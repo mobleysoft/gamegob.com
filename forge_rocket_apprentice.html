@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Rocket Apprentice">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Rocket Apprentice</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0f;touch-action:none;user-select:none;-webkit-user-select:none;}
+canvas{display:block;margin:0 auto;}
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+'use strict';
+
+// ============================================================
+// ROCKET APPRENTICE — "Navigate, Upgrade, Master."
+// An endless space journey with meta-progression, economy,
+// procedural generation, prestige system, and 10+ ships.
+// ============================================================
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// --- Audio Engine ---
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+const ensureAudio = () => { if (!audioCtx) audioCtx = new AudioCtx(); };
+
+const playSound = (type) => {
+  ensureAudio();
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  switch(type) {
+    case 'thrust':
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(80, now);
+      osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+      gain.gain.setValueAtTime(0.06, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.start(now); osc.stop(now + 0.1); break;
+    case 'collect':
+      osc.type = 'sine'; osc.frequency.setValueAtTime(600, now);
+      osc.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+      gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now); osc.stop(now + 0.15); break;
+    case 'hit':
+      osc.type = 'square'; osc.frequency.setValueAtTime(200, now);
+      osc.frequency.exponentialRampToValueAtTime(50, now + 0.3);
+      gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      osc.start(now); osc.stop(now + 0.3); break;
+    case 'boost':
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now);
+      osc.frequency.exponentialRampToValueAtTime(400, now + 0.2);
+      gain.gain.setValueAtTime(0.12, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.start(now); osc.stop(now + 0.25); break;
+    case 'wormhole':
+      osc.type = 'sine'; osc.frequency.setValueAtTime(200, now);
+      osc.frequency.exponentialRampToValueAtTime(2000, now + 0.6);
+      gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+      osc.start(now); osc.stop(now + 0.7); break;
+    case 'death':
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(30, now + 0.8);
+      gain.gain.setValueAtTime(0.25, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+      osc.start(now); osc.stop(now + 0.8); break;
+    case 'buy':
+      osc.type = 'triangle'; osc.frequency.setValueAtTime(800, now);
+      osc.frequency.setValueAtTime(1000, now + 0.05);
+      osc.frequency.setValueAtTime(1200, now + 0.1);
+      gain.gain.setValueAtTime(0.12, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2); break;
+    case 'prestige':
+      osc.type = 'sine'; osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(1600, now + 0.5);
+      gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.2, now + 0.4);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+      osc.start(now); osc.stop(now + 0.8); break;
+    case 'unlock':
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(523, now);
+      osc.frequency.setValueAtTime(659, now + 0.1);
+      osc.frequency.setValueAtTime(784, now + 0.2);
+      osc.frequency.setValueAtTime(1047, now + 0.3);
+      gain.gain.setValueAtTime(0.15, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc.start(now); osc.stop(now + 0.5); break;
+  }
+};
+
+// --- Colors ---
+const C = {
+  bg: '#0a0a0f', gold: '#f0b800', green: '#00ff88', red: '#ff3344',
+  blue: '#3388ff', purple: '#aa44ff', cyan: '#00ddff', white: '#ffffff',
+  dimWhite: '#8888aa', orange: '#ff8800', pink: '#ff44aa',
+  darkPanel: 'rgba(10,10,20,0.92)', panelBorder: 'rgba(240,184,0, 0.65)',
+};
+
+// --- Responsive Canvas ---
+let W, H;
+const resize = () => {
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W; canvas.height = H;
+};
+window.addEventListener('resize', resize);
+resize();
+
+// --- Seeded RNG ---
+class SeededRNG {
+  constructor(seed) { this.seed = seed; }
+  next() {
+    this.seed = (this.seed * 16807 + 0) % 2147483647;
+    return (this.seed - 1) / 2147483646;
+  }
+}
+
+// --- Ships (10+ with different stats) ---
+const SHIPS = [
+  { id: 'scout', name: 'Scout', color: C.green, speed: 5, fuel: 100, shield: 1, boost: 1.5, desc: 'Balanced starter', cost: 0, reqPrestige: 0 },
+  { id: 'hauler', name: 'Hauler', color: '#88aacc', speed: 3.5, fuel: 160, shield: 2, boost: 1.2, desc: 'Huge fuel tank', cost: 500, reqPrestige: 0 },
+  { id: 'viper', name: 'Viper', color: C.red, speed: 7, fuel: 70, shield: 0.5, boost: 2.0, desc: 'Fast but fragile', cost: 800, reqPrestige: 0 },
+  { id: 'tank', name: 'Fortress', color: '#6688bb', speed: 3, fuel: 120, shield: 4, boost: 1.0, desc: 'Heavy shields', cost: 1200, reqPrestige: 0 },
+  { id: 'phantom', name: 'Phantom', color: C.purple, speed: 6, fuel: 90, shield: 1.5, boost: 1.8, desc: 'Smaller hitbox', cost: 2000, reqPrestige: 1 },
+  { id: 'solar', name: 'Solar Fin', color: C.gold, speed: 4.5, fuel: 130, shield: 1.5, boost: 1.3, desc: 'Regen fuel slowly', cost: 3000, reqPrestige: 1 },
+  { id: 'pulse', name: 'Pulse', color: C.cyan, speed: 5.5, fuel: 100, shield: 2, boost: 1.6, desc: 'EMP burst ability', cost: 4500, reqPrestige: 2 },
+  { id: 'wraith', name: 'Wraith', color: '#aaffaa', speed: 6.5, fuel: 80, shield: 1, boost: 2.2, desc: 'Phase through rocks', cost: 6000, reqPrestige: 2 },
+  { id: 'titan', name: 'Titan', color: C.orange, speed: 4, fuel: 150, shield: 3.5, boost: 1.4, desc: 'Ramming damage', cost: 8000, reqPrestige: 3 },
+  { id: 'nova', name: 'Nova', color: C.pink, speed: 5, fuel: 110, shield: 2, boost: 1.7, desc: 'Explosion on death', cost: 10000, reqPrestige: 3 },
+  { id: 'apex', name: 'Apex', color: '#ffffff', speed: 6, fuel: 120, shield: 3, boost: 2.0, desc: 'Elite all-rounder', cost: 15000, reqPrestige: 4 },
+  { id: 'omega', name: 'Omega', color: '#ffdd00', speed: 7, fuel: 140, shield: 3, boost: 2.5, desc: 'The ultimate ship', cost: 25000, reqPrestige: 5 },
+];
+
+// --- Persistent Save ---
+const SAVE_KEY = 'rocket_apprentice_save';
+const defaultSave = () => ({
+  credits: 0, totalCredits: 0, highScore: 0, highDist: 0,
+  prestigeLevel: 0, prestigeShieldBonus: 0,
+  unlockedShips: ['scout'], selectedShip: 'scout',
+  upgrades: { fuelEff: 0, shieldStr: 0, boostPow: 0, magnetRange: 0, startFuel: 0 },
+  achievements: {},
+  totalRuns: 0, totalAsteroids: 0, totalWormholes: 0,
+});
+let save;
+const loadSave = () => {
+  try { save = JSON.parse(localStorage.getItem(SAVE_KEY)); if (!save || !save.upgrades) throw 0; }
+  catch(e) { save = defaultSave(); }
+  // Ensure new fields exist
+  if (!save.achievements) save.achievements = {};
+  if (save.totalRuns === undefined) save.totalRuns = 0;
+  if (save.totalAsteroids === undefined) save.totalAsteroids = 0;
+  if (save.totalWormholes === undefined) save.totalWormholes = 0;
+};
+const saveSave = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch(e){} };
+loadSave();
+
+// --- Upgrade Definitions ---
+const UPGRADES = [
+  { id: 'fuelEff', name: 'Fuel Efficiency', desc: '-10% fuel consumption per level', maxLvl: 10, baseCost: 100, costMult: 1.8 },
+  { id: 'shieldStr', name: 'Shield Strength', desc: '+15% shield per level', maxLvl: 10, baseCost: 150, costMult: 1.9 },
+  { id: 'boostPow', name: 'Boost Power', desc: '+10% boost speed per level', maxLvl: 8, baseCost: 200, costMult: 2.0 },
+  { id: 'magnetRange', name: 'Magnet Range', desc: '+20% pickup range per level', maxLvl: 8, baseCost: 120, costMult: 1.7 },
+  { id: 'startFuel', name: 'Start Fuel', desc: '+10% starting fuel per level', maxLvl: 10, baseCost: 80, costMult: 1.6 },
+];
+const upgradeCost = (upg) => Math.floor(upg.baseCost * Math.pow(upg.costMult, save.upgrades[upg.id]));
+
+// --- Achievements ---
+const ACHIEVEMENTS = [
+  { id: 'first_run', name: 'Liftoff', desc: 'Complete your first run', check: (s) => s.totalRuns >= 1 },
+  { id: 'dist_1000', name: 'Explorer', desc: 'Travel 1000 km', check: (s) => s.highDist >= 1000 },
+  { id: 'dist_5000', name: 'Voyager', desc: 'Travel 5000 km', check: (s) => s.highDist >= 5000 },
+  { id: 'dist_20000', name: 'Deep Space', desc: 'Travel 20000 km', check: (s) => s.highDist >= 20000 },
+  { id: 'credits_1000', name: 'Merchant', desc: 'Earn 1000 total credits', check: (s) => s.totalCredits >= 1000 },
+  { id: 'credits_10000', name: 'Tycoon', desc: 'Earn 10000 total credits', check: (s) => s.totalCredits >= 10000 },
+  { id: 'prestige_1', name: 'Reborn', desc: 'Prestige for the first time', check: (s) => s.prestigeLevel >= 1 },
+  { id: 'prestige_3', name: 'Veteran', desc: 'Reach prestige level 3', check: (s) => s.prestigeLevel >= 3 },
+  { id: 'ships_3', name: 'Collector', desc: 'Unlock 3 ships', check: (s) => s.unlockedShips.length >= 3 },
+  { id: 'ships_all', name: 'Fleet Admiral', desc: 'Unlock all ships', check: (s) => s.unlockedShips.length >= SHIPS.length },
+  { id: 'asteroids_100', name: 'Dodger', desc: 'Dodge 100 asteroids total', check: (s) => s.totalAsteroids >= 100 },
+  { id: 'wormholes_10', name: 'Warp Master', desc: 'Enter 10 wormholes', check: (s) => s.totalWormholes >= 10 },
+];
+
+// --- Game State Machine ---
+const STATE = { TITLE: 0, HANGAR: 1, UPGRADES: 2, ACHIEVEMENTS: 3, PLAYING: 4, GAMEOVER: 5, PRESTIGE: 6 };
+let gameState = STATE.TITLE;
+
+// --- Particles ---
+let particles = [];
+class Particle {
+  constructor(x, y, vx, vy, life, color, size) {
+    this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+    this.life = life; this.maxLife = life; this.color = color; this.size = size;
+  }
+  update(dt) {
+    this.x += this.vx * dt; this.y += this.vy * dt;
+    this.life -= dt;
+    return this.life > 0;
+  }
+  draw() {
+    const a = this.life / this.maxLife;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size * a, this.size * a);
+    ctx.globalAlpha = 1;
+  }
+}
+
+const spawnParticles = (x, y, count, color, speed = 100, size = 3, life = 0.5) => {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = Math.random() * speed;
+    particles.push(new Particle(x, y, Math.cos(angle)*spd, Math.sin(angle)*spd, life + Math.random()*0.3, color, size + Math.random()*2));
+  }
+};
+
+// --- Stars (parallax background) ---
+let stars = [];
+const initStars = () => {
+  stars = [];
+  for (let i = 0; i < 200; i++) {
+    stars.push({
+      x: Math.random() * W, y: Math.random() * H,
+      size: Math.random() * 2 + 0.5,
+      speed: Math.random() * 0.5 + 0.1,
+      brightness: Math.random() * 0.5 + 0.3,
+    });
+  }
+};
+initStars();
+
+// --- Screen Shake ---
+let shakeAmount = 0, shakeDuration = 0;
+const shake = (amount, dur) => { shakeAmount = amount; shakeDuration = dur; };
+
+// --- Flash ---
+let flashColor = null, flashDuration = 0;
+const flash = (color, dur) => { flashColor = color; flashDuration = dur; };
+
+// --- Game Variables ---
+let player, obstacles, collectibles, wormholes, distance, runCredits, runScore;
+let scrollSpeed, difficultyTimer, spawnTimer, fuelSpawnTimer, wormholeTimer, creditSpawnTimer;
+let thrustTimer, isBoosting, boostCooldown, invulnTimer;
+let asteroidsThisRun, wormholesThisRun;
+let notificationQueue = [], activeNotification = null;
+
+const getShipData = () => SHIPS.find(s => s.id === save.selectedShip) || SHIPS[0];
+
+const notify = (text, color = C.gold) => {
+  notificationQueue.push({ text, color, timer: 2.5 });
+};
+
+const initGame = () => {
+  const ship = getShipData();
+  const startFuelMult = 1 + save.upgrades.startFuel * 0.1;
+  const shieldMult = (1 + save.upgrades.shieldStr * 0.15) + save.prestigeShieldBonus;
+
+  player = {
+    x: W / 2, y: H * 0.7,
+    w: 24, h: 32, speed: ship.speed,
+    fuel: ship.fuel * startFuelMult,
+    maxFuel: ship.fuel * startFuelMult,
+    shield: ship.shield * shieldMult,
+    maxShield: ship.shield * shieldMult,
+    boostMult: ship.boost * (1 + save.upgrades.boostPow * 0.1),
+    fuelRate: 1 - save.upgrades.fuelEff * 0.1,
+    magnetRange: 60 * (1 + save.upgrades.magnetRange * 0.2),
+    color: ship.color,
+    shipId: ship.id,
+    phasing: false, phaseCooldown: 0,
+  };
+
+  // Phantom hitbox reduction
+  if (ship.id === 'phantom') { player.w = 18; player.h = 26; }
+
+  obstacles = [];
+  collectibles = [];
+  wormholes = [];
+  distance = 0;
+  runCredits = 0;
+  runScore = 0;
+  scrollSpeed = 150;
+  difficultyTimer = 0;
+  spawnTimer = 0;
+  fuelSpawnTimer = 2;
+  wormholeTimer = 15 + Math.random() * 20;
+  creditSpawnTimer = 1;
+  thrustTimer = 0;
+  isBoosting = false;
+  boostCooldown = 0;
+  invulnTimer = 0;
+  asteroidsThisRun = 0;
+  wormholesThisRun = 0;
+  particles = [];
+  shakeAmount = 0;
+  notificationQueue = [];
+  activeNotification = null;
+};
+
+// --- Input ---
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.key] = true; e.preventDefault(); });
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+// Touch controls
+let touchL = false, touchR = false, touchUp = false, touchDown = false, touchBoost = false;
+let touches = {};
+
+const getTouchZone = (tx, ty) => {
+  // Left side: d-pad. Right side: boost button.
+  if (tx < W * 0.4) {
+    // D-pad region
+    const cx = W * 0.15, cy = H * 0.78;
+    const dx = tx - cx, dy = ty - cy;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      return dx < 0 ? 'left' : 'right';
+    } else {
+      return dy < 0 ? 'up' : 'down';
+    }
+  } else if (tx > W * 0.6) {
+    return 'boost';
+  }
+  return null;
+};
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    const zone = getTouchZone(t.clientX, t.clientY);
+    touches[t.identifier] = zone;
+    if (zone === 'left') touchL = true;
+    if (zone === 'right') touchR = true;
+    if (zone === 'up') touchUp = true;
+    if (zone === 'down') touchDown = true;
+    if (zone === 'boost') touchBoost = true;
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    const oldZone = touches[t.identifier];
+    const newZone = getTouchZone(t.clientX, t.clientY);
+    if (oldZone !== newZone) {
+      if (oldZone === 'left') touchL = false;
+      if (oldZone === 'right') touchR = false;
+      if (oldZone === 'up') touchUp = false;
+      if (oldZone === 'down') touchDown = false;
+      if (oldZone === 'boost') touchBoost = false;
+      touches[t.identifier] = newZone;
+      if (newZone === 'left') touchL = true;
+      if (newZone === 'right') touchR = true;
+      if (newZone === 'up') touchUp = true;
+      if (newZone === 'down') touchDown = true;
+      if (newZone === 'boost') touchBoost = true;
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    const zone = touches[t.identifier];
+    if (zone === 'left') touchL = false;
+    if (zone === 'right') touchR = false;
+    if (zone === 'up') touchUp = false;
+    if (zone === 'down') touchDown = false;
+    if (zone === 'boost') touchBoost = false;
+    delete touches[t.identifier];
+  }
+}, { passive: false });
+
+// Click/Tap for menus
+let clickX = -1, clickY = -1, clicked = false;
+canvas.addEventListener('click', e => { clickX = e.clientX; clickY = e.clientY; clicked = true; });
+canvas.addEventListener('touchstart', e => {
+  if (gameState !== STATE.PLAYING) {
+    clickX = e.touches[0].clientX; clickY = e.touches[0].clientY; clicked = true;
+  }
+}, { passive: false });
+
+const wasClicked = (x, y, w, h) => {
+  if (!clicked) return false;
+  return clickX >= x && clickX <= x + w && clickY >= y && clickY <= y + h;
+};
+
+// --- Procedural Generation ---
+let worldSeed = Date.now();
+let rng;
+
+const spawnAsteroid = () => {
+  const size = 15 + Math.random() * 35;
+  const x = Math.random() * (W - size * 2) + size;
+  const speedMod = 0.5 + Math.random() * 0.5;
+  const lateralSpeed = (Math.random() - 0.5) * 60;
+  const rotation = (Math.random() - 0.5) * 3;
+  const vertices = [];
+  const numVerts = 6 + Math.floor(Math.random() * 5);
+  for (let i = 0; i < numVerts; i++) {
+    const angle = (i / numVerts) * Math.PI * 2;
+    const r = size * (0.6 + Math.random() * 0.4);
+    vertices.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
+  }
+  obstacles.push({
+    x, y: -size, size, speedMod, vx: lateralSpeed,
+    rot: 0, rotSpeed: rotation, vertices, hp: size > 30 ? 2 : 1,
+  });
+};
+
+const spawnFuelPod = () => {
+  const x = Math.random() * (W - 40) + 20;
+  collectibles.push({ x, y: -20, type: 'fuel', size: 12, value: 15 + Math.random() * 10 });
+};
+
+const spawnCreditOrb = () => {
+  const x = Math.random() * (W - 40) + 20;
+  const val = Math.floor(5 + Math.random() * 10 + distance / 500);
+  collectibles.push({ x, y: -20, type: 'credit', size: 10, value: val });
+};
+
+const spawnShieldPod = () => {
+  const x = Math.random() * (W - 40) + 20;
+  collectibles.push({ x, y: -20, type: 'shield', size: 14, value: 0.5 });
+};
+
+const spawnWormhole = () => {
+  const x = W * 0.2 + Math.random() * W * 0.6;
+  wormholes.push({
+    x, y: -40, size: 35, skipDist: 500 + Math.random() * 1500,
+    rot: 0, pulse: 0,
+  });
+};
+
+// --- Drawing Helpers ---
+const drawText = (text, x, y, size, color, align = 'center', baseline = 'middle') => {
+  ctx.font = `${size}px 'Courier New', monospace`;
+  ctx.fillStyle = color;
+  ctx.textAlign = align;
+  ctx.textBaseline = baseline;
+  ctx.fillText(text, x, y);
+};
+
+const drawTextBold = (text, x, y, size, color, align = 'center') => {
+  ctx.font = `bold ${size}px 'Courier New', monospace`;
+  ctx.fillStyle = color;
+  ctx.textAlign = align;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+};
+
+const drawBar = (x, y, w, h, ratio, color, bgColor = 'rgba(255,255,255, 0.65)') => {
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w * Math.max(0, Math.min(1, ratio)), h);
+  ctx.strokeStyle = 'rgba(255,255,255, 0.65)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+};
+
+const drawPanel = (x, y, w, h) => {
+  ctx.fillStyle = C.darkPanel;
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = C.panelBorder;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+};
+
+const drawButton = (text, x, y, w, h, color = C.gold, hover = false) => {
+  ctx.fillStyle = hover ? color : 'rgba(240,184,0, 0.65)';
+  if (hover) ctx.globalAlpha = 0.2;
+  ctx.fillRect(x, y, w, h);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, w, h);
+  drawTextBold(text, x + w/2, y + h/2, Math.min(18, h * 0.5), color);
+  return wasClicked(x, y, w, h);
+};
+
+// --- Draw Ship ---
+const drawShip = (x, y, w, h, color, tilt = 0) => {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(tilt * 0.05);
+
+  // Main body
+  ctx.beginPath();
+  ctx.moveTo(0, -h/2);
+  ctx.lineTo(-w/2, h/3);
+  ctx.lineTo(-w/4, h/2);
+  ctx.lineTo(w/4, h/2);
+  ctx.lineTo(w/2, h/3);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255, 0.65)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Cockpit
+  ctx.beginPath();
+  ctx.moveTo(0, -h/3);
+  ctx.lineTo(-w/6, h/8);
+  ctx.lineTo(w/6, h/8);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(0,200,255,0.6)';
+  ctx.fill();
+
+  // Wings
+  ctx.beginPath();
+  ctx.moveTo(-w/2, h/3);
+  ctx.lineTo(-w*0.8, h/2);
+  ctx.lineTo(-w/3, h/2);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(w/2, h/3);
+  ctx.lineTo(w*0.8, h/2);
+  ctx.lineTo(w/3, h/2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+};
+
+// --- Draw Asteroid ---
+const drawAsteroid = (obs) => {
+  ctx.save();
+  ctx.translate(obs.x, obs.y);
+  ctx.rotate(obs.rot);
+  ctx.beginPath();
+  ctx.moveTo(obs.vertices[0].x, obs.vertices[0].y);
+  for (let i = 1; i < obs.vertices.length; i++) {
+    ctx.lineTo(obs.vertices[i].x, obs.vertices[i].y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = obs.hp > 1 ? '#664422' : '#553322';
+  ctx.fill();
+  ctx.strokeStyle = '#886644';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.restore();
+};
+
+// --- Draw Wormhole ---
+const drawWormhole = (wh) => {
+  ctx.save();
+  ctx.translate(wh.x, wh.y);
+  for (let i = 4; i >= 0; i--) {
+    const r = wh.size * (1 + i * 0.3) + Math.sin(wh.pulse) * 5;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(100,50,200,${0.05 + i * 0.02})`;
+    ctx.fill();
+  }
+  ctx.save();
+  ctx.rotate(wh.rot);
+  ctx.beginPath();
+  const arms = 5;
+  for (let i = 0; i < arms * 2; i++) {
+    const angle = (i / (arms * 2)) * Math.PI * 2;
+    const r = i % 2 === 0 ? wh.size : wh.size * 0.5;
+    if (i === 0) ctx.moveTo(Math.cos(angle) * r, Math.sin(angle) * r);
+    else ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+  }
+  ctx.closePath();
+  ctx.fillStyle = C.purple;
+  ctx.globalAlpha = 0.6 + Math.sin(wh.pulse) * 0.2;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // Center glow
+  const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, wh.size * 0.5);
+  grad.addColorStop(0, 'rgba(200,150,255,0.8)');
+  grad.addColorStop(1, 'rgba(100,50,200,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(-wh.size, -wh.size, wh.size*2, wh.size*2);
+
+  ctx.restore();
+};
+
+// --- Update Stars ---
+const updateStars = (dt, speed) => {
+  for (const s of stars) {
+    s.y += speed * s.speed * dt;
+    if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
+  }
+};
+
+const drawStars = () => {
+  for (const s of stars) {
+    ctx.fillStyle = `rgba(200,210,255,${s.brightness})`;
+    ctx.fillRect(s.x, s.y, s.size, s.size);
+  }
+};
+
+// --- Title Screen ---
+let titlePulse = 0;
+const drawTitle = (dt) => {
+  titlePulse += dt * 2;
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  updateStars(dt, 80);
+  drawStars();
+
+  const cx = W / 2;
+
+  // Title
+  const titleSize = Math.min(48, W * 0.08);
+  drawTextBold('ROCKET', cx, H * 0.2, titleSize, C.gold);
+  drawTextBold('APPRENTICE', cx, H * 0.2 + titleSize * 1.1, titleSize, C.green);
+
+  // Subtitle
+  drawText('"Navigate, Upgrade, Master."', cx, H * 0.2 + titleSize * 2.5, Math.min(16, W * 0.03), C.dimWhite);
+
+  // Animated ship
+  drawShip(cx, H * 0.45, 40, 56, C.green, Math.sin(titlePulse) * 0.5);
+  // Thrust particles
+  if (Math.random() < 0.3) {
+    spawnParticles(cx, H * 0.45 + 30, 2, C.orange, 40, 2, 0.3);
+  }
+
+  // Stats
+  const sy = H * 0.55;
+  drawText(`High Score: ${save.highScore}`, cx, sy, 16, C.dimWhite);
+  drawText(`Best Distance: ${Math.floor(save.highDist)} km`, cx, sy + 22, 16, C.dimWhite);
+  drawText(`Credits: ${save.credits}`, cx, sy + 44, 16, C.gold);
+  if (save.prestigeLevel > 0) {
+    drawText(`Prestige: ${save.prestigeLevel}`, cx, sy + 66, 16, C.purple);
+  }
+
+  // Buttons
+  const bw = Math.min(220, W * 0.5);
+  const bh = 44;
+  const bx = cx - bw / 2;
+  let by = H * 0.7;
+
+  if (drawButton('LAUNCH', bx, by, bw, bh, C.green)) {
+    ensureAudio(); initGame(); gameState = STATE.PLAYING; playSound('boost');
+  }
+  by += bh + 12;
+  if (drawButton('HANGAR', bx, by, bw, bh, C.cyan)) { gameState = STATE.HANGAR; }
+  by += bh + 12;
+  if (drawButton('UPGRADES', bx, by, bw, bh, C.gold)) { gameState = STATE.UPGRADES; }
+  by += bh + 12;
+  if (drawButton('ACHIEVEMENTS', bx, by, bw, bh, C.purple)) { gameState = STATE.ACHIEVEMENTS; }
+
+  if (save.totalCredits >= 5000 && save.prestigeLevel < 10) {
+    by += bh + 12;
+    if (drawButton('PRESTIGE', bx, by, bw, bh, C.pink)) { gameState = STATE.PRESTIGE; }
+  }
+
+  // Controls hint
+  drawText('Arrow Keys / WASD + Space = Boost', cx, H - 40, 12, C.dimWhite);
+  drawText('Touch: D-pad left, Boost right', cx, H - 22, 12, C.dimWhite);
+
+  particles = particles.filter(p => p.update(dt));
+  particles.forEach(p => p.draw());
+};
+
+// --- Hangar Screen ---
+let hangarScroll = 0;
+const drawHangar = (dt) => {
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+  updateStars(dt, 30);
+  drawStars();
+
+  drawTextBold('HANGAR', W/2, 40, 32, C.cyan);
+  drawText(`Credits: ${save.credits}`, W/2, 70, 16, C.gold);
+
+  if (drawButton('BACK', 20, 15, 80, 30, C.dimWhite)) { gameState = STATE.TITLE; }
+
+  const cardW = Math.min(280, W - 40);
+  const cardH = 80;
+  const sx = W/2 - cardW/2;
+  let sy = 100 - hangarScroll;
+
+  for (const ship of SHIPS) {
+    if (sy > -cardH && sy < H) {
+      const owned = save.unlockedShips.includes(ship.id);
+      const selected = save.selectedShip === ship.id;
+      const canBuy = !owned && save.credits >= ship.cost && save.prestigeLevel >= ship.reqPrestige;
+      const locked = !owned && save.prestigeLevel < ship.reqPrestige;
+
+      drawPanel(sx, sy, cardW, cardH);
+      if (selected) {
+        ctx.strokeStyle = C.green;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(sx, sy, cardW, cardH);
+      }
+
+      // Ship preview
+      drawShip(sx + 30, sy + cardH/2, 20, 28, owned ? ship.color : '#444');
+
+      // Info
+      const tx = sx + 60;
+      drawTextBold(ship.name, tx + 50, sy + 16, 14, owned ? ship.color : '#666', 'center');
+      drawText(ship.desc, tx + 50, sy + 33, 11, C.dimWhite, 'center');
+
+      // Stats bar
+      const bsy = sy + 48;
+      drawText('SPD', tx, bsy, 9, C.dimWhite, 'left');
+      drawBar(tx + 26, bsy - 5, 40, 8, ship.speed / 8, C.green);
+      drawText('FUL', tx + 76, bsy, 9, C.dimWhite, 'left');
+      drawBar(tx + 102, bsy - 5, 40, 8, ship.fuel / 160, C.cyan);
+      drawText('SHD', tx + 150, bsy, 9, C.dimWhite, 'left');
+      drawBar(tx + 176, bsy - 5, 40, 8, ship.shield / 4, C.gold);
+
+      // Action button
+      const btnX = sx + cardW - 80;
+      const btnY = sy + 10;
+      if (owned && !selected) {
+        if (drawButton('SELECT', btnX, btnY, 70, 24, C.green)) {
+          save.selectedShip = ship.id; saveSave(); playSound('collect');
+        }
+      } else if (owned && selected) {
+        drawText('ACTIVE', btnX + 35, btnY + 12, 11, C.green, 'center');
+      } else if (locked) {
+        drawText(`P${ship.reqPrestige}+`, btnX + 35, btnY + 12, 11, C.red, 'center');
+      } else if (canBuy) {
+        if (drawButton(`${ship.cost}c`, btnX, btnY, 70, 24, C.gold)) {
+          save.credits -= ship.cost;
+          save.unlockedShips.push(ship.id);
+          save.selectedShip = ship.id;
+          saveSave(); playSound('buy');
+          notify(`${ship.name} unlocked!`, C.green);
+        }
+      } else {
+        drawText(`${ship.cost}c`, btnX + 35, btnY + 12, 11, C.red, 'center');
+      }
+    }
+    sy += cardH + 8;
+  }
+
+  // Handle scroll with touch/mouse wheel
+  const totalH = SHIPS.length * (cardH + 8);
+  const maxScroll = Math.max(0, totalH - (H - 120));
+  hangarScroll = Math.max(0, Math.min(maxScroll, hangarScroll));
+};
+
+canvas.addEventListener('wheel', e => {
+  if (gameState === STATE.HANGAR || gameState === STATE.UPGRADES || gameState === STATE.ACHIEVEMENTS) {
+    hangarScroll += e.deltaY * 0.5;
+    e.preventDefault();
+  }
+}, { passive: false });
+
+// Swipe scrolling for touch
+let lastTouchY = 0, isSwiping = false;
+canvas.addEventListener('touchstart', e => {
+  if (gameState === STATE.HANGAR || gameState === STATE.UPGRADES || gameState === STATE.ACHIEVEMENTS) {
+    lastTouchY = e.touches[0].clientY;
+    isSwiping = true;
+  }
+}, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (isSwiping && (gameState === STATE.HANGAR || gameState === STATE.UPGRADES || gameState === STATE.ACHIEVEMENTS)) {
+    const dy = lastTouchY - e.touches[0].clientY;
+    hangarScroll += dy;
+    lastTouchY = e.touches[0].clientY;
+  }
+}, { passive: true });
+canvas.addEventListener('touchend', () => { isSwiping = false; });
+
+// --- Upgrades Screen ---
+const drawUpgrades = (dt) => {
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+  updateStars(dt, 30);
+  drawStars();
+
+  drawTextBold('UPGRADES', W/2, 40, 32, C.gold);
+  drawText(`Credits: ${save.credits}`, W/2, 70, 16, C.gold);
+
+  if (drawButton('BACK', 20, 15, 80, 30, C.dimWhite)) { gameState = STATE.TITLE; hangarScroll = 0; }
+
+  const cardW = Math.min(320, W - 40);
+  const cardH = 70;
+  const sx = W/2 - cardW/2;
+  let sy = 100 - hangarScroll;
+
+  for (const upg of UPGRADES) {
+    if (sy > -cardH && sy < H) {
+      const lvl = save.upgrades[upg.id];
+      const maxed = lvl >= upg.maxLvl;
+      const cost = upgradeCost(upg);
+      const canBuy = !maxed && save.credits >= cost;
+
+      drawPanel(sx, sy, cardW, cardH);
+
+      drawTextBold(upg.name, sx + 10, sy + 18, 14, C.gold, 'left');
+      drawText(upg.desc, sx + 10, sy + 36, 11, C.dimWhite, 'left');
+
+      // Level pips
+      for (let i = 0; i < upg.maxLvl; i++) {
+        const px = sx + 10 + i * 14;
+        ctx.fillStyle = i < lvl ? C.green : 'rgba(255,255,255, 0.65)';
+        ctx.fillRect(px, sy + 50, 10, 8);
+      }
+
+      // Buy button
+      const btnX = sx + cardW - 90;
+      const btnY = sy + 15;
+      if (maxed) {
+        drawText('MAX', btnX + 40, btnY + 15, 14, C.green, 'center');
+      } else if (canBuy) {
+        if (drawButton(`${cost}c`, btnX, btnY, 80, 30, C.gold)) {
+          save.credits -= cost;
+          save.upgrades[upg.id]++;
+          saveSave(); playSound('buy');
+        }
+      } else {
+        drawText(`${cost}c`, btnX + 40, btnY + 15, 14, C.red, 'center');
+      }
+    }
+    sy += cardH + 8;
+  }
+};
+
+// --- Achievements Screen ---
+const drawAchievements = (dt) => {
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+  updateStars(dt, 30);
+  drawStars();
+
+  drawTextBold('ACHIEVEMENTS', W/2, 40, 28, C.purple);
+  const earned = Object.keys(save.achievements).length;
+  drawText(`${earned} / ${ACHIEVEMENTS.length} unlocked`, W/2, 68, 14, C.dimWhite);
+
+  if (drawButton('BACK', 20, 15, 80, 30, C.dimWhite)) { gameState = STATE.TITLE; hangarScroll = 0; }
+
+  const cardW = Math.min(320, W - 40);
+  const cardH = 55;
+  const sx = W/2 - cardW/2;
+  let sy = 95 - hangarScroll;
+
+  for (const ach of ACHIEVEMENTS) {
+    if (sy > -cardH && sy < H) {
+      const unlocked = !!save.achievements[ach.id];
+      drawPanel(sx, sy, cardW, cardH);
+
+      if (unlocked) {
+        ctx.fillStyle = 'rgba(0,255,136, 0.65)';
+        ctx.fillRect(sx+1, sy+1, cardW-2, cardH-2);
+      }
+
+      const icon = unlocked ? '\u2605' : '\u2606';
+      drawTextBold(icon, sx + 20, sy + cardH/2, 20, unlocked ? C.gold : '#444', 'center');
+      drawTextBold(ach.name, sx + 45, sy + 18, 13, unlocked ? C.green : '#666', 'left');
+      drawText(ach.desc, sx + 45, sy + 38, 11, unlocked ? C.dimWhite : '#444', 'left');
+    }
+    sy += cardH + 6;
+  }
+};
+
+// --- Prestige Screen ---
+const drawPrestige = (dt) => {
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+  updateStars(dt, 30);
+  drawStars();
+
+  const cx = W / 2;
+  drawTextBold('PRESTIGE', cx, 60, 36, C.pink);
+
+  drawText(`Current Prestige Level: ${save.prestigeLevel}`, cx, 110, 16, C.purple);
+  drawText(`Current Shield Bonus: +${(save.prestigeShieldBonus * 100).toFixed(0)}%`, cx, 135, 14, C.gold);
+
+  const nextBonus = (save.prestigeLevel + 1) * 0.15;
+  drawText('Prestige resets your credits and upgrades,', cx, 180, 14, C.dimWhite);
+  drawText('but you gain a PERMANENT shield bonus.', cx, 200, 14, C.dimWhite);
+  drawText(`Next bonus: +${(nextBonus * 100).toFixed(0)}% shield`, cx, 230, 16, C.green);
+  drawText('Ship unlocks are kept!', cx, 255, 13, C.cyan);
+
+  const bw = 200, bh = 50;
+  if (drawButton('PRESTIGE NOW', cx - bw/2, 290, bw, bh, C.pink)) {
+    save.prestigeLevel++;
+    save.prestigeShieldBonus = save.prestigeLevel * 0.15;
+    save.credits = 0;
+    save.upgrades = { fuelEff: 0, shieldStr: 0, boostPow: 0, magnetRange: 0, startFuel: 0 };
+    saveSave();
+    playSound('prestige');
+    notify(`Prestige ${save.prestigeLevel}! Shield +${(save.prestigeShieldBonus*100).toFixed(0)}%`, C.pink);
+    gameState = STATE.TITLE;
+  }
+
+  if (drawButton('BACK', 20, 15, 80, 30, C.dimWhite)) { gameState = STATE.TITLE; }
+};
+
+// --- Gameplay Update ---
+const updateGame = (dt) => {
+  // Difficulty ramp
+  difficultyTimer += dt;
+  if (difficultyTimer > 5) {
+    scrollSpeed = Math.min(500, scrollSpeed + 8);
+    difficultyTimer = 0;
+  }
+
+  const effectiveSpeed = isBoosting ? scrollSpeed * player.boostMult : scrollSpeed;
+  distance += effectiveSpeed * dt * 0.05;
+  runScore = Math.floor(distance * 10);
+
+  // Input
+  let mx = 0, my = 0;
+  if (keys['ArrowLeft'] || keys['a'] || keys['A'] || touchL) mx -= 1;
+  if (keys['ArrowRight'] || keys['d'] || keys['D'] || touchR) mx += 1;
+  if (keys['ArrowUp'] || keys['w'] || keys['W'] || touchUp) my -= 1;
+  if (keys['ArrowDown'] || keys['s'] || keys['S'] || touchDown) my += 1;
+
+  const wantBoost = keys[' '] || keys['Shift'] || touchBoost;
+
+  // Boost
+  if (boostCooldown > 0) boostCooldown -= dt;
+  if (wantBoost && player.fuel > 5 && boostCooldown <= 0) {
+    isBoosting = true;
+    player.fuel -= 15 * dt * player.fuelRate;
+    if (thrustTimer <= 0) { playSound('thrust'); thrustTimer = 0.15; }
+  } else {
+    isBoosting = false;
+  }
+
+  // Fuel drain
+  player.fuel -= (3 + scrollSpeed * 0.005) * dt * player.fuelRate;
+
+  // Solar Fin regen
+  if (player.shipId === 'solar') {
+    player.fuel = Math.min(player.maxFuel, player.fuel + 1.5 * dt);
+  }
+
+  // Movement
+  const spd = player.speed * 60;
+  player.x += mx * spd * dt;
+  player.y += my * spd * dt * 0.6;
+  player.x = Math.max(player.w, Math.min(W - player.w, player.x));
+  player.y = Math.max(player.h, Math.min(H - player.h, player.y));
+
+  thrustTimer -= dt;
+
+  // Invulnerability
+  if (invulnTimer > 0) invulnTimer -= dt;
+
+  // Wraith phasing
+  if (player.shipId === 'wraith') {
+    if (player.phaseCooldown > 0) player.phaseCooldown -= dt;
+    player.phasing = wantBoost && isBoosting;
+  }
+
+  // Thrust particles
+  if (isBoosting) {
+    spawnParticles(player.x, player.y + player.h/2, 3, C.orange, 80, 3, 0.2);
+    spawnParticles(player.x, player.y + player.h/2, 1, C.gold, 60, 2, 0.15);
+  } else {
+    if (Math.random() < 0.3) spawnParticles(player.x, player.y + player.h/2, 1, '#884400', 30, 2, 0.15);
+  }
+
+  // Spawn asteroids
+  const spawnRate = Math.max(0.15, 1.2 - distance * 0.0002);
+  spawnTimer -= dt;
+  if (spawnTimer <= 0) {
+    spawnAsteroid();
+    // Double spawn at high difficulty
+    if (distance > 3000 && Math.random() < 0.3) spawnAsteroid();
+    if (distance > 8000 && Math.random() < 0.3) spawnAsteroid();
+    spawnTimer = spawnRate;
+  }
+
+  // Spawn fuel
+  fuelSpawnTimer -= dt;
+  if (fuelSpawnTimer <= 0) {
+    spawnFuelPod();
+    if (Math.random() < 0.3) spawnShieldPod();
+    fuelSpawnTimer = 3 + Math.random() * 4;
+  }
+
+  // Spawn credits
+  creditSpawnTimer -= dt;
+  if (creditSpawnTimer <= 0) {
+    spawnCreditOrb();
+    creditSpawnTimer = 1.5 + Math.random() * 2;
+  }
+
+  // Spawn wormhole
+  wormholeTimer -= dt;
+  if (wormholeTimer <= 0) {
+    spawnWormhole();
+    wormholeTimer = 20 + Math.random() * 30;
+  }
+
+  // Update obstacles
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    const obs = obstacles[i];
+    obs.y += effectiveSpeed * obs.speedMod * dt;
+    obs.x += obs.vx * dt;
+    obs.rot += obs.rotSpeed * dt;
+
+    // Bounce off walls
+    if (obs.x < obs.size || obs.x > W - obs.size) obs.vx *= -1;
+
+    if (obs.y > H + obs.size * 2) {
+      obstacles.splice(i, 1);
+      asteroidsThisRun++;
+      continue;
+    }
+
+    // Collision with player
+    if (invulnTimer <= 0 && !player.phasing) {
+      const dx = player.x - obs.x;
+      const dy = player.y - obs.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const hitDist = obs.size * 0.7 + player.w * 0.4;
+
+      if (dist < hitDist) {
+        // Titan ramming
+        if (player.shipId === 'titan' && isBoosting) {
+          spawnParticles(obs.x, obs.y, 15, C.orange, 150, 4, 0.4);
+          obstacles.splice(i, 1);
+          playSound('hit');
+          shake(4, 0.15);
+          continue;
+        }
+
+        player.shield -= 1;
+        invulnTimer = 1.0;
+        playSound('hit');
+        shake(8, 0.25);
+        flash(C.red, 0.1);
+        spawnParticles(player.x, player.y, 10, C.red, 100, 3, 0.3);
+
+        if (player.shield <= 0) {
+          // Death
+          endRun();
+          return;
+        }
+      }
+    }
+  }
+
+  // Update collectibles
+  const magnetR = player.magnetRange;
+  for (let i = collectibles.length - 1; i >= 0; i--) {
+    const c = collectibles[i];
+    c.y += effectiveSpeed * 0.7 * dt;
+
+    // Magnet pull
+    const dx = player.x - c.x;
+    const dy = player.y - c.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < magnetR) {
+      const pull = (1 - dist / magnetR) * 300 * dt;
+      c.x += (dx / dist) * pull;
+      c.y += (dy / dist) * pull;
+    }
+
+    // Collection
+    if (dist < player.w * 0.7 + c.size) {
+      if (c.type === 'fuel') {
+        player.fuel = Math.min(player.maxFuel, player.fuel + c.value);
+        spawnParticles(c.x, c.y, 8, C.cyan, 60, 2, 0.2);
+      } else if (c.type === 'credit') {
+        runCredits += c.value;
+        spawnParticles(c.x, c.y, 8, C.gold, 60, 2, 0.2);
+      } else if (c.type === 'shield') {
+        player.shield = Math.min(player.maxShield, player.shield + c.value);
+        spawnParticles(c.x, c.y, 8, C.green, 60, 2, 0.2);
+      }
+      playSound('collect');
+      collectibles.splice(i, 1);
+      continue;
+    }
+
+    if (c.y > H + 30) { collectibles.splice(i, 1); }
+  }
+
+  // Update wormholes
+  for (let i = wormholes.length - 1; i >= 0; i--) {
+    const wh = wormholes[i];
+    wh.y += effectiveSpeed * 0.5 * dt;
+    wh.rot += dt * 1.5;
+    wh.pulse += dt * 3;
+
+    const dx = player.x - wh.x;
+    const dy = player.y - wh.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist < wh.size) {
+      distance += wh.skipDist;
+      runCredits += Math.floor(wh.skipDist * 0.1);
+      wormholesThisRun++;
+      playSound('wormhole');
+      flash(C.purple, 0.3);
+      shake(10, 0.4);
+      spawnParticles(player.x, player.y, 30, C.purple, 200, 4, 0.5);
+      // Clear nearby obstacles
+      obstacles = obstacles.filter(o => {
+        const d = Math.sqrt((o.x - wh.x)**2 + (o.y - wh.y)**2);
+        return d > 150;
+      });
+      wormholes.splice(i, 1);
+      notify(`Wormhole! +${Math.floor(wh.skipDist)} km`, C.purple);
+      continue;
+    }
+
+    if (wh.y > H + 60) { wormholes.splice(i, 1); }
+  }
+
+  // Fuel death
+  if (player.fuel <= 0) {
+    player.fuel = 0;
+    endRun();
+    return;
+  }
+
+  // Update stars
+  updateStars(dt, effectiveSpeed * 0.3);
+
+  // Update particles
+  particles = particles.filter(p => p.update(dt));
+
+  // Screen shake
+  if (shakeDuration > 0) shakeDuration -= dt;
+
+  // Flash
+  if (flashDuration > 0) flashDuration -= dt;
+
+  // Notifications
+  if (activeNotification) {
+    activeNotification.timer -= dt;
+    if (activeNotification.timer <= 0) activeNotification = null;
+  } else if (notificationQueue.length > 0) {
+    activeNotification = notificationQueue.shift();
+  }
+};
+
+const endRun = () => {
+  // Nova explosion
+  if (player.shipId === 'nova') {
+    spawnParticles(player.x, player.y, 60, C.pink, 300, 6, 0.8);
+    spawnParticles(player.x, player.y, 40, C.orange, 250, 4, 0.6);
+    shake(15, 0.5);
+  } else {
+    spawnParticles(player.x, player.y, 30, C.red, 200, 5, 0.6);
+  }
+
+  playSound('death');
+  flash(C.red, 0.2);
+
+  save.totalRuns++;
+  save.totalAsteroids += asteroidsThisRun;
+  save.totalWormholes += wormholesThisRun;
+
+  // Prestige bonus credits
+  const creditMult = 1 + save.prestigeLevel * 0.1;
+  const finalCredits = Math.floor(runCredits * creditMult);
+
+  save.credits += finalCredits;
+  save.totalCredits += finalCredits;
+  if (runScore > save.highScore) save.highScore = runScore;
+  if (distance > save.highDist) save.highDist = distance;
+
+  // Check achievements
+  for (const ach of ACHIEVEMENTS) {
+    if (!save.achievements[ach.id] && ach.check(save)) {
+      save.achievements[ach.id] = true;
+      notify(`Achievement: ${ach.name}!`, C.gold);
+      playSound('unlock');
+    }
+  }
+
+  saveSave();
+  gameState = STATE.GAMEOVER;
+};
+
+// --- Draw Gameplay ---
+const drawGame = (dt) => {
+  // Apply screen shake
+  ctx.save();
+  if (shakeDuration > 0) {
+    const sx = (Math.random() - 0.5) * shakeAmount * 2;
+    const sy = (Math.random() - 0.5) * shakeAmount * 2;
+    ctx.translate(sx, sy);
+  }
+
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(-10, -10, W + 20, H + 20);
+
+  drawStars();
+
+  // Draw wormholes
+  wormholes.forEach(drawWormhole);
+
+  // Draw collectibles
+  for (const c of collectibles) {
+    if (c.type === 'fuel') {
+      ctx.fillStyle = C.cyan;
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y - c.size);
+      ctx.lineTo(c.x - c.size * 0.7, c.y + c.size * 0.5);
+      ctx.lineTo(c.x + c.size * 0.7, c.y + c.size * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(0,220,255, 0.65)';
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, c.size * 1.3, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (c.type === 'credit') {
+      ctx.fillStyle = C.gold;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0a0a0f';
+      drawText('$', c.x, c.y, 10, '#0a0a0f');
+    } else if (c.type === 'shield') {
+      ctx.strokeStyle = C.green;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y - c.size);
+      ctx.lineTo(c.x + c.size, c.y - c.size * 0.3);
+      ctx.lineTo(c.x + c.size * 0.7, c.y + c.size);
+      ctx.lineTo(c.x, c.y + c.size * 0.6);
+      ctx.lineTo(c.x - c.size * 0.7, c.y + c.size);
+      ctx.lineTo(c.x - c.size, c.y - c.size * 0.3);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(0,255,136, 0.65)';
+      ctx.fill();
+    }
+  }
+
+  // Draw asteroids
+  obstacles.forEach(drawAsteroid);
+
+  // Draw player
+  if (invulnTimer <= 0 || Math.floor(invulnTimer * 10) % 2 === 0) {
+    if (player.phasing) ctx.globalAlpha = 0.3;
+    const tilt = (keys['ArrowLeft'] || keys['a'] || touchL) ? -1 : (keys['ArrowRight'] || keys['d'] || touchR) ? 1 : 0;
+    drawShip(player.x, player.y, player.w, player.h, player.color, tilt);
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw particles
+  particles.forEach(p => p.draw());
+
+  ctx.restore();
+
+  // --- HUD ---
+  // Fuel bar
+  const hudY = 10;
+  drawText('FUEL', 12, hudY + 8, 11, C.cyan, 'left');
+  drawBar(50, hudY, Math.min(150, W * 0.2), 14, player.fuel / player.maxFuel,
+    player.fuel < player.maxFuel * 0.25 ? C.red : C.cyan);
+
+  // Shield pips
+  drawText('SHD', 12, hudY + 28, 11, C.green, 'left');
+  for (let i = 0; i < Math.ceil(player.maxShield); i++) {
+    const full = player.shield >= i + 1;
+    const partial = player.shield > i && player.shield < i + 1;
+    ctx.fillStyle = full ? C.green : partial ? 'rgba(0,255,136,0.4)' : 'rgba(255,255,255, 0.65)';
+    ctx.fillRect(50 + i * 18, hudY + 22, 14, 10);
+  }
+
+  // Distance & Score
+  drawText(`${Math.floor(distance)} km`, W - 10, hudY + 8, 14, C.dimWhite, 'right');
+  drawText(`Score: ${runScore}`, W - 10, hudY + 26, 12, C.gold, 'right');
+  drawText(`Credits: ${runCredits}`, W - 10, hudY + 42, 11, C.gold, 'right');
+
+  // Boost indicator
+  if (isBoosting) {
+    drawText('BOOST', W/2, hudY + 8, 16, C.orange);
+  }
+
+  // Wormhole nearby indicator
+  for (const wh of wormholes) {
+    if (wh.y > 0 && wh.y < H) {
+      // Arrow pointing to wormhole
+      const dx = wh.x - player.x;
+      drawText('\u25BC WORMHOLE', wh.x, wh.y - wh.size - 15, 10, C.purple);
+    }
+  }
+
+  // Flash overlay
+  if (flashDuration > 0 && flashColor) {
+    ctx.fillStyle = flashColor;
+    ctx.globalAlpha = flashDuration * 3;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+  }
+
+  // Notification
+  if (activeNotification) {
+    const na = Math.min(1, activeNotification.timer * 2);
+    ctx.globalAlpha = na;
+    drawTextBold(activeNotification.text, W/2, H * 0.15, 18, activeNotification.color);
+    ctx.globalAlpha = 1;
+  }
+
+  // Touch controls overlay
+  if ('ontouchstart' in window) {
+    // D-pad
+    const cx = W * 0.15, cy = H * 0.78;
+    ctx.globalAlpha = 0.15;
+    ctx.strokeStyle = C.dimWhite;
+    ctx.lineWidth = 2;
+
+    // Up
+    ctx.beginPath(); ctx.moveTo(cx, cy - 50); ctx.lineTo(cx - 15, cy - 25); ctx.lineTo(cx + 15, cy - 25); ctx.closePath(); ctx.stroke();
+    // Down
+    ctx.beginPath(); ctx.moveTo(cx, cy + 50); ctx.lineTo(cx - 15, cy + 25); ctx.lineTo(cx + 15, cy + 25); ctx.closePath(); ctx.stroke();
+    // Left
+    ctx.beginPath(); ctx.moveTo(cx - 50, cy); ctx.lineTo(cx - 25, cy - 15); ctx.lineTo(cx - 25, cy + 15); ctx.closePath(); ctx.stroke();
+    // Right
+    ctx.beginPath(); ctx.moveTo(cx + 50, cy); ctx.lineTo(cx + 25, cy - 15); ctx.lineTo(cx + 25, cy + 15); ctx.closePath(); ctx.stroke();
+
+    // Boost button
+    const bx = W * 0.85, by = H * 0.78;
+    ctx.beginPath(); ctx.arc(bx, by, 35, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 0.2;
+    drawText('BOOST', bx, by, 12, C.orange);
+    ctx.globalAlpha = 1;
+  }
+};
+
+// --- Game Over Screen ---
+let gameOverTimer = 0;
+const drawGameOver = (dt) => {
+  gameOverTimer += dt;
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+  updateStars(dt, 20);
+  drawStars();
+  particles = particles.filter(p => p.update(dt));
+  particles.forEach(p => p.draw());
+
+  const cx = W / 2;
+
+  drawTextBold('JOURNEY OVER', cx, H * 0.15, Math.min(36, W * 0.06), C.red);
+
+  const creditMult = 1 + save.prestigeLevel * 0.1;
+
+  let y = H * 0.28;
+  const lineH = 26;
+  drawText(`Distance: ${Math.floor(distance)} km`, cx, y, 16, C.dimWhite); y += lineH;
+  drawText(`Score: ${runScore}`, cx, y, 16, C.gold); y += lineH;
+  drawText(`Credits Earned: ${Math.floor(runCredits * creditMult)}`, cx, y, 16, C.gold); y += lineH;
+  if (save.prestigeLevel > 0) {
+    drawText(`(x${creditMult.toFixed(1)} prestige bonus)`, cx, y, 12, C.purple); y += lineH;
+  }
+  drawText(`Asteroids Dodged: ${asteroidsThisRun}`, cx, y, 14, C.dimWhite); y += lineH;
+  drawText(`Wormholes Used: ${wormholesThisRun}`, cx, y, 14, C.dimWhite); y += lineH * 1.5;
+
+  if (runScore >= save.highScore) {
+    drawTextBold('NEW HIGH SCORE!', cx, y, 20, C.gold);
+    y += lineH * 1.5;
+  }
+
+  drawText(`Total Credits: ${save.credits}`, cx, y, 14, C.gold); y += lineH;
+  drawText(`Best Distance: ${Math.floor(save.highDist)} km`, cx, y, 14, C.dimWhite); y += lineH;
+  drawText(`Total Runs: ${save.totalRuns}`, cx, y, 14, C.dimWhite); y += lineH * 1.5;
+
+  // Notifications (achievements)
+  if (activeNotification) {
+    const na = Math.min(1, activeNotification.timer * 2);
+    ctx.globalAlpha = na;
+    drawTextBold(activeNotification.text, cx, y, 16, activeNotification.color);
+    ctx.globalAlpha = 1;
+    activeNotification.timer -= dt;
+    if (activeNotification.timer <= 0) activeNotification = null;
+    y += lineH;
+  } else if (notificationQueue.length > 0) {
+    activeNotification = notificationQueue.shift();
+  }
+
+  const bw = Math.min(200, W * 0.45);
+  const bh = 44;
+  if (gameOverTimer > 1) {
+    if (drawButton('FLY AGAIN', cx - bw/2, H * 0.78, bw, bh, C.green)) {
+      initGame(); gameState = STATE.PLAYING; gameOverTimer = 0; playSound('boost');
+    }
+    if (drawButton('HANGAR', cx - bw/2, H * 0.78 + bh + 12, bw, bh, C.cyan)) {
+      gameState = STATE.HANGAR; gameOverTimer = 0;
+    }
+    if (drawButton('MENU', cx - bw/2, H * 0.78 + (bh + 12) * 2, bw, bh, C.dimWhite)) {
+      gameState = STATE.TITLE; gameOverTimer = 0;
+    }
+  }
+};
+
+// --- Main Loop ---
+let lastTime = 0;
+const loop = (time) => {
+  const dt = Math.min(0.05, (time - lastTime) / 1000);
+  lastTime = time;
+
+  switch (gameState) {
+    case STATE.TITLE: drawTitle(dt); break;
+    case STATE.HANGAR: drawHangar(dt); break;
+    case STATE.UPGRADES: drawUpgrades(dt); break;
+    case STATE.ACHIEVEMENTS: drawAchievements(dt); break;
+    case STATE.PLAYING: updateGame(dt); drawGame(dt); break;
+    case STATE.GAMEOVER: drawGameOver(dt); break;
+    case STATE.PRESTIGE: drawPrestige(dt); break;
+  }
+
+  clicked = false;
+  requestAnimationFrame(loop);
+};
+
+requestAnimationFrame(loop);
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

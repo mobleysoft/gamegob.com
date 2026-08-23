@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Serpent's Coil">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Serpent's Coil</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0f; overflow: hidden; touch-action: none; user-select: none; font-family: 'Courier New', monospace; }
+canvas { display: block; margin: auto; }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+'use strict';
+
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+
+// ═══════════════════════════════════════════════════
+// CONSTANTS & CONFIG
+// ═══════════════════════════════════════════════════
+const COLORS = {
+  bg: '#0a0a0f',
+  bgGrid: '#0f0f18',
+  gold: '#f0b800',
+  green: '#00ff88',
+  red: '#ff3355',
+  blue: '#3388ff',
+  purple: '#aa55ff',
+  cyan: '#00ddff',
+  white: '#eeeeff',
+  dim: '#334455',
+  darkGold: '#805500',
+  snakeHead: '#00ff88',
+  snakeBody: '#00cc66',
+  snakeTail: '#009944',
+  food: '#f0b800',
+  poison: '#ff3355',
+  magnet: '#aa55ff',
+  ghost: '#3388ff',
+  multi: '#00ddff',
+  wallPass: '#3388ff55',
+};
+
+const GRID = 20;
+const BASE_SPEED = 8; // moves per second
+const MAX_SPEED = 25;
+
+// ═══════════════════════════════════════════════════
+// AUDIO ENGINE
+// ═══════════════════════════════════════════════════
+let audioCtx = null;
+const ensureAudio = () => { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); };
+
+const playSound = (type) => {
+  ensureAudio();
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  switch(type) {
+    case 'eat':
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now); osc.stop(now + 0.15);
+      break;
+    case 'die':
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(50, now + 0.5);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc.start(now); osc.stop(now + 0.5);
+      break;
+    case 'powerup':
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523, now);
+      osc.frequency.setValueAtTime(659, now + 0.08);
+      osc.frequency.setValueAtTime(784, now + 0.16);
+      osc.frequency.setValueAtTime(1047, now + 0.24);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.start(now); osc.stop(now + 0.35);
+      break;
+    case 'buy':
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.exponentialRampToValueAtTime(900, now + 0.1);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
+      break;
+    case 'prestige':
+      osc.type = 'sine';
+      [523,659,784,1047,1319].forEach((f,i) => {
+        osc.frequency.setValueAtTime(f, now + i*0.1);
+      });
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      osc.start(now); osc.stop(now + 0.6);
+      break;
+    case 'tick':
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1200, now);
+      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+      osc.start(now); osc.stop(now + 0.03);
+      break;
+    case 'split':
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(200, now);
+      osc.frequency.exponentialRampToValueAtTime(800, now + 0.15);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
+      break;
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// SAVE/LOAD SYSTEM
+// ═══════════════════════════════════════════════════
+const SAVE_KEY = 'serpents_coil_v2';
+
+const defaultSave = () => ({
+  coils: 0,
+  totalCoils: 0,
+  highScore: 0,
+  bestLength: 0,
+  totalRuns: 0,
+  totalFood: 0,
+  prestigeLevel: 0,
+  prestigeMultiplier: 1,
+  upgrades: {
+    speed: 0,
+    wallPass: 0,
+    split: 0,
+    magnet: 0,
+    coilBonus: 0,
+    startLength: 0,
+    shieldChance: 0,
+    foodValue: 0,
+  },
+  achievements: [],
+  dailyBest: 0,
+  dailyDate: '',
+  unlocks: {
+    poison: false,
+    magnetFood: false,
+    ghostMode: false,
+    multiFood: false,
+  },
+});
+
+let save = defaultSave();
+
+const loadSave = () => {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) {
+      const loaded = JSON.parse(raw);
+      save = { ...defaultSave(), ...loaded, upgrades: { ...defaultSave().upgrades, ...(loaded.upgrades||{}) }, unlocks: { ...defaultSave().unlocks, ...(loaded.unlocks||{}) } };
+    }
+  } catch(e) { save = defaultSave(); }
+  const today = new Date().toISOString().slice(0,10);
+  if (save.dailyDate !== today) { save.dailyBest = 0; save.dailyDate = today; }
+};
+
+const writeSave = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch(e) {} };
+
+// ═══════════════════════════════════════════════════
+// UPGRADE DEFINITIONS
+// ═══════════════════════════════════════════════════
+const UPGRADES = {
+  speed: { name: 'Slither Speed', desc: 'Move faster', icon: '⚡', maxLevel: 10, baseCost: 15, costMult: 1.8, effect: (l) => `+${l*8}% speed` },
+  wallPass: { name: 'Phase Scales', desc: 'Pass through walls', icon: '👻', maxLevel: 3, baseCost: 100, costMult: 3, effect: (l) => l >= 3 ? 'Full phase' : `${l}/3 walls` },
+  split: { name: 'Hydra Gene', desc: 'Split into 2 snakes', icon: '🐍', maxLevel: 3, baseCost: 150, costMult: 2.5, effect: (l) => `${l} split(s)/run` },
+  magnet: { name: 'Prey Sense', desc: 'Attract nearby food', icon: '🧲', maxLevel: 5, baseCost: 50, costMult: 2, effect: (l) => `${l*2} tile radius` },
+  coilBonus: { name: 'Golden Scales', desc: 'Earn more coils', icon: '💰', maxLevel: 10, baseCost: 25, costMult: 1.6, effect: (l) => `+${l*15}% coils` },
+  startLength: { name: 'Ancient Serpent', desc: 'Start longer', icon: '📏', maxLevel: 5, baseCost: 40, costMult: 2, effect: (l) => `Start +${l*2} length` },
+  shieldChance: { name: 'Iron Hide', desc: 'Survive one hit', icon: '🛡️', maxLevel: 3, baseCost: 200, costMult: 2.5, effect: (l) => `${l*15}% shield` },
+  foodValue: { name: 'Glutton', desc: 'Food worth more', icon: '🍖', maxLevel: 8, baseCost: 30, costMult: 1.7, effect: (l) => `+${l} per food` },
+};
+
+const getUpgradeCost = (key) => {
+  const u = UPGRADES[key];
+  return Math.floor(u.baseCost * Math.pow(u.costMult, save.upgrades[key]));
+};
+
+// ═══════════════════════════════════════════════════
+// ACHIEVEMENTS
+// ═══════════════════════════════════════════════════
+const ACHIEVEMENTS = [
+  { id: 'first_run', name: 'First Slither', desc: 'Complete your first run', check: () => save.totalRuns >= 1 },
+  { id: 'score_100', name: 'Century', desc: 'Score 100 in a single run', check: () => save.highScore >= 100 },
+  { id: 'score_500', name: 'Serpent Lord', desc: 'Score 500 in a single run', check: () => save.highScore >= 500 },
+  { id: 'length_20', name: 'Long Boi', desc: 'Reach length 20', check: () => save.bestLength >= 20 },
+  { id: 'length_50', name: 'Ouroboros', desc: 'Reach length 50', check: () => save.bestLength >= 50 },
+  { id: 'coils_1000', name: 'Hoarder', desc: 'Earn 1000 total coils', check: () => save.totalCoils >= 1000 },
+  { id: 'prestige_1', name: 'Ascension', desc: 'Prestige for the first time', check: () => save.prestigeLevel >= 1 },
+  { id: 'prestige_5', name: 'Eternal Serpent', desc: 'Reach prestige 5', check: () => save.prestigeLevel >= 5 },
+  { id: 'food_500', name: 'Feast', desc: 'Eat 500 total food', check: () => save.totalFood >= 500 },
+  { id: 'runs_50', name: 'Persistent', desc: 'Complete 50 runs', check: () => save.totalRuns >= 50 },
+  { id: 'max_upgrade', name: 'Maxed Out', desc: 'Max any upgrade', check: () => Object.keys(UPGRADES).some(k => save.upgrades[k] >= UPGRADES[k].maxLevel) },
+  { id: 'all_unlocks', name: 'Completionist', desc: 'Unlock all food types', check: () => Object.values(save.unlocks).every(v => v) },
+];
+
+const checkAchievements = () => {
+  let newOnes = [];
+  for (const a of ACHIEVEMENTS) {
+    if (!save.achievements.includes(a.id) && a.check()) {
+      save.achievements.push(a.id);
+      newOnes.push(a);
+    }
+  }
+  return newOnes;
+};
+
+// ═══════════════════════════════════════════════════
+// PARTICLES
+// ═══════════════════════════════════════════════════
+let particles = [];
+const spawnParticles = (x, y, color, count=8, speed=3) => {
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed * (0.5 + Math.random()),
+      vy: Math.sin(angle) * speed * (0.5 + Math.random()),
+      life: 1,
+      decay: 0.02 + Math.random() * 0.03,
+      size: 2 + Math.random() * 4,
+      color,
+    });
+  }
+};
+
+const updateParticles = (dt) => {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx * dt * 60;
+    p.y += p.vy * dt * 60;
+    p.life -= p.decay * dt * 60;
+    p.vx *= 0.96;
+    p.vy *= 0.96;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+};
+
+const drawParticles = () => {
+  for (const p of particles) {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
+};
+
+// ═══════════════════════════════════════════════════
+// SCREEN SHAKE
+// ═══════════════════════════════════════════════════
+let shakeAmount = 0;
+let shakeTimer = 0;
+const triggerShake = (amount, duration) => { shakeAmount = amount; shakeTimer = duration; };
+
+// ═══════════════════════════════════════════════════
+// FLOATING TEXT
+// ═══════════════════════════════════════════════════
+let floatingTexts = [];
+const spawnFloatingText = (x, y, text, color, size=14) => {
+  floatingTexts.push({ x, y, text, color, size, life: 1, vy: -1.5 });
+};
+
+const updateFloatingTexts = (dt) => {
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    const ft = floatingTexts[i];
+    ft.y += ft.vy * dt * 60;
+    ft.life -= 0.025 * dt * 60;
+    if (ft.life <= 0) floatingTexts.splice(i, 1);
+  }
+};
+
+const drawFloatingTexts = () => {
+  for (const ft of floatingTexts) {
+    ctx.globalAlpha = ft.life;
+    ctx.fillStyle = ft.color;
+    ctx.font = `bold ${ft.size}px 'Courier New'`;
+    ctx.textAlign = 'center';
+    ctx.fillText(ft.text, ft.x, ft.y);
+  }
+  ctx.globalAlpha = 1;
+};
+
+// ═══════════════════════════════════════════════════
+// NOTIFICATION SYSTEM
+// ═══════════════════════════════════════════════════
+let notifications = [];
+const notify = (text, color=COLORS.gold, duration=3) => {
+  notifications.push({ text, color, life: duration, maxLife: duration });
+};
+
+const updateNotifications = (dt) => {
+  for (let i = notifications.length - 1; i >= 0; i--) {
+    notifications[i].life -= dt;
+    if (notifications[i].life <= 0) notifications.splice(i, 1);
+  }
+};
+
+const drawNotifications = (w) => {
+  let y = 60;
+  for (const n of notifications) {
+    const alpha = Math.min(1, n.life / 0.5, (n.maxLife - (n.maxLife - n.life)) > n.maxLife - 0.3 ? 1 : n.life / 0.5);
+    ctx.globalAlpha = Math.min(1, n.life * 2);
+    ctx.fillStyle = n.color;
+    ctx.font = 'bold 16px "Courier New"';
+    ctx.textAlign = 'center';
+    ctx.fillText(n.text, w / 2, y);
+    y += 24;
+  }
+  ctx.globalAlpha = 1;
+};
+
+// ═══════════════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════════════
+const STATES = { TITLE: 0, SHOP: 1, PLAYING: 2, GAMEOVER: 3, PRESTIGE: 4, ACHIEVEMENTS: 5 };
+let state = STATES.TITLE;
+let canvasW, canvasH, gridW, gridH, cellSize, offsetX, offsetY;
+let gameTime = 0;
+let titlePulse = 0;
+
+// Game vars
+let snakes = []; // array of snake objects for split mechanic
+let foods = [];
+let score = 0;
+let coilsEarned = 0;
+let moveTimer = 0;
+let wallPassesLeft = 0;
+let splitsLeft = 0;
+let shielded = false;
+let magnetRadius = 0;
+let currentSpeed = BASE_SPEED;
+let difficultyTimer = 0;
+let comboCount = 0;
+let comboTimer = 0;
+let runTime = 0;
+let evolutionLevel = 0;
+let ghostModeTimer = 0;
+
+// Input
+let inputDir = { x: 0, y: 0 };
+let inputQueue = [];
+let touchStartX = 0, touchStartY = 0;
+let keys = {};
+
+// Shop
+let shopScroll = 0;
+let shopSelected = 0;
+const shopKeys = Object.keys(UPGRADES);
+
+// Achievement notification queue
+let achievementQueue = [];
+let achievementDisplay = null;
+let achievementDisplayTimer = 0;
+
+// ═══════════════════════════════════════════════════
+// RESIZE
+// ═══════════════════════════════════════════════════
+const resize = () => {
+  canvasW = window.innerWidth;
+  canvasH = window.innerHeight;
+  canvas.width = canvasW;
+  canvas.height = canvasH;
+
+  const maxGrid = Math.min(canvasW - 20, canvasH - 100);
+  cellSize = Math.floor(maxGrid / GRID);
+  gridW = GRID;
+  gridH = GRID;
+  offsetX = Math.floor((canvasW - gridW * cellSize) / 2);
+  offsetY = Math.floor((canvasH - gridH * cellSize) / 2) + 20;
+};
+
+window.addEventListener('resize', resize);
+resize();
+
+// ═══════════════════════════════════════════════════
+// GRID HELPERS
+// ═══════════════════════════════════════════════════
+const gridToPixel = (gx, gy) => ({
+  x: offsetX + gx * cellSize + cellSize / 2,
+  y: offsetY + gy * cellSize + cellSize / 2,
+});
+
+const isOccupied = (x, y) => {
+  for (const s of snakes) {
+    for (const seg of s.body) {
+      if (seg.x === x && seg.y === y) return true;
+    }
+  }
+  return false;
+};
+
+const randomFreeCell = () => {
+  let attempts = 0;
+  while (attempts < 200) {
+    const x = Math.floor(Math.random() * gridW);
+    const y = Math.floor(Math.random() * gridH);
+    if (!isOccupied(x, y) && !foods.some(f => f.x === x && f.y === y)) return { x, y };
+    attempts++;
+  }
+  return { x: Math.floor(Math.random() * gridW), y: Math.floor(Math.random() * gridH) };
+};
+
+// ═══════════════════════════════════════════════════
+// FOOD TYPES
+// ═══════════════════════════════════════════════════
+const FOOD_TYPES = {
+  normal: { color: COLORS.food, value: 1, weight: 60, glyph: '●' },
+  golden: { color: '#ffdd00', value: 3, weight: 15, glyph: '★' },
+  poison: { color: COLORS.poison, value: -1, weight: 0, glyph: '✖', unlockKey: 'poison' },
+  magnetItem: { color: COLORS.magnet, value: 1, weight: 0, glyph: '◎', unlockKey: 'magnetFood', special: 'magnet' },
+  ghost: { color: COLORS.ghost, value: 1, weight: 0, glyph: '◈', unlockKey: 'ghostMode', special: 'ghost' },
+  multi: { color: COLORS.multi, value: 2, weight: 0, glyph: '❖', unlockKey: 'multiFood', special: 'multi' },
+};
+
+const spawnFood = () => {
+  let totalWeight = FOOD_TYPES.normal.weight + FOOD_TYPES.golden.weight;
+  const types = ['normal', 'golden'];
+
+  if (save.unlocks.poison && score > 10) { totalWeight += 12; types.push('poison'); }
+  if (save.unlocks.magnetFood) { totalWeight += 8; types.push('magnetItem'); }
+  if (save.unlocks.ghostMode) { totalWeight += 6; types.push('ghost'); }
+  if (save.unlocks.multiFood) { totalWeight += 10; types.push('multi'); }
+
+  let roll = Math.random() * totalWeight;
+  let chosen = 'normal';
+  let cumul = 0;
+  for (const t of types) {
+    let w = FOOD_TYPES[t].weight;
+    if (t === 'poison') w = 12;
+    else if (t === 'magnetItem') w = 8;
+    else if (t === 'ghost') w = 6;
+    else if (t === 'multi') w = 10;
+    cumul += w;
+    if (roll < cumul) { chosen = t; break; }
+  }
+
+  const pos = randomFreeCell();
+  foods.push({ ...pos, type: chosen, pulse: Math.random() * Math.PI * 2 });
+};
+
+// ═══════════════════════════════════════════════════
+// SNAKE CLASS
+// ═══════════════════════════════════════════════════
+class Snake {
+  constructor(x, y, dir, isClone=false) {
+    this.body = [{ x, y }];
+    this.dir = { ...dir };
+    this.nextDir = { ...dir };
+    this.alive = true;
+    this.isClone = isClone;
+    this.growQueue = 0;
+    this.hue = isClone ? 180 : 140;
+
+    // Add start length
+    const extra = save.upgrades.startLength * 2;
+    for (let i = 0; i < extra; i++) {
+      this.body.push({ x: x - dir.x * (i + 1), y: y - dir.y * (i + 1) });
+    }
+  }
+
+  setDirection(dx, dy) {
+    if (this.body.length > 1) {
+      if (dx === -this.dir.x && dy === -this.dir.y) return;
+    }
+    this.nextDir = { x: dx, y: dy };
+  }
+
+  update() {
+    if (!this.alive) return;
+    this.dir = { ...this.nextDir };
+    const head = this.body[0];
+    let nx = head.x + this.dir.x;
+    let ny = head.y + this.dir.y;
+
+    // Wall handling
+    const hitWall = nx < 0 || nx >= gridW || ny < 0 || ny >= gridH;
+    if (hitWall) {
+      if (save.upgrades.wallPass > 0 && wallPassesLeft > 0) {
+        nx = ((nx % gridW) + gridW) % gridW;
+        ny = ((ny % gridH) + gridH) % gridH;
+        wallPassesLeft--;
+        spawnParticles(gridToPixel(head.x, head.y).x, gridToPixel(head.x, head.y).y, COLORS.blue, 6);
+        spawnFloatingText(gridToPixel(head.x, head.y).x, gridToPixel(head.x, head.y).y, 'PHASE!', COLORS.blue);
+      } else if (ghostModeTimer > 0) {
+        nx = ((nx % gridW) + gridW) % gridW;
+        ny = ((ny % gridH) + gridH) % gridH;
+      } else {
+        this.die(head);
+        return;
+      }
+    }
+
+    // Self collision
+    for (let i = 0; i < this.body.length - 1; i++) {
+      if (this.body[i].x === nx && this.body[i].y === ny) {
+        if (ghostModeTimer > 0) continue;
+        if (shielded && Math.random() < save.upgrades.shieldChance * 0.15) {
+          shielded = false;
+          spawnFloatingText(gridToPixel(nx, ny).x, gridToPixel(nx, ny).y, 'SHIELD!', COLORS.cyan, 18);
+          triggerShake(3, 0.15);
+          continue;
+        }
+        this.die(head);
+        return;
+      }
+    }
+
+    // Other snake collision
+    for (const other of snakes) {
+      if (other === this || !other.alive) continue;
+      for (const seg of other.body) {
+        if (seg.x === nx && seg.y === ny && ghostModeTimer <= 0) {
+          this.die(head);
+          return;
+        }
+      }
+    }
+
+    // Move
+    this.body.unshift({ x: nx, y: ny });
+    if (this.growQueue > 0) {
+      this.growQueue--;
+    } else {
+      this.body.pop();
+    }
+
+    // Food collision
+    for (let i = foods.length - 1; i >= 0; i--) {
+      const f = foods[i];
+      if (f.x === nx && f.y === ny) {
+        this.eatFood(f, i);
+      }
+    }
+  }
+
+  eatFood(f, idx) {
+    const ft = FOOD_TYPES[f.type];
+    const foodVal = ft.value + (ft.value > 0 ? save.upgrades.foodValue : 0);
+    const pp = gridToPixel(f.x, f.y);
+
+    if (f.type === 'poison') {
+      // Shrink
+      for (let j = 0; j < Math.abs(foodVal) && this.body.length > 2; j++) {
+        this.body.pop();
+      }
+      score = Math.max(0, score - 5);
+      triggerShake(6, 0.2);
+      spawnParticles(pp.x, pp.y, COLORS.red, 10, 4);
+      spawnFloatingText(pp.x, pp.y, '-5', COLORS.red, 16);
+      playSound('die');
+    } else {
+      this.growQueue += foodVal;
+      const comboMult = Math.min(comboCount + 1, 5);
+      const pts = foodVal * comboMult * (f.type === 'golden' ? 3 : 1);
+      score += pts;
+      comboCount++;
+      comboTimer = 2;
+
+      spawnParticles(pp.x, pp.y, ft.color, 8, 3);
+      const txt = comboMult > 1 ? `+${pts} x${comboMult}` : `+${pts}`;
+      spawnFloatingText(pp.x, pp.y, txt, ft.color, comboMult > 1 ? 18 : 14);
+      playSound(f.type === 'golden' ? 'powerup' : 'eat');
+
+      // Special effects
+      if (ft.special === 'magnet') {
+        magnetRadius = Math.max(magnetRadius, 5);
+        notify('MAGNET BOOST!', COLORS.magnet);
+      }
+      if (ft.special === 'ghost') {
+        ghostModeTimer = 5;
+        notify('GHOST MODE!', COLORS.blue);
+      }
+      if (ft.special === 'multi') {
+        // Spawn 3 extra food
+        for (let j = 0; j < 3; j++) spawnFood();
+        notify('FOOD FRENZY!', COLORS.cyan);
+      }
+
+      save.totalFood++;
+    }
+
+    foods.splice(idx, 1);
+    if (foods.length < 2) spawnFood();
+    if (Math.random() < 0.3) spawnFood();
+  }
+
+  die(head) {
+    this.alive = false;
+    const pp = gridToPixel(head.x, head.y);
+    spawnParticles(pp.x, pp.y, COLORS.red, 20, 5);
+    triggerShake(10, 0.3);
+    playSound('die');
+
+    // Explode body particles
+    for (let i = 0; i < this.body.length; i += 2) {
+      const bp = gridToPixel(this.body[i].x, this.body[i].y);
+      spawnParticles(bp.x, bp.y, COLORS.green, 3, 2);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// MAGNET LOGIC
+// ═══════════════════════════════════════════════════
+const updateMagnet = () => {
+  const radius = save.upgrades.magnet * 2 + (magnetRadius > 0 ? 3 : 0);
+  if (radius <= 0) return;
+  if (snakes.length === 0 || !snakes[0].alive) return;
+
+  const head = snakes[0].body[0];
+  for (const f of foods) {
+    if (f.type === 'poison') continue;
+    const dx = head.x - f.x;
+    const dy = head.y - f.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist <= radius && dist > 0) {
+      f.x += Math.sign(dx);
+      f.y += Math.sign(dy);
+      f.x = Math.max(0, Math.min(gridW-1, f.x));
+      f.y = Math.max(0, Math.min(gridH-1, f.y));
+    }
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// INIT GAME
+// ═══════════════════════════════════════════════════
+const initGame = () => {
+  const cx = Math.floor(gridW / 2);
+  const cy = Math.floor(gridH / 2);
+  snakes = [new Snake(cx, cy, { x: 1, y: 0 })];
+  foods = [];
+  score = 0;
+  coilsEarned = 0;
+  moveTimer = 0;
+  comboCount = 0;
+  comboTimer = 0;
+  runTime = 0;
+  evolutionLevel = 0;
+  difficultyTimer = 0;
+  ghostModeTimer = 0;
+  magnetRadius = 0;
+  inputQueue = [];
+  particles = [];
+  floatingTexts = [];
+  notifications = [];
+  shielded = save.upgrades.shieldChance > 0;
+
+  currentSpeed = BASE_SPEED + save.upgrades.speed * 0.8;
+  wallPassesLeft = save.upgrades.wallPass * 5;
+  splitsLeft = save.upgrades.split;
+
+  for (let i = 0; i < 3; i++) spawnFood();
+
+  // Unlock checks
+  if (save.totalRuns >= 5 && !save.unlocks.poison) {
+    save.unlocks.poison = true;
+    notify('UNLOCKED: Poison food spawns!', COLORS.red, 4);
+  }
+  if (save.totalRuns >= 10 && !save.unlocks.magnetFood) {
+    save.unlocks.magnetFood = true;
+    notify('UNLOCKED: Magnet pickups!', COLORS.magnet, 4);
+  }
+  if (save.totalRuns >= 20 && !save.unlocks.ghostMode) {
+    save.unlocks.ghostMode = true;
+    notify('UNLOCKED: Ghost mode pickups!', COLORS.blue, 4);
+  }
+  if (save.totalRuns >= 30 && !save.unlocks.multiFood) {
+    save.unlocks.multiFood = true;
+    notify('UNLOCKED: Multi-food pickups!', COLORS.cyan, 4);
+  }
+
+  state = STATES.PLAYING;
+};
+
+// ═══════════════════════════════════════════════════
+// END RUN
+// ═══════════════════════════════════════════════════
+const endRun = () => {
+  const baseCoils = Math.floor(score * 0.5 + snakes[0].body.length * 0.3);
+  const bonusMult = 1 + save.upgrades.coilBonus * 0.15;
+  const prestigeMult = save.prestigeMultiplier;
+  coilsEarned = Math.floor(baseCoils * bonusMult * prestigeMult);
+
+  save.coils += coilsEarned;
+  save.totalCoils += coilsEarned;
+  save.totalRuns++;
+  if (score > save.highScore) save.highScore = score;
+  const maxLen = Math.max(...snakes.map(s => s.body.length));
+  if (maxLen > save.bestLength) save.bestLength = maxLen;
+  if (score > save.dailyBest) save.dailyBest = score;
+
+  // Check achievements
+  const newAch = checkAchievements();
+  for (const a of newAch) {
+    achievementQueue.push(a);
+  }
+
+  writeSave();
+  state = STATES.GAMEOVER;
+};
+
+// ═══════════════════════════════════════════════════
+// PRESTIGE
+// ═══════════════════════════════════════════════════
+const canPrestige = () => save.totalCoils >= 500 * Math.pow(2, save.prestigeLevel);
+
+const doPrestige = () => {
+  save.prestigeLevel++;
+  save.prestigeMultiplier = 1 + save.prestigeLevel * 0.25;
+  save.coils = 0;
+  save.upgrades = { ...defaultSave().upgrades };
+  playSound('prestige');
+  notify(`PRESTIGE ${save.prestigeLevel}! x${save.prestigeMultiplier.toFixed(2)} multiplier`, COLORS.purple, 5);
+  writeSave();
+  state = STATES.SHOP;
+};
+
+// ═══════════════════════════════════════════════════
+// INPUT
+// ═══════════════════════════════════════════════════
+window.addEventListener('keydown', (e) => {
+  keys[e.key] = true;
+  if (state === STATES.PLAYING) {
+    const dirMap = {
+      'ArrowUp': { x: 0, y: -1 }, 'w': { x: 0, y: -1 }, 'W': { x: 0, y: -1 },
+      'ArrowDown': { x: 0, y: 1 }, 's': { x: 0, y: 1 }, 'S': { x: 0, y: 1 },
+      'ArrowLeft': { x: -1, y: 0 }, 'a': { x: -1, y: 0 }, 'A': { x: -1, y: 0 },
+      'ArrowRight': { x: 1, y: 0 }, 'd': { x: 1, y: 0 }, 'D': { x: 1, y: 0 },
+    };
+    if (dirMap[e.key]) {
+      inputQueue.push(dirMap[e.key]);
+      e.preventDefault();
+    }
+    if ((e.key === ' ' || e.key === 'f' || e.key === 'F') && splitsLeft > 0) {
+      performSplit();
+      e.preventDefault();
+    }
+  } else if (state === STATES.TITLE) {
+    if (e.key === 'Enter' || e.key === ' ') { state = STATES.SHOP; playSound('tick'); }
+  } else if (state === STATES.SHOP) {
+    if (e.key === 'ArrowUp' || e.key === 'w') { shopSelected = Math.max(0, shopSelected - 1); playSound('tick'); }
+    if (e.key === 'ArrowDown' || e.key === 's') { shopSelected = Math.min(shopKeys.length - 1, shopSelected + 1); playSound('tick'); }
+    if (e.key === 'Enter' || e.key === ' ') { buyUpgrade(shopKeys[shopSelected]); }
+    if (e.key === 'p' || e.key === 'P') { if (canPrestige()) { state = STATES.PRESTIGE; } }
+    if (e.key === 'Escape' || e.key === 'g' || e.key === 'G') { initGame(); }
+    if (e.key === 'a' || e.key === 'A') { state = STATES.ACHIEVEMENTS; }
+  } else if (state === STATES.GAMEOVER) {
+    if (e.key === 'Enter' || e.key === ' ') { state = STATES.SHOP; }
+  } else if (state === STATES.PRESTIGE) {
+    if (e.key === 'y' || e.key === 'Y') { doPrestige(); }
+    if (e.key === 'n' || e.key === 'N' || e.key === 'Escape') { state = STATES.SHOP; }
+  } else if (state === STATES.ACHIEVEMENTS) {
+    if (e.key === 'Escape' || e.key === 'Backspace') { state = STATES.SHOP; }
+  }
+});
+
+window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+
+// Touch
+let touchId = null;
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  ensureAudio();
+  const t = e.touches[0];
+  touchStartX = t.clientX;
+  touchStartY = t.clientY;
+  touchId = t.identifier;
+
+  if (state === STATES.TITLE) { state = STATES.SHOP; playSound('tick'); return; }
+  if (state === STATES.GAMEOVER) { state = STATES.SHOP; return; }
+  if (state === STATES.ACHIEVEMENTS) { state = STATES.SHOP; return; }
+  if (state === STATES.PRESTIGE) {
+    if (t.clientY < canvasH / 2) doPrestige();
+    else state = STATES.SHOP;
+    return;
+  }
+  if (state === STATES.SHOP) {
+    handleShopTouch(t.clientX, t.clientY);
+    return;
+  }
+
+  // Split on double-tap right side
+  if (state === STATES.PLAYING && t.clientX > canvasW * 0.8 && splitsLeft > 0) {
+    performSplit();
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (state !== STATES.PLAYING) return;
+  for (const t of e.changedTouches) {
+    if (t.identifier === touchId) {
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+      const threshold = 20;
+      if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+          inputQueue.push({ x: dx > 0 ? 1 : -1, y: 0 });
+        } else {
+          inputQueue.push({ x: 0, y: dy > 0 ? 1 : -1 });
+        }
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+      }
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => { e.preventDefault(); }, { passive: false });
+
+// Mouse click for shop
+canvas.addEventListener('click', (e) => {
+  ensureAudio();
+  if (state === STATES.TITLE) { state = STATES.SHOP; playSound('tick'); return; }
+  if (state === STATES.GAMEOVER) { state = STATES.SHOP; return; }
+  if (state === STATES.ACHIEVEMENTS) { state = STATES.SHOP; return; }
+  if (state === STATES.PRESTIGE) {
+    if (e.clientY < canvasH / 2) doPrestige();
+    else state = STATES.SHOP;
+    return;
+  }
+  if (state === STATES.SHOP) {
+    handleShopTouch(e.clientX, e.clientY);
+  }
+});
+
+const handleShopTouch = (tx, ty) => {
+  // Check each upgrade button area
+  const startY = 130;
+  const rowH = 52;
+  for (let i = 0; i < shopKeys.length; i++) {
+    const by = startY + i * rowH;
+    if (ty >= by && ty < by + rowH - 4) {
+      shopSelected = i;
+      buyUpgrade(shopKeys[i]);
+      return;
+    }
+  }
+  // Bottom buttons
+  if (ty > canvasH - 90) {
+    if (tx < canvasW / 3) {
+      if (canPrestige()) state = STATES.PRESTIGE;
+    } else if (tx < canvasW * 2/3) {
+      state = STATES.ACHIEVEMENTS;
+    } else {
+      initGame();
+    }
+  }
+};
+
+const buyUpgrade = (key) => {
+  const cost = getUpgradeCost(key);
+  if (save.upgrades[key] >= UPGRADES[key].maxLevel) { return; }
+  if (save.coils < cost) { return; }
+  save.coils -= cost;
+  save.upgrades[key]++;
+  playSound('buy');
+  writeSave();
+};
+
+const performSplit = () => {
+  if (splitsLeft <= 0) return;
+  if (!snakes[0] || !snakes[0].alive) return;
+  splitsLeft--;
+
+  const main = snakes[0];
+  const head = main.body[0];
+  // Clone goes perpendicular
+  const cloneDir = { x: -main.dir.y, y: main.dir.x };
+  const clone = new Snake(head.x, head.y, cloneDir, true);
+  // Give clone half the body
+  const halfLen = Math.floor(main.body.length / 3);
+  for (let i = 0; i < halfLen && main.body.length > 3; i++) {
+    main.body.pop();
+  }
+  clone.growQueue = halfLen;
+  snakes.push(clone);
+  playSound('split');
+  spawnParticles(gridToPixel(head.x, head.y).x, gridToPixel(head.x, head.y).y, COLORS.cyan, 15, 4);
+  notify('SPLIT!', COLORS.cyan);
+};
+
+// ═══════════════════════════════════════════════════
+// EVOLUTION SYSTEM
+// ═══════════════════════════════════════════════════
+const EVOLUTIONS = [
+  { at: 10, name: 'Hatchling', color: '#44ff66' },
+  { at: 25, name: 'Serpent', color: '#33ddaa' },
+  { at: 50, name: 'Wyrm', color: '#22bbff' },
+  { at: 80, name: 'Drake', color: '#aa55ff' },
+  { at: 120, name: 'Leviathan', color: '#ff4488' },
+  { at: 200, name: 'Elder Dragon', color: '#ffaa00' },
+];
+
+const checkEvolution = () => {
+  for (let i = EVOLUTIONS.length - 1; i >= 0; i--) {
+    if (score >= EVOLUTIONS[i].at && evolutionLevel < i + 1) {
+      evolutionLevel = i + 1;
+      const evo = EVOLUTIONS[i];
+      notify(`EVOLVED: ${evo.name}!`, evo.color, 3);
+      playSound('powerup');
+      snakes[0].hue = parseInt(evo.color.slice(1,3), 16);
+      triggerShake(5, 0.2);
+      spawnParticles(canvasW/2, canvasH/2, evo.color, 30, 6);
+      // Bonus on evolution
+      for (let j = 0; j < 2; j++) spawnFood();
+    }
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// UPDATE
+// ═══════════════════════════════════════════════════
+let lastTime = performance.now();
+
+const update = (now) => {
+  const dt = Math.min((now - lastTime) / 1000, 0.1);
+  lastTime = now;
+  gameTime += dt;
+  titlePulse += dt * 2;
+
+  // Shake
+  if (shakeTimer > 0) {
+    shakeTimer -= dt;
+    if (shakeTimer <= 0) shakeAmount = 0;
+  }
+
+  updateParticles(dt);
+  updateFloatingTexts(dt);
+  updateNotifications(dt);
+
+  // Achievement display
+  if (achievementDisplay) {
+    achievementDisplayTimer -= dt;
+    if (achievementDisplayTimer <= 0) achievementDisplay = null;
+  }
+  if (!achievementDisplay && achievementQueue.length > 0) {
+    achievementDisplay = achievementQueue.shift();
+    achievementDisplayTimer = 3;
+  }
+
+  if (state === STATES.PLAYING) {
+    runTime += dt;
+    difficultyTimer += dt;
+
+    // Ramp difficulty
+    if (difficultyTimer > 15) {
+      difficultyTimer = 0;
+      currentSpeed = Math.min(MAX_SPEED, currentSpeed + 0.5);
+    }
+
+    // Combo decay
+    if (comboTimer > 0) {
+      comboTimer -= dt;
+      if (comboTimer <= 0) comboCount = 0;
+    }
+
+    // Ghost timer
+    if (ghostModeTimer > 0) ghostModeTimer -= dt;
+
+    // Magnet boost decay
+    if (magnetRadius > 0) {
+      magnetRadius -= dt * 0.5;
+      if (magnetRadius < 0) magnetRadius = 0;
+    }
+
+    // Move
+    moveTimer += dt * currentSpeed;
+    while (moveTimer >= 1) {
+      moveTimer -= 1;
+
+      // Process input
+      if (inputQueue.length > 0) {
+        const dir = inputQueue.shift();
+        snakes[0].setDirection(dir.x, dir.y);
+      }
+
+      // Update magnet
+      updateMagnet();
+
+      // Move all snakes
+      for (const s of snakes) {
+        s.update();
+      }
+
+      // Clone snakes just follow in the same direction as main
+      for (let i = 1; i < snakes.length; i++) {
+        if (snakes[i].alive && snakes[0].alive) {
+          // AI for clones: move toward nearest food
+          const head = snakes[i].body[0];
+          let nearest = null;
+          let nearDist = Infinity;
+          for (const f of foods) {
+            if (f.type === 'poison') continue;
+            const d = Math.abs(f.x - head.x) + Math.abs(f.y - head.y);
+            if (d < nearDist) { nearDist = d; nearest = f; }
+          }
+          if (nearest) {
+            const dx = nearest.x - head.x;
+            const dy = nearest.y - head.y;
+            if (Math.abs(dx) > Math.abs(dy)) {
+              snakes[i].setDirection(Math.sign(dx), 0);
+            } else {
+              snakes[i].setDirection(0, Math.sign(dy));
+            }
+          }
+        }
+      }
+
+      // Evolution check
+      checkEvolution();
+
+      // Spawn extra food periodically
+      if (foods.length < 2 + Math.floor(runTime / 30)) spawnFood();
+    }
+
+    // Check all dead
+    const anyAlive = snakes.some(s => s.alive);
+    if (!anyAlive) endRun();
+  }
+
+  draw();
+  requestAnimationFrame(update);
+};
+
+// ═══════════════════════════════════════════════════
+// DRAW
+// ═══════════════════════════════════════════════════
+const draw = () => {
+  ctx.save();
+
+  // Screen shake
+  if (shakeTimer > 0) {
+    const sx = (Math.random() - 0.5) * shakeAmount * 2;
+    const sy = (Math.random() - 0.5) * shakeAmount * 2;
+    ctx.translate(sx, sy);
+  }
+
+  ctx.fillStyle = COLORS.bg;
+  ctx.fillRect(-20, -20, canvasW + 40, canvasH + 40);
+
+  switch(state) {
+    case STATES.TITLE: drawTitle(); break;
+    case STATES.SHOP: drawShop(); break;
+    case STATES.PLAYING: drawGame(); break;
+    case STATES.GAMEOVER: drawGameOver(); break;
+    case STATES.PRESTIGE: drawPrestige(); break;
+    case STATES.ACHIEVEMENTS: drawAchievements(); break;
+  }
+
+  // Achievement popup
+  if (achievementDisplay) {
+    const alpha = Math.min(1, achievementDisplayTimer, (3 - (3 - achievementDisplayTimer)));
+    ctx.globalAlpha = Math.min(1, achievementDisplayTimer * 2) * Math.min(1, (achievementDisplayTimer));
+    ctx.fillStyle = '#1a1a2f';
+    ctx.strokeStyle = COLORS.gold;
+    ctx.lineWidth = 2;
+    const aw = 300, ah = 60;
+    const ax = canvasW/2 - aw/2, ay = 10;
+    ctx.fillRect(ax, ay, aw, ah);
+    ctx.strokeRect(ax, ay, aw, ah);
+    ctx.fillStyle = COLORS.gold;
+    ctx.font = 'bold 14px "Courier New"';
+    ctx.textAlign = 'center';
+    ctx.fillText('ACHIEVEMENT UNLOCKED', canvasW/2, ay + 22);
+    ctx.fillStyle = COLORS.white;
+    ctx.font = '13px "Courier New"';
+    ctx.fillText(achievementDisplay.name, canvasW/2, ay + 42);
+    ctx.globalAlpha = 1;
+  }
+
+  drawNotifications(canvasW);
+  drawParticles();
+  drawFloatingTexts();
+
+  ctx.restore();
+};
+
+// ═══════════════════════════════════════════════════
+// DRAW: TITLE
+// ═══════════════════════════════════════════════════
+const drawTitle = () => {
+  // Animated background snakes
+  const t = gameTime;
+  ctx.strokeStyle = COLORS.green + '15';
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 5; i++) {
+    ctx.beginPath();
+    for (let x = 0; x < canvasW; x += 10) {
+      const y = canvasH/2 + Math.sin(x * 0.01 + t + i * 1.3) * (100 + i * 40) + Math.cos(x * 0.005 + t * 0.7) * 50;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // Title
+  const scale = 1 + Math.sin(titlePulse) * 0.03;
+  ctx.save();
+  ctx.translate(canvasW/2, canvasH * 0.3);
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = `bold ${Math.min(canvasW * 0.08, 56)}px "Courier New"`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = COLORS.gold;
+  ctx.shadowBlur = 20;
+  ctx.fillText("SERPENT'S", 0, -30);
+  ctx.fillText("COIL", 0, 30);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // Subtitle
+  ctx.fillStyle = COLORS.green;
+  ctx.font = `${Math.min(canvasW * 0.035, 20)}px "Courier New"`;
+  ctx.textAlign = 'center';
+  ctx.fillText('Slither. Grow. Evolve.', canvasW/2, canvasH * 0.45);
+
+  // Stats
+  ctx.fillStyle = COLORS.dim;
+  ctx.font = '14px "Courier New"';
+  if (save.highScore > 0) {
+    ctx.fillText(`Best: ${save.highScore} | Runs: ${save.totalRuns} | Prestige: ${save.prestigeLevel}`, canvasW/2, canvasH * 0.55);
+  }
+
+  // Start prompt
+  const blink = Math.sin(gameTime * 4) > 0;
+  if (blink) {
+    ctx.fillStyle = COLORS.white;
+    ctx.font = `bold ${Math.min(canvasW * 0.04, 22)}px "Courier New"`;
+    ctx.fillText('[ PRESS START / TAP ]', canvasW/2, canvasH * 0.7);
+  }
+
+  // Controls hint
+  ctx.fillStyle = COLORS.dim;
+  ctx.font = '12px "Courier New"';
+  ctx.fillText('WASD/Arrows to move | Space to split', canvasW/2, canvasH * 0.85);
+  ctx.fillText('Swipe on mobile | Tap right side to split', canvasW/2, canvasH * 0.89);
+};
+
+// ═══════════════════════════════════════════════════
+// DRAW: SHOP
+// ═══════════════════════════════════════════════════
+const drawShop = () => {
+  // Header
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = 'bold 28px "Courier New"';
+  ctx.textAlign = 'center';
+  ctx.fillText('SERPENT SHOP', canvasW/2, 40);
+
+  // Coils
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = 'bold 20px "Courier New"';
+  ctx.fillText(`Coils: ${save.coils}`, canvasW/2, 72);
+
+  // Prestige info
+  if (save.prestigeLevel > 0) {
+    ctx.fillStyle = COLORS.purple;
+    ctx.font = '14px "Courier New"';
+    ctx.fillText(`Prestige ${save.prestigeLevel} | x${save.prestigeMultiplier.toFixed(2)} multiplier`, canvasW/2, 92);
+  }
+
+  // Upgrades
+  const startY = 115;
+  const rowH = 52;
+  const maxW = Math.min(canvasW - 40, 500);
+  const lx = canvasW/2 - maxW/2;
+
+  for (let i = 0; i < shopKeys.length; i++) {
+    const key = shopKeys[i];
+    const u = UPGRADES[key];
+    const level = save.upgrades[key];
+    const cost = getUpgradeCost(key);
+    const maxed = level >= u.maxLevel;
+    const canBuy = !maxed && save.coils >= cost;
+    const selected = i === shopSelected;
+
+    const y = startY + i * rowH;
+
+    // Background
+    ctx.fillStyle = selected ? '#1a1a3f' : '#0d0d1a';
+    ctx.fillRect(lx, y, maxW, rowH - 4);
+    if (selected) {
+      ctx.strokeStyle = COLORS.gold;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(lx, y, maxW, rowH - 4);
+    }
+
+    // Icon + Name
+    ctx.fillStyle = maxed ? COLORS.green : canBuy ? COLORS.white : COLORS.dim;
+    ctx.font = 'bold 15px "Courier New"';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${u.icon} ${u.name}`, lx + 10, y + 18);
+
+    // Level bar
+    const barX = lx + 10;
+    const barY = y + 26;
+    const barW = maxW * 0.4;
+    const barH = 8;
+    ctx.fillStyle = '#222233';
+    ctx.fillRect(barX, barY, barW, barH);
+    const fill = level / u.maxLevel;
+    ctx.fillStyle = maxed ? COLORS.green : COLORS.gold;
+    ctx.fillRect(barX, barY, barW * fill, barH);
+    ctx.fillStyle = COLORS.dim;
+    ctx.font = '11px "Courier New"';
+    ctx.fillText(`${level}/${u.maxLevel}`, barX + barW + 6, barY + 8);
+
+    // Effect
+    ctx.fillStyle = COLORS.green;
+    ctx.font = '11px "Courier New"';
+    ctx.textAlign = 'left';
+    ctx.fillText(u.effect(level), lx + maxW * 0.55, y + 18);
+
+    // Cost
+    ctx.textAlign = 'right';
+    if (maxed) {
+      ctx.fillStyle = COLORS.green;
+      ctx.fillText('MAXED', lx + maxW - 10, y + 34);
+    } else {
+      ctx.fillStyle = canBuy ? COLORS.gold : COLORS.red;
+      ctx.fillText(`${cost} coils`, lx + maxW - 10, y + 34);
+    }
+  }
+
+  // Bottom buttons
+  const btnY = canvasH - 70;
+  const btnW = Math.min(canvasW / 3 - 20, 160);
+
+  // Prestige button
+  const cp = canPrestige();
+  ctx.fillStyle = cp ? '#2a1a3f' : '#151520';
+  ctx.fillRect(canvasW/6 - btnW/2, btnY, btnW, 40);
+  ctx.strokeStyle = cp ? COLORS.purple : COLORS.dim;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(canvasW/6 - btnW/2, btnY, btnW, 40);
+  ctx.fillStyle = cp ? COLORS.purple : COLORS.dim;
+  ctx.font = 'bold 13px "Courier New"';
+  ctx.textAlign = 'center';
+  ctx.fillText(cp ? '[P] PRESTIGE' : 'Prestige', canvasW/6, btnY + 17);
+  ctx.font = '10px "Courier New"';
+  const pCost = 500 * Math.pow(2, save.prestigeLevel);
+  ctx.fillText(`Need ${pCost} total`, canvasW/6, btnY + 32);
+
+  // Achievements button
+  ctx.fillStyle = '#1a1a2f';
+  ctx.fillRect(canvasW/2 - btnW/2, btnY, btnW, 40);
+  ctx.strokeStyle = COLORS.gold;
+  ctx.strokeRect(canvasW/2 - btnW/2, btnY, btnW, 40);
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = 'bold 13px "Courier New"';
+  ctx.fillText(`[A] ${save.achievements.length}/${ACHIEVEMENTS.length}`, canvasW/2, btnY + 24);
+
+  // Play button
+  ctx.fillStyle = '#1a2f1a';
+  ctx.fillRect(canvasW*5/6 - btnW/2, btnY, btnW, 40);
+  ctx.strokeStyle = COLORS.green;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(canvasW*5/6 - btnW/2, btnY, btnW, 40);
+  ctx.fillStyle = COLORS.green;
+  ctx.font = 'bold 15px "Courier New"';
+  ctx.fillText('[G] PLAY', canvasW*5/6, btnY + 24);
+
+  // Controls hint
+  ctx.fillStyle = COLORS.dim;
+  ctx.font = '11px "Courier New"';
+  ctx.textAlign = 'center';
+  ctx.fillText('↑↓ select | Enter buy | G play | P prestige', canvasW/2, canvasH - 15);
+};
+
+// ═══════════════════════════════════════════════════
+// DRAW: GAME
+// ═══════════════════════════════════════════════════
+const drawGame = () => {
+  // Grid background
+  ctx.fillStyle = COLORS.bgGrid;
+  ctx.fillRect(offsetX, offsetY, gridW * cellSize, gridH * cellSize);
+
+  // Grid lines
+  ctx.strokeStyle = '#151525';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x <= gridW; x++) {
+    ctx.beginPath();
+    ctx.moveTo(offsetX + x * cellSize, offsetY);
+    ctx.lineTo(offsetX + x * cellSize, offsetY + gridH * cellSize);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= gridH; y++) {
+    ctx.beginPath();
+    ctx.moveTo(offsetX, offsetY + y * cellSize);
+    ctx.lineTo(offsetX + gridW * cellSize, offsetY + y * cellSize);
+    ctx.stroke();
+  }
+
+  // Ghost mode overlay
+  if (ghostModeTimer > 0) {
+    ctx.fillStyle = COLORS.blue + '08';
+    ctx.fillRect(offsetX, offsetY, gridW * cellSize, gridH * cellSize);
+    // Pulsing border
+    ctx.strokeStyle = COLORS.blue + (Math.sin(gameTime * 8) > 0 ? '44' : '11');
+    ctx.lineWidth = 3;
+    ctx.strokeRect(offsetX, offsetY, gridW * cellSize, gridH * cellSize);
+  }
+
+  // Wall pass indicator
+  if (wallPassesLeft > 0) {
+    ctx.strokeStyle = COLORS.wallPass;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.strokeRect(offsetX, offsetY, gridW * cellSize, gridH * cellSize);
+    ctx.setLineDash([]);
+  }
+
+  // Magnet range indicator
+  const magRad = save.upgrades.magnet * 2 + (magnetRadius > 0 ? 3 : 0);
+  if (magRad > 0 && snakes[0] && snakes[0].alive) {
+    const head = snakes[0].body[0];
+    const hp = gridToPixel(head.x, head.y);
+    ctx.strokeStyle = COLORS.magnet + '22';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(hp.x, hp.y, magRad * cellSize, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Draw food
+  for (const f of foods) {
+    const ft = FOOD_TYPES[f.type];
+    const p = gridToPixel(f.x, f.y);
+    f.pulse += 0.05;
+    const pulseSz = 1 + Math.sin(f.pulse) * 0.15;
+    const sz = cellSize * 0.7 * pulseSz;
+
+    // Glow
+    ctx.shadowColor = ft.color;
+    ctx.shadowBlur = 8;
+
+    ctx.fillStyle = ft.color;
+    ctx.font = `${Math.floor(sz)}px "Courier New"`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(ft.glyph, p.x, p.y);
+
+    ctx.shadowBlur = 0;
+  }
+
+  // Draw snakes
+  for (const s of snakes) {
+    if (!s.alive) continue;
+    const bodyLen = s.body.length;
+
+    for (let i = bodyLen - 1; i >= 0; i--) {
+      const seg = s.body[i];
+      const p = gridToPixel(seg.x, seg.y);
+      const t = i / bodyLen;
+      const sz = cellSize * (i === 0 ? 0.9 : 0.75 - t * 0.15);
+
+      if (i === 0) {
+        // Head
+        ctx.fillStyle = s.isClone ? COLORS.cyan : (ghostModeTimer > 0 ? COLORS.blue : COLORS.snakeHead);
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.shadowBlur = 10;
+        ctx.fillRect(p.x - sz/2, p.y - sz/2, sz, sz);
+        ctx.shadowBlur = 0;
+
+        // Eyes
+        const edx = s.dir.x * 2;
+        const edy = s.dir.y * 2;
+        ctx.fillStyle = '#000';
+        const eyeSz = sz * 0.2;
+        if (s.dir.x !== 0) {
+          ctx.fillRect(p.x + edx + sz*0.15 - eyeSz/2, p.y - sz*0.2 - eyeSz/2, eyeSz, eyeSz);
+          ctx.fillRect(p.x + edx + sz*0.15 - eyeSz/2, p.y + sz*0.2 - eyeSz/2, eyeSz, eyeSz);
+        } else {
+          ctx.fillRect(p.x - sz*0.2 - eyeSz/2, p.y + edy + sz*0.15 - eyeSz/2, eyeSz, eyeSz);
+          ctx.fillRect(p.x + sz*0.2 - eyeSz/2, p.y + edy + sz*0.15 - eyeSz/2, eyeSz, eyeSz);
+        }
+      } else {
+        // Body gradient
+        const alpha = ghostModeTimer > 0 ? 0.5 : 1;
+        const r = Math.floor(0 + t * 0);
+        const g = Math.floor(255 - t * 120);
+        const b = Math.floor(136 - t * 70);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = s.isClone ? `rgb(0, ${180 - t*80}, ${220 - t*60})` : `rgb(${r}, ${g}, ${b})`;
+        ctx.fillRect(p.x - sz/2, p.y - sz/2, sz, sz);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  // HUD
+  ctx.textAlign = 'left';
+  ctx.fillStyle = COLORS.white;
+  ctx.font = 'bold 18px "Courier New"';
+  ctx.fillText(`Score: ${score}`, 10, 24);
+
+  ctx.textAlign = 'right';
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = '14px "Courier New"';
+  const mainLen = snakes[0] ? snakes[0].body.length : 0;
+  ctx.fillText(`Length: ${mainLen}`, canvasW - 10, 20);
+
+  // Evolution name
+  if (evolutionLevel > 0) {
+    ctx.fillStyle = EVOLUTIONS[evolutionLevel-1].color;
+    ctx.font = 'bold 12px "Courier New"';
+    ctx.textAlign = 'center';
+    ctx.fillText(EVOLUTIONS[evolutionLevel-1].name, canvasW/2, 20);
+  }
+
+  // Combo
+  if (comboCount > 1) {
+    ctx.fillStyle = COLORS.gold;
+    ctx.font = 'bold 14px "Courier New"';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Combo x${Math.min(comboCount, 5)}`, 10, 44);
+  }
+
+  // Abilities
+  let statusY = 44;
+  ctx.textAlign = 'right';
+  ctx.font = '12px "Courier New"';
+  if (wallPassesLeft > 0) {
+    ctx.fillStyle = COLORS.blue;
+    ctx.fillText(`Phase: ${wallPassesLeft}`, canvasW - 10, statusY);
+    statusY += 16;
+  }
+  if (splitsLeft > 0) {
+    ctx.fillStyle = COLORS.cyan;
+    ctx.fillText(`Splits: ${splitsLeft} [Space]`, canvasW - 10, statusY);
+    statusY += 16;
+  }
+  if (ghostModeTimer > 0) {
+    ctx.fillStyle = COLORS.blue;
+    ctx.fillText(`Ghost: ${ghostModeTimer.toFixed(1)}s`, canvasW - 10, statusY);
+    statusY += 16;
+  }
+  if (shielded) {
+    ctx.fillStyle = COLORS.cyan;
+    ctx.fillText('Shield: Active', canvasW - 10, statusY);
+  }
+
+  // Speed indicator
+  ctx.fillStyle = COLORS.dim;
+  ctx.font = '11px "Courier New"';
+  ctx.textAlign = 'left';
+  ctx.fillText(`Speed: ${currentSpeed.toFixed(1)}`, 10, canvasH - 10);
+
+  // Mobile split button
+  if (splitsLeft > 0) {
+    ctx.fillStyle = COLORS.cyan + '33';
+    ctx.fillRect(canvasW - 60, canvasH/2 - 30, 55, 60);
+    ctx.strokeStyle = COLORS.cyan;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(canvasW - 60, canvasH/2 - 30, 55, 60);
+    ctx.fillStyle = COLORS.cyan;
+    ctx.font = 'bold 12px "Courier New"';
+    ctx.textAlign = 'center';
+    ctx.fillText('SPLIT', canvasW - 32, canvasH/2 + 5);
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// DRAW: GAME OVER
+// ═══════════════════════════════════════════════════
+const drawGameOver = () => {
+  // Dim background
+  ctx.fillStyle = '#0a0a0f99';
+  ctx.fillRect(0, 0, canvasW, canvasH);
+
+  const cx = canvasW / 2;
+
+  ctx.fillStyle = COLORS.red;
+  ctx.font = `bold ${Math.min(canvasW * 0.08, 48)}px "Courier New"`;
+  ctx.textAlign = 'center';
+  ctx.shadowColor = COLORS.red;
+  ctx.shadowBlur = 15;
+  ctx.fillText('GAME OVER', cx, canvasH * 0.25);
+  ctx.shadowBlur = 0;
+
+  // Stats
+  const stats = [
+    { label: 'Score', value: score, color: COLORS.white },
+    { label: 'Best', value: save.highScore, color: score >= save.highScore ? COLORS.gold : COLORS.dim },
+    { label: 'Coils Earned', value: `+${coilsEarned}`, color: COLORS.gold },
+    { label: 'Total Coils', value: save.coils, color: COLORS.gold },
+    { label: 'Run Time', value: `${Math.floor(runTime)}s`, color: COLORS.dim },
+    { label: 'Max Length', value: Math.max(...snakes.map(s => s.body.length)), color: COLORS.green },
+  ];
+
+  let sy = canvasH * 0.35;
+  for (const s of stats) {
+    ctx.fillStyle = COLORS.dim;
+    ctx.font = '14px "Courier New"';
+    ctx.textAlign = 'right';
+    ctx.fillText(s.label + ':', cx - 10, sy);
+    ctx.fillStyle = s.color;
+    ctx.font = 'bold 16px "Courier New"';
+    ctx.textAlign = 'left';
+    ctx.fillText(String(s.value), cx + 10, sy);
+    sy += 28;
+  }
+
+  // Prestige multiplier
+  if (save.prestigeMultiplier > 1) {
+    ctx.fillStyle = COLORS.purple;
+    ctx.font = '13px "Courier New"';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Prestige x${save.prestigeMultiplier.toFixed(2)} applied to coils`, cx, sy + 10);
+  }
+
+  // Daily best
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = '13px "Courier New"';
+  ctx.textAlign = 'center';
+  ctx.fillText(`Today's Best: ${save.dailyBest}`, cx, sy + 35);
+
+  // Continue prompt
+  const blink = Math.sin(gameTime * 4) > 0;
+  if (blink) {
+    ctx.fillStyle = COLORS.white;
+    ctx.font = 'bold 18px "Courier New"';
+    ctx.fillText('[ CONTINUE TO SHOP ]', cx, canvasH * 0.85);
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// DRAW: PRESTIGE
+// ═══════════════════════════════════════════════════
+const drawPrestige = () => {
+  ctx.fillStyle = '#0a0a1f';
+  ctx.fillRect(0, 0, canvasW, canvasH);
+
+  const cx = canvasW / 2;
+
+  ctx.fillStyle = COLORS.purple;
+  ctx.font = 'bold 36px "Courier New"';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = COLORS.purple;
+  ctx.shadowBlur = 20;
+  ctx.fillText('PRESTIGE', cx, canvasH * 0.2);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = COLORS.white;
+  ctx.font = '16px "Courier New"';
+  ctx.fillText('Reset all upgrades for a permanent', cx, canvasH * 0.35);
+  ctx.fillText('coil multiplier boost?', cx, canvasH * 0.39);
+
+  ctx.fillStyle = COLORS.purple;
+  ctx.font = 'bold 22px "Courier New"';
+  const newMult = 1 + (save.prestigeLevel + 1) * 0.25;
+  ctx.fillText(`x${save.prestigeMultiplier.toFixed(2)} → x${newMult.toFixed(2)}`, cx, canvasH * 0.48);
+
+  ctx.fillStyle = COLORS.red;
+  ctx.font = '14px "Courier New"';
+  ctx.fillText('All upgrades will be reset to 0', cx, canvasH * 0.55);
+  ctx.fillText('Your coils will be set to 0', cx, canvasH * 0.58);
+
+  ctx.fillStyle = COLORS.green;
+  ctx.font = 'bold 14px "Courier New"';
+  ctx.fillText('Achievements & unlocks are kept', cx, canvasH * 0.63);
+
+  // Buttons
+  ctx.fillStyle = '#1f2f1a';
+  ctx.fillRect(cx - 100, canvasH * 0.72, 200, 45);
+  ctx.strokeStyle = COLORS.green;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cx - 100, canvasH * 0.72, 200, 45);
+  ctx.fillStyle = COLORS.green;
+  ctx.font = 'bold 18px "Courier New"';
+  ctx.fillText('[Y] PRESTIGE', cx, canvasH * 0.72 + 28);
+
+  ctx.fillStyle = '#2f1a1a';
+  ctx.fillRect(cx - 100, canvasH * 0.82, 200, 45);
+  ctx.strokeStyle = COLORS.red;
+  ctx.strokeRect(cx - 100, canvasH * 0.82, 200, 45);
+  ctx.fillStyle = COLORS.red;
+  ctx.fillText('[N] CANCEL', cx, canvasH * 0.82 + 28);
+};
+
+// ═══════════════════════════════════════════════════
+// DRAW: ACHIEVEMENTS
+// ═══════════════════════════════════════════════════
+const drawAchievements = () => {
+  ctx.fillStyle = '#0a0a1f';
+  ctx.fillRect(0, 0, canvasW, canvasH);
+
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = 'bold 28px "Courier New"';
+  ctx.textAlign = 'center';
+  ctx.fillText('ACHIEVEMENTS', canvasW/2, 40);
+  ctx.fillText(`${save.achievements.length} / ${ACHIEVEMENTS.length}`, canvasW/2, 68);
+
+  const maxW = Math.min(canvasW - 40, 450);
+  const lx = canvasW/2 - maxW/2;
+  let y = 90;
+
+  for (const a of ACHIEVEMENTS) {
+    const unlocked = save.achievements.includes(a.id);
+    ctx.fillStyle = unlocked ? '#1a2a1a' : '#111118';
+    ctx.fillRect(lx, y, maxW, 40);
+    ctx.strokeStyle = unlocked ? COLORS.green : '#222';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(lx, y, maxW, 40);
+
+    ctx.fillStyle = unlocked ? COLORS.green : COLORS.dim;
+    ctx.font = 'bold 13px "Courier New"';
+    ctx.textAlign = 'left';
+    ctx.fillText(unlocked ? `✓ ${a.name}` : `○ ${a.name}`, lx + 10, y + 17);
+
+    ctx.fillStyle = unlocked ? COLORS.white : COLORS.dim;
+    ctx.font = '11px "Courier New"';
+    ctx.fillText(a.desc, lx + 10, y + 32);
+
+    y += 44;
+  }
+
+  ctx.fillStyle = COLORS.dim;
+  ctx.font = '13px "Courier New"';
+  ctx.textAlign = 'center';
+  ctx.fillText('[ESC] Back to Shop', canvasW/2, canvasH - 20);
+};
+
+// ═══════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════
+loadSave();
+requestAnimationFrame(update);
+
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

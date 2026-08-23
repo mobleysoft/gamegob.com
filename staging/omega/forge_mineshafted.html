@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Mineshafted — Dig, Disarm, Discover">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob/forge_mineshafted.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Mineshafted — Dig, Disarm, Discover</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+'use strict';
+
+// ============================================================
+// MINESHAFTED — Minesweeper Roguelike with Meta-Progression
+// ============================================================
+
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+
+// --- Responsive Canvas ---
+let W, H, SCALE;
+const resize = () => {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    SCALE = Math.min(W, H) < 500 ? 1 : 1;
+    canvas.width = W;
+    canvas.height = H;
+};
+window.addEventListener('resize', resize);
+resize();
+
+// --- Audio System ---
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+const ensureAudio = () => { if (!audioCtx) audioCtx = new AudioCtx(); };
+
+const playSound = (type) => {
+    ensureAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    switch(type) {
+        case 'dig':
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.exponentialRampToValueAtTime(500, now + 0.08);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+            osc.start(now); osc.stop(now + 0.12);
+            break;
+        case 'reveal':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(900, now + 0.15);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+            break;
+        case 'trap':
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.exponentialRampToValueAtTime(60, now + 0.4);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            osc.start(now); osc.stop(now + 0.5);
+            break;
+        case 'gem':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+            osc.start(now); osc.stop(now + 0.25);
+            // Second tone
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.connect(gain2); gain2.connect(audioCtx.destination);
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(1000, now + 0.08);
+            osc2.frequency.exponentialRampToValueAtTime(1500, now + 0.2);
+            gain2.gain.setValueAtTime(0.12, now + 0.08);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            osc2.start(now + 0.08); osc2.stop(now + 0.3);
+            break;
+        case 'shield':
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(300, now + 0.15);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+            break;
+        case 'buy':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(500, now);
+            osc.frequency.exponentialRampToValueAtTime(700, now + 0.05);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            osc.start(now); osc.stop(now + 0.15);
+            const osc3 = audioCtx.createOscillator();
+            const gain3 = audioCtx.createGain();
+            osc3.connect(gain3); gain3.connect(audioCtx.destination);
+            osc3.type = 'sine';
+            osc3.frequency.setValueAtTime(700, now + 0.06);
+            gain3.gain.setValueAtTime(0.12, now + 0.06);
+            gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            osc3.start(now + 0.06); osc3.stop(now + 0.2);
+            break;
+        case 'descend':
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(200, now + 0.5);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+            osc.start(now); osc.stop(now + 0.6);
+            break;
+        case 'flag':
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.exponentialRampToValueAtTime(600, now + 0.06);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+            break;
+        case 'levelup':
+            for (let i = 0; i < 4; i++) {
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.connect(g); g.connect(audioCtx.destination);
+                o.type = 'sine';
+                const t = now + i * 0.12;
+                o.frequency.setValueAtTime(400 + i * 200, t);
+                g.gain.setValueAtTime(0.1, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+                o.start(t); o.stop(t + 0.15);
+            }
+            break;
+        case 'death':
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.exponentialRampToValueAtTime(40, now + 0.8);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+            osc.start(now); osc.stop(now + 1.0);
+            break;
+    }
+};
+
+// --- Seeded RNG ---
+class SeededRNG {
+    constructor(seed) {
+        this.seed = seed;
+    }
+    next() {
+        this.seed = (this.seed * 16807 + 0) % 2147483647;
+        return (this.seed - 1) / 2147483646;
+    }
+    nextInt(min, max) {
+        return Math.floor(this.next() * (max - min + 1)) + min;
+    }
+}
+
+// --- Particle System ---
+const particles = [];
+const spawnParticles = (x, y, color, count = 8, speed = 120) => {
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const spd = speed * (0.3 + Math.random() * 0.7);
+        particles.push({
+            x, y,
+            vx: Math.cos(angle) * spd,
+            vy: Math.sin(angle) * spd,
+            life: 0.4 + Math.random() * 0.4,
+            maxLife: 0.4 + Math.random() * 0.4,
+            size: 2 + Math.random() * 3,
+            color
+        });
+    }
+};
+
+const updateParticles = (dt) => {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 200 * dt;
+        p.life -= dt;
+        if (p.life <= 0) particles.splice(i, 1);
+    }
+};
+
+const drawParticles = () => {
+    for (const p of particles) {
+        const alpha = Math.max(0, p.life / p.maxLife);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+};
+
+// --- Screen Shake ---
+let shakeAmount = 0;
+let shakeTime = 0;
+const triggerShake = (amount = 5, duration = 0.15) => {
+    shakeAmount = amount;
+    shakeTime = duration;
+};
+
+// --- Flash Effect ---
+let flashColor = null;
+let flashTime = 0;
+const triggerFlash = (color = '#ff0000', duration = 0.1) => {
+    flashColor = color;
+    flashTime = duration;
+};
+
+// --- Persistence ---
+const SAVE_KEY = 'mineshafted_save_v2';
+const loadSave = () => {
+    try {
+        const data = JSON.parse(localStorage.getItem(SAVE_KEY));
+        if (data) return data;
+    } catch(e) {}
+    return {
+        gold: 0,
+        totalGold: 0,
+        deepestLevel: 0,
+        totalRuns: 0,
+        totalCellsDug: 0,
+        totalTrapsHit: 0,
+        totalGemsFound: 0,
+        upgrades: {
+            maxHP: 0,         // +1 HP per level (base 3)
+            detectors: 0,     // +1 starting detector per level
+            drills: 0,        // +1 starting drill per level
+            shields: 0,       // +1 starting shield per level
+            gemBonus: 0,      // +10% gem value per level
+            trapSense: 0,     // chance to auto-reveal adjacent trap
+            luckyDig: 0,      // chance to find bonus gold on dig
+            armorPlate: 0,    // chance to negate trap damage
+        },
+        achievements: {},
+        highScore: 0,
+    };
+};
+
+const saveSave = (data) => {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+};
+
+let saveData = loadSave();
+
+// --- Upgrade Definitions ---
+const UPGRADE_DEFS = {
+    maxHP: { name: 'Reinforced Hull', desc: '+1 Max HP', icon: '❤', baseCost: 50, costMult: 1.8, maxLevel: 10 },
+    detectors: { name: 'Detector Kit', desc: '+1 Starting Detector', icon: '📡', baseCost: 40, costMult: 1.6, maxLevel: 8 },
+    drills: { name: 'Diamond Drill', desc: '+1 Starting Drill', icon: '⛏', baseCost: 40, costMult: 1.6, maxLevel: 8 },
+    shields: { name: 'Energy Shield', desc: '+1 Starting Shield', icon: '🛡', baseCost: 60, costMult: 1.7, maxLevel: 6 },
+    gemBonus: { name: 'Gem Appraiser', desc: '+15% Gem Value', icon: '💎', baseCost: 80, costMult: 2.0, maxLevel: 10 },
+    trapSense: { name: 'Trap Sense', desc: '+5% Auto-Reveal Trap', icon: '👁', baseCost: 100, costMult: 2.2, maxLevel: 5 },
+    luckyDig: { name: 'Lucky Pickaxe', desc: '+4% Bonus Gold on Dig', icon: '🍀', baseCost: 70, costMult: 1.9, maxLevel: 8 },
+    armorPlate: { name: 'Armor Plating', desc: '+5% Negate Trap Damage', icon: '🔰', baseCost: 120, costMult: 2.5, maxLevel: 5 },
+};
+
+const getUpgradeCost = (key) => {
+    const def = UPGRADE_DEFS[key];
+    return Math.floor(def.baseCost * Math.pow(def.costMult, saveData.upgrades[key]));
+};
+
+// --- Achievement Definitions ---
+const ACHIEVEMENT_DEFS = [
+    { id: 'first_dig', name: 'First Steps', desc: 'Dig your first cell', check: (s) => s.totalCellsDug >= 1 },
+    { id: 'dig_100', name: 'Mole Person', desc: 'Dig 100 cells total', check: (s) => s.totalCellsDug >= 100 },
+    { id: 'dig_1000', name: 'Master Excavator', desc: 'Dig 1000 cells total', check: (s) => s.totalCellsDug >= 1000 },
+    { id: 'depth_5', name: 'Deep Diver', desc: 'Reach depth 5', check: (s) => s.deepestLevel >= 5 },
+    { id: 'depth_10', name: 'Abyssal Explorer', desc: 'Reach depth 10', check: (s) => s.deepestLevel >= 10 },
+    { id: 'depth_20', name: 'Core Crawler', desc: 'Reach depth 20', check: (s) => s.deepestLevel >= 20 },
+    { id: 'gold_500', name: 'Prospector', desc: 'Earn 500 total gold', check: (s) => s.totalGold >= 500 },
+    { id: 'gold_2000', name: 'Gold Rush', desc: 'Earn 2000 total gold', check: (s) => s.totalGold >= 2000 },
+    { id: 'gems_50', name: 'Gem Collector', desc: 'Find 50 gems', check: (s) => s.totalGemsFound >= 50 },
+    { id: 'runs_10', name: 'Persistent Miner', desc: 'Complete 10 runs', check: (s) => s.totalRuns >= 10 },
+    { id: 'survive_trap', name: 'Lucky Escape', desc: 'Survive a trap with armor', check: (s) => s.achievements.survive_trap },
+    { id: 'perfect_floor', name: 'Perfectionist', desc: 'Clear a floor with no trap hits', check: (s) => s.achievements.perfect_floor },
+];
+
+// --- Game State ---
+const STATES = { TITLE: 0, PLAYING: 1, SHOP: 2, GAMEOVER: 3, ACHIEVEMENTS: 4 };
+let state = STATES.TITLE;
+
+// Grid
+let GRID_COLS, GRID_ROWS, CELL_SIZE;
+let grid = [];
+let gridOffsetX, gridOffsetY;
+
+// Run state
+let run = null;
+
+// UI state
+let selectedTool = 'dig'; // 'dig', 'detector', 'drill', 'shield', 'flag'
+let hoveredCell = null;
+let cursorX = -1, cursorY = -1;
+let shopScroll = 0;
+let achievementNotifications = [];
+let titlePulse = 0;
+let animTime = 0;
+
+// Touch
+let touchStartX = 0, touchStartY = 0;
+let isTouching = false;
+let longPressTimer = null;
+
+// --- Cell Types ---
+const CELL = {
+    HIDDEN: 0,
+    REVEALED: 1,
+    FLAGGED: 2,
+    TRAP_REVEALED: 3,
+};
+
+const CONTENT = {
+    EMPTY: 0,
+    TRAP: 1,
+    GEM: 2,
+    GOLD: 3,
+    EXIT: 4,
+    TOOL_DETECTOR: 5,
+    TOOL_DRILL: 6,
+    TOOL_SHIELD: 7,
+    WALL: 8,
+};
+
+// --- Level Generation ---
+const generateLevel = (depth, seed) => {
+    const rng = new SeededRNG(seed + depth * 7919);
+
+    // Grid size grows slightly with depth
+    const baseCols = Math.min(10, 6 + Math.floor(depth / 4));
+    const baseRows = Math.min(12, 7 + Math.floor(depth / 3));
+    GRID_COLS = baseCols;
+    GRID_ROWS = baseRows;
+
+    // Calculate cell size to fit screen
+    const maxW = W * 0.88;
+    const maxH = H * 0.65;
+    CELL_SIZE = Math.floor(Math.min(maxW / GRID_COLS, maxH / GRID_ROWS));
+    CELL_SIZE = Math.min(CELL_SIZE, 60);
+    CELL_SIZE = Math.max(CELL_SIZE, 28);
+
+    gridOffsetX = Math.floor((W - GRID_COLS * CELL_SIZE) / 2);
+    gridOffsetY = Math.floor((H - GRID_ROWS * CELL_SIZE) / 2) + 30;
+
+    grid = [];
+    for (let r = 0; r < GRID_ROWS; r++) {
+        grid[r] = [];
+        for (let c = 0; c < GRID_COLS; c++) {
+            grid[r][c] = {
+                state: CELL.HIDDEN,
+                content: CONTENT.EMPTY,
+                adjacentTraps: 0,
+                revealAnim: 0,
+                shakeAnim: 0,
+            };
+        }
+    }
+
+    // Place walls (Perlin-ish noise via RNG)
+    const wallChance = Math.min(0.15, 0.05 + depth * 0.008);
+    for (let r = 0; r < GRID_ROWS; r++) {
+        for (let c = 0; c < GRID_COLS; c++) {
+            if (rng.next() < wallChance) {
+                grid[r][c].content = CONTENT.WALL;
+            }
+        }
+    }
+
+    // Place traps
+    const totalCells = GRID_COLS * GRID_ROWS;
+    const wallCount = grid.flat().filter(c => c.content === CONTENT.WALL).length;
+    const availCells = totalCells - wallCount;
+    const trapRatio = Math.min(0.25, 0.12 + depth * 0.01);
+    let trapCount = Math.floor(availCells * trapRatio);
+    trapCount = Math.max(3, trapCount);
+
+    let placed = 0;
+    while (placed < trapCount) {
+        const r = rng.nextInt(0, GRID_ROWS - 1);
+        const c = rng.nextInt(0, GRID_COLS - 1);
+        if (grid[r][c].content === CONTENT.EMPTY) {
+            grid[r][c].content = CONTENT.TRAP;
+            placed++;
+        }
+    }
+
+    // Place exit
+    let exitPlaced = false;
+    let attempts = 0;
+    while (!exitPlaced && attempts < 200) {
+        const r = rng.nextInt(Math.floor(GRID_ROWS * 0.5), GRID_ROWS - 1);
+        const c = rng.nextInt(0, GRID_COLS - 1);
+        if (grid[r][c].content === CONTENT.EMPTY) {
+            grid[r][c].content = CONTENT.EXIT;
+            exitPlaced = true;
+        }
+        attempts++;
+    }
+    if (!exitPlaced) {
+        // Force place
+        for (let r = GRID_ROWS - 1; r >= 0; r--) {
+            for (let c = GRID_COLS - 1; c >= 0; c--) {
+                if (grid[r][c].content === CONTENT.EMPTY) {
+                    grid[r][c].content = CONTENT.EXIT;
+                    exitPlaced = true;
+                    break;
+                }
+            }
+            if (exitPlaced) break;
+        }
+    }
+
+    // Place gems
+    const gemCount = Math.max(2, Math.floor(availCells * 0.06) + rng.nextInt(0, 2));
+    placed = 0;
+    while (placed < gemCount) {
+        const r = rng.nextInt(0, GRID_ROWS - 1);
+        const c = rng.nextInt(0, GRID_COLS - 1);
+        if (grid[r][c].content === CONTENT.EMPTY) {
+            grid[r][c].content = CONTENT.GEM;
+            placed++;
+        }
+    }
+
+    // Place gold nuggets
+    const goldCount = Math.max(3, Math.floor(availCells * 0.08) + rng.nextInt(0, 3));
+    placed = 0;
+    while (placed < goldCount) {
+        const r = rng.nextInt(0, GRID_ROWS - 1);
+        const c = rng.nextInt(0, GRID_COLS - 1);
+        if (grid[r][c].content === CONTENT.EMPTY) {
+            grid[r][c].content = CONTENT.GOLD;
+            placed++;
+        }
+    }
+
+    // Place tool pickups (rarer at deeper levels)
+    const toolTypes = [CONTENT.TOOL_DETECTOR, CONTENT.TOOL_DRILL, CONTENT.TOOL_SHIELD];
+    const toolCount = Math.max(1, 3 - Math.floor(depth / 5));
+    for (let i = 0; i < toolCount; i++) {
+        let tp = false;
+        let ta = 0;
+        while (!tp && ta < 100) {
+            const r = rng.nextInt(0, GRID_ROWS - 1);
+            const c = rng.nextInt(0, GRID_COLS - 1);
+            if (grid[r][c].content === CONTENT.EMPTY) {
+                grid[r][c].content = toolTypes[rng.nextInt(0, 2)];
+                tp = true;
+            }
+            ta++;
+        }
+    }
+
+    // Calculate adjacent trap counts
+    for (let r = 0; r < GRID_ROWS; r++) {
+        for (let c = 0; c < GRID_COLS; c++) {
+            if (grid[r][c].content === CONTENT.TRAP || grid[r][c].content === CONTENT.WALL) continue;
+            let count = 0;
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    const nr = r + dr, nc = c + dc;
+                    if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < GRID_COLS) {
+                        if (grid[nr][nc].content === CONTENT.TRAP) count++;
+                    }
+                }
+            }
+            grid[r][c].adjacentTraps = count;
+        }
+    }
+
+    // Auto-reveal starting cell (top-left safe area)
+    let startRevealed = false;
+    for (let r = 0; r < Math.min(2, GRID_ROWS); r++) {
+        for (let c = 0; c < Math.min(2, GRID_COLS); c++) {
+            if (grid[r][c].content === CONTENT.EMPTY && grid[r][c].adjacentTraps === 0 && !startRevealed) {
+                floodReveal(r, c);
+                startRevealed = true;
+            }
+        }
+    }
+    if (!startRevealed) {
+        // Reveal top-left cell regardless
+        if (grid[0][0].content !== CONTENT.TRAP) {
+            grid[0][0].state = CELL.REVEALED;
+            grid[0][0].revealAnim = 1;
+        }
+    }
+};
+
+const floodReveal = (r, c) => {
+    if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS) return;
+    const cell = grid[r][c];
+    if (cell.state === CELL.REVEALED) return;
+    if (cell.content === CONTENT.TRAP || cell.content === CONTENT.WALL) return;
+
+    cell.state = CELL.REVEALED;
+    cell.revealAnim = 1;
+    run.cellsDugThisFloor++;
+    run.totalCellsDug++;
+
+    if (cell.adjacentTraps === 0 && cell.content === CONTENT.EMPTY) {
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue;
+                floodReveal(r + dr, c + dc);
+            }
+        }
+    }
+};
+
+// --- Start New Run ---
+const startRun = () => {
+    const seed = Date.now();
+    run = {
+        depth: 1,
+        seed,
+        hp: 3 + saveData.upgrades.maxHP,
+        maxHP: 3 + saveData.upgrades.maxHP,
+        detectors: 1 + saveData.upgrades.detectors,
+        drills: 1 + saveData.upgrades.drills,
+        shields: 1 + saveData.upgrades.shields,
+        gold: 0,
+        gems: 0,
+        score: 0,
+        totalCellsDug: 0,
+        cellsDugThisFloor: 0,
+        trapsHitThisFloor: 0,
+        trapsHit: 0,
+        floorsCleared: 0,
+        floorComplete: false,
+    };
+    selectedTool = 'dig';
+    generateLevel(run.depth, run.seed);
+    state = STATES.PLAYING;
+};
+
+// --- Dig a Cell ---
+const digCell = (r, c) => {
+    if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS) return;
+    const cell = grid[r][c];
+    if (cell.state === CELL.REVEALED || cell.state === CELL.TRAP_REVEALED) return;
+
+    if (selectedTool === 'flag') {
+        cell.state = cell.state === CELL.FLAGGED ? CELL.HIDDEN : CELL.FLAGGED;
+        playSound('flag');
+        return;
+    }
+
+    if (cell.state === CELL.FLAGGED && selectedTool === 'dig') return; // Can't dig flagged
+
+    if (selectedTool === 'detector') {
+        if (run.detectors <= 0) return;
+        run.detectors--;
+        playSound('reveal');
+        // Reveal all traps adjacent to this cell (including the cell itself)
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                const nr = r + dr, nc = c + dc;
+                if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < GRID_COLS) {
+                    if (grid[nr][nc].content === CONTENT.TRAP && grid[nr][nc].state !== CELL.REVEALED) {
+                        grid[nr][nc].state = CELL.TRAP_REVEALED;
+                        grid[nr][nc].revealAnim = 1;
+                        spawnParticles(
+                            gridOffsetX + nc * CELL_SIZE + CELL_SIZE/2,
+                            gridOffsetY + nr * CELL_SIZE + CELL_SIZE/2,
+                            '#ff4444', 6, 80
+                        );
+                    }
+                }
+            }
+        }
+        triggerFlash('#00aaff', 0.08);
+        return;
+    }
+
+    if (selectedTool === 'drill') {
+        if (run.drills <= 0) return;
+        if (cell.content !== CONTENT.WALL && cell.content !== CONTENT.TRAP) {
+            // Drill can also safe-dig any cell
+        }
+        run.drills--;
+        playSound('dig');
+        cell.state = CELL.REVEALED;
+        cell.revealAnim = 1;
+        run.cellsDugThisFloor++;
+        run.totalCellsDug++;
+        // Drill safely reveals regardless of content
+        if (cell.content === CONTENT.TRAP) {
+            cell.state = CELL.TRAP_REVEALED;
+            spawnParticles(
+                gridOffsetX + c * CELL_SIZE + CELL_SIZE/2,
+                gridOffsetY + r * CELL_SIZE + CELL_SIZE/2,
+                '#ff8800', 10, 100
+            );
+        } else {
+            handleCellContent(r, c);
+        }
+        triggerFlash('#f0b800', 0.06);
+        return;
+    }
+
+    if (selectedTool === 'shield') {
+        if (run.shields <= 0) return;
+        // Shield: dig with protection
+        run.shields--;
+        playSound('shield');
+        cell.state = CELL.REVEALED;
+        cell.revealAnim = 1;
+        run.cellsDugThisFloor++;
+        run.totalCellsDug++;
+        if (cell.content === CONTENT.TRAP) {
+            cell.state = CELL.TRAP_REVEALED;
+            spawnParticles(
+                gridOffsetX + c * CELL_SIZE + CELL_SIZE/2,
+                gridOffsetY + r * CELL_SIZE + CELL_SIZE/2,
+                '#00aaff', 12, 120
+            );
+            triggerShake(3, 0.1);
+            // No damage taken
+        } else {
+            handleCellContent(r, c);
+        }
+        triggerFlash('#00aaff', 0.08);
+        return;
+    }
+
+    // Normal dig
+    if (cell.content === CONTENT.WALL) return; // Can't dig walls without drill
+
+    // Trap sense check
+    if (cell.content === CONTENT.TRAP && saveData.upgrades.trapSense > 0) {
+        const sense = saveData.upgrades.trapSense * 0.05;
+        if (Math.random() < sense) {
+            // Auto-reveal trap!
+            cell.state = CELL.TRAP_REVEALED;
+            cell.revealAnim = 1;
+            playSound('reveal');
+            spawnParticles(
+                gridOffsetX + c * CELL_SIZE + CELL_SIZE/2,
+                gridOffsetY + r * CELL_SIZE + CELL_SIZE/2,
+                '#ff4444', 8, 80
+            );
+            triggerFlash('#ffaa00', 0.1);
+            return;
+        }
+    }
+
+    cell.state = CELL.REVEALED;
+    cell.revealAnim = 1;
+    run.cellsDugThisFloor++;
+    run.totalCellsDug++;
+
+    if (cell.content === CONTENT.TRAP) {
+        // Armor plate check
+        let blocked = false;
+        if (saveData.upgrades.armorPlate > 0) {
+            const armorChance = saveData.upgrades.armorPlate * 0.05;
+            if (Math.random() < armorChance) {
+                blocked = true;
+                if (!saveData.achievements.survive_trap) {
+                    saveData.achievements.survive_trap = true;
+                    checkAchievements();
+                }
+            }
+        }
+
+        if (!blocked) {
+            run.hp--;
+            run.trapsHit++;
+            run.trapsHitThisFloor++;
+        }
+        playSound('trap');
+        triggerShake(8, 0.2);
+        triggerFlash('#ff0000', 0.15);
+        spawnParticles(
+            gridOffsetX + c * CELL_SIZE + CELL_SIZE/2,
+            gridOffsetY + r * CELL_SIZE + CELL_SIZE/2,
+            blocked ? '#00aaff' : '#ff4444', 15, 150
+        );
+
+        if (run.hp <= 0) {
+            endRun();
+            return;
+        }
+    } else {
+        handleCellContent(r, c);
+        playSound('dig');
+
+        // Flood fill if 0 adjacent traps and empty
+        if (cell.adjacentTraps === 0 && cell.content === CONTENT.EMPTY) {
+            floodReveal(r, c);
+        }
+    }
+
+    // Lucky dig check
+    if (saveData.upgrades.luckyDig > 0 && cell.content !== CONTENT.TRAP) {
+        const luck = saveData.upgrades.luckyDig * 0.04;
+        if (Math.random() < luck) {
+            const bonus = Math.floor(3 + run.depth * 0.5);
+            run.gold += bonus;
+            spawnParticles(
+                gridOffsetX + c * CELL_SIZE + CELL_SIZE/2,
+                gridOffsetY + r * CELL_SIZE + CELL_SIZE/2,
+                '#f0b800', 5, 60
+            );
+        }
+    }
+
+    checkFloorComplete();
+};
+
+const handleCellContent = (r, c) => {
+    const cell = grid[r][c];
+    const cx = gridOffsetX + c * CELL_SIZE + CELL_SIZE/2;
+    const cy = gridOffsetY + r * CELL_SIZE + CELL_SIZE/2;
+
+    switch (cell.content) {
+        case CONTENT.GEM:
+            const gemValue = Math.floor((10 + run.depth * 5) * (1 + saveData.upgrades.gemBonus * 0.15));
+            run.gold += gemValue;
+            run.gems++;
+            run.score += gemValue * 2;
+            playSound('gem');
+            spawnParticles(cx, cy, '#00ffcc', 12, 100);
+            spawnParticles(cx, cy, '#ff00ff', 6, 60);
+            break;
+        case CONTENT.GOLD:
+            const goldValue = Math.floor(3 + run.depth * 2);
+            run.gold += goldValue;
+            run.score += goldValue;
+            playSound('gem');
+            spawnParticles(cx, cy, '#f0b800', 8, 80);
+            break;
+        case CONTENT.EXIT:
+            run.floorComplete = true;
+            playSound('descend');
+            break;
+        case CONTENT.TOOL_DETECTOR:
+            run.detectors++;
+            playSound('buy');
+            spawnParticles(cx, cy, '#00aaff', 8, 80);
+            break;
+        case CONTENT.TOOL_DRILL:
+            run.drills++;
+            playSound('buy');
+            spawnParticles(cx, cy, '#f0b800', 8, 80);
+            break;
+        case CONTENT.TOOL_SHIELD:
+            run.shields++;
+            playSound('buy');
+            spawnParticles(cx, cy, '#00ff88', 8, 80);
+            break;
+    }
+};
+
+const checkFloorComplete = () => {
+    if (run.floorComplete) {
+        // Check perfect floor
+        if (run.trapsHitThisFloor === 0) {
+            if (!saveData.achievements.perfect_floor) {
+                saveData.achievements.perfect_floor = true;
+                checkAchievements();
+            }
+        }
+
+        run.floorsCleared++;
+        run.score += run.depth * 50;
+        run.depth++;
+        run.floorComplete = false;
+        run.cellsDugThisFloor = 0;
+        run.trapsHitThisFloor = 0;
+
+        if (run.depth > saveData.deepestLevel) {
+            saveData.deepestLevel = run.depth;
+        }
+
+        playSound('levelup');
+        triggerFlash('#00ff88', 0.2);
+
+        generateLevel(run.depth, run.seed);
+    }
+};
+
+const endRun = () => {
+    playSound('death');
+    triggerShake(12, 0.4);
+
+    saveData.gold += run.gold;
+    saveData.totalGold += run.gold;
+    saveData.totalRuns++;
+    saveData.totalCellsDug += run.totalCellsDug;
+    saveData.totalTrapsHit += run.trapsHit;
+    saveData.totalGemsFound += run.gems;
+
+    if (run.score > saveData.highScore) {
+        saveData.highScore = run.score;
+    }
+    if (run.depth > saveData.deepestLevel) {
+        saveData.deepestLevel = run.depth;
+    }
+
+    checkAchievements();
+    saveSave(saveData);
+    state = STATES.GAMEOVER;
+};
+
+const checkAchievements = () => {
+    for (const ach of ACHIEVEMENT_DEFS) {
+        if (!saveData.achievements[ach.id] && ach.check(saveData)) {
+            saveData.achievements[ach.id] = true;
+            achievementNotifications.push({ name: ach.name, time: 3 });
+        }
+    }
+};
+
+// --- Drawing Helpers ---
+const drawText = (text, x, y, size, color = '#ffffff', align = 'center', bold = false) => {
+    ctx.font = `${bold ? 'bold ' : ''}${size}px monospace`;
+    ctx.fillStyle = color;
+    ctx.textAlign = align;
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x, y);
+};
+
+const drawRect = (x, y, w, h, color, radius = 0) => {
+    ctx.fillStyle = color;
+    if (radius > 0) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, radius);
+        ctx.fill();
+    } else {
+        ctx.fillRect(x, y, w, h);
+    }
+};
+
+const drawRectStroke = (x, y, w, h, color, lw = 1, radius = 0) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    if (radius > 0) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, radius);
+        ctx.stroke();
+    } else {
+        ctx.strokeRect(x, y, w, h);
+    }
+};
+
+// --- Number Colors (minesweeper style) ---
+const NUM_COLORS = ['', '#00aaff', '#00cc44', '#ff4444', '#aa00ff', '#ff8800', '#00cccc', '#888888', '#ffffff'];
+
+// --- Draw Cell ---
+const drawCell = (r, c) => {
+    const cell = grid[r][c];
+    const x = gridOffsetX + c * CELL_SIZE;
+    const y = gridOffsetY + r * CELL_SIZE;
+    const pad = 1;
+    const inner = CELL_SIZE - pad * 2;
+
+    // Reveal animation
+    const revScale = cell.revealAnim > 0 ? 1 + cell.revealAnim * 0.15 : 1;
+    const shake = cell.shakeAnim > 0 ? Math.sin(cell.shakeAnim * 30) * 2 : 0;
+
+    const cx = x + CELL_SIZE/2 + shake;
+    const cy = y + CELL_SIZE/2;
+
+    if (cell.state === CELL.HIDDEN || cell.state === CELL.FLAGGED) {
+        // Undigged cell
+        const isHovered = hoveredCell && hoveredCell.r === r && hoveredCell.c === c;
+        const baseColor = isHovered ? '#3a3540' : '#2a2530';
+        drawRect(x + pad, y + pad, inner, inner, baseColor, 3);
+
+        // Surface texture
+        const texAlpha = 0.15;
+        ctx.globalAlpha = texAlpha;
+        drawRect(x + pad, y + pad, inner, inner * 0.3, '#4a4550', 3);
+        ctx.globalAlpha = 1;
+
+        // Border
+        drawRectStroke(x + pad, y + pad, inner, inner, '#4a4560', 1, 3);
+
+        if (cell.state === CELL.FLAGGED) {
+            drawText('⚑', cx, cy, CELL_SIZE * 0.5, '#ff4444');
+        }
+
+        if (isHovered && selectedTool !== 'flag') {
+            let toolColor = '#ffffff';
+            if (selectedTool === 'detector') toolColor = '#00aaff';
+            if (selectedTool === 'drill') toolColor = '#f0b800';
+            if (selectedTool === 'shield') toolColor = '#00ff88';
+            ctx.globalAlpha = 0.3;
+            drawRect(x + pad, y + pad, inner, inner, toolColor, 3);
+            ctx.globalAlpha = 1;
+        }
+    } else if (cell.state === CELL.REVEALED) {
+        // Revealed
+        const baseCol = '#151218';
+        ctx.save();
+        if (revScale > 1) {
+            ctx.translate(cx, cy);
+            ctx.scale(revScale, revScale);
+            ctx.translate(-cx, -cy);
+        }
+        drawRect(x + pad, y + pad, inner, inner, baseCol, 2);
+        drawRectStroke(x + pad, y + pad, inner, inner, '#1e1a22', 1, 2);
+
+        // Content
+        switch (cell.content) {
+            case CONTENT.EMPTY:
+                if (cell.adjacentTraps > 0) {
+                    const col = NUM_COLORS[cell.adjacentTraps] || '#ffffff';
+                    drawText(String(cell.adjacentTraps), cx, cy, CELL_SIZE * 0.5, col, 'center', true);
+                }
+                break;
+            case CONTENT.GEM:
+                drawText('◆', cx, cy, CELL_SIZE * 0.45, '#00ffcc');
+                break;
+            case CONTENT.GOLD:
+                drawText('●', cx, cy, CELL_SIZE * 0.35, '#f0b800');
+                break;
+            case CONTENT.EXIT:
+                // Pulsing exit
+                const pulse = 0.7 + Math.sin(animTime * 4) * 0.3;
+                ctx.globalAlpha = pulse;
+                drawRect(x + pad + 2, y + pad + 2, inner - 4, inner - 4, '#00ff8830', 2);
+                ctx.globalAlpha = 1;
+                drawText('▼', cx, cy, CELL_SIZE * 0.5, '#00ff88');
+                drawText('EXIT', cx, cy + CELL_SIZE * 0.28, CELL_SIZE * 0.18, '#00ff88');
+                break;
+            case CONTENT.WALL:
+                drawRect(x + pad, y + pad, inner, inner, '#3a3040', 2);
+                drawText('▓', cx, cy, CELL_SIZE * 0.5, '#5a5060');
+                break;
+            case CONTENT.TOOL_DETECTOR:
+                drawText('📡', cx, cy, CELL_SIZE * 0.4);
+                break;
+            case CONTENT.TOOL_DRILL:
+                drawText('⛏', cx, cy, CELL_SIZE * 0.4);
+                break;
+            case CONTENT.TOOL_SHIELD:
+                drawText('🛡', cx, cy, CELL_SIZE * 0.4);
+                break;
+        }
+        ctx.restore();
+    } else if (cell.state === CELL.TRAP_REVEALED) {
+        // Trap revealed
+        drawRect(x + pad, y + pad, inner, inner, '#2a0808', 2);
+        drawRectStroke(x + pad, y + pad, inner, inner, '#ff2222', 1, 2);
+        drawText('💣', cx, cy, CELL_SIZE * 0.45);
+    }
+};
+
+// --- Tool Bar (bottom of screen) ---
+const TOOL_BAR_HEIGHT = 56;
+const tools = [
+    { id: 'dig', label: '⛏ DIG', color: '#ffffff', key: '1' },
+    { id: 'detector', label: '📡 SCAN', color: '#00aaff', key: '2' },
+    { id: 'drill', label: '🔨 DRILL', color: '#f0b800', key: '3' },
+    { id: 'shield', label: '🛡 GUARD', color: '#00ff88', key: '4' },
+    { id: 'flag', label: '⚑ FLAG', color: '#ff4444', key: '5' },
+];
+
+const drawToolBar = () => {
+    const barY = H - TOOL_BAR_HEIGHT - 8;
+    drawRect(0, barY - 4, W, TOOL_BAR_HEIGHT + 12, '#0a0a0f');
+    drawRect(0, barY - 4, W, 1, '#2a2530');
+
+    const toolW = Math.min(80, (W - 20) / tools.length - 4);
+    const totalW = tools.length * (toolW + 4);
+    const startX = (W - totalW) / 2;
+
+    for (let i = 0; i < tools.length; i++) {
+        const t = tools[i];
+        const tx = startX + i * (toolW + 4);
+        const selected = selectedTool === t.id;
+
+        const bgColor = selected ? t.color + '33' : '#1a1520';
+        drawRect(tx, barY, toolW, TOOL_BAR_HEIGHT - 8, bgColor, 6);
+        if (selected) {
+            drawRectStroke(tx, barY, toolW, TOOL_BAR_HEIGHT - 8, t.color, 2, 6);
+        } else {
+            drawRectStroke(tx, barY, toolW, TOOL_BAR_HEIGHT - 8, '#3a3540', 1, 6);
+        }
+
+        drawText(t.label, tx + toolW/2, barY + 14, 10, selected ? t.color : '#888888', 'center', selected);
+
+        // Count
+        let count = '';
+        if (t.id === 'detector') count = String(run.detectors);
+        else if (t.id === 'drill') count = String(run.drills);
+        else if (t.id === 'shield') count = String(run.shields);
+        else if (t.id === 'dig') count = '∞';
+        else if (t.id === 'flag') count = '—';
+
+        drawText(count, tx + toolW/2, barY + 32, 14, selected ? t.color : '#666666', 'center', true);
+        drawText(t.key, tx + toolW - 8, barY + 6, 8, '#444444', 'right');
+    }
+};
+
+const getToolBarClick = (mx, my) => {
+    const barY = H - TOOL_BAR_HEIGHT - 8;
+    if (my < barY || my > barY + TOOL_BAR_HEIGHT) return null;
+    const toolW = Math.min(80, (W - 20) / tools.length - 4);
+    const totalW = tools.length * (toolW + 4);
+    const startX = (W - totalW) / 2;
+
+    for (let i = 0; i < tools.length; i++) {
+        const tx = startX + i * (toolW + 4);
+        if (mx >= tx && mx <= tx + toolW) return tools[i].id;
+    }
+    return null;
+};
+
+// --- HUD ---
+const drawHUD = () => {
+    // Top bar bg
+    drawRect(0, 0, W, 52, '#0a0a0f');
+    drawRect(0, 52, W, 1, '#2a2530');
+
+    // HP
+    let hpX = 12;
+    for (let i = 0; i < run.maxHP; i++) {
+        const filled = i < run.hp;
+        drawText('♥', hpX + i * 20, 18, 16, filled ? '#ff4444' : '#333333');
+    }
+
+    // Depth
+    drawText(`DEPTH ${run.depth}`, W/2, 16, 14, '#00ff88', 'center', true);
+
+    // Gold
+    drawText(`● ${run.gold}`, W - 12, 16, 13, '#f0b800', 'right', true);
+
+    // Score
+    drawText(`SCORE: ${run.score}`, W/2, 38, 10, '#888888', 'center');
+
+    // Gems
+    drawText(`◆ ${run.gems}`, W - 12, 38, 10, '#00ffcc', 'right');
+};
+
+// --- Title Screen ---
+const drawTitle = () => {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, W, H);
+
+    // Background grid decoration
+    const gridDecorSize = 30;
+    ctx.globalAlpha = 0.05;
+    for (let x = 0; x < W; x += gridDecorSize) {
+        for (let y = 0; y < H; y += gridDecorSize) {
+            const isOn = Math.sin(x * 0.03 + animTime) * Math.cos(y * 0.03 + animTime * 0.7) > 0.3;
+            if (isOn) {
+                ctx.fillStyle = '#f0b800';
+                ctx.fillRect(x + 2, y + 2, gridDecorSize - 4, gridDecorSize - 4);
+            }
+        }
+    }
+    ctx.globalAlpha = 1;
+
+    const cy = H * 0.32;
+    // Title
+    const titleSize = Math.min(48, W * 0.08);
+    drawText('MINESHAFTED', W/2, cy, titleSize, '#f0b800', 'center', true);
+    drawText('Dig. Disarm. Discover.', W/2, cy + titleSize * 0.8, titleSize * 0.3, '#888888', 'center');
+
+    // Subtitle with tools
+    const subY = cy + titleSize * 1.5;
+    drawText('⛏ Mine Clearance × Roguelike', W/2, subY, titleSize * 0.28, '#00ff88', 'center');
+
+    // Stats
+    const statY = H * 0.52;
+    if (saveData.totalRuns > 0) {
+        drawText(`Deepest: Depth ${saveData.deepestLevel}`, W/2, statY, 13, '#aaaaaa', 'center');
+        drawText(`High Score: ${saveData.highScore}`, W/2, statY + 20, 13, '#f0b800', 'center');
+        drawText(`Gold: ● ${saveData.gold}`, W/2, statY + 40, 13, '#f0b800', 'center');
+        drawText(`Runs: ${saveData.totalRuns}`, W/2, statY + 60, 11, '#666666', 'center');
+    }
+
+    // Buttons
+    const btnW = 200, btnH = 44;
+    const btnX = W/2 - btnW/2;
+    const playY = H * 0.72;
+
+    // Play button
+    const playPulse = 0.8 + Math.sin(animTime * 3) * 0.2;
+    ctx.globalAlpha = playPulse;
+    drawRect(btnX, playY, btnW, btnH, '#00ff8833', 8);
+    drawRectStroke(btnX, playY, btnW, btnH, '#00ff88', 2, 8);
+    ctx.globalAlpha = 1;
+    drawText('▶  D I G  I N', W/2, playY + btnH/2, 16, '#00ff88', 'center', true);
+
+    // Shop button
+    const shopY = playY + btnH + 12;
+    drawRect(btnX, shopY, btnW, btnH, '#f0b80022', 8);
+    drawRectStroke(btnX, shopY, btnW, btnH, '#f0b800', 1, 8);
+    drawText(`⚙  UPGRADES  (● ${saveData.gold})`, W/2, shopY + btnH/2, 13, '#f0b800', 'center', true);
+
+    // Achievements button
+    const achY = shopY + btnH + 12;
+    const achCount = ACHIEVEMENT_DEFS.filter(a => saveData.achievements[a.id]).length;
+    drawRect(btnX, achY, btnW, btnH, '#aa44ff22', 8);
+    drawRectStroke(btnX, achY, btnW, btnH, '#aa44ff', 1, 8);
+    drawText(`★  ACHIEVEMENTS  (${achCount}/${ACHIEVEMENT_DEFS.length})`, W/2, achY + btnH/2, 12, '#aa44ff', 'center', true);
+
+    // Return button positions for click handling
+    return { playY, shopY, achY, btnX, btnW, btnH };
+};
+
+let titleBtns = null;
+
+// --- Shop Screen ---
+const drawShop = () => {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, W, H);
+
+    drawText('UPGRADES', W/2, 30, 22, '#f0b800', 'center', true);
+    drawText(`Gold: ● ${saveData.gold}`, W/2, 56, 14, '#f0b800', 'center');
+
+    const keys = Object.keys(UPGRADE_DEFS);
+    const itemH = 64;
+    const listY = 80;
+    const maxScroll = Math.max(0, keys.length * itemH - (H - listY - 80));
+    shopScroll = Math.max(0, Math.min(shopScroll, maxScroll));
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, listY, W, H - listY - 70);
+    ctx.clip();
+
+    for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        const def = UPGRADE_DEFS[key];
+        const lvl = saveData.upgrades[key];
+        const cost = getUpgradeCost(key);
+        const maxed = lvl >= def.maxLevel;
+        const canBuy = !maxed && saveData.gold >= cost;
+
+        const iy = listY + i * itemH - shopScroll;
+        if (iy < listY - itemH || iy > H) continue;
+
+        const bgColor = canBuy ? '#1a1a2a' : '#121218';
+        drawRect(10, iy + 2, W - 20, itemH - 4, bgColor, 6);
+        if (canBuy) {
+            drawRectStroke(10, iy + 2, W - 20, itemH - 4, '#f0b80044', 1, 6);
+        }
+
+        drawText(def.icon, 32, iy + itemH/2, 20);
+        drawText(def.name, 56, iy + 16, 13, canBuy ? '#ffffff' : '#666666', 'left', true);
+        drawText(def.desc, 56, iy + 34, 10, '#888888', 'left');
+
+        // Level pips
+        for (let l = 0; l < def.maxLevel; l++) {
+            const px = 56 + l * 10;
+            const filled = l < lvl;
+            drawRect(px, iy + 46, 7, 7, filled ? '#f0b800' : '#333333', 2);
+        }
+
+        // Cost
+        if (maxed) {
+            drawText('MAX', W - 24, iy + itemH/2, 12, '#00ff88', 'right', true);
+        } else {
+            drawText(`● ${cost}`, W - 24, iy + itemH/2, 13, canBuy ? '#f0b800' : '#ff4444', 'right', true);
+        }
+    }
+
+    ctx.restore();
+
+    // Back button
+    const backY = H - 56;
+    drawRect(W/2 - 80, backY, 160, 40, '#2a2530', 8);
+    drawRectStroke(W/2 - 80, backY, 160, 40, '#666666', 1, 8);
+    drawText('◀  BACK', W/2, backY + 20, 14, '#ffffff', 'center', true);
+
+    return { listY, itemH, keys, backY };
+};
+
+let shopData = null;
+
+// --- Achievements Screen ---
+const drawAchievements = () => {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, W, H);
+
+    const achCount = ACHIEVEMENT_DEFS.filter(a => saveData.achievements[a.id]).length;
+    drawText('ACHIEVEMENTS', W/2, 30, 22, '#aa44ff', 'center', true);
+    drawText(`${achCount} / ${ACHIEVEMENT_DEFS.length}`, W/2, 54, 13, '#888888', 'center');
+
+    const itemH = 50;
+    const listY = 74;
+
+    for (let i = 0; i < ACHIEVEMENT_DEFS.length; i++) {
+        const ach = ACHIEVEMENT_DEFS[i];
+        const unlocked = !!saveData.achievements[ach.id];
+        const iy = listY + i * itemH;
+        if (iy > H - 70) break;
+
+        const bgColor = unlocked ? '#1a1a2a' : '#0e0e14';
+        drawRect(10, iy + 2, W - 20, itemH - 4, bgColor, 6);
+        if (unlocked) {
+            drawRectStroke(10, iy + 2, W - 20, itemH - 4, '#aa44ff44', 1, 6);
+        }
+
+        drawText(unlocked ? '★' : '☆', 28, iy + itemH/2, 16, unlocked ? '#f0b800' : '#333333');
+        drawText(ach.name, 48, iy + 16, 12, unlocked ? '#ffffff' : '#444444', 'left', true);
+        drawText(unlocked ? ach.desc : '???', 48, iy + 34, 10, unlocked ? '#888888' : '#333333', 'left');
+    }
+
+    // Back button
+    const backY = H - 56;
+    drawRect(W/2 - 80, backY, 160, 40, '#2a2530', 8);
+    drawRectStroke(W/2 - 80, backY, 160, 40, '#666666', 1, 8);
+    drawText('◀  BACK', W/2, backY + 20, 14, '#ffffff', 'center', true);
+
+    return { backY };
+};
+
+let achData = null;
+
+// --- Game Over ---
+const drawGameOver = () => {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, W, H);
+
+    const cy = H * 0.22;
+    drawText('SHAFT COLLAPSED', W/2, cy, Math.min(32, W * 0.06), '#ff4444', 'center', true);
+
+    const statY = cy + 50;
+    const stats = [
+        [`Score`, `${run.score}`],
+        [`Depth`, `${run.depth}`],
+        [`Gold Earned`, `● ${run.gold}`],
+        [`Gems Found`, `◆ ${run.gems}`],
+        [`Cells Dug`, `${run.totalCellsDug}`],
+        [`Traps Hit`, `${run.trapsHit}`],
+        [`Floors Cleared`, `${run.floorsCleared}`],
+    ];
+
+    for (let i = 0; i < stats.length; i++) {
+        const y = statY + i * 24;
+        drawText(stats[i][0], W/2 - 10, y, 12, '#888888', 'right');
+        drawText(stats[i][1], W/2 + 10, y, 12, '#ffffff', 'left', true);
+    }
+
+    if (run.score >= saveData.highScore) {
+        drawText('★ NEW HIGH SCORE ★', W/2, statY + stats.length * 24 + 20, 14, '#f0b800', 'center', true);
+    }
+
+    // Total gold
+    drawText(`Total Gold: ● ${saveData.gold}`, W/2, H * 0.7, 16, '#f0b800', 'center', true);
+
+    // Buttons
+    const btnW = 180, btnH = 44;
+    const btnX = W/2 - btnW/2;
+    const retryY = H * 0.78;
+    const menuY = retryY + btnH + 12;
+
+    const pulse = 0.8 + Math.sin(animTime * 3) * 0.2;
+    ctx.globalAlpha = pulse;
+    drawRect(btnX, retryY, btnW, btnH, '#00ff8833', 8);
+    drawRectStroke(btnX, retryY, btnW, btnH, '#00ff88', 2, 8);
+    ctx.globalAlpha = 1;
+    drawText('▶  DIG AGAIN', W/2, retryY + btnH/2, 15, '#00ff88', 'center', true);
+
+    drawRect(btnX, menuY, btnW, btnH, '#2a2530', 8);
+    drawRectStroke(btnX, menuY, btnW, btnH, '#666666', 1, 8);
+    drawText('◀  MENU', W/2, menuY + btnH/2, 14, '#ffffff', 'center', true);
+
+    return { retryY, menuY, btnX, btnW, btnH };
+};
+
+let goBtns = null;
+
+// --- Achievement Notifications ---
+const drawNotifications = () => {
+    for (let i = achievementNotifications.length - 1; i >= 0; i--) {
+        const n = achievementNotifications[i];
+        const alpha = Math.min(1, n.time, n.time > 2.5 ? (3 - n.time) * 2 : 1);
+        const ny = 60 + i * 40;
+        ctx.globalAlpha = alpha;
+        drawRect(W/2 - 120, ny, 240, 34, '#aa44ff33', 8);
+        drawRectStroke(W/2 - 120, ny, 240, 34, '#aa44ff', 1, 8);
+        drawText(`★ ${n.name}`, W/2, ny + 17, 12, '#f0b800', 'center', true);
+        ctx.globalAlpha = 1;
+    }
+};
+
+// --- Input Handling ---
+const getCellFromPos = (mx, my) => {
+    const c = Math.floor((mx - gridOffsetX) / CELL_SIZE);
+    const r = Math.floor((my - gridOffsetY) / CELL_SIZE);
+    if (r >= 0 && r < GRID_ROWS && c >= 0 && c < GRID_COLS) return { r, c };
+    return null;
+};
+
+const handleClick = (mx, my) => {
+    ensureAudio();
+
+    if (state === STATES.TITLE) {
+        if (!titleBtns) return;
+        const { playY, shopY, achY, btnX, btnW, btnH } = titleBtns;
+        if (mx >= btnX && mx <= btnX + btnW) {
+            if (my >= playY && my <= playY + btnH) { startRun(); return; }
+            if (my >= shopY && my <= shopY + btnH) { state = STATES.SHOP; shopScroll = 0; return; }
+            if (my >= achY && my <= achY + btnH) { state = STATES.ACHIEVEMENTS; return; }
+        }
+        return;
+    }
+
+    if (state === STATES.SHOP) {
+        if (!shopData) return;
+        const { listY, itemH, keys, backY } = shopData;
+
+        // Back
+        if (my >= backY && my <= backY + 40 && mx >= W/2 - 80 && mx <= W/2 + 80) {
+            state = STATES.TITLE;
+            saveSave(saveData);
+            return;
+        }
+
+        // Buy
+        for (let i = 0; i < keys.length; i++) {
+            const iy = listY + i * itemH - shopScroll;
+            if (my >= iy && my <= iy + itemH && mx >= 10 && mx <= W - 10) {
+                const key = keys[i];
+                const def = UPGRADE_DEFS[key];
+                const cost = getUpgradeCost(key);
+                if (saveData.upgrades[key] < def.maxLevel && saveData.gold >= cost) {
+                    saveData.gold -= cost;
+                    saveData.upgrades[key]++;
+                    playSound('buy');
+                    saveSave(saveData);
+                }
+                return;
+            }
+        }
+        return;
+    }
+
+    if (state === STATES.ACHIEVEMENTS) {
+        if (!achData) return;
+        const { backY } = achData;
+        if (my >= backY && my <= backY + 40 && mx >= W/2 - 80 && mx <= W/2 + 80) {
+            state = STATES.TITLE;
+            return;
+        }
+        return;
+    }
+
+    if (state === STATES.GAMEOVER) {
+        if (!goBtns) return;
+        const { retryY, menuY, btnX, btnW, btnH } = goBtns;
+        if (mx >= btnX && mx <= btnX + btnW) {
+            if (my >= retryY && my <= retryY + btnH) { startRun(); return; }
+            if (my >= menuY && my <= menuY + btnH) { state = STATES.TITLE; return; }
+        }
+        return;
+    }
+
+    if (state === STATES.PLAYING) {
+        // Check toolbar first
+        const toolId = getToolBarClick(mx, my);
+        if (toolId) {
+            selectedTool = toolId;
+            playSound('flag');
+            return;
+        }
+
+        // Check grid
+        const cell = getCellFromPos(mx, my);
+        if (cell) {
+            // Click on exit cell to descend
+            if (grid[cell.r][cell.c].state === CELL.REVEALED && grid[cell.r][cell.c].content === CONTENT.EXIT) {
+                run.floorComplete = true;
+                playSound('descend');
+                checkFloorComplete();
+                return;
+            }
+            digCell(cell.r, cell.c);
+        }
+    }
+};
+
+const handleRightClick = (mx, my) => {
+    if (state !== STATES.PLAYING) return;
+    const cell = getCellFromPos(mx, my);
+    if (cell) {
+        const c = grid[cell.r][cell.c];
+        if (c.state === CELL.HIDDEN || c.state === CELL.FLAGGED) {
+            c.state = c.state === CELL.FLAGGED ? CELL.HIDDEN : CELL.FLAGGED;
+            playSound('flag');
+        }
+    }
+};
+
+// Mouse
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 2) {
+        handleRightClick(e.clientX, e.clientY);
+        return;
+    }
+    handleClick(e.clientX, e.clientY);
+});
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('mousemove', (e) => {
+    cursorX = e.clientX;
+    cursorY = e.clientY;
+});
+
+// Touch
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const t = e.touches[0];
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+    isTouching = true;
+    cursorX = t.clientX;
+    cursorY = t.clientY;
+
+    // Long press for flag
+    longPressTimer = setTimeout(() => {
+        if (state === STATES.PLAYING) {
+            handleRightClick(touchStartX, touchStartY);
+        }
+        longPressTimer = null;
+    }, 500);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const t = e.touches[0];
+    cursorX = t.clientX;
+    cursorY = t.clientY;
+
+    // Cancel long press on movement
+    if (longPressTimer && (Math.abs(t.clientX - touchStartX) > 10 || Math.abs(t.clientY - touchStartY) > 10)) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+    }
+
+    // Shop scroll
+    if (state === STATES.SHOP) {
+        shopScroll -= (t.clientY - touchStartY) * 0.3;
+        touchStartY = t.clientY;
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+        handleClick(touchStartX, touchStartY);
+    }
+    isTouching = false;
+}, { passive: false });
+
+// Keyboard
+document.addEventListener('keydown', (e) => {
+    if (state === STATES.TITLE) {
+        if (e.key === 'Enter' || e.key === ' ') { ensureAudio(); startRun(); }
+        if (e.key === 's' || e.key === 'S') { ensureAudio(); state = STATES.SHOP; shopScroll = 0; }
+        return;
+    }
+
+    if (state === STATES.GAMEOVER) {
+        if (e.key === 'Enter' || e.key === ' ') { startRun(); }
+        if (e.key === 'Escape') { state = STATES.TITLE; }
+        return;
+    }
+
+    if (state === STATES.SHOP || state === STATES.ACHIEVEMENTS) {
+        if (e.key === 'Escape' || e.key === 'Backspace') { state = STATES.TITLE; saveSave(saveData); }
+        return;
+    }
+
+    if (state === STATES.PLAYING) {
+        if (e.key === '1') selectedTool = 'dig';
+        if (e.key === '2') selectedTool = 'detector';
+        if (e.key === '3') selectedTool = 'drill';
+        if (e.key === '4') selectedTool = 'shield';
+        if (e.key === '5') selectedTool = 'flag';
+        if (e.key === 'q' || e.key === 'Q') selectedTool = 'dig';
+        if (e.key === 'w' || e.key === 'W') selectedTool = 'detector';
+        if (e.key === 'e' || e.key === 'E') selectedTool = 'drill';
+        if (e.key === 'r' || e.key === 'R') selectedTool = 'shield';
+        if (e.key === 'f' || e.key === 'F') selectedTool = 'flag';
+    }
+});
+
+// Mouse wheel for shop
+canvas.addEventListener('wheel', (e) => {
+    if (state === STATES.SHOP) {
+        shopScroll += e.deltaY * 0.5;
+        e.preventDefault();
+    }
+}, { passive: false });
+
+// --- Game Loop ---
+let lastTime = 0;
+
+const update = (dt) => {
+    animTime += dt;
+    titlePulse += dt;
+
+    // Screen shake
+    if (shakeTime > 0) shakeTime -= dt;
+
+    // Flash
+    if (flashTime > 0) flashTime -= dt;
+
+    // Particles
+    updateParticles(dt);
+
+    // Achievement notifications
+    for (let i = achievementNotifications.length - 1; i >= 0; i--) {
+        achievementNotifications[i].time -= dt;
+        if (achievementNotifications[i].time <= 0) {
+            achievementNotifications.splice(i, 1);
+        }
+    }
+
+    // Cell animations
+    if (state === STATES.PLAYING && grid.length > 0) {
+        for (let r = 0; r < GRID_ROWS; r++) {
+            for (let c = 0; c < GRID_COLS; c++) {
+                if (grid[r][c].revealAnim > 0) {
+                    grid[r][c].revealAnim = Math.max(0, grid[r][c].revealAnim - dt * 5);
+                }
+                if (grid[r][c].shakeAnim > 0) {
+                    grid[r][c].shakeAnim = Math.max(0, grid[r][c].shakeAnim - dt * 4);
+                }
+            }
+        }
+
+        // Hover
+        hoveredCell = getCellFromPos(cursorX, cursorY);
+    }
+};
+
+const render = () => {
+    ctx.save();
+
+    // Screen shake
+    if (shakeTime > 0) {
+        const sx = (Math.random() - 0.5) * shakeAmount * 2;
+        const sy = (Math.random() - 0.5) * shakeAmount * 2;
+        ctx.translate(sx, sy);
+    }
+
+    switch (state) {
+        case STATES.TITLE:
+            titleBtns = drawTitle();
+            break;
+        case STATES.SHOP:
+            shopData = drawShop();
+            break;
+        case STATES.ACHIEVEMENTS:
+            achData = drawAchievements();
+            break;
+        case STATES.GAMEOVER:
+            goBtns = drawGameOver();
+            break;
+        case STATES.PLAYING:
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, W, H);
+
+            // Draw grid
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    drawCell(r, c);
+                }
+            }
+
+            // Draw particles
+            drawParticles();
+
+            // HUD
+            drawHUD();
+            drawToolBar();
+            break;
+    }
+
+    // Flash overlay
+    if (flashTime > 0 && flashColor) {
+        ctx.globalAlpha = flashTime * 3;
+        ctx.fillStyle = flashColor;
+        ctx.fillRect(0, 0, W, H);
+        ctx.globalAlpha = 1;
+    }
+
+    // Notifications
+    drawNotifications();
+
+    ctx.restore();
+};
+
+const loop = (timestamp) => {
+    const dt = Math.min(0.1, (timestamp - lastTime) / 1000);
+    lastTime = timestamp;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+};
+
+requestAnimationFrame((ts) => {
+    lastTime = ts;
+    loop(ts);
+});
+
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

@@ -1,0 +1,2137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Hero's Journey — Legacy of the Fallen">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Hero's Journey — Legacy of the Fallen</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); image-rendering: pixelated; }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+'use strict';
+
+// ============================================================
+// HERO'S JOURNEY — LEGACY OF THE FALLEN
+// A meta-progression roguelike where death makes you stronger
+// ============================================================
+
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+
+// --- Audio System ---
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+const ensureAudio = () => { if (!audioCtx) audioCtx = new AudioCtx(); };
+
+const sfx = {
+  hit: () => { ensureAudio(); const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'sawtooth'; o.frequency.setValueAtTime(200, audioCtx.currentTime); o.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.15); g.gain.setValueAtTime(0.3, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15); o.start(); o.stop(audioCtx.currentTime + 0.15); },
+  kill: () => { ensureAudio(); const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'square'; o.frequency.setValueAtTime(400, audioCtx.currentTime); o.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1); g.gain.setValueAtTime(0.2, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2); o.start(); o.stop(audioCtx.currentTime + 0.2); },
+  pickup: () => { ensureAudio(); const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'sine'; o.frequency.setValueAtTime(523, audioCtx.currentTime); o.frequency.setValueAtTime(659, audioCtx.currentTime + 0.08); o.frequency.setValueAtTime(784, audioCtx.currentTime + 0.16); g.gain.setValueAtTime(0.2, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3); o.start(); o.stop(audioCtx.currentTime + 0.3); },
+  death: () => { ensureAudio(); const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'sawtooth'; o.frequency.setValueAtTime(300, audioCtx.currentTime); o.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.8); g.gain.setValueAtTime(0.3, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8); o.start(); o.stop(audioCtx.currentTime + 0.8); },
+  levelup: () => { ensureAudio(); [523, 659, 784, 1047].forEach((f, i) => { const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0, audioCtx.currentTime + i * 0.1); g.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + i * 0.1 + 0.05); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.1 + 0.2); o.start(audioCtx.currentTime + i * 0.1); o.stop(audioCtx.currentTime + i * 0.1 + 0.2); }); },
+  swing: () => { ensureAudio(); const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'sawtooth'; o.frequency.setValueAtTime(150, audioCtx.currentTime); o.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.08); g.gain.setValueAtTime(0.15, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1); o.start(); o.stop(audioCtx.currentTime + 0.1); },
+  door: () => { ensureAudio(); const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'triangle'; o.frequency.setValueAtTime(200, audioCtx.currentTime); o.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.3); g.gain.setValueAtTime(0.2, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3); o.start(); o.stop(audioCtx.currentTime + 0.3); },
+  boss: () => { ensureAudio(); for (let i = 0; i < 3; i++) { const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'square'; o.frequency.value = 80 + i * 20; g.gain.setValueAtTime(0.1, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1); o.start(); o.stop(audioCtx.currentTime + 1); } },
+  npc: () => { ensureAudio(); [440, 520, 440].forEach((f, i) => { const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0, audioCtx.currentTime + i * 0.08); g.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + i * 0.08 + 0.02); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.08 + 0.08); o.start(audioCtx.currentTime + i * 0.08); o.stop(audioCtx.currentTime + i * 0.08 + 0.08); }); },
+  unlock: () => { ensureAudio(); [262, 330, 392, 523, 659].forEach((f, i) => { const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0, audioCtx.currentTime + i * 0.12); g.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + i * 0.12 + 0.04); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i * 0.12 + 0.25); o.start(audioCtx.currentTime + i * 0.12); o.stop(audioCtx.currentTime + i * 0.12 + 0.25); }); },
+};
+
+// --- Constants ---
+const TILE = 24;
+const MAP_W = 40;
+const MAP_H = 30;
+const COLORS = {
+  bg: '#0a0a0f', gold: '#f0b800', green: '#00ff88', red: '#ff3344',
+  blue: '#4488ff', purple: '#bb44ff', white: '#eeeeff', grey: '#555566',
+  darkgrey: '#222233', wall: '#1a1a2f', floor: '#111122', door: '#886622',
+  npcColor: '#44ddff', bossRed: '#ff2200', loot: '#ffdd00',
+};
+
+// --- Meta Progression (persisted in localStorage) ---
+const LEGACY_KEY = 'heros_journey_legacy';
+const defaultLegacy = () => ({
+  totalRuns: 0, totalKills: 0, totalGold: 0, totalFloorsCleared: 0,
+  bestFloor: 0, bestScore: 0, heroNames: [],
+  bossesDefeated: {}, bossPatterns: {},
+  clearedAreas: [], clearedAreaRunsLeft: {},
+  unlocks: { classes: ['warrior'], gear: ['rusty_sword'], abilities: ['slash'] },
+  achievements: [],
+  npcMemory: [],
+  legacyPower: 0, // total accumulated power bonus
+  statBonuses: { hp: 0, atk: 0, def: 0, spd: 0 },
+});
+
+const loadLegacy = () => {
+  try { const d = JSON.parse(localStorage.getItem(LEGACY_KEY)); return d ? { ...defaultLegacy(), ...d } : defaultLegacy(); }
+  catch { return defaultLegacy(); }
+};
+const saveLegacy = (l) => { try { localStorage.setItem(LEGACY_KEY, JSON.stringify(l)); } catch {} };
+
+let legacy = loadLegacy();
+
+// --- Class Definitions ---
+const CLASS_DEFS = {
+  warrior: { name: 'Warrior', color: '#ff6644', hp: 120, atk: 14, def: 8, spd: 1.0, ability: 'slash', desc: 'Strong and durable. Cleaves enemies.' },
+  rogue: { name: 'Rogue', color: '#44ff88', hp: 80, atk: 18, def: 4, spd: 1.4, ability: 'backstab', desc: 'Fast and deadly. Critical strikes.', req: 10 },
+  mage: { name: 'Mage', color: '#8844ff', hp: 70, atk: 22, def: 3, spd: 0.9, ability: 'fireball', desc: 'Devastating magic. Area damage.', req: 25 },
+  paladin: { name: 'Paladin', color: '#ffdd44', hp: 150, atk: 12, def: 12, spd: 0.8, ability: 'smite', desc: 'Holy warrior. Self-healing.', req: 50 },
+};
+
+const GEAR_DEFS = {
+  rusty_sword: { name: 'Rusty Sword', atk: 0, def: 0, color: '#887766' },
+  iron_blade: { name: 'Iron Blade', atk: 3, def: 0, color: '#aabbcc', req: 5 },
+  shadow_dagger: { name: 'Shadow Dagger', atk: 6, def: 0, color: '#44ff88', req: 15 },
+  flame_staff: { name: 'Flame Staff', atk: 8, def: 1, color: '#ff6622', req: 30 },
+  holy_shield: { name: 'Holy Shield', atk: 2, def: 8, color: '#ffdd44', req: 40 },
+  legendary_blade: { name: 'Legendary Blade', atk: 12, def: 4, color: '#ff44ff', req: 75 },
+};
+
+const ABILITY_DEFS = {
+  slash: { name: 'Slash', desc: 'Wide arc attack', range: 2, damage: 1.2, cooldown: 0.8 },
+  backstab: { name: 'Backstab', desc: 'High crit chance', range: 1.5, damage: 2.5, cooldown: 1.2, req: 10 },
+  fireball: { name: 'Fireball', desc: 'Ranged AoE', range: 5, damage: 2.0, cooldown: 2.0, req: 25 },
+  smite: { name: 'Smite', desc: 'Heal + damage', range: 2, damage: 1.5, cooldown: 3.0, heal: 20, req: 50 },
+  dash: { name: 'Dash', desc: 'Teleport forward', range: 4, damage: 0.5, cooldown: 1.5, req: 15 },
+  whirlwind: { name: 'Whirlwind', desc: '360 damage', range: 2.5, damage: 1.8, cooldown: 2.5, req: 60 },
+};
+
+// --- Game State ---
+const STATES = { TITLE: 0, CLASS_SELECT: 1, GAME: 2, DIALOGUE: 3, GAMEOVER: 4, LEGACY: 5, LEVELUP: 6, BOSS_INTRO: 7 };
+let state = STATES.TITLE;
+let screenShake = 0;
+let screenShakeIntensity = 0;
+let particles = [];
+let damageNumbers = [];
+let messages = [];
+let messageTimer = 0;
+
+// Player
+let player = null;
+let camera = { x: 0, y: 0 };
+
+// Map
+let map = [];
+let rooms = [];
+let entities = [];
+let items = [];
+let npcs = [];
+let stairs = null;
+let currentFloor = 0;
+let fog = [];
+let explored = [];
+
+// Dialogue
+let dialogueData = null;
+
+// Input
+const keys = {};
+let touchDpad = { x: 0, y: 0 };
+let touchAction = false;
+let touchAbility = false;
+let touchInteract = false;
+let touchStart = null;
+let lastTap = 0;
+
+// UI
+let selectedClass = 0;
+let selectedGear = 0;
+let levelUpChoices = [];
+let levelUpSelected = 0;
+let titlePulse = 0;
+let runStats = { kills: 0, gold: 0, floorsCleared: 0 };
+
+// --- Resize ---
+const resize = () => {
+  const s = Math.min(window.innerWidth, window.innerHeight);
+  canvas.width = MAP_W * TILE;
+  canvas.height = MAP_H * TILE;
+  const scale = Math.min(window.innerWidth / canvas.width, window.innerHeight / canvas.height);
+  canvas.style.width = `${canvas.width * scale}px`;
+  canvas.style.height = `${canvas.height * scale}px`;
+};
+window.addEventListener('resize', resize);
+resize();
+
+// --- Utility ---
+const rng = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const rngf = (min, max) => Math.random() * (max - min) + min;
+const dist = (a, b) => Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+const addShake = (intensity, duration) => { screenShake = duration; screenShakeIntensity = intensity; };
+const addParticle = (x, y, color, count = 5) => {
+  for (let i = 0; i < count; i++) {
+    particles.push({ x, y, vx: rngf(-3, 3), vy: rngf(-3, 3), life: rngf(0.3, 0.8), maxLife: 0.8, color, size: rngf(2, 5) });
+  }
+};
+const addDamageNum = (x, y, text, color) => { damageNumbers.push({ x, y, text: String(text), color, life: 1.0, vy: -2 }); };
+const addMessage = (text, color = COLORS.white) => { messages.push({ text, color, life: 3.0 }); };
+
+// --- Map Generation ---
+const CELL = { WALL: 0, FLOOR: 1, DOOR: 2, STAIRS: 3, CLEARED: 4 };
+
+const generateMap = (floor) => {
+  map = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(CELL.WALL));
+  fog = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(true));
+  explored = Array.from({ length: MAP_H }, () => Array(MAP_W).fill(false));
+  rooms = [];
+  entities = [];
+  items = [];
+  npcs = [];
+  stairs = null;
+
+  const areaKey = `floor_${floor}`;
+  const isPreCleared = legacy.clearedAreaRunsLeft[areaKey] > 0;
+
+  // BSP room generation
+  const attempts = 80;
+  for (let i = 0; i < attempts; i++) {
+    const w = rng(4, 9);
+    const h = rng(4, 7);
+    const x = rng(1, MAP_W - w - 2);
+    const y = rng(1, MAP_H - h - 2);
+    let overlap = false;
+    for (const r of rooms) {
+      if (x < r.x + r.w + 1 && x + w + 1 > r.x && y < r.y + r.h + 1 && y + h + 1 > r.y) { overlap = true; break; }
+    }
+    if (!overlap) {
+      rooms.push({ x, y, w, h });
+      for (let ry = y; ry < y + h; ry++) for (let rx = x; rx < x + w; rx++) map[ry][rx] = CELL.FLOOR;
+    }
+  }
+
+  // Connect rooms with corridors
+  for (let i = 1; i < rooms.length; i++) {
+    const a = rooms[i - 1], b = rooms[i];
+    const ax = Math.floor(a.x + a.w / 2), ay = Math.floor(a.y + a.h / 2);
+    const bx = Math.floor(b.x + b.w / 2), by = Math.floor(b.y + b.h / 2);
+    let cx = ax, cy = ay;
+    while (cx !== bx) { if (cy >= 0 && cy < MAP_H && cx >= 0 && cx < MAP_W) { if (map[cy][cx] === CELL.WALL) map[cy][cx] = CELL.FLOOR; } cx += cx < bx ? 1 : -1; }
+    while (cy !== by) { if (cy >= 0 && cy < MAP_H && cx >= 0 && cx < MAP_W) { if (map[cy][cx] === CELL.WALL) map[cy][cx] = CELL.FLOOR; } cy += cy < by ? 1 : -1; }
+  }
+
+  // Add doors at room entrances
+  for (const r of rooms) {
+    const checkDoor = (x, y) => {
+      if (x <= 0 || x >= MAP_W - 1 || y <= 0 || y >= MAP_H - 1) return;
+      if (map[y][x] !== CELL.FLOOR) return;
+      const isEdge = (x === r.x || x === r.x + r.w - 1 || y === r.y || y === r.y + r.h - 1);
+      if (!isEdge) return;
+      let wallCount = 0;
+      if (map[y - 1][x] === CELL.WALL) wallCount++;
+      if (map[y + 1][x] === CELL.WALL) wallCount++;
+      if (map[y][x - 1] === CELL.WALL) wallCount++;
+      if (map[y][x + 1] === CELL.WALL) wallCount++;
+      if (wallCount === 2 && Math.random() < 0.3) map[y][x] = CELL.DOOR;
+    };
+    for (let x = r.x; x < r.x + r.w; x++) { checkDoor(x, r.y); checkDoor(x, r.y + r.h - 1); }
+    for (let y = r.y; y < r.y + r.h; y++) { checkDoor(r.x, y); checkDoor(r.x + r.w - 1, y); }
+  }
+
+  // Place player in first room
+  const startRoom = rooms[0];
+  player.x = startRoom.x + Math.floor(startRoom.w / 2);
+  player.y = startRoom.y + Math.floor(startRoom.h / 2);
+
+  // Place stairs in last room
+  const endRoom = rooms[rooms.length - 1];
+  stairs = { x: endRoom.x + Math.floor(endRoom.w / 2), y: endRoom.y + Math.floor(endRoom.h / 2) };
+  map[stairs.y][stairs.x] = CELL.STAIRS;
+
+  // Place NPC in 2nd room (if exists)
+  if (rooms.length > 2) {
+    const npcRoom = rooms[1];
+    const npc = createNPC(npcRoom.x + Math.floor(npcRoom.w / 2), npcRoom.y + Math.floor(npcRoom.h / 2), floor);
+    npcs.push(npc);
+  }
+
+  // Boss room every 5 floors
+  const isBossFloor = floor > 0 && floor % 5 === 0;
+
+  // Place enemies (fewer if pre-cleared)
+  const enemyCount = isPreCleared ? rng(2, 4) : rng(6 + floor * 2, 10 + floor * 3);
+  for (let i = 0; i < enemyCount; i++) {
+    const roomIdx = rng(2, rooms.length - 1);
+    if (roomIdx >= rooms.length) continue;
+    const room = rooms[roomIdx];
+    const ex = rng(room.x + 1, room.x + room.w - 2);
+    const ey = rng(room.y + 1, room.y + room.h - 2);
+    if (map[ey][ex] === CELL.FLOOR && !(ex === player.x && ey === player.y)) {
+      entities.push(createEnemy(ex, ey, floor, false));
+    }
+  }
+
+  // Place boss
+  if (isBossFloor && rooms.length > 3) {
+    const bossRoom = rooms[rooms.length - 2];
+    const bx = bossRoom.x + Math.floor(bossRoom.w / 2);
+    const by = bossRoom.y + Math.floor(bossRoom.h / 2);
+    entities.push(createEnemy(bx, by, floor, true));
+  }
+
+  // Place items
+  const itemCount = rng(3, 6);
+  for (let i = 0; i < itemCount; i++) {
+    const roomIdx = rng(1, rooms.length - 1);
+    if (roomIdx >= rooms.length) continue;
+    const room = rooms[roomIdx];
+    const ix = rng(room.x + 1, room.x + room.w - 2);
+    const iy = rng(room.y + 1, room.y + room.h - 2);
+    if (map[iy][ix] === CELL.FLOOR) {
+      items.push(createItem(ix, iy, floor));
+    }
+  }
+
+  if (isPreCleared) addMessage('This area was cleared before. Fewer enemies remain.', COLORS.green);
+};
+
+// --- Entity Factories ---
+const ENEMY_TYPES = [
+  { name: 'Rat', color: '#886644', hp: 15, atk: 4, def: 1, xp: 5, speed: 0.8, char: 'r' },
+  { name: 'Skeleton', color: '#ccccaa', hp: 25, atk: 7, def: 3, xp: 10, speed: 0.6, char: 'S' },
+  { name: 'Goblin', color: '#44aa44', hp: 20, atk: 9, def: 2, xp: 8, speed: 1.0, char: 'g' },
+  { name: 'Wraith', color: '#8844cc', hp: 35, atk: 12, def: 4, xp: 15, speed: 0.5, char: 'W' },
+  { name: 'Demon', color: '#ff4422', hp: 50, atk: 16, def: 6, xp: 25, speed: 0.7, char: 'D' },
+  { name: 'Dragon', color: '#ff8800', hp: 80, atk: 22, def: 10, xp: 50, speed: 0.4, char: 'V' },
+];
+
+const BOSS_TYPES = [
+  { name: 'Skull Lord', color: '#ff2244', hp: 200, atk: 20, def: 10, xp: 100, speed: 0.3, char: 'K', pattern: 'charge' },
+  { name: 'Shadow King', color: '#6622cc', hp: 250, atk: 25, def: 12, xp: 150, speed: 0.4, char: 'Q', pattern: 'teleport' },
+  { name: 'Inferno Wyrm', color: '#ff6600', hp: 350, atk: 30, def: 15, xp: 200, speed: 0.35, char: 'W', pattern: 'breath' },
+];
+
+const createEnemy = (x, y, floor, isBoss) => {
+  if (isBoss) {
+    const bossIdx = Math.min(Math.floor(floor / 5) - 1, BOSS_TYPES.length - 1);
+    const base = BOSS_TYPES[Math.max(0, bossIdx)];
+    const scale = 1 + floor * 0.1;
+    const bossId = `${base.name}_f${floor}`;
+    const knownPatterns = legacy.bossPatterns[bossId] || [];
+    return {
+      x, y, ...base, hp: Math.floor(base.hp * scale), maxHp: Math.floor(base.hp * scale),
+      atk: Math.floor(base.atk * scale), def: Math.floor(base.def * scale),
+      isBoss: true, bossId, knownPatterns, moveTimer: 0, attackTimer: 0,
+      phase: 0, phaseTimer: 0, aggro: false, patternIdx: 0,
+    };
+  }
+  const tier = Math.min(Math.floor(floor / 2), ENEMY_TYPES.length - 1);
+  const typeIdx = rng(Math.max(0, tier - 1), Math.min(tier + 1, ENEMY_TYPES.length - 1));
+  const base = ENEMY_TYPES[typeIdx];
+  const scale = 1 + floor * 0.08;
+  return {
+    x, y, ...base, hp: Math.floor(base.hp * scale), maxHp: Math.floor(base.hp * scale),
+    atk: Math.floor(base.atk * scale), def: Math.floor(base.def * scale),
+    isBoss: false, moveTimer: 0, attackTimer: 0, aggro: false,
+  };
+};
+
+const ITEM_TYPES = [
+  { name: 'Health Potion', type: 'heal', value: 30, color: '#ff4444', char: '!' },
+  { name: 'Gold Coins', type: 'gold', value: 15, color: COLORS.gold, char: '$' },
+  { name: 'Strength Tome', type: 'buff_atk', value: 2, color: '#ff8844', char: 'T' },
+  { name: 'Shield Rune', type: 'buff_def', value: 2, color: '#4488ff', char: 'R' },
+  { name: 'Speed Boots', type: 'buff_spd', value: 0.1, color: COLORS.green, char: 'B' },
+  { name: 'XP Orb', type: 'xp', value: 20, color: '#ccaaff', char: 'O' },
+];
+
+const createItem = (x, y, floor) => {
+  const base = ITEM_TYPES[rng(0, ITEM_TYPES.length - 1)];
+  const scale = 1 + floor * 0.15;
+  return { x, y, ...base, value: Math.floor(base.value * scale), bobTimer: Math.random() * Math.PI * 2 };
+};
+
+// --- NPC System ---
+const NPC_DIALOGUES = [
+  { greeting: 'Greetings, hero.', lines: [
+    { text: 'The dungeon grows stronger with each floor...', next: null },
+    { text: 'But so do you. Each death teaches you something.', next: null },
+  ]},
+  { greeting: 'Ah, a {CLASS}! Welcome back.', lines: [
+    { text: 'I remember your past lives. You\'ve died {DEATHS} times.', next: null },
+    { text: 'Your legacy grows. Keep fighting!', next: null },
+  ]},
+  { greeting: 'The shadows whisper of your deeds...', lines: [
+    { text: 'You\'ve slain {KILLS} monsters across all your lives.', next: null },
+    { text: 'The darkness fears your name now.', next: null },
+  ]},
+];
+
+const NPC_HINTS = [
+  'Tip: Bosses repeat their patterns. Learn them and you\'ll know what\'s coming.',
+  'Tip: Cleared areas stay safe for 3 runs. Use them to reach deeper floors.',
+  'Tip: Each run adds to your legacy power. Starting stats grow over time.',
+  'Tip: Unlock new classes by accumulating kills across runs.',
+  'Tip: Find the stairs to descend. Bosses guard every 5th floor.',
+];
+
+const createNPC = (x, y, floor) => {
+  const dialogueSet = NPC_DIALOGUES[rng(0, NPC_DIALOGUES.length - 1)];
+  const hint = NPC_HINTS[rng(0, NPC_HINTS.length - 1)];
+  return {
+    x, y, color: COLORS.npcColor, char: '?', name: `Sage`,
+    dialogueSet, hint, talked: false,
+  };
+};
+
+// --- Player Creation ---
+const createPlayer = (className, gearName) => {
+  const classDef = CLASS_DEFS[className];
+  const gear = GEAR_DEFS[gearName];
+  const lb = legacy.statBonuses;
+  return {
+    x: 0, y: 0,
+    className, classDef,
+    gear, gearName,
+    hp: classDef.hp + lb.hp,
+    maxHp: classDef.hp + lb.hp,
+    atk: classDef.atk + gear.atk + lb.atk,
+    def: classDef.def + gear.def + lb.def,
+    spd: classDef.spd + lb.spd,
+    level: 1, xp: 0, xpToLevel: 30,
+    gold: 0, score: 0,
+    ability: classDef.ability,
+    abilityCooldown: 0,
+    attackCooldown: 0,
+    invincible: 0,
+    facing: { x: 0, y: 1 },
+    attackAnim: 0,
+    abilityAnim: 0,
+    moveTimer: 0,
+    name: generateHeroName(),
+  };
+};
+
+const HERO_NAMES = ['Aldric', 'Brenna', 'Cael', 'Dara', 'Elric', 'Freya', 'Galen', 'Helena', 'Isen', 'Jade',
+  'Kael', 'Luna', 'Mira', 'Nyx', 'Orin', 'Petra', 'Quinn', 'Raven', 'Sira', 'Thane', 'Uma', 'Vex', 'Wren', 'Xara', 'Yara', 'Zane'];
+const generateHeroName = () => {
+  const name = HERO_NAMES[rng(0, HERO_NAMES.length - 1)];
+  const suffix = legacy.totalRuns > 0 ? ` ${toRoman(legacy.totalRuns + 1)}` : '';
+  return name + suffix;
+};
+
+const toRoman = (num) => {
+  const vals = [1000,900,500,400,100,90,50,40,10,9,5,4,1];
+  const syms = ['M','CM','D','CD','C','XC','L','XL','X','IX','V','IV','I'];
+  let result = '';
+  for (let i = 0; i < vals.length; i++) { while (num >= vals[i]) { result += syms[i]; num -= vals[i]; } }
+  return result;
+};
+
+// --- Level Up System ---
+const LEVEL_UP_OPTIONS = [
+  { name: '+20 Max HP', apply: (p) => { p.maxHp += 20; p.hp = Math.min(p.hp + 20, p.maxHp); } },
+  { name: '+3 Attack', apply: (p) => { p.atk += 3; } },
+  { name: '+2 Defense', apply: (p) => { p.def += 2; } },
+  { name: '+0.1 Speed', apply: (p) => { p.spd += 0.1; } },
+  { name: 'Heal to Full', apply: (p) => { p.hp = p.maxHp; } },
+  { name: '+15% Crit', apply: (p) => { p.critBonus = (p.critBonus || 0) + 0.15; } },
+  { name: '-20% Cooldown', apply: (p) => { p.cdReduction = (p.cdReduction || 0) + 0.2; } },
+];
+
+const checkLevelUp = () => {
+  if (player.xp >= player.xpToLevel) {
+    player.xp -= player.xpToLevel;
+    player.level++;
+    player.xpToLevel = Math.floor(player.xpToLevel * 1.5);
+    player.hp = Math.min(player.hp + 10, player.maxHp);
+    sfx.levelup();
+    addMessage(`Level up! Now level ${player.level}`, COLORS.gold);
+    addParticle(player.x * TILE + TILE / 2, player.y * TILE + TILE / 2, COLORS.gold, 15);
+
+    // Show level up choices
+    levelUpChoices = [];
+    const indices = [];
+    while (indices.length < 3) {
+      const idx = rng(0, LEVEL_UP_OPTIONS.length - 1);
+      if (!indices.includes(idx)) indices.push(idx);
+    }
+    levelUpChoices = indices.map(i => LEVEL_UP_OPTIONS[i]);
+    levelUpSelected = 0;
+    state = STATES.LEVELUP;
+  }
+};
+
+// --- FOV / Visibility ---
+const revealFov = () => {
+  const radius = 6;
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      if (dx * dx + dy * dy > radius * radius) continue;
+      const tx = player.x + dx, ty = player.y + dy;
+      if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) continue;
+      // Simple raycasting
+      let blocked = false;
+      const steps = Math.max(Math.abs(dx), Math.abs(dy));
+      for (let s = 1; s <= steps; s++) {
+        const cx = Math.round(player.x + dx * s / steps);
+        const cy = Math.round(player.y + dy * s / steps);
+        if (cx >= 0 && cx < MAP_W && cy >= 0 && cy < MAP_H) {
+          if (map[cy][cx] === CELL.WALL) { blocked = true; explored[cy][cx] = true; fog[cy][cx] = false; break; }
+        }
+      }
+      if (!blocked) { fog[ty][tx] = false; explored[ty][tx] = true; }
+    }
+  }
+  // Reset fog for non-visible
+  for (let y = 0; y < MAP_H; y++) for (let x = 0; x < MAP_W; x++) fog[y][x] = true;
+  for (let dy = -radius; dy <= radius; dy++) {
+    for (let dx = -radius; dx <= radius; dx++) {
+      if (dx * dx + dy * dy > radius * radius) continue;
+      const tx = player.x + dx, ty = player.y + dy;
+      if (tx < 0 || tx >= MAP_W || ty < 0 || ty >= MAP_H) continue;
+      let blocked = false;
+      const steps = Math.max(Math.abs(dx), Math.abs(dy), 1);
+      for (let s = 1; s <= steps; s++) {
+        const cx = Math.round(player.x + dx * s / steps);
+        const cy = Math.round(player.y + dy * s / steps);
+        if (cx >= 0 && cx < MAP_W && cy >= 0 && cy < MAP_H && map[cy][cx] === CELL.WALL) { blocked = true; break; }
+      }
+      if (!blocked) fog[ty][tx] = false;
+    }
+  }
+};
+
+// --- Combat ---
+const attackEntity = (target, damage) => {
+  const actualDmg = Math.max(1, damage - target.def);
+  const isCrit = Math.random() < (player.critBonus || 0.05);
+  const finalDmg = isCrit ? Math.floor(actualDmg * 2) : actualDmg;
+  target.hp -= finalDmg;
+  sfx.hit();
+  addShake(isCrit ? 6 : 3, 0.15);
+  addDamageNum(target.x * TILE + TILE / 2, target.y * TILE, isCrit ? `${finalDmg}!` : finalDmg, isCrit ? COLORS.gold : COLORS.red);
+  addParticle(target.x * TILE + TILE / 2, target.y * TILE + TILE / 2, COLORS.red, isCrit ? 8 : 4);
+
+  if (target.hp <= 0) {
+    sfx.kill();
+    addParticle(target.x * TILE + TILE / 2, target.y * TILE + TILE / 2, target.color, 15);
+    const xpGain = target.xp;
+    player.xp += xpGain;
+    player.score += target.xp * 10;
+    runStats.kills++;
+    addMessage(`${target.name} defeated! +${xpGain} XP`, COLORS.green);
+
+    // Drop gold
+    if (Math.random() < 0.5) {
+      items.push({ x: target.x, y: target.y, name: 'Gold', type: 'gold', value: rng(5, 15 + currentFloor * 3), color: COLORS.gold, char: '$', bobTimer: 0 });
+    }
+
+    if (target.isBoss) {
+      legacy.bossesDefeated[target.bossId] = (legacy.bossesDefeated[target.bossId] || 0) + 1;
+      if (!legacy.bossPatterns[target.bossId]) legacy.bossPatterns[target.bossId] = [];
+      if (!legacy.bossPatterns[target.bossId].includes(target.pattern)) {
+        legacy.bossPatterns[target.bossId].push(target.pattern);
+      }
+      addMessage(`BOSS DEFEATED! Pattern "${target.pattern}" learned!`, COLORS.gold);
+      player.score += 500;
+    }
+
+    return true; // killed
+  }
+  return false;
+};
+
+const playerTakeDamage = (amount) => {
+  if (player.invincible > 0) return;
+  const actualDmg = Math.max(1, amount - player.def);
+  player.hp -= actualDmg;
+  player.invincible = 0.5;
+  sfx.hit();
+  addShake(5, 0.2);
+  addDamageNum(player.x * TILE + TILE / 2, player.y * TILE, actualDmg, COLORS.red);
+  addParticle(player.x * TILE + TILE / 2, player.y * TILE + TILE / 2, COLORS.red, 6);
+
+  if (player.hp <= 0) {
+    player.hp = 0;
+    onDeath();
+  }
+};
+
+// --- Abilities ---
+const useAbility = () => {
+  if (player.abilityCooldown > 0) return;
+  const abilDef = ABILITY_DEFS[player.ability];
+  if (!abilDef) return;
+
+  const cd = abilDef.cooldown * (1 - (player.cdReduction || 0));
+  player.abilityCooldown = cd;
+  player.abilityAnim = 0.3;
+  sfx.swing();
+
+  const range = abilDef.range;
+  const damage = Math.floor(player.atk * abilDef.damage);
+
+  if (player.ability === 'fireball') {
+    // Ranged projectile AoE
+    const fx = player.x + player.facing.x * range;
+    const fy = player.y + player.facing.y * range;
+    addParticle(fx * TILE + TILE / 2, fy * TILE + TILE / 2, '#ff6600', 20);
+    entities.forEach(e => {
+      if (dist(e, { x: fx, y: fy }) <= 2) {
+        if (attackEntity(e, damage)) entities.splice(entities.indexOf(e), 1);
+      }
+    });
+  } else if (player.ability === 'backstab') {
+    // Single target high damage
+    const tx = player.x + player.facing.x;
+    const ty = player.y + player.facing.y;
+    const target = entities.find(e => e.x === tx && e.y === ty);
+    if (target) {
+      const backstabDmg = Math.floor(damage * (Math.random() < 0.5 ? 2 : 1));
+      if (attackEntity(target, backstabDmg)) entities.splice(entities.indexOf(target), 1);
+    }
+  } else if (player.ability === 'smite') {
+    // Damage + heal
+    entities.forEach(e => {
+      if (dist(e, player) <= range) {
+        if (attackEntity(e, damage)) entities.splice(entities.indexOf(e), 1);
+      }
+    });
+    player.hp = Math.min(player.hp + abilDef.heal, player.maxHp);
+    addDamageNum(player.x * TILE + TILE / 2, player.y * TILE - 10, `+${abilDef.heal}`, COLORS.green);
+  } else if (player.ability === 'dash') {
+    // Teleport forward
+    let nx = player.x, ny = player.y;
+    for (let i = 0; i < Math.floor(range); i++) {
+      const tx = nx + player.facing.x;
+      const ty = ny + player.facing.y;
+      if (tx >= 0 && tx < MAP_W && ty >= 0 && ty < MAP_H && map[ty][tx] !== CELL.WALL) {
+        nx = tx; ny = ty;
+      } else break;
+    }
+    player.x = nx; player.y = ny;
+    addParticle(player.x * TILE + TILE / 2, player.y * TILE + TILE / 2, COLORS.blue, 10);
+    // Damage enemies along path
+    entities.forEach(e => {
+      if (dist(e, player) <= 1.5) {
+        if (attackEntity(e, Math.floor(damage * 0.5))) entities.splice(entities.indexOf(e), 1);
+      }
+    });
+  } else if (player.ability === 'whirlwind') {
+    // 360 degree damage
+    addParticle(player.x * TILE + TILE / 2, player.y * TILE + TILE / 2, COLORS.gold, 20);
+    entities.forEach(e => {
+      if (dist(e, player) <= range) {
+        if (attackEntity(e, damage)) entities.splice(entities.indexOf(e), 1);
+      }
+    });
+  } else {
+    // Default slash - arc in front
+    const targets = entities.filter(e => {
+      const d = dist(e, player);
+      if (d > range) return false;
+      const dx = e.x - player.x, dy = e.y - player.y;
+      const dot = dx * player.facing.x + dy * player.facing.y;
+      return dot > 0;
+    });
+    targets.forEach(e => {
+      if (attackEntity(e, damage)) entities.splice(entities.indexOf(e), 1);
+    });
+  }
+
+  // Remove dead entities
+  entities = entities.filter(e => e.hp > 0);
+};
+
+// --- Enemy AI ---
+const updateEnemies = (dt) => {
+  for (const e of entities) {
+    if (fog[e.y]?.[e.x]) continue; // Don't update off-screen enemies
+
+    const d = dist(e, player);
+    if (d < 8) e.aggro = true;
+
+    if (!e.aggro) continue;
+
+    e.moveTimer -= dt;
+    e.attackTimer -= dt;
+
+    if (e.isBoss) {
+      updateBoss(e, dt);
+      continue;
+    }
+
+    // Attack if adjacent
+    if (d < 1.5 && e.attackTimer <= 0) {
+      playerTakeDamage(e.atk);
+      e.attackTimer = 1.0 / e.speed;
+      continue;
+    }
+
+    // Move toward player
+    if (e.moveTimer <= 0 && d > 1.2) {
+      e.moveTimer = 0.3 / e.speed;
+      const dx = Math.sign(player.x - e.x);
+      const dy = Math.sign(player.y - e.y);
+
+      // Try preferred direction first
+      let moved = false;
+      if (Math.random() < 0.5) {
+        if (tryMove(e, dx, 0)) moved = true;
+        else if (tryMove(e, 0, dy)) moved = true;
+      } else {
+        if (tryMove(e, 0, dy)) moved = true;
+        else if (tryMove(e, dx, 0)) moved = true;
+      }
+    }
+  }
+};
+
+const updateBoss = (boss, dt) => {
+  const d = dist(boss, player);
+  boss.phaseTimer -= dt;
+  boss.moveTimer -= dt;
+  boss.attackTimer -= dt;
+
+  // Phase transitions
+  if (boss.hp < boss.maxHp * 0.5 && boss.phase === 0) {
+    boss.phase = 1;
+    addMessage(`${boss.name} enters rage mode!`, COLORS.red);
+    boss.speed *= 1.5;
+    boss.atk = Math.floor(boss.atk * 1.3);
+  }
+
+  const knownPatterns = boss.knownPatterns || [];
+  const showHint = knownPatterns.includes(boss.pattern);
+
+  if (boss.pattern === 'charge') {
+    if (boss.phaseTimer <= 0) {
+      boss.phaseTimer = 2.0;
+      if (showHint && boss.attackTimer < 0.5) {
+        addMessage('Boss winding up CHARGE — dodge now!', COLORS.gold);
+      }
+      // Charge at player
+      const dx = Math.sign(player.x - boss.x);
+      const dy = Math.sign(player.y - boss.y);
+      for (let i = 0; i < 3; i++) {
+        if (tryMove(boss, dx, dy)) {
+          if (dist(boss, player) < 1.5) {
+            playerTakeDamage(boss.atk);
+            break;
+          }
+        }
+      }
+    }
+  } else if (boss.pattern === 'teleport') {
+    if (boss.phaseTimer <= 0) {
+      boss.phaseTimer = 3.0;
+      if (showHint) addMessage('Boss about to TELEPORT — watch your back!', COLORS.gold);
+      // Teleport near player
+      const offsets = [[-2,0],[2,0],[0,-2],[0,2],[-1,-1],[1,1]];
+      const off = offsets[rng(0, offsets.length - 1)];
+      const nx = clamp(player.x + off[0], 1, MAP_W - 2);
+      const ny = clamp(player.y + off[1], 1, MAP_H - 2);
+      if (map[ny][nx] !== CELL.WALL) {
+        addParticle(boss.x * TILE + TILE / 2, boss.y * TILE + TILE / 2, boss.color, 10);
+        boss.x = nx; boss.y = ny;
+        addParticle(boss.x * TILE + TILE / 2, boss.y * TILE + TILE / 2, boss.color, 10);
+      }
+    }
+  } else if (boss.pattern === 'breath') {
+    if (boss.phaseTimer <= 0) {
+      boss.phaseTimer = 2.5;
+      if (showHint) addMessage('Boss inhaling for FIRE BREATH — get behind!', COLORS.gold);
+      // Line attack
+      const dx = Math.sign(player.x - boss.x);
+      const dy = Math.sign(player.y - boss.y);
+      for (let i = 1; i <= 5; i++) {
+        const fx = boss.x + dx * i, fy = boss.y + dy * i;
+        if (fx >= 0 && fx < MAP_W && fy >= 0 && fy < MAP_H) {
+          addParticle(fx * TILE + TILE / 2, fy * TILE + TILE / 2, '#ff4400', 3);
+          if (fx === player.x && fy === player.y) playerTakeDamage(Math.floor(boss.atk * 0.8));
+        }
+      }
+    }
+  }
+
+  // Normal melee
+  if (d < 1.5 && boss.attackTimer <= 0) {
+    playerTakeDamage(boss.atk);
+    boss.attackTimer = 1.0;
+  }
+
+  // Move toward player
+  if (boss.moveTimer <= 0 && d > 1.5) {
+    boss.moveTimer = 0.4 / boss.speed;
+    const dx = Math.sign(player.x - boss.x);
+    const dy = Math.sign(player.y - boss.y);
+    tryMove(boss, dx, 0) || tryMove(boss, 0, dy);
+  }
+};
+
+const tryMove = (entity, dx, dy) => {
+  const nx = entity.x + dx, ny = entity.y + dy;
+  if (nx < 0 || nx >= MAP_W || ny < 0 || ny >= MAP_H) return false;
+  if (map[ny][nx] === CELL.WALL) return false;
+  // Don't step on other entities
+  if (entities.some(e => e !== entity && e.x === nx && e.y === ny)) return false;
+  if (player.x === nx && player.y === ny) return false;
+  entity.x = nx; entity.y = ny;
+  return true;
+};
+
+// --- Player Movement ---
+const movePlayer = (dx, dy) => {
+  if (dx === 0 && dy === 0) return;
+  if (player.moveTimer > 0) return;
+
+  player.facing = { x: dx, y: dy };
+  const nx = player.x + dx;
+  const ny = player.y + dy;
+
+  if (nx < 0 || nx >= MAP_W || ny < 0 || ny >= MAP_H) return;
+  if (map[ny][nx] === CELL.WALL) return;
+
+  // Attack enemy if present
+  const target = entities.find(e => e.x === nx && e.y === ny);
+  if (target) {
+    player.attackAnim = 0.2;
+    player.attackCooldown = 0.3;
+    sfx.swing();
+    if (attackEntity(target, player.atk)) {
+      entities = entities.filter(e => e !== target);
+    }
+    player.moveTimer = 0.15;
+    checkLevelUp();
+    return;
+  }
+
+  // Open door
+  if (map[ny][nx] === CELL.DOOR) {
+    map[ny][nx] = CELL.FLOOR;
+    sfx.door();
+    addMessage('Door opened!', COLORS.grey);
+  }
+
+  // Move
+  player.x = nx;
+  player.y = ny;
+  player.moveTimer = 0.12 / player.spd;
+
+  // Pick up items
+  const itemIdx = items.findIndex(i => i.x === nx && i.y === ny);
+  if (itemIdx >= 0) {
+    const item = items[itemIdx];
+    items.splice(itemIdx, 1);
+    sfx.pickup();
+    applyItem(item);
+  }
+
+  // Interact with NPC
+  // (handled separately via interact button)
+
+  // Check stairs
+  if (map[ny][nx] === CELL.STAIRS) {
+    descendFloor();
+  }
+
+  revealFov();
+};
+
+const applyItem = (item) => {
+  switch (item.type) {
+    case 'heal':
+      player.hp = Math.min(player.hp + item.value, player.maxHp);
+      addDamageNum(player.x * TILE + TILE / 2, player.y * TILE, `+${item.value}`, COLORS.green);
+      addMessage(`${item.name}: +${item.value} HP`, COLORS.green);
+      break;
+    case 'gold':
+      player.gold += item.value;
+      runStats.gold += item.value;
+      player.score += item.value;
+      addMessage(`+${item.value} Gold`, COLORS.gold);
+      break;
+    case 'buff_atk':
+      player.atk += item.value;
+      addMessage(`${item.name}: +${item.value} ATK`, '#ff8844');
+      break;
+    case 'buff_def':
+      player.def += item.value;
+      addMessage(`${item.name}: +${item.value} DEF`, COLORS.blue);
+      break;
+    case 'buff_spd':
+      player.spd += item.value;
+      addMessage(`${item.name}: +${item.value} SPD`, COLORS.green);
+      break;
+    case 'xp':
+      player.xp += item.value;
+      addMessage(`${item.name}: +${item.value} XP`, '#ccaaff');
+      checkLevelUp();
+      break;
+  }
+};
+
+const descendFloor = () => {
+  currentFloor++;
+  runStats.floorsCleared++;
+  sfx.door();
+  addMessage(`Descending to Floor ${currentFloor + 1}...`, COLORS.gold);
+
+  // Mark area as cleared
+  const areaKey = `floor_${currentFloor - 1}`;
+  legacy.clearedAreaRunsLeft[areaKey] = 3;
+
+  // Boss intro
+  if (currentFloor > 0 && currentFloor % 5 === 0) {
+    sfx.boss();
+    state = STATES.BOSS_INTRO;
+    setTimeout(() => { if (state === STATES.BOSS_INTRO) { state = STATES.GAME; } }, 2500);
+  }
+
+  generateMap(currentFloor);
+  revealFov();
+};
+
+// --- NPC Interaction ---
+const interactNPC = () => {
+  const npc = npcs.find(n => dist(n, player) < 2);
+  if (!npc) return;
+
+  sfx.npc();
+  npc.talked = true;
+
+  const d = npc.dialogueSet;
+  let greeting = d.greeting
+    .replace('{CLASS}', player.classDef.name)
+    .replace('{DEATHS}', String(legacy.totalRuns))
+    .replace('{KILLS}', String(legacy.totalKills));
+
+  const lines = [
+    greeting,
+    ...d.lines.map(l => l.text
+      .replace('{CLASS}', player.classDef.name)
+      .replace('{DEATHS}', String(legacy.totalRuns))
+      .replace('{KILLS}', String(legacy.totalKills))
+    ),
+    npc.hint,
+  ];
+
+  dialogueData = { lines, currentLine: 0, npcName: npc.name };
+  state = STATES.DIALOGUE;
+};
+
+// --- Death & Legacy ---
+const onDeath = () => {
+  sfx.death();
+  addShake(10, 0.5);
+
+  // Update legacy
+  legacy.totalRuns++;
+  legacy.totalKills += runStats.kills;
+  legacy.totalGold += runStats.gold;
+  legacy.totalFloorsCleared += runStats.floorsCleared;
+  legacy.bestFloor = Math.max(legacy.bestFloor, currentFloor);
+  legacy.bestScore = Math.max(legacy.bestScore, player.score);
+  legacy.heroNames.push(player.name);
+  if (legacy.heroNames.length > 10) legacy.heroNames.shift();
+
+  // Decay cleared areas
+  for (const key in legacy.clearedAreaRunsLeft) {
+    legacy.clearedAreaRunsLeft[key]--;
+    if (legacy.clearedAreaRunsLeft[key] <= 0) delete legacy.clearedAreaRunsLeft[key];
+  }
+
+  // Legacy power: cumulative stat bonuses
+  legacy.legacyPower++;
+  if (legacy.legacyPower % 3 === 0) legacy.statBonuses.hp += 5;
+  if (legacy.legacyPower % 4 === 0) legacy.statBonuses.atk += 1;
+  if (legacy.legacyPower % 5 === 0) legacy.statBonuses.def += 1;
+  if (legacy.legacyPower % 8 === 0) legacy.statBonuses.spd += 0.05;
+
+  // Unlock checks
+  if (legacy.totalKills >= 10 && !legacy.unlocks.classes.includes('rogue')) {
+    legacy.unlocks.classes.push('rogue');
+    legacy.unlocks.gear.push('shadow_dagger');
+    legacy.unlocks.abilities.push('backstab');
+    addMessage('UNLOCKED: Rogue class!', COLORS.gold);
+  }
+  if (legacy.totalKills >= 25 && !legacy.unlocks.classes.includes('mage')) {
+    legacy.unlocks.classes.push('mage');
+    legacy.unlocks.gear.push('flame_staff');
+    legacy.unlocks.abilities.push('fireball');
+  }
+  if (legacy.totalKills >= 50 && !legacy.unlocks.classes.includes('paladin')) {
+    legacy.unlocks.classes.push('paladin');
+    legacy.unlocks.gear.push('holy_shield');
+    legacy.unlocks.abilities.push('smite');
+  }
+  if (legacy.totalKills >= 5 && !legacy.unlocks.gear.includes('iron_blade')) {
+    legacy.unlocks.gear.push('iron_blade');
+  }
+  if (legacy.totalKills >= 15 && !legacy.unlocks.abilities.includes('dash')) {
+    legacy.unlocks.abilities.push('dash');
+  }
+  if (legacy.totalKills >= 60 && !legacy.unlocks.abilities.includes('whirlwind')) {
+    legacy.unlocks.abilities.push('whirlwind');
+  }
+  if (legacy.totalKills >= 75 && !legacy.unlocks.gear.includes('legendary_blade')) {
+    legacy.unlocks.gear.push('legendary_blade');
+  }
+
+  // Achievement checks
+  const ach = legacy.achievements;
+  if (legacy.totalRuns >= 1 && !ach.includes('first_death')) { ach.push('first_death'); }
+  if (legacy.totalKills >= 100 && !ach.includes('centurion')) { ach.push('centurion'); }
+  if (legacy.bestFloor >= 10 && !ach.includes('deep_diver')) { ach.push('deep_diver'); }
+  if (legacy.bestFloor >= 25 && !ach.includes('abyss_walker')) { ach.push('abyss_walker'); }
+  if (Object.keys(legacy.bossesDefeated).length >= 3 && !ach.includes('boss_slayer')) { ach.push('boss_slayer'); }
+
+  // Store NPC memory
+  legacy.npcMemory.push({ hero: player.name, floor: currentFloor, kills: runStats.kills });
+  if (legacy.npcMemory.length > 5) legacy.npcMemory.shift();
+
+  saveLegacy(legacy);
+
+  setTimeout(() => { state = STATES.GAMEOVER; }, 500);
+};
+
+// --- Input Handling ---
+window.addEventListener('keydown', (e) => {
+  keys[e.key.toLowerCase()] = true;
+  e.preventDefault();
+
+  if (state === STATES.TITLE) {
+    ensureAudio();
+    state = STATES.CLASS_SELECT;
+    return;
+  }
+
+  if (state === STATES.CLASS_SELECT) {
+    if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') { selectedClass = Math.max(0, selectedClass - 1); }
+    if (e.key === 'ArrowDown' || e.key.toLowerCase() === 's') { selectedClass = Math.min(legacy.unlocks.classes.length - 1, selectedClass + 1); }
+    if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') { selectedGear = Math.max(0, selectedGear - 1); }
+    if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') { selectedGear = Math.min(legacy.unlocks.gear.length - 1, selectedGear + 1); }
+    if (e.key === 'Enter' || e.key === ' ') { startGame(); }
+    if (e.key.toLowerCase() === 'l') { state = STATES.LEGACY; }
+    return;
+  }
+
+  if (state === STATES.LEGACY) {
+    if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { state = STATES.CLASS_SELECT; }
+    return;
+  }
+
+  if (state === STATES.DIALOGUE) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key.toLowerCase() === 'e') {
+      dialogueData.currentLine++;
+      if (dialogueData.currentLine >= dialogueData.lines.length) {
+        state = STATES.GAME;
+        dialogueData = null;
+      }
+    }
+    return;
+  }
+
+  if (state === STATES.LEVELUP) {
+    if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') { levelUpSelected = Math.max(0, levelUpSelected - 1); }
+    if (e.key === 'ArrowDown' || e.key.toLowerCase() === 's') { levelUpSelected = Math.min(levelUpChoices.length - 1, levelUpSelected + 1); }
+    if (e.key === 'Enter' || e.key === ' ') {
+      levelUpChoices[levelUpSelected].apply(player);
+      addMessage(`Chose: ${levelUpChoices[levelUpSelected].name}`, COLORS.gold);
+      state = STATES.GAME;
+    }
+    return;
+  }
+
+  if (state === STATES.GAMEOVER) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      state = STATES.CLASS_SELECT;
+    }
+    return;
+  }
+
+  if (state === STATES.GAME) {
+    if (e.key.toLowerCase() === 'e') { interactNPC(); }
+    if (e.key === ' ' || e.key.toLowerCase() === 'j') { useAbility(); }
+  }
+});
+
+window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+// --- Touch Input ---
+let activeTouches = {};
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  ensureAudio();
+
+  for (const touch of e.changedTouches) {
+    const rect = canvas.getBoundingClientRect();
+    const x = (touch.clientX - rect.left) / rect.width;
+    const y = (touch.clientY - rect.top) / rect.height;
+    activeTouches[touch.identifier] = { x, y, startX: x, startY: y };
+  }
+
+  if (state === STATES.TITLE) { state = STATES.CLASS_SELECT; return; }
+  if (state === STATES.GAMEOVER) { state = STATES.CLASS_SELECT; return; }
+  if (state === STATES.BOSS_INTRO) { state = STATES.GAME; return; }
+
+  if (state === STATES.DIALOGUE) {
+    dialogueData.currentLine++;
+    if (dialogueData.currentLine >= dialogueData.lines.length) { state = STATES.GAME; dialogueData = null; }
+    return;
+  }
+
+  if (state === STATES.CLASS_SELECT) {
+    const touch0 = e.changedTouches[0];
+    const rect = canvas.getBoundingClientRect();
+    const ty = (touch0.clientY - rect.top) / rect.height;
+    const tx = (touch0.clientX - rect.left) / rect.width;
+
+    if (ty > 0.85) { startGame(); return; }
+    if (ty > 0.75 && ty < 0.85) { state = STATES.LEGACY; return; }
+
+    // Class selection
+    const classes = legacy.unlocks.classes;
+    const classY = 0.25;
+    const classH = 0.05;
+    for (let i = 0; i < classes.length; i++) {
+      if (ty > classY + i * classH && ty < classY + (i + 1) * classH) {
+        selectedClass = i;
+        break;
+      }
+    }
+    return;
+  }
+
+  if (state === STATES.LEGACY) { state = STATES.CLASS_SELECT; return; }
+
+  if (state === STATES.LEVELUP) {
+    const touch0 = e.changedTouches[0];
+    const rect = canvas.getBoundingClientRect();
+    const ty = (touch0.clientY - rect.top) / rect.height;
+    for (let i = 0; i < levelUpChoices.length; i++) {
+      if (ty > 0.35 + i * 0.12 && ty < 0.35 + (i + 1) * 0.12) {
+        levelUpSelected = i;
+        levelUpChoices[levelUpSelected].apply(player);
+        addMessage(`Chose: ${levelUpChoices[levelUpSelected].name}`, COLORS.gold);
+        state = STATES.GAME;
+        return;
+      }
+    }
+    return;
+  }
+});
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  for (const touch of e.changedTouches) {
+    if (activeTouches[touch.identifier]) {
+      const rect = canvas.getBoundingClientRect();
+      activeTouches[touch.identifier].x = (touch.clientX - rect.left) / rect.width;
+      activeTouches[touch.identifier].y = (touch.clientY - rect.top) / rect.height;
+    }
+  }
+});
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  for (const touch of e.changedTouches) {
+    delete activeTouches[touch.identifier];
+  }
+});
+
+const processTouchInput = () => {
+  touchDpad = { x: 0, y: 0 };
+  touchAction = false;
+  touchAbility = false;
+  touchInteract = false;
+
+  for (const id in activeTouches) {
+    const t = activeTouches[id];
+    // Left side = d-pad
+    if (t.startX < 0.4) {
+      const dx = t.x - t.startX;
+      const dy = t.y - t.startY;
+      const deadzone = 0.03;
+      if (Math.abs(dx) > deadzone || Math.abs(dy) > deadzone) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+          touchDpad.x = dx > 0 ? 1 : -1;
+        } else {
+          touchDpad.y = dy > 0 ? 1 : -1;
+        }
+      }
+    }
+    // Right side buttons
+    else if (t.startX > 0.6) {
+      if (t.startY > 0.7) {
+        touchAction = true; // attack
+      } else if (t.startY > 0.5) {
+        touchAbility = true;
+      } else if (t.startY > 0.3) {
+        touchInteract = true;
+      }
+    }
+  }
+};
+
+// --- Start Game ---
+const startGame = () => {
+  const className = legacy.unlocks.classes[selectedClass] || 'warrior';
+  const gearName = legacy.unlocks.gear[selectedGear] || 'rusty_sword';
+
+  player = createPlayer(className, gearName);
+  currentFloor = 0;
+  runStats = { kills: 0, gold: 0, floorsCleared: 0 };
+  particles = [];
+  damageNumbers = [];
+  messages = [];
+
+  generateMap(currentFloor);
+  revealFov();
+  state = STATES.GAME;
+
+  addMessage(`${player.name} the ${player.classDef.name} begins their journey.`, COLORS.gold);
+  if (legacy.totalRuns > 0) {
+    addMessage(`Legacy Power: +${legacy.statBonuses.hp} HP, +${legacy.statBonuses.atk} ATK, +${legacy.statBonuses.def} DEF`, COLORS.green);
+  }
+};
+
+// --- Update ---
+let lastTime = 0;
+let touchMoveAccum = 0;
+
+const update = (dt) => {
+  titlePulse += dt;
+
+  // Particles
+  particles = particles.filter(p => { p.life -= dt; p.x += p.vx; p.y += p.vy; p.vy += 3 * dt; return p.life > 0; });
+  damageNumbers = damageNumbers.filter(d => { d.life -= dt; d.y += d.vy; return d.life > 0; });
+  messages = messages.filter(m => { m.life -= dt; return m.life > 0; });
+
+  if (screenShake > 0) screenShake -= dt;
+
+  if (state !== STATES.GAME) return;
+  if (!player || player.hp <= 0) return;
+
+  player.moveTimer -= dt;
+  player.attackCooldown -= dt;
+  player.abilityCooldown -= dt;
+  player.invincible -= dt;
+  player.attackAnim -= dt;
+  player.abilityAnim -= dt;
+
+  processTouchInput();
+
+  // Movement input
+  let dx = 0, dy = 0;
+  if (keys['arrowleft'] || keys['a']) dx = -1;
+  if (keys['arrowright'] || keys['d']) dx = 1;
+  if (keys['arrowup'] || keys['w']) dy = -1;
+  if (keys['arrowdown'] || keys['s']) dy = 1;
+
+  if (touchDpad.x !== 0 || touchDpad.y !== 0) { dx = touchDpad.x; dy = touchDpad.y; }
+
+  // Normalize to 4-directional
+  if (dx !== 0 && dy !== 0) { if (Math.random() < 0.5) dx = 0; else dy = 0; }
+
+  if (dx !== 0 || dy !== 0) {
+    touchMoveAccum += dt;
+    if (touchMoveAccum >= 0.12 / player.spd) {
+      touchMoveAccum = 0;
+      movePlayer(dx, dy);
+    }
+  } else {
+    touchMoveAccum = 0.1; // ready to move immediately
+  }
+
+  // Touch action buttons
+  if (touchAction) {
+    const tx = player.x + player.facing.x;
+    const ty = player.y + player.facing.y;
+    const target = entities.find(e => e.x === tx && e.y === ty);
+    if (target && player.attackCooldown <= 0) {
+      player.attackAnim = 0.2;
+      player.attackCooldown = 0.3;
+      sfx.swing();
+      if (attackEntity(target, player.atk)) { entities = entities.filter(e => e !== target); }
+      checkLevelUp();
+    }
+  }
+  if (touchAbility) useAbility();
+  if (touchInteract) interactNPC();
+
+  // Enemy AI
+  updateEnemies(dt);
+
+  // Camera
+  camera.x = player.x * TILE - canvas.width / 2 + TILE / 2;
+  camera.y = player.y * TILE - canvas.height / 2 + TILE / 2;
+
+  // Item bobbing
+  items.forEach(i => i.bobTimer += dt * 3);
+};
+
+// --- Render ---
+const render = () => {
+  ctx.fillStyle = COLORS.bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const shakeX = screenShake > 0 ? rngf(-screenShakeIntensity, screenShakeIntensity) : 0;
+  const shakeY = screenShake > 0 ? rngf(-screenShakeIntensity, screenShakeIntensity) : 0;
+
+  ctx.save();
+  if (state === STATES.GAME || state === STATES.DIALOGUE || state === STATES.LEVELUP || state === STATES.BOSS_INTRO) {
+    ctx.translate(-camera.x + shakeX, -camera.y + shakeY);
+    renderMap();
+    renderItems();
+    renderNPCs();
+    renderEntities();
+    renderPlayer();
+    renderParticles();
+    renderDamageNumbers();
+    ctx.restore();
+    renderHUD();
+    renderMessages();
+    renderMobileControls();
+  } else {
+    ctx.restore();
+  }
+
+  if (state === STATES.TITLE) renderTitle();
+  if (state === STATES.CLASS_SELECT) renderClassSelect();
+  if (state === STATES.GAMEOVER) renderGameOver();
+  if (state === STATES.LEGACY) renderLegacyScreen();
+  if (state === STATES.DIALOGUE) renderDialogue();
+  if (state === STATES.LEVELUP) renderLevelUp();
+  if (state === STATES.BOSS_INTRO) renderBossIntro();
+};
+
+const renderMap = () => {
+  const startX = Math.max(0, Math.floor(camera.x / TILE) - 1);
+  const startY = Math.max(0, Math.floor(camera.y / TILE) - 1);
+  const endX = Math.min(MAP_W, startX + Math.ceil(canvas.width / TILE) + 3);
+  const endY = Math.min(MAP_H, startY + Math.ceil(canvas.height / TILE) + 3);
+
+  for (let y = startY; y < endY; y++) {
+    for (let x = startX; x < endX; x++) {
+      if (!explored[y]?.[x]) continue;
+      const inFog = fog[y]?.[x];
+      const alpha = inFog ? 0.3 : 1.0;
+
+      const px = x * TILE, py = y * TILE;
+      const cell = map[y][x];
+
+      ctx.globalAlpha = alpha;
+      if (cell === CELL.WALL) {
+        ctx.fillStyle = COLORS.wall;
+        ctx.fillRect(px, py, TILE, TILE);
+        // Wall detail
+        ctx.fillStyle = '#252540';
+        ctx.fillRect(px + 1, py + 1, TILE - 2, 2);
+      } else if (cell === CELL.FLOOR) {
+        ctx.fillStyle = COLORS.floor;
+        ctx.fillRect(px, py, TILE, TILE);
+        // Floor detail
+        if ((x + y) % 7 === 0) {
+          ctx.fillStyle = '#161630';
+          ctx.fillRect(px + 8, py + 8, 3, 3);
+        }
+      } else if (cell === CELL.DOOR) {
+        ctx.fillStyle = COLORS.door;
+        ctx.fillRect(px + 2, py + 2, TILE - 4, TILE - 4);
+        ctx.fillStyle = '#aa8833';
+        ctx.fillRect(px + TILE / 2 - 2, py + TILE / 2 - 2, 4, 4);
+      } else if (cell === CELL.STAIRS) {
+        ctx.fillStyle = COLORS.floor;
+        ctx.fillRect(px, py, TILE, TILE);
+        ctx.fillStyle = COLORS.gold;
+        ctx.font = `${TILE - 4}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText('>', px + TILE / 2, py + TILE - 4);
+      }
+      ctx.globalAlpha = 1.0;
+    }
+  }
+};
+
+const renderPlayer = () => {
+  if (!player) return;
+  const px = player.x * TILE, py = player.y * TILE;
+
+  // Invincibility flash
+  if (player.invincible > 0 && Math.floor(player.invincible * 10) % 2 === 0) return;
+
+  // Attack animation
+  let ox = 0, oy = 0;
+  if (player.attackAnim > 0) {
+    const t = player.attackAnim / 0.2;
+    ox = player.facing.x * TILE * 0.3 * t;
+    oy = player.facing.y * TILE * 0.3 * t;
+  }
+
+  // Body
+  ctx.fillStyle = player.classDef.color;
+  ctx.fillRect(px + 4 + ox, py + 4 + oy, TILE - 8, TILE - 8);
+
+  // Eyes
+  ctx.fillStyle = '#fff';
+  const eyeX = px + TILE / 2 + player.facing.x * 3 + ox;
+  const eyeY = py + TILE / 2 - 2 + player.facing.y * 2 + oy;
+  ctx.fillRect(eyeX - 3, eyeY, 2, 2);
+  ctx.fillRect(eyeX + 1, eyeY, 2, 2);
+
+  // Weapon glow during ability
+  if (player.abilityAnim > 0) {
+    ctx.fillStyle = COLORS.gold;
+    ctx.globalAlpha = player.abilityAnim / 0.3;
+    ctx.beginPath();
+    ctx.arc(px + TILE / 2 + player.facing.x * TILE, py + TILE / 2 + player.facing.y * TILE,
+      TILE * (ABILITY_DEFS[player.ability]?.range || 1), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+  }
+};
+
+const renderEntities = () => {
+  for (const e of entities) {
+    if (fog[e.y]?.[e.x]) continue;
+    const px = e.x * TILE, py = e.y * TILE;
+
+    if (e.isBoss) {
+      // Boss rendering - larger and meaner
+      ctx.fillStyle = e.color;
+      ctx.fillRect(px, py, TILE, TILE);
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${TILE - 2}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText(e.char, px + TILE / 2, py + TILE - 3);
+
+      // Boss HP bar
+      const hpRatio = e.hp / e.maxHp;
+      ctx.fillStyle = '#440000';
+      ctx.fillRect(px - 4, py - 8, TILE + 8, 5);
+      ctx.fillStyle = hpRatio > 0.5 ? COLORS.red : '#ff0000';
+      ctx.fillRect(px - 4, py - 8, (TILE + 8) * hpRatio, 5);
+
+      // Glow
+      ctx.strokeStyle = e.color;
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.3 + Math.sin(titlePulse * 4) * 0.2;
+      ctx.strokeRect(px - 2, py - 2, TILE + 4, TILE + 4);
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.fillStyle = e.color;
+      ctx.fillRect(px + 3, py + 3, TILE - 6, TILE - 6);
+      ctx.fillStyle = '#fff';
+      ctx.font = `${TILE - 6}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText(e.char, px + TILE / 2, py + TILE - 5);
+
+      // HP bar (when damaged)
+      if (e.hp < e.maxHp) {
+        const hpRatio = e.hp / e.maxHp;
+        ctx.fillStyle = '#440000';
+        ctx.fillRect(px, py - 4, TILE, 3);
+        ctx.fillStyle = COLORS.red;
+        ctx.fillRect(px, py - 4, TILE * hpRatio, 3);
+      }
+    }
+  }
+};
+
+const renderItems = () => {
+  for (const item of items) {
+    if (fog[item.y]?.[item.x]) continue;
+    const px = item.x * TILE, py = item.y * TILE;
+    const bob = Math.sin(item.bobTimer) * 3;
+
+    ctx.fillStyle = item.color;
+    ctx.globalAlpha = 0.8 + Math.sin(item.bobTimer) * 0.2;
+    ctx.font = `${TILE - 6}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(item.char, px + TILE / 2, py + TILE - 5 + bob);
+    ctx.globalAlpha = 1;
+  }
+};
+
+const renderNPCs = () => {
+  for (const npc of npcs) {
+    if (fog[npc.y]?.[npc.x]) continue;
+    const px = npc.x * TILE, py = npc.y * TILE;
+
+    ctx.fillStyle = npc.color;
+    ctx.fillRect(px + 2, py + 2, TILE - 4, TILE - 4);
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${TILE - 4}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(npc.char, px + TILE / 2, py + TILE - 4);
+
+    // Interact prompt
+    if (dist(npc, player) < 2.5 && !npc.talked) {
+      ctx.fillStyle = COLORS.gold;
+      ctx.font = '10px monospace';
+      ctx.fillText('[E] Talk', px + TILE / 2, py - 6);
+    }
+  }
+};
+
+const renderParticles = () => {
+  for (const p of particles) {
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.life / p.maxLife;
+    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
+};
+
+const renderDamageNumbers = () => {
+  for (const d of damageNumbers) {
+    ctx.fillStyle = d.color;
+    ctx.globalAlpha = d.life;
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(d.text, d.x, d.y);
+  }
+  ctx.globalAlpha = 1;
+};
+
+const renderHUD = () => {
+  const w = canvas.width;
+
+  // Background bar
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(0, 0, w, 42);
+
+  // HP bar
+  const hpW = 150;
+  const hpRatio = player.hp / player.maxHp;
+  ctx.fillStyle = '#330000';
+  ctx.fillRect(8, 6, hpW, 14);
+  ctx.fillStyle = hpRatio > 0.3 ? '#cc2222' : '#ff0000';
+  ctx.fillRect(8, 6, hpW * hpRatio, 14);
+  ctx.strokeStyle = '#554444';
+  ctx.strokeRect(8, 6, hpW, 14);
+  ctx.fillStyle = '#fff';
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(`HP ${player.hp}/${player.maxHp}`, 12, 17);
+
+  // XP bar
+  const xpW = 150;
+  const xpRatio = player.xp / player.xpToLevel;
+  ctx.fillStyle = '#001133';
+  ctx.fillRect(8, 24, xpW, 10);
+  ctx.fillStyle = '#4488ff';
+  ctx.fillRect(8, 24, xpW * xpRatio, 10);
+  ctx.fillStyle = '#aaccff';
+  ctx.font = '8px monospace';
+  ctx.fillText(`XP ${player.xp}/${player.xpToLevel}`, 12, 32);
+
+  // Stats
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = '12px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(`Lv${player.level} | F${currentFloor + 1} | ATK:${player.atk} DEF:${player.def}`, w - 10, 16);
+  ctx.fillStyle = COLORS.green;
+  ctx.fillText(`Gold:${player.gold} | Score:${player.score}`, w - 10, 32);
+
+  // Ability cooldown
+  const abilDef = ABILITY_DEFS[player.ability];
+  if (abilDef) {
+    const cdMax = abilDef.cooldown * (1 - (player.cdReduction || 0));
+    const cdRatio = Math.max(0, player.abilityCooldown / cdMax);
+    ctx.fillStyle = cdRatio > 0 ? '#555' : COLORS.gold;
+    ctx.textAlign = 'center';
+    ctx.font = '10px monospace';
+    ctx.fillText(`[SPACE] ${abilDef.name} ${cdRatio > 0 ? Math.ceil(player.abilityCooldown * 10) / 10 + 's' : 'READY'}`, w / 2, 16);
+  }
+
+  // Legacy power indicator
+  if (legacy.legacyPower > 0) {
+    ctx.fillStyle = COLORS.purple;
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Legacy Power: ${legacy.legacyPower}`, w / 2, 32);
+  }
+
+  // Minimap
+  const mmSize = 3;
+  const mmX = w - MAP_W * mmSize - 8;
+  const mmY = 46;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(mmX - 2, mmY - 2, MAP_W * mmSize + 4, MAP_H * mmSize + 4);
+  for (let y = 0; y < MAP_H; y++) {
+    for (let x = 0; x < MAP_W; x++) {
+      if (!explored[y]?.[x]) continue;
+      const cell = map[y][x];
+      if (cell === CELL.WALL) ctx.fillStyle = '#222';
+      else if (cell === CELL.FLOOR) ctx.fillStyle = '#333';
+      else if (cell === CELL.DOOR) ctx.fillStyle = COLORS.door;
+      else if (cell === CELL.STAIRS) ctx.fillStyle = COLORS.gold;
+      else continue;
+      ctx.fillRect(mmX + x * mmSize, mmY + y * mmSize, mmSize, mmSize);
+    }
+  }
+  // Player on minimap
+  ctx.fillStyle = COLORS.green;
+  ctx.fillRect(mmX + player.x * mmSize, mmY + player.y * mmSize, mmSize, mmSize);
+  // Enemies on minimap
+  entities.forEach(e => {
+    if (!fog[e.y]?.[e.x]) {
+      ctx.fillStyle = e.isBoss ? COLORS.bossRed : COLORS.red;
+      ctx.fillRect(mmX + e.x * mmSize, mmY + e.y * mmSize, mmSize, mmSize);
+    }
+  });
+};
+
+const renderMessages = () => {
+  ctx.textAlign = 'left';
+  ctx.font = '11px monospace';
+  const baseY = canvas.height - 20;
+  messages.slice(-5).forEach((m, i) => {
+    ctx.globalAlpha = Math.min(1, m.life);
+    ctx.fillStyle = m.color;
+    ctx.fillText(m.text, 10, baseY - (messages.slice(-5).length - 1 - i) * 14);
+  });
+  ctx.globalAlpha = 1;
+};
+
+const renderMobileControls = () => {
+  // Only show on touch devices
+  if (!('ontouchstart' in window)) return;
+
+  ctx.globalAlpha = 0.3;
+
+  // D-pad (left side)
+  const dpadX = 70, dpadY = canvas.height - 100, dpadR = 40;
+  ctx.strokeStyle = COLORS.white;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(dpadX, dpadY, dpadR, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Arrows
+  ctx.fillStyle = COLORS.white;
+  ctx.font = '16px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('^', dpadX, dpadY - 18);
+  ctx.fillText('v', dpadX, dpadY + 24);
+  ctx.fillText('<', dpadX - 22, dpadY + 5);
+  ctx.fillText('>', dpadX + 22, dpadY + 5);
+
+  // Action buttons (right side)
+  const btnX = canvas.width - 60;
+  const btnR = 24;
+
+  // Attack
+  ctx.fillStyle = COLORS.red;
+  ctx.beginPath();
+  ctx.arc(btnX, canvas.height - 60, btnR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = '10px monospace';
+  ctx.fillText('ATK', btnX, canvas.height - 57);
+
+  // Ability
+  ctx.fillStyle = COLORS.blue;
+  ctx.beginPath();
+  ctx.arc(btnX, canvas.height - 120, btnR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.fillText('ABL', btnX, canvas.height - 117);
+
+  // Interact
+  ctx.fillStyle = COLORS.green;
+  ctx.beginPath();
+  ctx.arc(btnX, canvas.height - 180, btnR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.fillText('NPC', btnX, canvas.height - 177);
+
+  ctx.globalAlpha = 1;
+};
+
+// --- Screen Renders ---
+const renderTitle = () => {
+  const w = canvas.width, h = canvas.height;
+
+  // Background particles
+  for (let i = 0; i < 30; i++) {
+    const x = (Math.sin(titlePulse * 0.3 + i * 1.7) * 0.5 + 0.5) * w;
+    const y = (Math.cos(titlePulse * 0.2 + i * 2.3) * 0.5 + 0.5) * h;
+    ctx.fillStyle = COLORS.gold;
+    ctx.globalAlpha = 0.1 + Math.sin(titlePulse + i) * 0.05;
+    ctx.fillRect(x, y, 2, 2);
+  }
+  ctx.globalAlpha = 1;
+
+  // Title
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = 'bold 36px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText("HERO'S JOURNEY", w / 2, h * 0.25);
+
+  ctx.fillStyle = COLORS.green;
+  ctx.font = '16px monospace';
+  ctx.fillText('Legacy of the Fallen', w / 2, h * 0.32);
+
+  // Tagline
+  ctx.fillStyle = COLORS.white;
+  ctx.font = '12px monospace';
+  ctx.fillText('Explore. Upgrade. Conquer.', w / 2, h * 0.40);
+  ctx.fillText('Every death makes you stronger.', w / 2, h * 0.45);
+
+  // Legacy info
+  if (legacy.totalRuns > 0) {
+    ctx.fillStyle = COLORS.purple;
+    ctx.font = '11px monospace';
+    ctx.fillText(`${legacy.totalRuns} past lives | ${legacy.totalKills} total kills | Best floor: ${legacy.bestFloor + 1}`, w / 2, h * 0.55);
+    ctx.fillText(`Legacy Power: ${legacy.legacyPower} | Unlocks: ${legacy.unlocks.classes.length} classes, ${legacy.unlocks.gear.length} gear`, w / 2, h * 0.60);
+  }
+
+  // Start prompt
+  const pulse = Math.sin(titlePulse * 3) * 0.3 + 0.7;
+  ctx.globalAlpha = pulse;
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = '18px monospace';
+  ctx.fillText('Press Any Key / Tap to Play', w / 2, h * 0.75);
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#555';
+  ctx.font = '9px monospace';
+  ctx.fillText('WASD/Arrows: Move | SPACE: Ability | E: Interact', w / 2, h * 0.90);
+};
+
+const renderClassSelect = () => {
+  const w = canvas.width, h = canvas.height;
+
+  ctx.fillStyle = COLORS.bg;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = 'bold 24px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('Choose Your Hero', w / 2, 40);
+
+  // Classes
+  const classes = legacy.unlocks.classes;
+  ctx.font = '14px monospace';
+  ctx.fillStyle = COLORS.white;
+  ctx.fillText('CLASS (Up/Down):', w * 0.3, 70);
+
+  classes.forEach((cls, i) => {
+    const def = CLASS_DEFS[cls];
+    const y = 95 + i * 50;
+    const selected = i === selectedClass;
+
+    if (selected) {
+      ctx.fillStyle = 'rgba(240,184,0, 0.65)';
+      ctx.fillRect(20, y - 15, w * 0.55, 45);
+      ctx.strokeStyle = COLORS.gold;
+      ctx.strokeRect(20, y - 15, w * 0.55, 45);
+    }
+
+    ctx.fillStyle = selected ? def.color : '#666';
+    ctx.textAlign = 'left';
+    ctx.font = `bold 14px monospace`;
+    ctx.fillText(`${selected ? '> ' : '  '}${def.name}`, 30, y);
+    ctx.font = '10px monospace';
+    ctx.fillStyle = selected ? COLORS.white : '#555';
+    ctx.fillText(`HP:${def.hp} ATK:${def.atk} DEF:${def.def} SPD:${def.spd.toFixed(1)}`, 30, y + 14);
+    ctx.fillText(def.desc, 30, y + 26);
+  });
+
+  // Gear
+  const gears = legacy.unlocks.gear;
+  ctx.font = '14px monospace';
+  ctx.fillStyle = COLORS.white;
+  ctx.textAlign = 'center';
+  ctx.fillText('GEAR (Left/Right):', w * 0.75, 70);
+
+  const gearY = 95;
+  const gear = GEAR_DEFS[gears[selectedGear]];
+  if (gear) {
+    ctx.fillStyle = gear.color;
+    ctx.font = 'bold 14px monospace';
+    ctx.fillText(gear.name, w * 0.75, gearY);
+    ctx.fillStyle = COLORS.white;
+    ctx.font = '11px monospace';
+    ctx.fillText(`ATK+${gear.atk} DEF+${gear.def}`, w * 0.75, gearY + 16);
+    ctx.fillStyle = '#555';
+    ctx.fillText(`< ${selectedGear + 1}/${gears.length} >`, w * 0.75, gearY + 32);
+  }
+
+  // Legacy bonuses
+  if (legacy.legacyPower > 0) {
+    const lb = legacy.statBonuses;
+    ctx.fillStyle = COLORS.purple;
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Legacy Bonuses: HP+${lb.hp} ATK+${lb.atk} DEF+${lb.def} SPD+${lb.spd.toFixed(2)}`, w / 2, h - 80);
+  }
+
+  // Cleared areas
+  const clearedCount = Object.keys(legacy.clearedAreaRunsLeft).length;
+  if (clearedCount > 0) {
+    ctx.fillStyle = COLORS.green;
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${clearedCount} areas still cleared from past runs`, w / 2, h - 60);
+  }
+
+  // Start
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = 'bold 16px monospace';
+  ctx.textAlign = 'center';
+  const pulse = Math.sin(titlePulse * 3) * 0.3 + 0.7;
+  ctx.globalAlpha = pulse;
+  ctx.fillText('[ ENTER / TAP TO BEGIN ]', w / 2, h - 30);
+  ctx.globalAlpha = 1;
+
+  // Legacy button
+  ctx.fillStyle = COLORS.grey;
+  ctx.font = '11px monospace';
+  ctx.fillText('[L] View Legacy', w / 2, h - 10);
+};
+
+const renderLegacyScreen = () => {
+  const w = canvas.width, h = canvas.height;
+
+  ctx.fillStyle = 'rgba(10,10,15,0.95)';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = 'bold 24px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('LEGACY OF THE FALLEN', w / 2, 40);
+
+  ctx.font = '12px monospace';
+  ctx.textAlign = 'left';
+  let y = 80;
+
+  const line = (label, val, color = COLORS.white) => {
+    ctx.fillStyle = COLORS.grey;
+    ctx.fillText(label, 40, y);
+    ctx.fillStyle = color;
+    ctx.fillText(String(val), 250, y);
+    y += 20;
+  };
+
+  line('Total Runs:', legacy.totalRuns, COLORS.gold);
+  line('Total Kills:', legacy.totalKills, COLORS.red);
+  line('Total Gold:', legacy.totalGold, COLORS.gold);
+  line('Best Floor:', legacy.bestFloor + 1, COLORS.green);
+  line('Best Score:', legacy.bestScore, COLORS.gold);
+  line('Legacy Power:', legacy.legacyPower, COLORS.purple);
+  line('Classes Unlocked:', `${legacy.unlocks.classes.length}/${Object.keys(CLASS_DEFS).length}`, COLORS.blue);
+  line('Gear Unlocked:', `${legacy.unlocks.gear.length}/${Object.keys(GEAR_DEFS).length}`, COLORS.blue);
+  line('Abilities Unlocked:', `${legacy.unlocks.abilities.length}/${Object.keys(ABILITY_DEFS).length}`, COLORS.blue);
+
+  y += 10;
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = 'bold 14px monospace';
+  ctx.fillText('Past Heroes:', 40, y);
+  y += 20;
+  ctx.font = '11px monospace';
+  legacy.heroNames.slice(-8).forEach(name => {
+    ctx.fillStyle = COLORS.grey;
+    ctx.fillText(name, 60, y);
+    y += 16;
+  });
+
+  y += 10;
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = 'bold 14px monospace';
+  ctx.fillText('Boss Knowledge:', 40, y);
+  y += 20;
+  ctx.font = '11px monospace';
+  for (const bossId in legacy.bossPatterns) {
+    const patterns = legacy.bossPatterns[bossId];
+    ctx.fillStyle = COLORS.red;
+    ctx.fillText(`${bossId}: ${patterns.join(', ')}`, 60, y);
+    y += 16;
+  }
+
+  y += 10;
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = 'bold 14px monospace';
+  ctx.fillText('Achievements:', 40, y);
+  y += 20;
+  ctx.font = '11px monospace';
+  const achNames = { first_death: 'First Death', centurion: 'Centurion (100 kills)', deep_diver: 'Deep Diver (Floor 10)', abyss_walker: 'Abyss Walker (Floor 25)', boss_slayer: 'Boss Slayer (3 bosses)' };
+  legacy.achievements.forEach(a => {
+    ctx.fillStyle = COLORS.green;
+    ctx.fillText(`* ${achNames[a] || a}`, 60, y);
+    y += 16;
+  });
+
+  // Unlock progress
+  y += 10;
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = 'bold 14px monospace';
+  ctx.fillText('Next Unlocks:', 40, y);
+  y += 20;
+  ctx.font = '11px monospace';
+  const nextUnlocks = [];
+  if (!legacy.unlocks.gear.includes('iron_blade')) nextUnlocks.push(`Iron Blade: ${legacy.totalKills}/5 kills`);
+  if (!legacy.unlocks.classes.includes('rogue')) nextUnlocks.push(`Rogue class: ${legacy.totalKills}/10 kills`);
+  if (!legacy.unlocks.abilities.includes('dash')) nextUnlocks.push(`Dash ability: ${legacy.totalKills}/15 kills`);
+  if (!legacy.unlocks.classes.includes('mage')) nextUnlocks.push(`Mage class: ${legacy.totalKills}/25 kills`);
+  if (!legacy.unlocks.classes.includes('paladin')) nextUnlocks.push(`Paladin class: ${legacy.totalKills}/50 kills`);
+  if (!legacy.unlocks.abilities.includes('whirlwind')) nextUnlocks.push(`Whirlwind: ${legacy.totalKills}/60 kills`);
+  if (!legacy.unlocks.gear.includes('legendary_blade')) nextUnlocks.push(`Legendary Blade: ${legacy.totalKills}/75 kills`);
+  nextUnlocks.slice(0, 4).forEach(u => {
+    ctx.fillStyle = COLORS.grey;
+    ctx.fillText(u, 60, y);
+    y += 16;
+  });
+  if (nextUnlocks.length === 0) {
+    ctx.fillStyle = COLORS.green;
+    ctx.fillText('All unlocks achieved!', 60, y);
+  }
+
+  ctx.fillStyle = COLORS.white;
+  ctx.font = '12px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('[ESC / TAP to return]', w / 2, h - 20);
+};
+
+const renderDialogue = () => {
+  if (!dialogueData) return;
+  const w = canvas.width, h = canvas.height;
+
+  // Dialogue box
+  const boxH = 120;
+  const boxY = h - boxH - 10;
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(10, boxY, w - 20, boxH);
+  ctx.strokeStyle = COLORS.npcColor;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(10, boxY, w - 20, boxH);
+
+  // NPC name
+  ctx.fillStyle = COLORS.npcColor;
+  ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(dialogueData.npcName, 24, boxY + 22);
+
+  // Text
+  ctx.fillStyle = COLORS.white;
+  ctx.font = '12px monospace';
+  const line = dialogueData.lines[dialogueData.currentLine];
+  // Word wrap
+  const maxWidth = w - 60;
+  const words = line.split(' ');
+  let currentLine = '';
+  let lineY = boxY + 45;
+  for (const word of words) {
+    const testLine = currentLine + (currentLine ? ' ' : '') + word;
+    if (ctx.measureText(testLine).width > maxWidth) {
+      ctx.fillText(currentLine, 24, lineY);
+      currentLine = word;
+      lineY += 16;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  ctx.fillText(currentLine, 24, lineY);
+
+  // Continue prompt
+  const pulse = Math.sin(titlePulse * 4) * 0.3 + 0.7;
+  ctx.globalAlpha = pulse;
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(`[${dialogueData.currentLine + 1}/${dialogueData.lines.length}] Press E / Tap to continue`, w - 20, boxY + boxH - 10);
+  ctx.globalAlpha = 1;
+};
+
+const renderLevelUp = () => {
+  const w = canvas.width, h = canvas.height;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = 'bold 28px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(`LEVEL ${player.level}!`, w / 2, h * 0.2);
+
+  ctx.fillStyle = COLORS.white;
+  ctx.font = '14px monospace';
+  ctx.fillText('Choose an upgrade:', w / 2, h * 0.3);
+
+  levelUpChoices.forEach((choice, i) => {
+    const y = h * 0.38 + i * 60;
+    const selected = i === levelUpSelected;
+
+    if (selected) {
+      ctx.fillStyle = 'rgba(240,184,0, 0.65)';
+      ctx.fillRect(w * 0.2, y - 10, w * 0.6, 45);
+      ctx.strokeStyle = COLORS.gold;
+      ctx.strokeRect(w * 0.2, y - 10, w * 0.6, 45);
+    }
+
+    ctx.fillStyle = selected ? COLORS.gold : COLORS.grey;
+    ctx.font = `${selected ? 'bold ' : ''}16px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(`${selected ? '> ' : '  '}${choice.name}`, w / 2, y + 15);
+  });
+};
+
+const renderBossIntro = () => {
+  const w = canvas.width, h = canvas.height;
+
+  ctx.fillStyle = 'rgba(30,0,0,0.85)';
+  ctx.fillRect(0, 0, w, h);
+
+  const pulse = Math.sin(titlePulse * 5) * 0.3 + 0.7;
+  ctx.globalAlpha = pulse;
+  ctx.fillStyle = COLORS.bossRed;
+  ctx.font = 'bold 32px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('BOSS FLOOR', w / 2, h * 0.35);
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = '16px monospace';
+  ctx.fillText(`Floor ${currentFloor + 1}`, w / 2, h * 0.45);
+
+  // Show known patterns
+  const bossOnFloor = entities.find(e => e.isBoss);
+  if (bossOnFloor) {
+    ctx.fillStyle = COLORS.white;
+    ctx.font = '14px monospace';
+    ctx.fillText(bossOnFloor.name, w / 2, h * 0.55);
+
+    if (bossOnFloor.knownPatterns.length > 0) {
+      ctx.fillStyle = COLORS.green;
+      ctx.font = '12px monospace';
+      ctx.fillText(`Known patterns: ${bossOnFloor.knownPatterns.join(', ')}`, w / 2, h * 0.62);
+      ctx.fillText('You will receive warnings during the fight!', w / 2, h * 0.68);
+    } else {
+      ctx.fillStyle = COLORS.red;
+      ctx.font = '12px monospace';
+      ctx.fillText('Unknown enemy. Be careful!', w / 2, h * 0.62);
+    }
+  }
+
+  ctx.fillStyle = COLORS.grey;
+  ctx.font = '11px monospace';
+  ctx.fillText('Preparing...', w / 2, h * 0.80);
+};
+
+const renderGameOver = () => {
+  const w = canvas.width, h = canvas.height;
+
+  ctx.fillStyle = 'rgba(10,0,0,0.9)';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.fillStyle = COLORS.red;
+  ctx.font = 'bold 36px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('FALLEN', w / 2, h * 0.15);
+
+  if (player) {
+    ctx.fillStyle = COLORS.white;
+    ctx.font = '16px monospace';
+    ctx.fillText(`${player.name} has perished on Floor ${currentFloor + 1}`, w / 2, h * 0.25);
+
+    ctx.font = '13px monospace';
+    let y = h * 0.35;
+    const stat = (label, val, color) => {
+      ctx.fillStyle = COLORS.grey;
+      ctx.fillText(`${label}: `, w / 2 - 60, y);
+      ctx.fillStyle = color;
+      ctx.fillText(String(val), w / 2 + 60, y);
+      y += 22;
+    };
+
+    stat('Score', player.score, COLORS.gold);
+    stat('Level', player.level, COLORS.blue);
+    stat('Kills', runStats.kills, COLORS.red);
+    stat('Gold', runStats.gold, COLORS.gold);
+    stat('Floors', runStats.floorsCleared, COLORS.green);
+
+    // Legacy update info
+    y += 15;
+    ctx.fillStyle = COLORS.purple;
+    ctx.font = 'bold 14px monospace';
+    ctx.fillText('LEGACY UPDATED', w / 2, y);
+    y += 22;
+
+    ctx.font = '11px monospace';
+    ctx.fillStyle = COLORS.green;
+    ctx.fillText(`Legacy Power: ${legacy.legacyPower} (+1)`, w / 2, y);
+    y += 16;
+    ctx.fillText(`Stat Bonuses: HP+${legacy.statBonuses.hp} ATK+${legacy.statBonuses.atk} DEF+${legacy.statBonuses.def}`, w / 2, y);
+    y += 16;
+
+    // New unlocks
+    const newUnlocks = [];
+    if (legacy.totalKills >= 5 && !legacy.unlocks.gear.includes('iron_blade')) newUnlocks.push('Iron Blade');
+    // (already applied above, but show if just reached)
+    if (runStats.kills > 0) {
+      const prevKills = legacy.totalKills - runStats.kills;
+      if (prevKills < 10 && legacy.totalKills >= 10) newUnlocks.push('Rogue class!');
+      if (prevKills < 25 && legacy.totalKills >= 25) newUnlocks.push('Mage class!');
+      if (prevKills < 50 && legacy.totalKills >= 50) newUnlocks.push('Paladin class!');
+    }
+    if (newUnlocks.length > 0) {
+      ctx.fillStyle = COLORS.gold;
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText(`NEW UNLOCKS: ${newUnlocks.join(', ')}`, w / 2, y + 16);
+    }
+
+    // Cleared areas info
+    const clearedCount = Object.keys(legacy.clearedAreaRunsLeft).length;
+    if (clearedCount > 0) {
+      ctx.fillStyle = COLORS.green;
+      ctx.font = '10px monospace';
+      ctx.fillText(`${clearedCount} areas remain cleared for future runs`, w / 2, y + 36);
+    }
+  }
+
+  const pulse = Math.sin(titlePulse * 3) * 0.3 + 0.7;
+  ctx.globalAlpha = pulse;
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = '16px monospace';
+  ctx.fillText('[ ENTER / TAP to Rise Again ]', w / 2, h * 0.92);
+  ctx.globalAlpha = 1;
+};
+
+// --- Game Loop ---
+const gameLoop = (timestamp) => {
+  const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+  lastTime = timestamp;
+
+  update(dt);
+  render();
+
+  requestAnimationFrame(gameLoop);
+};
+
+requestAnimationFrame((ts) => { lastTime = ts; gameLoop(ts); });
+
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

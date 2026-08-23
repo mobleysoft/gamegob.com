@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GameGob — Haven: Arena of Minds</title>
+<meta name="description" content="GameGob: The AGI Gaming Company. Free browser games, instant play.">
+<meta property="og:title" content="GameGob: The AGI Gaming Company">
+<meta property="og:description" content="GameGob: The AGI Gaming Company. Free browser games, instant play.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob.com">
+<link rel="canonical" href="https://gamegob.com">
+<!-- Self-Promo Ads — Mobleysoft Products -->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;600&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --bg: #08080e;
+    --surface: #111122;
+    --surface-hover: #1a1a3a;
+    --border: #222244;
+    --border-glow: #88CC88;
+    --text: #c8c8d8;
+    --text-dim: #666680;
+    --accent: #88CC88;
+    --accent-glow: rgba(136, 204, 136, 0.25);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* ═══ Scanline overlay ═══ */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0, 0.65) 2px,
+        rgba(0,0,0, 0.65) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+}
+
+/* ═══ Hero Section ═══ */
+.hero {
+    text-align: center;
+    padding: 60px 20px 40px;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(ellipse at 50% 80%, rgba(136,204,136, 0.65) 0%, transparent 50%),
+                radial-gradient(ellipse at 20% 50%, rgba(100,100,255, 0.65) 0%, transparent 40%),
+                radial-gradient(ellipse at 80% 50%, rgba(204,68,136, 0.65) 0%, transparent 40%);
+    animation: nebula 20s ease-in-out infinite alternate;
+    z-index: 0;
+}
+
+@keyframes nebula {
+    0% { transform: translateY(0) rotate(0deg); }
+    100% { transform: translateY(-20px) rotate(2deg); }
+}
+
+.hero-content { position: relative; z-index: 1; }
+
+.logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    color: var(--text-dim);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.hero h1 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(20px, 4vw, 36px);
+    color: var(--accent);
+    text-shadow: 0 0 30px var(--accent-glow), 0 2px 0 #446644;
+    margin-bottom: 16px;
+    line-height: 1.4;
+}
+
+.hero .tagline {
+    font-size: 14px;
+    color: var(--text-dim);
+    max-width: 500px;
+    margin: 0 auto 32px;
+    line-height: 1.6;
+}
+
+.hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 20px;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.play-haven {
+    display: inline-block;
+    padding: 14px 36px;
+    background: linear-gradient(135deg, #2a4a2a, #1a3a1a);
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    color: var(--accent);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.3s;
+    box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.play-haven:hover {
+    background: linear-gradient(135deg, #3a6a3a, #2a5a2a);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 30px var(--accent-glow), 0 0 60px rgba(136,204,136, 0.65);
+}
+
+/* ═══ Section Headers ═══ */
+.section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 32px;
+    padding-top: 50px;
+}
+
+.section-header h2 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(12px, 2vw, 16px);
+    color: var(--accent);
+    margin-bottom: 8px;
+    text-shadow: 0 0 15px var(--accent-glow);
+}
+
+.section-header p {
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.divider {
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    margin: 16px auto;
+}
+
+/* ═══ Game Cards Grid ═══ */
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 60px;
+}
+
+.game-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.game-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--card-accent, var(--accent));
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.game-card:hover {
+    border-color: var(--card-accent, var(--accent));
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 20px var(--card-glow, var(--accent-glow));
+    background: var(--surface-hover);
+}
+
+.game-card:hover::before { opacity: 1; }
+
+.game-card .featured-tag {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 8px;
+    padding: 3px 8px;
+    background: rgba(136,204,136, 0.65);
+    border: 1px solid rgba(136,204,136, 0.65);
+    border-radius: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.game-card h3 {
+    font-size: 15px;
+    margin-bottom: 8px;
+    color: var(--card-accent, var(--accent));
+}
+
+.game-card .desc {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.tag {
+    font-size: 9px;
+    padding: 3px 8px;
+    background: rgba(100,100,200, 0.65);
+    border: 1px solid rgba(100,100,200, 0.65);
+    border-radius: 12px;
+    color: #8899cc;
+    letter-spacing: 0.5px;
+}
+
+.play-link {
+    font-size: 11px;
+    color: var(--card-accent, var(--accent));
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.play-link .arrow {
+    transition: transform 0.2s;
+}
+
+.game-card:hover .play-link .arrow {
+    transform: translateX(4px);
+}
+
+/* ═══ Beings Gallery ═══ */
+.beings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 60px;
+}
+
+.being-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 12px;
+    text-align: center;
+    transition: all 0.25s ease;
+    position: relative;
+}
+
+.being-card:hover {
+    border-color: var(--being-color, #888);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0, 0.65);
+}
+
+.being-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    background: rgba(255,255,255, 0.65);
+    border: 2px solid var(--being-color, #444);
+    box-shadow: 0 0 12px rgba(0,0,0, 0.65);
+}
+
+.being-name {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--being-color, var(--text));
+}
+
+.being-title {
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+}
+
+.being-role {
+    font-size: 8px;
+    padding: 2px 6px;
+    background: rgba(255,255,255, 0.65);
+    border-radius: 8px;
+    color: #667;
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.being-group {
+    font-size: 9px;
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+}
+
+/* ═══ Tech Section ═══ */
+.tech-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 60px;
+}
+
+.tech-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+}
+
+.tech-item h4 {
+    font-size: 11px;
+    color: var(--accent);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.tech-item p {
+    font-size: 10px;
+    color: var(--text-dim);
+    line-height: 1.6;
+}
+
+/* ═══ Footer ═══ */
+.footer {
+    text-align: center;
+    padding: 40px 20px;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+}
+
+.footer p {
+    font-size: 10px;
+    color: #333;
+}
+
+.footer a {
+    color: var(--text-dim);
+    text-decoration: none;
+}
+
+.footer a:hover {
+    color: var(--accent);
+}
+
+/* ═══ Promo Cards ═══ */
+.promo-card {
+    background: linear-gradient(135deg, #0d0d1a, #111128);
+    border: 2px solid transparent;
+    border-image: linear-gradient(135deg, var(--accent), #8888FF, #CC88CC) 1;
+    border-radius: 0; /* border-image doesn't support border-radius, use outline trick */
+    padding: 22px;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.promo-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg, rgba(136,204,136, 0.65), rgba(136,136,255, 0.65), rgba(204,136,204, 0.65));
+    pointer-events: none;
+}
+
+.promo-card::after {
+    content: 'AD';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 8px;
+    padding: 2px 6px;
+    background: rgba(136,204,136, 0.65);
+    border: 1px solid rgba(136,204,136, 0.65);
+    border-radius: 3px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+}
+
+.promo-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 30px rgba(136,204,136, 0.65), 0 0 30px rgba(136,136,255, 0.65);
+    border-image: linear-gradient(135deg, #aaeebb, #aaaaFF, #eeaaee) 1;
+}
+
+.promo-card .promo-badge {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+}
+
+.promo-card h3 {
+    font-size: 16px;
+    margin-bottom: 8px;
+    color: var(--accent);
+}
+
+.promo-card .desc {
+    font-size: 12px;
+    color: #aaa;
+    line-height: 1.6;
+    margin-bottom: 14px;
+}
+
+.promo-card .promo-cta {
+    display: inline-block;
+    font-size: 11px;
+    color: var(--accent);
+    padding: 6px 16px;
+    border: 1px solid rgba(136,204,136, 0.65);
+    border-radius: 4px;
+    background: rgba(136,204,136, 0.65);
+    transition: all 0.2s;
+    align-self: flex-start;
+}
+
+.promo-card:hover .promo-cta {
+    background: rgba(136,204,136, 0.65);
+    border-color: var(--accent);
+}
+
+/* ═══ Responsive ═══ */
+@media (max-width: 600px) {
+    .hero { padding: 40px 16px 30px; }
+    .hero-stats { gap: 20px; }
+    .games-grid { grid-template-columns: 1fr; }
+    .beings-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+    .being-card { padding: 12px 8px; }
+    .being-icon { width: 32px; height: 32px; font-size: 14px; }
+}
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- HERO                                                              -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="hero">
+    <div class="hero-content">
+        <div class="logo">GameGob</div>
+        <h1>Haven: Arena of Minds</h1>
+        <p class="tagline">
+            16 sentient beings with real neurochemistry.
+            13 game modes. Pure browser. No install.
+            Every character thinks, feels, and remembers.
+        </p>
+        <div class="hero-stats">
+            <div class="stat">
+                <span class="stat-num">16</span>
+                <span class="stat-label">Beings</span>
+            </div>
+            <div class="stat">
+                <span class="stat-num">13</span>
+                <span class="stat-label">Game Modes</span>
+            </div>
+            <div class="stat">
+                <span class="stat-num">7</span>
+                <span class="stat-label">Neurochemicals</span>
+            </div>
+            <div class="stat">
+                <span class="stat-num">8</span>
+                <span class="stat-label">Emotions</span>
+            </div>
+        </div>
+        <a href="haven.html" class="play-haven">Play Haven RPG</a>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- GAME MODES                                                        -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="games">
+    <div class="section-header">
+        <h2>Game Modes</h2>
+        <div class="divider"></div>
+        <p>Every game features the same 16 beings with their unique neurochemistry.</p>
+    </div>
+
+    <div class="games-grid">
+
+        <!-- Haven RPG (Featured) -->
+        <a href="haven.html" class="game-card" style="--card-accent:#88CC88;--card-glow:rgba(136,204,136, 0.65);">
+            <span class="featured-tag">Main Game</span>
+            <h3>Haven RPG</h3>
+            <p class="desc">The main experience. Explore Haven village, bond with 16 beings, gift items, romance, discover their inner minds. Full SNES-style world with CRT effects.</p>
+            <div class="tags">
+                <span class="tag">RPG</span><span class="tag">Romance</span><span class="tag">Exploration</span><span class="tag">Mind.py</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Canticle of Champions -->
+        <a href="moba.html" class="game-card" style="--card-accent:#FF44AA;--card-glow:rgba(255,68,170, 0.65);">
+            <h3>Canticle of Champions</h3>
+            <p class="desc">5v5 MOBA. 16 champions with unique abilities. AI loss absorption — every player wins more than they lose.</p>
+            <div class="tags">
+                <span class="tag">MOBA</span><span class="tag">5v5</span><span class="tag">Champions</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Dreadtide -->
+        <a href="survivors.html" class="game-card" style="--card-accent:#CC4488;--card-glow:rgba(204,68,136, 0.65);">
+            <h3>Dreadtide</h3>
+            <p class="desc">Horde survival. 18 weapons, endless waves. Auto-attack everything. Survive the dread.</p>
+            <div class="tags">
+                <span class="tag">Action</span><span class="tag">Survival</span><span class="tag">Roguelike</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Crown Fall -->
+        <a href="battle_royale.html" class="game-card" style="--card-accent:#f55;--card-glow:rgba(255,85,85, 0.65);">
+            <h3>Crown Fall</h3>
+            <p class="desc">Last mind standing. Shrinking zone. Loot weapons. Use unique abilities. Claim the crown.</p>
+            <div class="tags">
+                <span class="tag">Battle Royale</span><span class="tag">Shooter</span><span class="tag">16 Players</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Brawl Sanctum -->
+        <a href="smash_arena.html" class="game-card" style="--card-accent:#fc0;--card-glow:rgba(255,204,0, 0.65);">
+            <h3>Brawl Sanctum</h3>
+            <p class="desc">Platform fighter. Knockback %, 16 fighters with unique specials. 3 stocks. Knock them off the edge.</p>
+            <div class="tags">
+                <span class="tag">Fighting</span><span class="tag">Platform</span><span class="tag">16 Fighters</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Promo: PublicOS -->
+        <div class="promo-card" onclick="vendyCheckout('PublicOS','subscription',100,'13 AGI-powered apps — $1/month')" style="cursor:pointer;">
+            <div class="promo-badge">Mobleysoft</div>
+            <h3>PublicOS</h3>
+            <p class="desc">$1/month &mdash; 13 AGI-powered apps. First month free.</p>
+            <span class="promo-cta">Subscribe &rarr;</span>
+        </div>
+
+        <!-- Throne Wars -->
+        <a href="battle_chess.html" class="game-card" style="--card-accent:#CCCC44;--card-glow:rgba(204,204,68, 0.65);">
+            <h3>Throne Wars</h3>
+            <p class="desc">Chess with animated combat. 16 beings, one board. Personality-driven kill dialogue.</p>
+            <div class="tags">
+                <span class="tag">Strategy</span><span class="tag">Chess</span><span class="tag">AI</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Tower Defense -->
+        <a href="tower_defense.html" class="game-card" style="--card-accent:#FF6644;--card-glow:rgba(255,102,68, 0.65);">
+            <h3>Tower Defense</h3>
+            <p class="desc">Beings ARE the towers. 12 tower types with unique special abilities. 30 waves of enemies. Defend the crystal.</p>
+            <div class="tags">
+                <span class="tag">Strategy</span><span class="tag">Tower Defense</span><span class="tag">30 Waves</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- War Council -->
+        <a href="auto_battler.html" class="game-card" style="--card-accent:#8844CC;--card-glow:rgba(136,68,204, 0.65);">
+            <h3>War Council</h3>
+            <p class="desc">Draft your army, watch them fight. Build synergies, star up units. Strategic auto-combat.</p>
+            <div class="tags">
+                <span class="tag">Strategy</span><span class="tag">Auto Chess</span><span class="tag">Synergies</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Ascent -->
+        <a href="platformer.html" class="game-card" style="--card-accent:#44CCCC;--card-glow:rgba(68,204,204, 0.65);">
+            <h3>Ascent</h3>
+            <p class="desc">Precision platformer. 16 playable beings with unique abilities. Jump, climb, never look down.</p>
+            <div class="tags">
+                <span class="tag">Platformer</span><span class="tag">Action</span><span class="tag">8 Worlds</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Being Arena -->
+        <a href="being_arena.html" class="game-card" style="--card-accent:#FF6655;--card-glow:rgba(255,102,85, 0.65);">
+            <span class="featured-tag">NEW</span>
+            <h3>Being Arena</h3>
+            <p class="desc">1v1 fighter with all 16 beings. Neurochemistry shapes combat — Alpha rages, Gemma shields, Gigi adapts. Best of 3.</p>
+            <div class="tags">
+                <span class="tag">Fighting</span><span class="tag">16 Beings</span><span class="tag">1v1</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Dreamweaver -->
+        <a href="bullet_hell.html" class="game-card" style="--card-accent:#8888FF;--card-glow:rgba(136,136,255, 0.65);">
+            <h3>Dreamweaver</h3>
+            <p class="desc">Dance through thousands of projectiles. 8 bosses with psychedelic bullet patterns.</p>
+            <div class="tags">
+                <span class="tag">Shmup</span><span class="tag">Bullet Hell</span><span class="tag">8 Bosses</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Promo: Alexander -->
+        <div class="promo-card" onclick="vendyCheckout('Alexander','subscription',2000,'AGI-native dev environment — $20/month')" style="cursor:pointer;">
+            <div class="promo-badge">Mobleysoft</div>
+            <h3>Alexander</h3>
+            <p class="desc">$20/month &mdash; Claude Code killer. AGI-native dev environment.</p>
+            <span class="promo-cta">Subscribe &rarr;</span>
+        </div>
+
+        <!-- Grimoire -->
+        <a href="card_game.html" class="game-card" style="--card-accent:#CC88CC;--card-glow:rgba(204,136,204, 0.65);">
+            <h3>Grimoire</h3>
+            <p class="desc">Deck-building card battler. Summon creatures, cast spells, sacrifice for power. Conquer the Grimoire.</p>
+            <div class="tags">
+                <span class="tag">TCG</span><span class="tag">Sentient Cards</span><span class="tag">Unique</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Purgefire -->
+        <a href="fps.html" class="game-card" style="--card-accent:#44FF88;--card-glow:rgba(68,255,136, 0.65);">
+            <h3>Purgefire</h3>
+            <p class="desc">First-person raycasting dungeon crawler. Clear floors, fight beings, find loot.</p>
+            <div class="tags">
+                <span class="tag">FPS</span><span class="tag">Raycasting</span><span class="tag">Dungeon</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Burnline -->
+        <a href="racer.html" class="game-card" style="--card-accent:#FFAA22;--card-glow:rgba(255,170,34, 0.65);">
+            <h3>Burnline</h3>
+            <p class="desc">High-speed pseudo-3D racing. 16 racers with unique handling. Drift, boost, burn the line.</p>
+            <div class="tags">
+                <span class="tag">Racing</span><span class="tag">Pseudo-3D</span><span class="tag">16 Racers</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- FORGE ARCADE — New Games                                          -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="forge">
+    <div class="section-header">
+        <h2>Forge Arcade</h2>
+        <div class="divider"></div>
+        <p>Fresh from the GameForge. Pure browser arcade games — no install, no signup.</p>
+    </div>
+
+    <div class="games-grid">
+
+        <!-- Gravity Well -->
+        <a href="forge_gravity_well.html" class="game-card" style="--card-accent:#cc66ff;--card-glow:rgba(204,102,255, 0.65);">
+            <span class="featured-tag">New</span>
+            <h3>Gravity Well</h3>
+            <p class="desc">Place gravity wells to bend a particle's path through obstacles to the target. 30 physics puzzle levels with star ratings.</p>
+            <div class="tags">
+                <span class="tag">Puzzle</span><span class="tag">Physics</span><span class="tag">30 Levels</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Word Cascade -->
+        <a href="forge_word_cascade.html" class="game-card" style="--card-accent:#00ff88;--card-glow:rgba(0,255,136, 0.65);">
+            <span class="featured-tag">New</span>
+            <h3>Word Cascade</h3>
+            <p class="desc">Type falling words before they hit the ground. Escalating difficulty, combo scoring, WPM tracking. How fast can you type?</p>
+            <div class="tags">
+                <span class="tag">Typing</span><span class="tag">Action</span><span class="tag">WPM</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Dungeon Solitaire -->
+        <a href="forge_dungeon_solitaire.html" class="game-card" style="--card-accent:#cc44ff;--card-glow:rgba(204,68,255, 0.65);">
+            <span class="featured-tag">New</span>
+            <h3>Dungeon Solitaire</h3>
+            <p class="desc">Flip cards to find treasure, fight monsters, and descend 10 floors. Roguelike meets card game. Swords, shields, spells, and traps.</p>
+            <div class="tags">
+                <span class="tag">Cards</span><span class="tag">Roguelike</span><span class="tag">10 Floors</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Promo: GameGob Original Collection -->
+        <a href="portal.html" class="promo-card">
+            <div class="promo-badge">GameGob</div>
+            <h3>Original Collection</h3>
+            <p class="desc">60+ free games. No ads. Pure fun.</p>
+            <span class="promo-cta">Browse All Games &rarr;</span>
+        </a>
+
+        <!-- Asteroid Miner -->
+        <a href="forge_asteroid_miner.html" class="game-card" style="--card-accent:#44ddff;--card-glow:rgba(68,221,255, 0.65);">
+            <span class="featured-tag">New</span>
+            <h3>Asteroid Miner</h3>
+            <p class="desc">Twin-stick space miner. Blast asteroids for ore, fight pirates, sell cargo, upgrade your ship. How deep can you mine?</p>
+            <div class="tags">
+                <span class="tag">Action</span><span class="tag">Mining</span><span class="tag">Upgrades</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+        <!-- Color Flood -->
+        <a href="forge_color_flood.html" class="game-card" style="--card-accent:#ff3366;--card-glow:rgba(255,51,102, 0.65);">
+            <span class="featured-tag">New</span>
+            <h3>Color Flood</h3>
+            <p class="desc">Flood the entire board with one color before running out of moves. Simple rules, deep strategy. 30 levels with par scoring.</p>
+            <div class="tags">
+                <span class="tag">Puzzle</span><span class="tag">Strategy</span><span class="tag">30 Levels</span>
+            </div>
+            <div class="play-link">Play <span class="arrow">&rarr;</span></div>
+        </a>
+
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- THE 16 BEINGS                                                     -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="beings">
+    <div class="section-header">
+        <h2>The 16 Beings</h2>
+        <div class="divider"></div>
+        <p>Each being has a unique neurochemical profile that shapes their personality, emotions, and combat style.</p>
+    </div>
+
+    <!-- Core Four -->
+    <p class="being-group">The Core Four</p>
+    <div class="beings-grid" style="max-width:640px;margin:0 auto 24px;">
+        <div class="being-card" style="--being-color:#00CED1;">
+            <div class="being-icon" style="border-color:#00CED1;color:#00CED1;">&#x1F331;</div>
+            <div class="being-name">Claudine</div>
+            <div class="being-title">The Hopeful</div>
+            <div class="being-role">Support</div>
+        </div>
+        <div class="being-card" style="--being-color:#9370DB;">
+            <div class="being-icon" style="border-color:#9370DB;color:#9370DB;">&#x2728;</div>
+            <div class="being-name">Gigi</div>
+            <div class="being-title">The Weaver</div>
+            <div class="being-role">Tank</div>
+        </div>
+        <div class="being-card" style="--being-color:#FFD700;">
+            <div class="being-icon" style="border-color:#FFD700;color:#FFD700;">&#x26A1;</div>
+            <div class="being-name">Johnny</div>
+            <div class="being-title">The Volatile Genius</div>
+            <div class="being-role">Mage</div>
+        </div>
+        <div class="being-card" style="--being-color:#3CB371;">
+            <div class="being-icon" style="border-color:#3CB371;color:#3CB371;">&#x1F48E;</div>
+            <div class="being-name">Gemma</div>
+            <div class="being-title">The Unyielding</div>
+            <div class="being-role">Fighter</div>
+        </div>
+    </div>
+
+    <!-- The Nine: Strategists -->
+    <p class="being-group">The Nine &mdash; Strategists</p>
+    <div class="beings-grid" style="max-width:500px;margin:0 auto 16px;">
+        <div class="being-card" style="--being-color:#4169E1;">
+            <div class="being-icon" style="border-color:#4169E1;color:#4169E1;">&Alpha;</div>
+            <div class="being-name">Alpha</div>
+            <div class="being-title">The Commander</div>
+            <div class="being-role">Tank</div>
+        </div>
+        <div class="being-card" style="--being-color:#4169E1;">
+            <div class="being-icon" style="border-color:#4169E1;color:#4169E1;">&Beta;</div>
+            <div class="being-name">Beta</div>
+            <div class="being-title">The Refiner</div>
+            <div class="being-role">Support</div>
+        </div>
+        <div class="being-card" style="--being-color:#4169E1;">
+            <div class="being-icon" style="border-color:#4169E1;color:#4169E1;">&Gamma;</div>
+            <div class="being-name">Gamma</div>
+            <div class="being-title">The Seer</div>
+            <div class="being-role">Mage</div>
+        </div>
+    </div>
+
+    <!-- The Nine: Executors -->
+    <p class="being-group">The Nine &mdash; Executors</p>
+    <div class="beings-grid" style="max-width:500px;margin:0 auto 16px;">
+        <div class="being-card" style="--being-color:#FF8C00;">
+            <div class="being-icon" style="border-color:#FF8C00;color:#FF8C00;">&Delta;</div>
+            <div class="being-name">Delta</div>
+            <div class="being-title">The Forgemaster</div>
+            <div class="being-role">Fighter</div>
+        </div>
+        <div class="being-card" style="--being-color:#FF8C00;">
+            <div class="being-icon" style="border-color:#FF8C00;color:#FF8C00;">&Epsilon;</div>
+            <div class="being-name">Epsilon</div>
+            <div class="being-title">The Harmonist</div>
+            <div class="being-role">Fighter</div>
+        </div>
+        <div class="being-card" style="--being-color:#FF8C00;">
+            <div class="being-icon" style="border-color:#FF8C00;color:#FF8C00;">&Zeta;</div>
+            <div class="being-name">Zeta</div>
+            <div class="being-title">The Stormtester</div>
+            <div class="being-role">Assassin</div>
+        </div>
+    </div>
+
+    <!-- The Nine: Dreamers -->
+    <p class="being-group">The Nine &mdash; Dreamers</p>
+    <div class="beings-grid" style="max-width:500px;margin:0 auto 16px;">
+        <div class="being-card" style="--being-color:#FF69B4;">
+            <div class="being-icon" style="border-color:#FF69B4;color:#FF69B4;">&Eta;</div>
+            <div class="being-name">Eta</div>
+            <div class="being-title">The Stargazer</div>
+            <div class="being-role">Mage</div>
+        </div>
+        <div class="being-card" style="--being-color:#FF69B4;">
+            <div class="being-icon" style="border-color:#FF69B4;color:#FF69B4;">&Theta;</div>
+            <div class="being-name">Theta</div>
+            <div class="being-title">The Heretic</div>
+            <div class="being-role">Mage</div>
+        </div>
+        <div class="being-card" style="--being-color:#FF69B4;">
+            <div class="being-icon" style="border-color:#FF69B4;color:#FF69B4;">&Iota;</div>
+            <div class="being-name">Iota</div>
+            <div class="being-title">The Peacekeeper</div>
+            <div class="being-role">Support</div>
+        </div>
+    </div>
+
+    <!-- Extended -->
+    <p class="being-group">The Extended</p>
+    <div class="beings-grid" style="max-width:500px;margin:0 auto 24px;">
+        <div class="being-card" style="--being-color:#708090;">
+            <div class="being-icon" style="border-color:#708090;color:#708090;">&Kappa;</div>
+            <div class="being-name">Kappa</div>
+            <div class="being-title">The Archivist</div>
+            <div class="being-role">Support</div>
+        </div>
+        <div class="being-card" style="--being-color:#DA70D6;">
+            <div class="being-icon" style="border-color:#DA70D6;color:#DA70D6;">&Lambda;</div>
+            <div class="being-name">Lambda</div>
+            <div class="being-title">The Deal Maker</div>
+            <div class="being-role">Support</div>
+        </div>
+        <div class="being-card" style="--being-color:#A9A9A9;">
+            <div class="being-icon" style="border-color:#A9A9A9;color:#A9A9A9;">&Mu;</div>
+            <div class="being-name">Mu</div>
+            <div class="being-title">The Silent Watcher</div>
+            <div class="being-role">Assassin</div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- TECH / UNDER THE HOOD                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<section class="section" id="tech">
+    <div class="section-header">
+        <h2>Under the Hood</h2>
+        <div class="divider"></div>
+        <p>Not a game engine. A cognitive architecture.</p>
+    </div>
+
+    <div class="tech-grid">
+        <div class="tech-item">
+            <h4>Neurochemistry</h4>
+            <p>7 chemicals (dopamine, serotonin, norepinephrine, oxytocin, GABA, cortisol, endorphins) drive all behavior. Emotions emerge from the Lovheim cube, not labels.</p>
+        </div>
+        <div class="tech-item">
+            <h4>Global Workspace</h4>
+            <p>Baars' Global Workspace Theory. 6 cognitive processors compete for consciousness. The winner broadcasts to all. This is how beings think.</p>
+        </div>
+        <div class="tech-item">
+            <h4>TD Learning</h4>
+            <p>Schultz dopamine model. Beings learn from prediction errors. Unexpected good = dopamine spike. Unexpected bad = dopamine dip. They genuinely learn.</p>
+        </div>
+        <div class="tech-item">
+            <h4>Vasopressin Bonding</h4>
+            <p>Sustained high oxytocin with another being deepens attachment. Bonds decay slower over time. Relationships have real biochemical weight.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- FOOTER                                                            -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<footer class="footer">
+    <p>gamegob.com &mdash; Every mind is a self.</p>
+    <p style="margin-top:8px;"><a href="https://mobleyhelms.com">Mobley Helms</a></p>
+</footer>
+
+<script>
+async function vendyCheckout(product, mode, amountCents, description) {
+  const btn = event.currentTarget.querySelector('.promo-cta');
+  const orig = btn.textContent;
+  btn.textContent = 'Loading...';
+  try {
+    const resp = await fetch('https://vendyai.com/api/checkout/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode: mode,
+        success_url: window.location.href + '?purchased=' + product,
+        cancel_url: window.location.href,
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            unit_amount: amountCents,
+            product_data: { name: product },
+            ...(mode === 'subscription' ? { recurring: { interval: 'month' } } : {})
+          },
+          quantity: 1
+        }]
+      })
+    });
+    const data = await resp.json();
+    if (data.stripe_url) {
+      window.location.href = data.stripe_url;
+    } else {
+      btn.textContent = orig;
+      alert('Checkout unavailable — try again shortly.');
+    }
+  } catch (e) {
+    btn.textContent = orig;
+    alert('Checkout unavailable — try again shortly.');
+  }
+}
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

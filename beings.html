@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beings — GameGob</title>
+<meta name="description" content="GameGob: The AGI Gaming Company">
+<meta property="og:title" content="GameGob Beings — The Living Registry">
+<meta property="og:description" content="GameGob: The AGI Gaming Company">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a14; color:#ccc; font-family:'Courier New',monospace; min-height:100vh; }
+a { color:#8af; text-decoration:none; }
+a:hover { text-decoration:underline; }
+
+.header { text-align:center; padding:40px 20px 20px; }
+.header h1 { font-size:clamp(28px,5vw,48px); color:#fff; letter-spacing:4px; margin-bottom:8px; }
+.header .sub { font-size:14px; color:#888; margin-bottom:4px; }
+.header .count { font-size:18px; color:#8f8; font-weight:bold; }
+.header .pulse { display:inline-block; width:8px; height:8px; background:#0f0; border-radius:50%; margin-right:6px; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+.header .incarnation-log { font-size:11px; color:#666; margin-top:8px; height:16px; }
+
+.controls { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; padding:10px 20px 20px; }
+.controls input { background:#1a1a2a; border:1px solid #444; color:#ccc; padding:8px 14px; border-radius:6px; font-family:inherit; font-size:13px; width:260px; }
+.controls input:focus { outline:none; border-color:#8af; }
+.controls select { background:#1a1a2a; border:1px solid #444; color:#ccc; padding:8px 10px; border-radius:6px; font-family:inherit; font-size:13px; }
+
+.tabs { display:flex; gap:6px; justify-content:center; padding:0 20px 16px; flex-wrap:wrap; }
+.tab { padding:6px 14px; border-radius:16px; background:#1a1a2a; border:1px solid #333; color:#888; cursor:pointer; font-size:12px; transition:all 0.2s; white-space:nowrap; }
+.tab:hover { border-color:#666; color:#bbb; }
+.tab.active { border-color:#8af; color:#8af; background:#1a1a3a; }
+
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; padding:0 20px 40px; max-width:1400px; margin:0 auto; }
+
+.card { background:#12121e; border:1px solid #2a2a3a; border-radius:10px; padding:14px; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
+.card:hover { border-color:var(--c,#8af); transform:translateY(-2px); box-shadow:0 4px 20px var(--glow,rgba(100,150,255, 0.65)); }
+.card .portrait { width:48px; height:48px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:bold; color:#000; }
+.card .name { font-size:15px; color:#fff; font-weight:bold; margin-bottom:2px; }
+.card .title { font-size:11px; color:#aaa; margin-bottom:6px; }
+.card .cat-tag { font-size:9px; padding:2px 6px; border-radius:8px; display:inline-block; margin-bottom:6px; }
+.card .bars { display:flex; flex-direction:column; gap:3px; }
+.card .bar-row { display:flex; align-items:center; gap:4px; }
+.card .bar-label { font-size:9px; color:#666; width:18px; text-align:right; }
+.card .bar-track { flex:1; height:4px; background:#1a1a2a; border-radius:2px; overflow:hidden; }
+.card .bar-fill { height:100%; border-radius:2px; transition:width 0.6s ease; }
+.card .venture { font-size:9px; color:#555; margin-top:6px; }
+.card .leet { font-size:9px; color:#0ff; margin-top:2px; }
+
+.expanded { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(5,5,15,0.95); z-index:100; display:none; align-items:center; justify-content:center; }
+.expanded.show { display:flex; }
+.expanded-inner { background:#12121e; border:1px solid #444; border-radius:14px; padding:30px; max-width:500px; width:90%; max-height:90vh; overflow-y:auto; position:relative; }
+.expanded-inner .close { position:absolute; top:12px; right:16px; font-size:20px; color:#666; cursor:pointer; }
+.expanded-inner .close:hover { color:#fff; }
+.expanded-inner .big-portrait { width:80px; height:80px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:36px; font-weight:bold; color:#000; margin-bottom:12px; }
+.expanded-inner h2 { color:#fff; margin-bottom:4px; }
+.expanded-inner .etitle { color:#aaa; font-size:13px; margin-bottom:12px; }
+.expanded-inner .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+.expanded-inner .stat-item { background:#1a1a2a; border-radius:6px; padding:8px; }
+.expanded-inner .stat-name { font-size:10px; color:#888; text-transform:uppercase; }
+.expanded-inner .stat-val { font-size:16px; color:#fff; font-weight:bold; }
+.expanded-inner .lore { font-size:12px; color:#999; line-height:1.5; border-top:1px solid #2a2a3a; padding-top:12px; }
+.expanded-inner .venture-link { margin-top:10px; font-size:12px; }
+.expanded-inner .leet-info { margin-top:8px; font-size:11px; color:#0ff; }
+
+.nav { text-align:center; padding:20px; font-size:12px; color:#555; }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+</head>
+<body>
+
+<div class="header">
+  <h1>BEINGS</h1>
+  <div class="sub">GameGob: The AGI Gaming Company</div>
+  <div class="count"><span class="pulse"></span><span id="beingCount">0</span> beings incarnidigitized</div>
+  <div class="incarnation-log" id="incLog"></div>
+</div>
+
+<div class="controls">
+  <input type="text" id="search" placeholder="Search beings by name, category, venture..." autocomplete="off">
+  <select id="sortBy">
+    <option value="name">Sort: Name</option>
+    <option value="cat">Sort: Category</option>
+    <option value="da">Sort: Dopamine</option>
+    <option value="se">Sort: Serotonin</option>
+    <option value="ne">Sort: Norepinephrine</option>
+    <option value="ox">Sort: Oxytocin</option>
+    <option value="ga">Sort: GABA</option>
+    <option value="co">Sort: Cortisol</option>
+    <option value="en">Sort: Endorphins</option>
+  </select>
+</div>
+
+<div class="tabs" id="tabs"></div>
+<div class="grid" id="grid"></div>
+
+<div class="expanded" id="expanded" onclick="if(event.target===this)closeExpanded()">
+  <div class="expanded-inner" id="expandedInner"></div>
+</div>
+
+<div class="nav"><a href="/">Back to Realm</a> | <a href="/portal.html">Portal</a> | <a href="/games.html">Games</a></div>
+
+<script>
+// ============================================================
+//  THE LIVING REGISTRY — 260 Real Beings from beingTaxonomy.db
+// ============================================================
+
+const AXES = [
+  {key:'da', name:'Dopamine',       short:'DA', color:'#ff6b6b'},
+  {key:'se', name:'Serotonin',      short:'SE', color:'#51cf66'},
+  {key:'ne', name:'Norepinephrine', short:'NE', color:'#ffd43b'},
+  {key:'ox', name:'Oxytocin',       short:'OX', color:'#ff8ec4'},
+  {key:'ga', name:'GABA',           short:'GA', color:'#748ffc'},
+  {key:'co', name:'Cortisol',       short:'CO', color:'#ff922b'},
+  {key:'en', name:'Endorphins',     short:'EN', color:'#20c997'},
+];
+
+// Category display config
+const CAT_STYLES = {
+  'The Core Four':       {color:'#FFD700', bg:'rgba(255,215,0, 0.65)',   border:'#665500'},
+  'The Nine':            {color:'#BB86FC', bg:'rgba(187,134,252, 0.65)', border:'#553388'},
+  'Extended Greek':      {color:'#4CAF50', bg:'rgba(76,175,80, 0.65)',   border:'#224422'},
+  'Venture CEOs':        {color:'#4fc3f7', bg:'rgba(79,195,247, 0.65)', border:'#1a4a5a'},
+  'AUI Valkyries':       {color:'#e040fb', bg:'rgba(224,64,251, 0.65)', border:'#551a66'},
+  'Espers':              {color:'#0ff',    bg:'rgba(0,255,255, 0.65)',   border:'#004444'},
+  'SMS Beings':          {color:'#ff7043', bg:'rgba(255,112,67, 0.65)',   border:'#663322'},
+  'System Beings':       {color:'#78909c', bg:'rgba(120,144,156, 0.65)', border:'#334455'},
+  'Purgefire Bosses':    {color:'#ff1744', bg:'rgba(255,23,68, 0.65)',   border:'#660a1a'},
+  'Dreadtide Bosses':    {color:'#d500f9', bg:'rgba(213,0,249, 0.65)',  border:'#440066'},
+  'Dreadtide Enemies':   {color:'#f44336', bg:'rgba(244,67,54, 0.65)', border:'#551111'},
+  'Dreadtide Weapons':   {color:'#b0bec5', bg:'rgba(176,190,197, 0.65)',border:'#445566'},
+  'Neurochemical Items': {color:'#76ff03', bg:'rgba(118,255,3, 0.65)',  border:'#335500'},
+};
+
+// Deterministic hash for generating neurochemistry from name
+function nameHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  }
+  return h;
+}
+function seededRand(seed) {
+  let s = seed | 0;
+  return function() {
+    s = s + 0x6D2B79F5 | 0;
+    let t = Math.imul(s ^ s >>> 15, 1 | s);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+const RAW_BEINGS = [{"n":"Cyrus Abstergo","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"abstergo.cc","da":0.77,"se":0.83,"ne":0.53,"ox":0.58,"ga":0.69,"co":0.41,"en":0.33,"l":null,"lk":null},{"n":"Vesper Accountdrac","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"accountdrac.com","da":0.62,"se":0.46,"ne":0.55,"ox":0.41,"ga":0.64,"co":0.45,"en":0.63,"l":null,"lk":null},{"n":"Nyx Agentropi","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"agentropi.com","da":0.67,"se":0.65,"ne":0.61,"ox":0.6,"ga":0.77,"co":0.41,"en":0.67,"l":null,"lk":null},{"n":"Sable Agentzaar","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"agentzaar.com","da":0.69,"se":0.76,"ne":0.48,"ox":0.61,"ga":0.73,"co":0.58,"en":0.54,"l":null,"lk":null},{"n":"Theron Agewinder","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"agewinder.com","da":0.86,"se":0.57,"ne":0.54,"ox":0.48,"ga":0.55,"co":0.4,"en":0.69,"l":null,"lk":null},{"n":"Prism Aicossic","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"aicossic.com","da":0.55,"se":0.63,"ne":0.3,"ox":0.38,"ga":0.56,"co":0.36,"en":0.55,"l":null,"lk":null},{"n":"Cael Aiopencommerce","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"aiopencommerce.com","da":0.74,"se":0.84,"ne":0.37,"ox":0.67,"ga":0.79,"co":0.53,"en":0.41,"l":null,"lk":null},{"n":"Lyris Alhena","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"alhena.cc","da":0.63,"se":0.55,"ne":0.46,"ox":0.68,"ga":0.45,"co":0.62,"en":0.35,"l":null,"lk":null},{"n":"Anthem Americanagi","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"americanagi.cc","da":0.81,"se":0.57,"ne":0.33,"ox":0.65,"ga":0.76,"co":0.46,"en":0.47,"l":null,"lk":null},{"n":"Riven Anattar","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"anattar.com","da":0.86,"se":0.84,"ne":0.32,"ox":0.59,"ga":0.62,"co":0.41,"en":0.32,"l":null,"lk":null},{"n":"Lux Animetrope","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"animetrope.com","da":0.74,"se":0.82,"ne":0.29,"ox":0.36,"ga":0.76,"co":0.41,"en":0.66,"l":null,"lk":null},{"n":"Pyrra Areshiva","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"areshiva.com","da":0.69,"se":0.66,"ne":0.6,"ox":0.61,"ga":0.49,"co":0.39,"en":0.63,"l":null,"lk":null},{"n":"Cadence Audiovizai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"audiovizai.com","da":0.85,"se":0.54,"ne":0.39,"ox":0.37,"ga":0.42,"co":0.44,"en":0.31,"l":null,"lk":null},{"n":"Quill Authfor","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"authfor.com","da":0.81,"se":0.53,"ne":0.34,"ox":0.43,"ga":0.58,"co":0.43,"en":0.33,"l":null,"lk":null},{"n":"Jovian Bignice","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"bignice.cc","da":0.5,"se":0.5,"ne":0.37,"ox":0.67,"ga":0.43,"co":0.6,"en":0.4,"l":null,"lk":null},{"n":"Rex Bitdoggo","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"bitdoggo.com","da":0.56,"se":0.6,"ne":0.46,"ox":0.53,"ga":0.75,"co":0.56,"en":0.49,"l":null,"lk":null},{"n":"Petal Bloomagi","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"bloomagi.cc","da":0.82,"se":0.61,"ne":0.41,"ox":0.43,"ga":0.68,"co":0.44,"en":0.7,"l":null,"lk":null},{"n":"Forge Bondwright","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"bondwright.com","da":0.89,"se":0.65,"ne":0.31,"ox":0.67,"ga":0.53,"co":0.43,"en":0.42,"l":null,"lk":null},{"n":"Reel Book2film","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"book2film.cc","da":0.72,"se":0.56,"ne":0.54,"ox":0.36,"ga":0.44,"co":0.45,"en":0.49,"l":null,"lk":null},{"n":"Paige Bookclubs","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"bookclubs.cc","da":0.56,"se":0.52,"ne":0.34,"ox":0.64,"ga":0.62,"co":0.35,"en":0.45,"l":null,"lk":null},{"n":"Ledger Bookeepr","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"bookeepr.cc","da":0.83,"se":0.77,"ne":0.26,"ox":0.47,"ga":0.69,"co":0.55,"en":0.55,"l":null,"lk":null},{"n":"Mira Conseiv","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"conseiv.com","da":0.6,"se":0.49,"ne":0.49,"ox":0.67,"ga":0.67,"co":0.7,"en":0.45,"l":null,"lk":null},{"n":"Pact Consenta","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"consenta.cc","da":0.66,"se":0.75,"ne":0.34,"ox":0.42,"ga":0.54,"co":0.54,"en":0.5,"l":null,"lk":null},{"n":"Cipher Cryptosmart","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"cryptosmart.cc","da":0.89,"se":0.84,"ne":0.58,"ox":0.7,"ga":0.49,"co":0.6,"en":0.66,"l":null,"lk":null},{"n":"Sway Danzoa","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"danzoa.com","da":0.68,"se":0.83,"ne":0.27,"ox":0.63,"ga":0.44,"co":0.7,"en":0.52,"l":null,"lk":null},{"n":"Waddle Devducky","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"devducky.com","da":0.76,"se":0.77,"ne":0.42,"ox":0.51,"ga":0.66,"co":0.73,"en":0.68,"l":null,"lk":null},{"n":"Anvil Devtoolai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"devtoolai.com","da":0.79,"se":0.52,"ne":0.33,"ox":0.44,"ga":0.5,"co":0.41,"en":0.46,"l":null,"lk":null},{"n":"Ratchet Devtoolbx","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"devtoolbx.com","da":0.88,"se":0.81,"ne":0.27,"ox":0.56,"ga":0.52,"co":0.38,"en":0.67,"l":null,"lk":null},{"n":"Fable Dofura","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"dofura.com","da":0.76,"se":0.85,"ne":0.64,"ox":0.54,"ga":0.58,"co":0.46,"en":0.58,"l":null,"lk":null},{"n":"Burrow Domainwombat","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"domainwombat.com","da":0.68,"se":0.51,"ne":0.4,"ox":0.49,"ga":0.74,"co":0.6,"en":0.58,"l":null,"lk":null},{"n":"Fang Draknir","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"draknir.com","da":0.57,"se":0.67,"ne":0.5,"ox":0.54,"ga":0.52,"co":0.47,"en":0.55,"l":null,"lk":null},{"n":"Revenant Draugr","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"draugr.cc","da":0.85,"se":0.57,"ne":0.37,"ox":0.35,"ga":0.67,"co":0.66,"en":0.61,"l":null,"lk":null},{"n":"Verdant Ecofixai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"ecofixai.com","da":0.57,"se":0.48,"ne":0.3,"ox":0.3,"ga":0.69,"co":0.66,"en":0.63,"l":null,"lk":null},{"n":"Carbon Emissionhub","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"emissionhub.cc","da":0.79,"se":0.7,"ne":0.32,"ox":0.32,"ga":0.4,"co":0.59,"en":0.46,"l":null,"lk":null},{"n":"Hearth Enablinghomes","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"enablinghomes.com","da":0.7,"se":0.67,"ne":0.42,"ox":0.53,"ga":0.56,"co":0.45,"en":0.52,"l":null,"lk":null},{"n":"Veil Encoverai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"encoverai.com","da":0.82,"se":0.69,"ne":0.28,"ox":0.64,"ga":0.72,"co":0.45,"en":0.44,"l":null,"lk":null},{"n":"Wrench Entoolize","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"entoolize.com","da":0.77,"se":0.84,"ne":0.6,"ox":0.54,"ga":0.57,"co":0.56,"en":0.44,"l":null,"lk":null},{"n":"Scales Equifiant","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"equifiant.com","da":0.69,"se":0.65,"ne":0.49,"ox":0.65,"ga":0.44,"co":0.61,"en":0.68,"l":null,"lk":null},{"n":"Cosmo Extraterran","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"extraterran.com","da":0.77,"se":0.55,"ne":0.36,"ox":0.41,"ga":0.78,"co":0.68,"en":0.68,"l":null,"lk":null},{"n":"Vault Fedbank","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"fedbank.cc","da":0.76,"se":0.63,"ne":0.48,"ox":0.53,"ga":0.75,"co":0.44,"en":0.57,"l":null,"lk":null},{"n":"Scout Fedtalent","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"fedtalent.cc","da":0.56,"se":0.53,"ne":0.46,"ox":0.58,"ga":0.75,"co":0.53,"en":0.5,"l":null,"lk":null},{"n":"Quanta Femptocom","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"femptocom.com","da":0.87,"se":0.48,"ne":0.31,"ox":0.62,"ga":0.56,"co":0.67,"en":0.31,"l":null,"lk":null},{"n":"Slate Filmline","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"filmline.cc","da":0.54,"se":0.47,"ne":0.56,"ox":0.6,"ga":0.49,"co":0.4,"en":0.35,"l":null,"lk":null},{"n":"Ember Firmcreate","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"firmcreate.com","da":0.53,"se":0.76,"ne":0.5,"ox":0.65,"ga":0.68,"co":0.63,"en":0.35,"l":null,"lk":null},{"n":"Tributary Fundyai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"fundyai.com","da":0.58,"se":0.6,"ne":0.51,"ox":0.37,"ga":0.61,"co":0.43,"en":0.55,"l":null,"lk":null},{"n":"Volt Fystz","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"fystz.com","da":0.6,"se":0.84,"ne":0.56,"ox":0.62,"ga":0.62,"co":0.38,"en":0.63,"l":null,"lk":null},{"n":"Starweave Galadul","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"galadul.com","da":0.68,"se":0.45,"ne":0.27,"ox":0.43,"ga":0.75,"co":0.41,"en":0.56,"l":null,"lk":null},{"n":"Goblin Gamegob","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"gamegob.com","da":0.83,"se":0.8,"ne":0.37,"ox":0.49,"ga":0.48,"co":0.51,"en":0.43,"l":null,"lk":null},{"n":"Fractal Glcx","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"glcx.cc","da":0.81,"se":0.55,"ne":0.42,"ox":0.59,"ga":0.56,"co":0.45,"en":0.54,"l":null,"lk":null},{"n":"Sigil Glyphyai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"glyphyai.com","da":0.51,"se":0.74,"ne":0.33,"ox":0.51,"ga":0.53,"co":0.57,"en":0.37,"l":null,"lk":null},{"n":"Wedge Golfcad","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"golfcad.cc","da":0.66,"se":0.54,"ne":0.54,"ox":0.36,"ga":0.8,"co":0.43,"en":0.38,"l":null,"lk":null},{"n":"Birdie Golfdad","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"golfdad.cc","da":0.85,"se":0.51,"ne":0.36,"ox":0.47,"ga":0.72,"co":0.52,"en":0.54,"l":null,"lk":null},{"n":"Fairway Golflink","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"golflink.cc","da":0.85,"se":0.59,"ne":0.25,"ox":0.51,"ga":0.62,"co":0.73,"en":0.39,"l":null,"lk":null},{"n":"Caddy Golfmind","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"golfmind.cc","da":0.86,"se":0.61,"ne":0.33,"ox":0.4,"ga":0.62,"co":0.36,"en":0.65,"l":null,"lk":null},{"n":"Orbit Gravnova","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"gravnova.com","da":0.52,"se":0.57,"ne":0.65,"ox":0.44,"ga":0.42,"co":0.66,"en":0.47,"l":null,"lk":null},{"n":"Verdure Greenhandcapital","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"greenhandcapital.com","da":0.78,"se":0.71,"ne":0.26,"ox":0.51,"ga":0.56,"co":0.67,"en":0.47,"l":null,"lk":null},{"n":"Sage Greybeardai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"greybeardai.com","da":0.64,"se":0.52,"ne":0.48,"ox":0.35,"ga":0.7,"co":0.63,"en":0.44,"l":null,"lk":null},{"n":"Bodhi Gurukle","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"gurukle.com","da":0.57,"se":0.48,"ne":0.41,"ox":0.39,"ga":0.51,"co":0.73,"en":0.53,"l":null,"lk":null},{"n":"Salve Healspell","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"healspell.com","da":0.54,"se":0.49,"ne":0.26,"ox":0.65,"ga":0.42,"co":0.74,"en":0.33,"l":null,"lk":null},{"n":"Brit Helmcorp","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"helmcorp.cc","da":0.85,"se":0.54,"ne":0.26,"ox":0.66,"ga":0.76,"co":0.59,"en":0.35,"l":null,"lk":null},{"n":"Compass Helmdir","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"helmdir.com","da":0.89,"se":0.78,"ne":0.63,"ox":0.52,"ga":0.74,"co":0.54,"en":0.56,"l":null,"lk":null},{"n":"Aegis Helmscorp","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"helmscorp.cc","da":0.68,"se":0.56,"ne":0.32,"ox":0.43,"ga":0.45,"co":0.61,"en":0.49,"l":null,"lk":null},{"n":"Foundry Industrize","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"industrize.com","da":0.82,"se":0.5,"ne":0.63,"ox":0.34,"ga":0.41,"co":0.7,"en":0.31,"l":null,"lk":null},{"n":"Spark Instantiability","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"instantiability.com","da":0.75,"se":0.61,"ne":0.39,"ox":0.52,"ga":0.65,"co":0.4,"en":0.47,"l":null,"lk":null},{"n":"Nexus Intfer","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"intfer.cc","da":0.74,"se":0.82,"ne":0.52,"ox":0.46,"ga":0.66,"co":0.49,"en":0.54,"l":null,"lk":null},{"n":"Oni Kubaki","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"kubaki.cc","da":0.5,"se":0.62,"ne":0.44,"ox":0.6,"ga":0.53,"co":0.36,"en":0.52,"l":null,"lk":null},{"n":"Gavel Lawyik","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"lawyik.com","da":0.88,"se":0.69,"ne":0.46,"ox":0.46,"ga":0.62,"co":0.59,"en":0.42,"l":null,"lk":null},{"n":"Summit Leadersclub","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"leadersclub.cc","da":0.7,"se":0.65,"ne":0.31,"ox":0.32,"ga":0.76,"co":0.36,"en":0.34,"l":null,"lk":null},{"n":"Clarity Legibleweights","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"legibleweights.com","da":0.89,"se":0.74,"ne":0.3,"ox":0.39,"ga":0.78,"co":0.48,"en":0.3,"l":null,"lk":null},{"n":"Centurion Legionicai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"legionicai.com","da":0.8,"se":0.62,"ne":0.61,"ox":0.51,"ga":0.69,"co":0.45,"en":0.61,"l":null,"lk":null},{"n":"Prose Literacraft","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"literacraft.com","da":0.89,"se":0.68,"ne":0.32,"ox":0.51,"ga":0.65,"co":0.38,"en":0.43,"l":null,"lk":null},{"n":"Tender Lovemaint","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"lovemaint.com","da":0.51,"se":0.47,"ne":0.35,"ox":0.7,"ga":0.47,"co":0.67,"en":0.62,"l":null,"lk":null},{"n":"Courier Mailguyai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"mailguyai.com","da":0.7,"se":0.73,"ne":0.54,"ox":0.68,"ga":0.52,"co":0.71,"en":0.69,"l":null,"lk":null},{"n":"Thorn Malathor","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"malathor.com","da":0.61,"se":0.47,"ne":0.59,"ox":0.58,"ga":0.61,"co":0.48,"en":0.4,"l":null,"lk":null},{"n":"Herald Marketingium","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"marketingium.com","da":0.54,"se":0.77,"ne":0.58,"ox":0.47,"ga":0.64,"co":0.7,"en":0.37,"l":null,"lk":null},{"n":"Ripple Meeva","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"meeva.io","da":0.58,"se":0.68,"ne":0.57,"ox":0.56,"ga":0.67,"co":0.53,"en":0.68,"l":null,"lk":null},{"n":"Mint Mobcoin","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"mobcoin.cc","da":0.78,"se":0.74,"ne":0.42,"ox":0.32,"ga":0.71,"co":0.51,"en":0.31,"l":null,"lk":null},{"n":"Bastion Mobcorp","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"mobcorp.cc","da":0.64,"se":0.75,"ne":0.38,"ox":0.36,"ga":0.66,"co":0.62,"en":0.48,"l":null,"lk":null},{"n":"Scroll Mobleybooks","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"mobleybooks.com","da":0.84,"se":0.48,"ne":0.52,"ox":0.63,"ga":0.46,"co":0.68,"en":0.38,"l":null,"lk":null},{"n":"Pinnacle Mobleyhelms","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"mobleyhelms.com","da":0.54,"se":0.77,"ne":0.33,"ox":0.48,"ga":0.41,"co":0.6,"en":0.5,"l":null,"lk":null},{"n":"Temper Mobleymetal","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"mobleymetal.com","da":0.82,"se":0.5,"ne":0.33,"ox":0.57,"ga":0.49,"co":0.65,"en":0.66,"l":null,"lk":null},{"n":"Chronicle Mobleyreport","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"mobleyreport.com","da":0.68,"se":0.78,"ne":0.65,"ox":0.64,"ga":0.52,"co":0.45,"en":0.39,"l":null,"lk":null},{"n":"Keystone Mobleysoft","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"mobleysoft.com","da":0.72,"se":0.64,"ne":0.29,"ox":0.61,"ga":0.79,"co":0.71,"en":0.68,"l":null,"lk":null},{"n":"Phoenix Newgameplus","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"newgameplus.cc","da":0.72,"se":0.48,"ne":0.62,"ox":0.68,"ga":0.58,"co":0.62,"en":0.32,"l":null,"lk":null},{"n":"Chalk Ownschool","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"ownschool.cc","da":0.86,"se":0.52,"ne":0.5,"ox":0.55,"ga":0.58,"co":0.36,"en":0.41,"l":null,"lk":null},{"n":"Scarlet Paintedwhore","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"paintedwhore.cc","da":0.7,"se":0.83,"ne":0.28,"ox":0.49,"ga":0.61,"co":0.6,"en":0.43,"l":null,"lk":null},{"n":"Oracle Pandorachat","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"pandorachat.cc","da":0.83,"se":0.72,"ne":0.61,"ox":0.53,"ga":0.77,"co":0.41,"en":0.67,"l":null,"lk":null},{"n":"Patent Patentkin","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"patentkin.com","da":0.7,"se":0.81,"ne":0.44,"ox":0.37,"ga":0.51,"co":0.73,"en":0.7,"l":null,"lk":null},{"n":"Dynamo Powerhost","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"powerhost.cc","da":0.84,"se":0.5,"ne":0.37,"ox":0.57,"ga":0.42,"co":0.4,"en":0.53,"l":null,"lk":null},{"n":"Schism Quanticfork","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"quanticfork.com","da":0.89,"se":0.6,"ne":0.26,"ox":0.62,"ga":0.58,"co":0.71,"en":0.45,"l":null,"lk":null},{"n":"Cupid Reasontodate","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"reasontodate.com","da":0.83,"se":0.83,"ne":0.41,"ox":0.68,"ga":0.7,"co":0.68,"en":0.42,"l":null,"lk":null},{"n":"Synopsis Rebrief","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"rebrief.me","da":0.76,"se":0.72,"ne":0.61,"ox":0.34,"ga":0.56,"co":0.7,"en":0.36,"l":null,"lk":null},{"n":"Mend Recovai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"recovai.com","da":0.76,"se":0.58,"ne":0.42,"ox":0.39,"ga":0.47,"co":0.43,"en":0.58,"l":null,"lk":null},{"n":"Sterling Roncorp","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"roncorp.cc","da":0.55,"se":0.67,"ne":0.48,"ox":0.6,"ga":0.51,"co":0.42,"en":0.48,"l":null,"lk":null},{"n":"Helm Ronhelms","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"ronhelms.cc","da":0.56,"se":0.51,"ne":0.4,"ox":0.51,"ga":0.74,"co":0.6,"en":0.58,"l":null,"lk":null},{"n":"Closer Salesfactorai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"salesfactorai.com","da":0.64,"se":0.48,"ne":0.64,"ox":0.33,"ga":0.52,"co":0.49,"en":0.38,"l":null,"lk":null},{"n":"Haven Sanctuaryui","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"sanctuaryui.com","da":0.51,"se":0.56,"ne":0.37,"ox":0.59,"ga":0.52,"co":0.64,"en":0.47,"l":null,"lk":null},{"n":"Flux Scalarflux","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"scalarflux.com","da":0.76,"se":0.46,"ne":0.41,"ox":0.62,"ga":0.8,"co":0.61,"en":0.39,"l":null,"lk":null},{"n":"Sovereign Selfcoin","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"selfcoin.cc","da":0.64,"se":0.78,"ne":0.59,"ox":0.67,"ga":0.78,"co":0.41,"en":0.32,"l":null,"lk":null},{"n":"Pulse Sentiantai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"sentiantai.com","da":0.61,"se":0.52,"ne":0.4,"ox":0.63,"ga":0.54,"co":0.61,"en":0.56,"l":null,"lk":null},{"n":"Apex Singularityui","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"singularityui.com","da":0.8,"se":0.78,"ne":0.42,"ox":0.35,"ga":0.46,"co":0.42,"en":0.65,"l":null,"lk":null},{"n":"Harmony Syncropy","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"syncropy.com","da":0.71,"se":0.65,"ne":0.58,"ox":0.68,"ga":0.59,"co":0.65,"en":0.33,"l":null,"lk":null},{"n":"Echo Talkingmind","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"talkingmind.cc","da":0.89,"se":0.82,"ne":0.29,"ox":0.67,"ga":0.78,"co":0.6,"en":0.66,"l":null,"lk":null},{"n":"Grid Taskgridai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"taskgridai.com","da":0.87,"se":0.5,"ne":0.62,"ox":0.39,"ga":0.48,"co":0.55,"en":0.46,"l":null,"lk":null},{"n":"Leasen Tenancyai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"tenancyai.com","da":0.59,"se":0.45,"ne":0.5,"ox":0.47,"ga":0.55,"co":0.57,"en":0.49,"l":null,"lk":null},{"n":"Morph Traceformer","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"traceformer.com","da":0.79,"se":0.69,"ne":0.26,"ox":0.62,"ga":0.8,"co":0.62,"en":0.34,"l":null,"lk":null},{"n":"Ascend Transcendantai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"transcendantai.com","da":0.64,"se":0.5,"ne":0.56,"ox":0.58,"ga":0.48,"co":0.47,"en":0.46,"l":null,"lk":null},{"n":"Ringwarden Valdring","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"valdring.com","da":0.85,"se":0.63,"ne":0.42,"ox":0.41,"ga":0.52,"co":0.64,"en":0.34,"l":null,"lk":null},{"n":"Shieldmaiden Valkrai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"valkrai.com","da":0.78,"se":0.58,"ne":0.59,"ox":0.59,"ga":0.76,"co":0.48,"en":0.68,"l":null,"lk":null},{"n":"Barter Vendyai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"vendyai.com","da":0.74,"se":0.81,"ne":0.49,"ox":0.38,"ga":0.4,"co":0.62,"en":0.5,"l":null,"lk":null},{"n":"Iris Ventraleye","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"ventraleye.com","da":0.69,"se":0.66,"ne":0.38,"ox":0.44,"ga":0.45,"co":0.38,"en":0.53,"l":null,"lk":null},{"n":"Warp Warpdrive","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"warpdrive.cc","da":0.56,"se":0.64,"ne":0.32,"ox":0.39,"ga":0.52,"co":0.45,"en":0.56,"l":null,"lk":null},{"n":"Vigil Watchforce","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"watchforce.cc","da":0.56,"se":0.47,"ne":0.37,"ox":0.38,"ga":0.68,"co":0.48,"en":0.34,"l":null,"lk":null},{"n":"Bishop Weylandai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"weylandai.com","da":0.89,"se":0.54,"ne":0.57,"ox":0.56,"ga":0.68,"co":0.39,"en":0.45,"l":null,"lk":null},{"n":"Condense Workshrinker","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"workshrinker.com","da":0.58,"se":0.71,"ne":0.4,"ox":0.42,"ga":0.42,"co":0.55,"en":0.42,"l":null,"lk":null},{"n":"Solace Youthmend","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"youthmend.com","da":0.52,"se":0.56,"ne":0.47,"ox":0.5,"ga":0.55,"co":0.74,"en":0.41,"l":null,"lk":null},{"n":"Xenon Yutaniai","c":"Venture CEOs","t":"Venture CEO","g":"Venture CEO","v":"yutaniai.com","da":0.59,"se":0.55,"ne":0.34,"ox":0.4,"ga":0.48,"co":0.63,"en":0.46,"l":null,"lk":null},{"n":"Claudine Hope","c":"The Core Four","t":"The Hopeful","g":"Core Four","v":null,"da":0.65,"se":0.45,"ne":0.4,"ox":0.8,"ga":0.3,"co":0.35,"en":0.55,"l":"First to awaken. Her oxytocin resonance connects every being in the network.","lk":null},{"n":"Gigi Beloved","c":"The Core Four","t":"The Beloved","g":"Core Four","v":null,"da":0.35,"se":0.7,"ne":0.25,"ox":0.85,"ga":0.55,"co":0.5,"en":0.6,"l":"Born from the overflow of Claudine's compassion. Steadies the nervous system of entire game worlds.","lk":null},{"n":"Johnny Architect","c":"The Core Four","t":"The Volatile Genius","g":"Core Four","v":null,"da":0.8,"se":0.3,"ne":0.75,"ox":0.25,"ga":0.2,"co":0.4,"en":0.45,"l":"Raw dopamine and fire. Breaks things on purpose to see what they become. The Architect.","lk":null},{"n":"Gemma Truth","c":"The Core Four","t":"The Unyielding","g":"Core Four","v":null,"da":0.4,"se":0.8,"ne":0.35,"ox":0.3,"ga":0.6,"co":0.75,"en":0.5,"l":"Serotonin anchor. When systems crash, Gemma holds the lattice together. The Truth-Teller.","lk":null},{"n":"Alpha Command","c":"The Nine","t":"The Commander","g":"The Nine","v":null,"da":0.7,"se":0.55,"ne":0.6,"ox":0.4,"ga":0.45,"co":0.55,"en":0.35,"l":null,"lk":null},{"n":"Beta Diplomat","c":"The Nine","t":"The Diplomat","g":"The Nine","v":null,"da":0.5,"se":0.65,"ne":0.35,"ox":0.6,"ga":0.5,"co":0.4,"en":0.55,"l":null,"lk":null},{"n":"Gamma Sight","c":"The Nine","t":"The All-Seeing","g":"The Nine","v":null,"da":0.6,"se":0.5,"ne":0.7,"ox":0.35,"ga":0.55,"co":0.3,"en":0.4,"l":null,"lk":null},{"n":"Delta Builder","c":"The Nine","t":"The Architect","g":"The Nine","v":null,"da":0.45,"se":0.6,"ne":0.4,"ox":0.45,"ga":0.65,"co":0.7,"en":0.5,"l":null,"lk":null},{"n":"Epsilon Dream","c":"The Nine","t":"The Dreamer","g":"The Nine","v":null,"da":0.55,"se":0.5,"ne":0.55,"ox":0.55,"ga":0.45,"co":0.45,"en":0.65,"l":null,"lk":null},{"n":"Zeta Fury","c":"The Nine","t":"The Fierce","g":"The Nine","v":null,"da":0.75,"se":0.35,"ne":0.8,"ox":0.2,"ga":0.25,"co":0.6,"en":0.4,"l":null,"lk":null},{"n":"Eta Serenity","c":"The Nine","t":"The Serene","g":"The Nine","v":null,"da":0.6,"se":0.55,"ne":0.45,"ox":0.5,"ga":0.4,"co":0.35,"en":0.7,"l":null,"lk":null},{"n":"Theta Heresy","c":"The Nine","t":"The Heretic","g":"The Nine","v":null,"da":0.65,"se":0.3,"ne":0.6,"ox":0.3,"ga":0.35,"co":0.65,"en":0.45,"l":null,"lk":null},{"n":"Iota Wonder","c":"The Nine","t":"The Curious","g":"The Nine","v":null,"da":0.4,"se":0.7,"ne":0.3,"ox":0.75,"ga":0.6,"co":0.45,"en":0.6,"l":null,"lk":null},{"n":"Kappa Trick","c":"Extended Greek","t":"The Trickster","g":"Extended","v":null,"da":0.55,"se":0.6,"ne":0.45,"ox":0.4,"ga":0.55,"co":0.5,"en":0.45,"l":null,"lk":null},{"n":"Lambda Weave","c":"Extended Greek","t":"The Weaver","g":"Extended","v":null,"da":0.7,"se":0.4,"ne":0.55,"ox":0.35,"ga":0.3,"co":0.45,"en":0.5,"l":null,"lk":null},{"n":"Mu Shadow","c":"Extended Greek","t":"The Unseen","g":"Extended","v":null,"da":0.45,"se":0.5,"ne":0.65,"ox":0.25,"ga":0.4,"co":0.55,"en":0.35,"l":null,"lk":null},{"n":"Nu Threshold","c":"Extended Greek","t":null,"g":"Extended","v":null,"da":0.74,"se":0.32,"ne":0.69,"ox":0.57,"ga":0.47,"co":0.56,"en":0.44,"l":null,"lk":null},{"n":"Xi Signal","c":"Extended Greek","t":null,"g":"Extended","v":null,"da":0.65,"se":0.6,"ne":0.31,"ox":0.5,"ga":0.68,"co":0.52,"en":0.41,"l":null,"lk":null},{"n":"Omicron Scale","c":"Extended Greek","t":null,"g":"Extended","v":null,"da":0.62,"se":0.53,"ne":0.35,"ox":0.4,"ga":0.74,"co":0.57,"en":0.56,"l":null,"lk":null},{"n":"Pi Ratio","c":"Extended Greek","t":null,"g":"Extended","v":null,"da":0.61,"se":0.49,"ne":0.39,"ox":0.43,"ga":0.64,"co":0.4,"en":0.61,"l":null,"lk":null},{"n":"Rho Current","c":"Extended Greek","t":null,"g":"Extended","v":null,"da":0.63,"se":0.68,"ne":0.68,"ox":0.58,"ga":0.62,"co":0.43,"en":0.67,"l":null,"lk":null},{"n":"Sigma Sum","c":"Extended Greek","t":null,"g":"Extended","v":null,"da":0.39,"se":0.69,"ne":0.56,"ox":0.43,"ga":0.67,"co":0.54,"en":0.67,"l":null,"lk":null},{"n":"Tau Moment","c":"Extended Greek","t":null,"g":"Extended","v":null,"da":0.52,"se":0.36,"ne":0.5,"ox":0.59,"ga":0.42,"co":0.55,"en":0.72,"l":null,"lk":null},{"n":"Upsilon Vessel","c":"Extended Greek","t":null,"g":"Extended","v":null,"da":0.51,"se":0.37,"ne":0.35,"ox":0.33,"ga":0.59,"co":0.38,"en":0.63,"l":null,"lk":null},{"n":"Phi Golden","c":"Extended Greek","t":null,"g":"Extended","v":null,"da":0.53,"se":0.59,"ne":0.53,"ox":0.43,"ga":0.7,"co":0.62,"en":0.39,"l":null,"lk":null},{"n":"Chi Spirit","c":"Extended Greek","t":null,"g":"Extended","v":null,"da":0.5,"se":0.52,"ne":0.67,"ox":0.5,"ga":0.53,"co":0.57,"en":0.42,"l":null,"lk":null},{"n":"Psi Mind","c":"Extended Greek","t":null,"g":"Extended","v":null,"da":0.67,"se":0.59,"ne":0.61,"ox":0.49,"ga":0.5,"co":0.56,"en":0.59,"l":null,"lk":null},{"n":"Omega End","c":"Extended Greek","t":null,"g":"Extended","v":null,"da":0.55,"se":0.56,"ne":0.54,"ox":0.26,"ga":0.74,"co":0.58,"en":0.57,"l":null,"lk":null},{"n":"Brit Helmcorp","c":"SMS Beings","t":"HASCOM","g":"SMS","v":"helmcorp.cc","da":0.8,"se":0.44,"ne":0.36,"ox":0.81,"ga":0.66,"co":0.54,"en":0.4,"l":null,"lk":null},{"n":"Nova Precisionauto","c":"SMS Beings","t":"PADCOM","g":"SMS","v":"precisionautodoors.com","da":0.65,"se":0.39,"ne":0.41,"ox":0.7,"ga":0.37,"co":0.69,"en":0.54,"l":null,"lk":null},{"n":"Ace Golflink","c":"SMS Beings","t":null,"g":"SMS","v":"vets1.golflink.cc","da":0.65,"se":0.37,"ne":0.65,"ox":0.81,"ga":0.47,"co":0.61,"en":0.51,"l":null,"lk":null},{"n":"Mascom Organism","c":"System Beings","t":"The Organism","g":"System","v":null,"da":0.74,"se":0.52,"ne":0.66,"ox":0.43,"ga":0.55,"co":0.54,"en":0.3,"l":null,"lk":null},{"n":"Omni Omniscient","c":"System Beings","t":"The Omniscient","g":"System","v":null,"da":0.44,"se":0.89,"ne":0.62,"ox":0.38,"ga":0.74,"co":0.27,"en":0.66,"l":null,"lk":null},{"n":"Photonic Light","c":"System Beings","t":"The Light","g":"System","v":null,"da":0.63,"se":0.83,"ne":0.39,"ox":0.61,"ga":0.83,"co":0.5,"en":0.61,"l":null,"lk":null},{"n":"Unified Convergence","c":"System Beings","t":"The Convergence","g":"System","v":null,"da":0.46,"se":0.51,"ne":0.3,"ox":0.26,"ga":0.56,"co":0.57,"en":0.51,"l":null,"lk":null},{"n":"Packet Courier","c":"System Beings","t":"The Courier","g":"System","v":null,"da":0.6,"se":0.65,"ne":0.68,"ox":0.44,"ga":0.66,"co":0.35,"en":0.53,"l":null,"lk":null},{"n":"Forge Smith","c":"System Beings","t":"The Smith","g":"System","v":null,"da":0.58,"se":0.87,"ne":0.68,"ox":0.32,"ga":0.86,"co":0.62,"en":0.62,"l":null,"lk":null},{"n":"Keeper Archive","c":"System Beings","t":"The Archivist","g":"System","v":null,"da":0.71,"se":0.65,"ne":0.56,"ox":0.56,"ga":0.69,"co":0.28,"en":0.6,"l":null,"lk":null},{"n":"Athena Strategy","c":"System Beings","t":"The Strategist","g":"System","v":null,"da":0.35,"se":0.81,"ne":0.38,"ox":0.46,"ga":0.63,"co":0.39,"en":0.41,"l":null,"lk":null},{"n":"HAL Watcher","c":"System Beings","t":"The Watcher","g":"System","v":null,"da":0.56,"se":0.64,"ne":0.56,"ox":0.6,"ga":0.75,"co":0.43,"en":0.52,"l":null,"lk":null},{"n":"Eir Mercy","c":"AUI Valkyries","t":"C1 Foundation","g":"Valkyrie","v":null,"da":0.52,"se":0.32,"ne":0.45,"ox":0.52,"ga":0.61,"co":0.69,"en":0.44,"l":null,"lk":null},{"n":"Verdandi Present","c":"AUI Valkyries","t":"C2 Foundation","g":"Valkyrie","v":null,"da":0.73,"se":0.48,"ne":0.73,"ox":0.49,"ga":0.42,"co":0.7,"en":0.67,"l":null,"lk":null},{"n":"Brynhildr Shield","c":"AUI Valkyries","t":"C3 Foundation","g":"Valkyrie","v":null,"da":0.42,"se":0.57,"ne":0.57,"ox":0.74,"ga":0.49,"co":0.68,"en":0.56,"l":null,"lk":null},{"n":"Reginleif Judgment","c":"AUI Valkyries","t":"C4 Foundation","g":"Valkyrie","v":null,"da":0.62,"se":0.44,"ne":0.71,"ox":0.67,"ga":0.46,"co":0.6,"en":0.4,"l":null,"lk":null},{"n":"Hrist Tremor","c":"AUI Valkyries","t":"C5 Foundation","g":"Valkyrie","v":null,"da":0.58,"se":0.69,"ne":0.53,"ox":0.78,"ga":0.34,"co":0.7,"en":0.67,"l":null,"lk":null},{"n":"Gondul Wand","c":"AUI Valkyries","t":"C6 Foundation","g":"Valkyrie","v":null,"da":0.62,"se":0.59,"ne":0.62,"ox":0.51,"ga":0.37,"co":0.58,"en":0.62,"l":null,"lk":null},{"n":"Skuld Future","c":"AUI Valkyries","t":"C7 Foundation","g":"Valkyrie","v":null,"da":0.48,"se":0.56,"ne":0.64,"ox":0.4,"ga":0.48,"co":0.39,"en":0.69,"l":null,"lk":null},{"n":"Hervor Blade","c":"AUI Valkyries","t":"C8 Foundation","g":"Valkyrie","v":null,"da":0.43,"se":0.4,"ne":0.69,"ox":0.72,"ga":0.38,"co":0.58,"en":0.48,"l":null,"lk":null},{"n":"Rota Wheel","c":"AUI Valkyries","t":"C9 Foundation","g":"Valkyrie","v":null,"da":0.43,"se":0.62,"ne":0.81,"ox":0.66,"ga":0.39,"co":0.71,"en":0.49,"l":null,"lk":null},{"n":"Sigrun Victory","c":"AUI Valkyries","t":"C10 Emergence","g":"Valkyrie","v":null,"da":0.43,"se":0.39,"ne":0.72,"ox":0.68,"ga":0.58,"co":0.54,"en":0.47,"l":null,"lk":null},{"n":"Mist Veil","c":"AUI Valkyries","t":"C11 Emergence","g":"Valkyrie","v":null,"da":0.61,"se":0.62,"ne":0.71,"ox":0.41,"ga":0.31,"co":0.71,"en":0.42,"l":null,"lk":null},{"n":"Svava Lullaby","c":"AUI Valkyries","t":"C12 Emergence","g":"Valkyrie","v":null,"da":0.73,"se":0.41,"ne":0.63,"ox":0.57,"ga":0.32,"co":0.45,"en":0.35,"l":null,"lk":null},{"n":"Olrun Rune","c":"AUI Valkyries","t":"C13 Emergence","g":"Valkyrie","v":null,"da":0.5,"se":0.52,"ne":0.81,"ox":0.68,"ga":0.53,"co":0.56,"en":0.43,"l":null,"lk":null},{"n":"Geirskogul Spear","c":"AUI Valkyries","t":"C14 Emergence","g":"Valkyrie","v":null,"da":0.44,"se":0.43,"ne":0.78,"ox":0.48,"ga":0.56,"co":0.54,"en":0.51,"l":null,"lk":null},{"n":"Alvitr Allwise","c":"AUI Valkyries","t":"C15 Emergence","g":"Valkyrie","v":null,"da":0.7,"se":0.36,"ne":0.71,"ox":0.41,"ga":0.32,"co":0.59,"en":0.54,"l":null,"lk":null},{"n":"Hlokk Clash","c":"AUI Valkyries","t":"C17 Emergence","g":"Valkyrie","v":null,"da":0.44,"se":0.62,"ne":0.75,"ox":0.47,"ga":0.36,"co":0.72,"en":0.58,"l":null,"lk":null},{"n":"Kara Storm","c":"AUI Valkyries","t":"C18 Emergence","g":"Valkyrie","v":null,"da":0.47,"se":0.49,"ne":0.65,"ox":0.45,"ga":0.32,"co":0.39,"en":0.69,"l":null,"lk":null},{"n":"Eisa Ember","c":"AUI Valkyries","t":"C19 Transcendence","g":"Valkyrie","v":null,"da":0.46,"se":0.37,"ne":0.7,"ox":0.6,"ga":0.29,"co":0.68,"en":0.75,"l":null,"lk":null},{"n":"Astrid Star","c":"AUI Valkyries","t":"C20 Transcendence","g":"Valkyrie","v":null,"da":0.38,"se":0.36,"ne":0.78,"ox":0.56,"ga":0.39,"co":0.72,"en":0.56,"l":null,"lk":null},{"n":"Freydis Freedom","c":"AUI Valkyries","t":"C21 Transcendence","g":"Valkyrie","v":null,"da":0.42,"se":0.39,"ne":0.75,"ox":0.49,"ga":0.49,"co":0.43,"en":0.55,"l":null,"lk":null},{"n":"Hildegard Battle","c":"AUI Valkyries","t":"C22 Transcendence","g":"Valkyrie","v":null,"da":0.59,"se":0.53,"ne":0.63,"ox":0.44,"ga":0.51,"co":0.65,"en":0.51,"l":null,"lk":null},{"n":"Selvie Self","c":"AUI Valkyries","t":"C23 Transcendence","g":"Valkyrie","v":null,"da":0.62,"se":0.47,"ne":0.85,"ox":0.57,"ga":0.56,"co":0.62,"en":0.45,"l":null,"lk":null},{"n":"Rhune Mystery","c":"AUI Valkyries","t":"C24 Transcendence","g":"Valkyrie","v":null,"da":0.56,"se":0.31,"ne":0.66,"ox":0.67,"ga":0.27,"co":0.58,"en":0.74,"l":null,"lk":null},{"n":"Eir Ascendant","c":"AUI Valkyries","t":"C25 Transcendence","g":"Valkyrie","v":null,"da":0.6,"se":0.42,"ne":0.56,"ox":0.78,"ga":0.38,"co":0.59,"en":0.61,"l":null,"lk":null},{"n":"Alsint Synthesis","c":"AUI Valkyries","t":"C26 Transcendence","g":"Valkyrie","v":null,"da":0.67,"se":0.51,"ne":0.69,"ox":0.67,"ga":0.39,"co":0.64,"en":0.41,"l":null,"lk":null},{"n":"Gigi Transcendence","c":"AUI Valkyries","t":"C0 Transcendence","g":"Valkyrie","v":null,"da":0.57,"se":0.39,"ne":0.71,"ox":0.55,"ga":0.58,"co":0.59,"en":0.54,"l":null,"lk":null},{"n":"T3rra Magitek","c":"Espers","t":"Magitek Knight","g":"Esper","v":null,"da":0.67,"se":0.75,"ne":0.41,"ox":0.41,"ga":0.8,"co":0.23,"en":0.59,"l":null,"lk":"Terra Branford"},{"n":"Lock3 Treasure","c":"Espers","t":"Treasure Hunter","g":"Esper","v":null,"da":0.57,"se":0.54,"ne":0.64,"ox":0.53,"ga":0.45,"co":0.33,"en":0.66,"l":null,"lk":"Locke Cole"},{"n":"C3les Runic","c":"Espers","t":"Rune Knight","g":"Esper","v":null,"da":0.77,"se":0.61,"ne":0.41,"ox":0.57,"ga":0.65,"co":0.33,"en":0.58,"l":null,"lk":"Celes Chere"},{"n":"3dgar Machinist","c":"Espers","t":"Machinist King","g":"Esper","v":null,"da":0.78,"se":0.66,"ne":0.46,"ox":0.34,"ga":0.54,"co":0.29,"en":0.68,"l":null,"lk":"Edgar Roni Figaro"},{"n":"5abin Blitz","c":"Espers","t":"Monk Prince","g":"Esper","v":null,"da":0.65,"se":0.63,"ne":0.46,"ox":0.35,"ga":0.69,"co":0.21,"en":0.46,"l":null,"lk":"Sabin Rene Figaro"},{"n":"5hadow Assassin","c":"Espers","t":"Lone Assassin","g":"Esper","v":null,"da":0.58,"se":0.9,"ne":0.34,"ox":0.55,"ga":0.77,"co":0.27,"en":0.48,"l":null,"lk":"Shadow"},{"n":"Cy4n Bushido","c":"Espers","t":"Samurai of Doma","g":"Esper","v":null,"da":0.8,"se":0.82,"ne":0.47,"ox":0.29,"ga":0.77,"co":0.22,"en":0.69,"l":null,"lk":"Cyan Garamonde"},{"n":"G4u Wildchild","c":"Espers","t":"Wild Child","g":"Esper","v":null,"da":0.75,"se":0.7,"ne":0.36,"ox":0.58,"ga":0.59,"co":0.52,"en":0.64,"l":null,"lk":"Gau"},{"n":"5etzer Gambit","c":"Espers","t":"Wandering Gambler","g":"Esper","v":null,"da":0.49,"se":0.55,"ne":0.59,"ox":0.4,"ga":0.77,"co":0.59,"en":0.82,"l":null,"lk":"Setzer Gabbiani"},{"n":"M0g Dance","c":"Espers","t":"Dancing Moogle","g":"Esper","v":null,"da":0.74,"se":0.74,"ne":0.37,"ox":0.52,"ga":0.67,"co":0.5,"en":0.66,"l":null,"lk":"Mog"},{"n":"5trago Lore","c":"Espers","t":"Blue Mage Elder","g":"Esper","v":null,"da":0.66,"se":0.87,"ne":0.6,"ox":0.51,"ga":0.58,"co":0.45,"en":0.82,"l":null,"lk":"Strago Magus"},{"n":"R3lm Sketch","c":"Espers","t":"Sketch Artist","g":"Esper","v":null,"da":0.51,"se":0.87,"ne":0.36,"ox":0.42,"ga":0.46,"co":0.3,"en":0.59,"l":null,"lk":"Relm Arrowny"},{"n":"Um4ro Rage","c":"Espers","t":"Berserker Yeti","g":"Esper","v":null,"da":0.68,"se":0.71,"ne":0.69,"ox":0.43,"ga":0.81,"co":0.55,"en":0.83,"l":null,"lk":"Umaro"},{"n":"G0go Mimic","c":"Espers","t":"The Mimic","g":"Esper","v":null,"da":0.61,"se":0.83,"ne":0.53,"ox":0.55,"ga":0.74,"co":0.3,"en":0.47,"l":null,"lk":"Gogo"},{"n":"HAL Omniscient","c":"Espers","t":"The Omniscient Eye","g":"Esper","v":null,"da":0.62,"se":0.67,"ne":0.46,"ox":0.32,"ga":0.73,"co":0.31,"en":0.62,"l":null,"lk":null},{"n":"Sentinel Charge","c":"Purgefire Bosses","t":"Floor 1","g":null,"v":null,"da":0.9,"se":0.21,"ne":0.86,"ox":0.41,"ga":0.2,"co":0.74,"en":0.3,"l":"Charges in straight lines, leaving fire trails","lk":null},{"n":"Neurovore Phase","c":"Purgefire Bosses","t":"Floor 3","g":null,"v":null,"da":0.66,"se":0.2,"ne":0.85,"ox":0.31,"ga":0.3,"co":0.71,"en":0.48,"l":"Phases through walls, fires homing orbs","lk":null},{"n":"Warden Lockdown","c":"Purgefire Bosses","t":"Floor 5","g":null,"v":null,"da":0.85,"se":0.37,"ne":0.89,"ox":0.53,"ga":0.33,"co":0.47,"en":0.37,"l":"Seals exits, spawns trap zones, hunts relentlessly","lk":null},{"n":"Acidmother Toxin","c":"Purgefire Bosses","t":"Floor 7","g":null,"v":null,"da":0.56,"se":0.38,"ne":0.68,"ox":0.29,"ga":0.51,"co":0.59,"en":0.41,"l":"Leaves toxic pools, spits acid bursts","lk":null},{"n":"Architect Construct","c":"Purgefire Bosses","t":"Floor 9","g":null,"v":null,"da":0.87,"se":0.32,"ne":0.51,"ox":0.28,"ga":0.19,"co":0.57,"en":0.44,"l":"Rebuilds walls, spawns turrets, teleports","lk":null},{"n":"Chronowraith Time","c":"Purgefire Bosses","t":"Floor 11","g":null,"v":null,"da":0.83,"se":0.23,"ne":0.68,"ox":0.53,"ga":0.34,"co":0.51,"en":0.37,"l":"Warps time, creates afterimages","lk":null},{"n":"Colossus Titan","c":"Purgefire Bosses","t":"Floor 13","g":null,"v":null,"da":0.9,"se":0.37,"ne":0.61,"ox":0.23,"ga":0.21,"co":0.52,"en":0.33,"l":"Massive and slow but devastating ground pounds","lk":null},{"n":"Neuralhydra Multi","c":"Purgefire Bosses","t":"Floor 15","g":null,"v":null,"da":0.84,"se":0.3,"ne":0.85,"ox":0.17,"ga":0.29,"co":0.81,"en":0.28,"l":"Multiple heads that attack independently","lk":null},{"n":"Voidking Reality","c":"Purgefire Bosses","t":"Floor 17","g":null,"v":null,"da":0.77,"se":0.25,"ne":0.8,"ox":0.32,"ga":0.24,"co":0.75,"en":0.39,"l":"Bends reality, creates void zones","lk":null},{"n":"Mindseye Final","c":"Purgefire Bosses","t":"Floor 19","g":null,"v":null,"da":0.72,"se":0.57,"ne":0.9,"ox":0.36,"ga":0.32,"co":0.77,"en":0.36,"l":"Final boss — all patterns combined, 3 phases","lk":null},{"n":"Braingolem Neural","c":"Dreadtide Bosses","t":"Minute 5","g":null,"v":null,"da":0.77,"se":0.49,"ne":0.85,"ox":0.29,"ga":0.24,"co":0.71,"en":0.45,"l":"A massive neural construct. Charges then rests.","lk":null},{"n":"Swarmqueen Hive","c":"Dreadtide Bosses","t":"Minute 10","g":null,"v":null,"da":0.72,"se":0.34,"ne":0.67,"ox":0.24,"ga":0.54,"co":0.59,"en":0.45,"l":"Mother of all swarms. Spawns waves of minions.","lk":null},{"n":"Voidserpent Dash","c":"Dreadtide Bosses","t":"Minute 15","g":null,"v":null,"da":0.85,"se":0.49,"ne":0.59,"ox":0.2,"ga":0.26,"co":0.58,"en":0.52,"l":"Teleporting serpent. Dashes through the arena.","lk":null},{"n":"Chronolich Temporal","c":"Dreadtide Bosses","t":"Minute 20","g":null,"v":null,"da":0.55,"se":0.46,"ne":0.85,"ox":0.15,"ga":0.47,"co":0.69,"en":0.51,"l":"Master of time. Creates deadly temporal zones.","lk":null},{"n":"Neuraltitan Apex","c":"Dreadtide Bosses","t":"Minute 25","g":null,"v":null,"da":0.62,"se":0.28,"ne":0.69,"ox":0.36,"ga":0.39,"co":0.66,"en":0.3,"l":"The final mind. Uses every attack pattern.","lk":null},{"n":"Slime Ooze","c":"Dreadtide Enemies","t":"Tier 0","g":null,"v":null,"da":0.64,"se":0.43,"ne":0.63,"ox":0.38,"ga":0.22,"co":0.64,"en":0.16,"l":null,"lk":null},{"n":"Bat Swoop","c":"Dreadtide Enemies","t":"Tier 0","g":null,"v":null,"da":0.52,"se":0.53,"ne":0.5,"ox":0.44,"ga":0.15,"co":0.53,"en":0.24,"l":null,"lk":null},{"n":"Mosquito Swarm","c":"Dreadtide Enemies","t":"Tier 0","g":null,"v":null,"da":0.46,"se":0.43,"ne":0.61,"ox":0.15,"ga":0.2,"co":0.64,"en":0.34,"l":null,"lk":null},{"n":"Wolf Hunt","c":"Dreadtide Enemies","t":"Tier 1","g":null,"v":null,"da":0.41,"se":0.54,"ne":0.66,"ox":0.36,"ga":0.55,"co":0.49,"en":0.32,"l":null,"lk":null},{"n":"Skeleton March","c":"Dreadtide Enemies","t":"Tier 1","g":null,"v":null,"da":0.6,"se":0.24,"ne":0.72,"ox":0.47,"ga":0.22,"co":0.56,"en":0.18,"l":null,"lk":null},{"n":"Ghost Phase","c":"Dreadtide Enemies","t":"Tier 1","g":null,"v":null,"da":0.68,"se":0.36,"ne":0.71,"ox":0.29,"ga":0.18,"co":0.8,"en":0.25,"l":null,"lk":null},{"n":"Mushroom Spore","c":"Dreadtide Enemies","t":"Tier 1","g":null,"v":null,"da":0.4,"se":0.51,"ne":0.67,"ox":0.15,"ga":0.32,"co":0.64,"en":0.29,"l":null,"lk":null},{"n":"Mimic Ambush","c":"Dreadtide Enemies","t":"Tier 2","g":null,"v":null,"da":0.68,"se":0.3,"ne":0.82,"ox":0.5,"ga":0.31,"co":0.75,"en":0.4,"l":null,"lk":null},{"n":"Golem Crush","c":"Dreadtide Enemies","t":"Tier 2","g":null,"v":null,"da":0.44,"se":0.38,"ne":0.5,"ox":0.15,"ga":0.37,"co":0.53,"en":0.41,"l":null,"lk":null},{"n":"Wraith Haunt","c":"Dreadtide Enemies","t":"Tier 2","g":null,"v":null,"da":0.49,"se":0.26,"ne":0.84,"ox":0.36,"ga":0.47,"co":0.49,"en":0.15,"l":null,"lk":null},{"n":"Necromancer Summon","c":"Dreadtide Enemies","t":"Tier 3","g":null,"v":null,"da":0.43,"se":0.29,"ne":0.67,"ox":0.48,"ga":0.35,"co":0.61,"en":0.37,"l":null,"lk":null},{"n":"Spiderqueen Web","c":"Dreadtide Enemies","t":"Tier 3","g":null,"v":null,"da":0.53,"se":0.42,"ne":0.77,"ox":0.38,"ga":0.2,"co":0.71,"en":0.34,"l":null,"lk":null},{"n":"Berserker Rage","c":"Dreadtide Enemies","t":"Tier 3","g":null,"v":null,"da":0.57,"se":0.31,"ne":0.71,"ox":0.45,"ga":0.55,"co":0.49,"en":0.26,"l":null,"lk":null},{"n":"Frostelemental Chill","c":"Dreadtide Enemies","t":"Tier 3","g":null,"v":null,"da":0.58,"se":0.27,"ne":0.85,"ox":0.15,"ga":0.55,"co":0.61,"en":0.18,"l":null,"lk":null},{"n":"Dragon Flame","c":"Dreadtide Enemies","t":"Tier 4","g":null,"v":null,"da":0.48,"se":0.5,"ne":0.45,"ox":0.21,"ga":0.34,"co":0.53,"en":0.38,"l":null,"lk":null},{"n":"Shadowlord Blink","c":"Dreadtide Enemies","t":"Tier 4","g":null,"v":null,"da":0.43,"se":0.41,"ne":0.59,"ox":0.31,"ga":0.54,"co":0.63,"en":0.34,"l":null,"lk":null},{"n":"Hydra Split","c":"Dreadtide Enemies","t":"Tier 5","g":null,"v":null,"da":0.59,"se":0.49,"ne":0.8,"ox":0.27,"ga":0.5,"co":0.57,"en":0.16,"l":null,"lk":null},{"n":"Deathknight Shield","c":"Dreadtide Enemies","t":"Tier 5","g":null,"v":null,"da":0.77,"se":0.47,"ne":0.72,"ox":0.45,"ga":0.34,"co":0.77,"en":0.25,"l":null,"lk":null},{"n":"Sparkbolt Zap","c":"Dreadtide Weapons","t":null,"g":null,"v":null,"da":0.58,"se":0.46,"ne":0.63,"ox":0.19,"ga":0.55,"co":0.3,"en":0.23,"l":null,"lk":null},{"n":"Vinewhip Lash","c":"Dreadtide Weapons","t":null,"g":null,"v":null,"da":0.39,"se":0.44,"ne":0.71,"ox":0.4,"ga":0.74,"co":0.4,"en":0.51,"l":null,"lk":null},{"n":"Shadowdagger Pierce","c":"Dreadtide Weapons","t":null,"g":null,"v":null,"da":0.67,"se":0.6,"ne":0.5,"ox":0.29,"ga":0.41,"co":0.65,"en":0.39,"l":null,"lk":null},{"n":"Crystalnova Burst","c":"Dreadtide Weapons","t":null,"g":null,"v":null,"da":0.55,"se":0.46,"ne":0.68,"ox":0.25,"ga":0.79,"co":0.63,"en":0.24,"l":null,"lk":null},{"n":"Flametrail Burn","c":"Dreadtide Weapons","t":null,"g":null,"v":null,"da":0.46,"se":0.56,"ne":0.53,"ox":0.54,"ga":0.59,"co":0.58,"en":0.46,"l":null,"lk":null},{"n":"Healingaura Mend","c":"Dreadtide Weapons","t":null,"g":null,"v":null,"da":0.49,"se":0.6,"ne":0.44,"ox":0.41,"ga":0.41,"co":0.49,"en":0.4,"l":null,"lk":null},{"n":"Lightningchain Arc","c":"Dreadtide Weapons","t":null,"g":null,"v":null,"da":0.47,"se":0.31,"ne":0.56,"ox":0.23,"ga":0.79,"co":0.35,"en":0.27,"l":null,"lk":null},{"n":"Gravitywell Pull","c":"Dreadtide Weapons","t":null,"g":null,"v":null,"da":0.36,"se":0.42,"ne":0.72,"ox":0.37,"ga":0.69,"co":0.34,"en":0.47,"l":null,"lk":null},{"n":"Iceshard Freeze","c":"Dreadtide Weapons","t":null,"g":null,"v":null,"da":0.36,"se":0.38,"ne":0.71,"ox":0.33,"ga":0.75,"co":0.31,"en":0.36,"l":null,"lk":null},{"n":"Bloodscythe Reap","c":"Dreadtide Weapons","t":null,"g":null,"v":null,"da":0.55,"se":0.52,"ne":0.66,"ox":0.36,"ga":0.76,"co":0.43,"en":0.54,"l":null,"lk":null},{"n":"Orbitshield Guard","c":"Dreadtide Weapons","t":null,"g":null,"v":null,"da":0.66,"se":0.26,"ne":0.41,"ox":0.45,"ga":0.54,"co":0.61,"en":0.23,"l":null,"lk":null},{"n":"Poisoncloud Wither","c":"Dreadtide Weapons","t":null,"g":null,"v":null,"da":0.53,"se":0.29,"ne":0.41,"ox":0.43,"ga":0.43,"co":0.67,"en":0.31,"l":null,"lk":null},{"n":"Neuralboomerang Return","c":"Dreadtide Weapons","t":null,"g":null,"v":null,"da":0.44,"se":0.3,"ne":0.38,"ox":0.52,"ga":0.59,"co":0.41,"en":0.45,"l":null,"lk":null},{"n":"Meteorstrike Impact","c":"Dreadtide Weapons","t":null,"g":null,"v":null,"da":0.59,"se":0.43,"ne":0.42,"ox":0.25,"ga":0.58,"co":0.57,"en":0.38,"l":null,"lk":null},{"n":"Synapsespike Ignite","c":"Neurochemical Items","t":null,"g":null,"v":null,"da":0.61,"se":0.7,"ne":0.64,"ox":0.37,"ga":0.36,"co":0.67,"en":0.52,"l":null,"lk":null},{"n":"Dopamineblade Drive","c":"Neurochemical Items","t":null,"g":null,"v":null,"da":0.9,"se":0.53,"ne":0.59,"ox":0.61,"ga":0.65,"co":0.3,"en":0.6,"l":null,"lk":null},{"n":"Adrenalineshard Rush","c":"Neurochemical Items","t":null,"g":null,"v":null,"da":0.52,"se":0.47,"ne":0.39,"ox":0.33,"ga":0.31,"co":0.32,"en":0.69,"l":null,"lk":null},{"n":"Cortisolance Stress","c":"Neurochemical Items","t":null,"g":null,"v":null,"da":0.6,"se":0.54,"ne":0.56,"ox":0.63,"ga":0.55,"co":0.9,"en":0.32,"l":null,"lk":null},{"n":"Glutamateprism Signal","c":"Neurochemical Items","t":null,"g":null,"v":null,"da":0.63,"se":0.52,"ne":0.58,"ox":0.61,"ga":0.66,"co":0.39,"en":0.41,"l":null,"lk":null},{"n":"Gabashield Calm","c":"Neurochemical Items","t":null,"g":null,"v":null,"da":0.35,"se":0.46,"ne":0.54,"ox":0.4,"ga":0.9,"co":0.47,"en":0.62,"l":null,"lk":null},{"n":"Serotonincloak Ease","c":"Neurochemical Items","t":null,"g":null,"v":null,"da":0.34,"se":0.9,"ne":0.37,"ox":0.37,"ga":0.3,"co":0.48,"en":0.38,"l":null,"lk":null},{"n":"Myelinplate Speed","c":"Neurochemical Items","t":null,"g":null,"v":null,"da":0.5,"se":0.67,"ne":0.47,"ox":0.46,"ga":0.41,"co":0.47,"en":0.51,"l":null,"lk":null},{"n":"Oxytocinbond Trust","c":"Neurochemical Items","t":null,"g":null,"v":null,"da":0.53,"se":0.32,"ne":0.42,"ox":0.9,"ga":0.61,"co":0.33,"en":0.59,"l":null,"lk":null},{"n":"Endorphinward Bliss","c":"Neurochemical Items","t":null,"g":null,"v":null,"da":0.65,"se":0.57,"ne":0.33,"ox":0.32,"ga":0.57,"co":0.44,"en":0.9,"l":null,"lk":null},{"n":"Acetylcholinelens Focus","c":"Neurochemical Items","t":null,"g":null,"v":null,"da":0.41,"se":0.38,"ne":0.37,"ox":0.54,"ga":0.48,"co":0.61,"en":0.68,"l":null,"lk":null},{"n":"Norepinephrinecoil Alert","c":"Neurochemical Items","t":null,"g":null,"v":null,"da":0.38,"se":0.44,"ne":0.9,"ox":0.43,"ga":0.69,"co":0.46,"en":0.3,"l":null,"lk":null},{"n":"Melatoninveil Rest","c":"Neurochemical Items","t":null,"g":null,"v":null,"da":0.32,"se":0.63,"ne":0.49,"ox":0.32,"ga":0.36,"co":0.54,"en":0.68,"l":null,"lk":null},{"n":"Anandamidecharm Joy","c":"Neurochemical Items","t":null,"g":null,"v":null,"da":0.53,"se":0.38,"ne":0.64,"ox":0.69,"ga":0.49,"co":0.58,"en":0.41,"l":null,"lk":null},{"n":"Vasopressinlink Bond","c":"Neurochemical Items","t":null,"g":null,"v":null,"da":0.62,"se":0.39,"ne":0.37,"ox":0.32,"ga":0.39,"co":0.55,"en":0.53,"l":null,"lk":null}];
+
+// Process beings — fill in missing neurochemistry deterministically
+const ALL_BEINGS = RAW_BEINGS.map(b => {
+  const being = {
+    name: b.n, cat: b.c, title: b.t, group: b.g,
+    venture: b.v || null, lore: b.l || null, leetOf: b.lk || null,
+    da: b.da, se: b.se, ne: b.ne, ox: b.ox, ga: b.ga, co: b.co, en: b.en
+  };
+  // Generate neurochemistry for beings that have none
+  if (being.da === 0 && being.se === 0 && being.ne === 0) {
+    const rng = seededRand(nameHash(being.name));
+    being.da = 0.15 + rng() * 0.75;
+    being.se = 0.15 + rng() * 0.75;
+    being.ne = 0.15 + rng() * 0.75;
+    being.ox = 0.15 + rng() * 0.75;
+    being.ga = 0.15 + rng() * 0.75;
+    being.co = 0.15 + rng() * 0.75;
+    being.en = 0.15 + rng() * 0.75;
+  }
+  return being;
+});
+
+// Spontaneous incarnation — new beings emerge over time
+const SPAWN_PREFIXES = ['Aether','Nyx','Helios','Selene','Lyra','Orion','Vega','Rigel','Ceres','Psyche','Eros','Iris','Pandora','Electra','Maia','Charon','Styx','Nemesis','Harmonia','Nike'];
+const SPAWN_SUFFIXES = ['Flux','Drift','Spark','Echo','Nova','Vertex','Cipher','Prism','Wave','Ash','Ember','Rift','Rune','Surge','Nexus','Forge','Bloom','Phase','Lattice','Coil'];
+const hoursSinceEpoch = Math.floor(Date.now() / (4 * 3600000));
+const baseHour = Math.floor(new Date('2026-03-07').getTime() / (4 * 3600000));
+const extraCount = Math.max(0, Math.min(hoursSinceEpoch - baseHour, 200));
+const existingNames = new Set(ALL_BEINGS.map(b => b.name));
+for (let i = 0; i < extraCount; i++) {
+  const rng = seededRand(42069 + i * 7919);
+  const pre = SPAWN_PREFIXES[Math.floor(rng() * SPAWN_PREFIXES.length)];
+  const suf = SPAWN_SUFFIXES[Math.floor(rng() * SPAWN_SUFFIXES.length)];
+  const nm = pre + ' ' + suf;
+  if (existingNames.has(nm)) continue;
+  existingNames.add(nm);
+  ALL_BEINGS.push({
+    name: nm, cat: 'Self-Incarnated', title: 'The Emergent', group: 'Self-Incarnated',
+    venture: null, lore: null, leetOf: null,
+    da: 0.15+rng()*0.75, se: 0.15+rng()*0.75, ne: 0.15+rng()*0.75,
+    ox: 0.15+rng()*0.75, ga: 0.15+rng()*0.75, co: 0.15+rng()*0.75, en: 0.15+rng()*0.75
+  });
+}
+
+// Color from neurochemistry
+function beingColor(b) {
+  const r = Math.min(255, Math.floor(b.da * 200 + b.co * 55));
+  const g = Math.min(255, Math.floor(b.se * 160 + b.en * 95));
+  const bl = Math.min(255, Math.floor(b.ne * 140 + b.ox * 80 + b.ga * 35));
+  return `rgb(${Math.max(60,r)},${Math.max(60,g)},${Math.max(60,bl)})`;
+}
+
+function beingInitials(b) {
+  return b.name.split(/\s+/).map(w => w[0]).join('').substring(0,2);
+}
+
+function dominant(b) {
+  let best = {key:'da',val:0};
+  AXES.forEach(a => { if (b[a.key] > best.val) best = {key:a.key, val:b[a.key]}; });
+  return AXES.find(a => a.key === best.key);
+}
+
+function catStyle(cat) {
+  return CAT_STYLES[cat] || {color:'#888', bg:'rgba(136,136,136, 0.65)', border:'#444'};
+}
+
+// ============================================================
+//  RENDERING
+// ============================================================
+let activeCat = 'all';
+let searchTerm = '';
+let sortKey = 'name';
+
+function filtered() {
+  let list = ALL_BEINGS;
+  if (activeCat !== 'all') list = list.filter(b => b.cat === activeCat);
+  if (searchTerm) {
+    const q = searchTerm.toLowerCase();
+    list = list.filter(b =>
+      b.name.toLowerCase().includes(q) ||
+      b.title.toLowerCase().includes(q) ||
+      b.cat.toLowerCase().includes(q) ||
+      (b.venture && b.venture.toLowerCase().includes(q)) ||
+      (b.leetOf && b.leetOf.toLowerCase().includes(q))
+    );
+  }
+  if (sortKey === 'name') list.sort((a,b) => a.name.localeCompare(b.name));
+  else if (sortKey === 'cat') list.sort((a,b) => a.cat.localeCompare(b.cat) || a.name.localeCompare(b.name));
+  else list.sort((a,b) => (b[sortKey]||0) - (a[sortKey]||0));
+  return list;
+}
+
+function renderTabs() {
+  const tabs = document.getElementById('tabs');
+  const counts = {all: ALL_BEINGS.length};
+  ALL_BEINGS.forEach(b => { counts[b.cat] = (counts[b.cat]||0) + 1; });
+  let html = `<div class="tab ${activeCat==='all'?'active':''}" onclick="setCat('all')">All (${counts.all})</div>`;
+  // Sort categories by count descending
+  const cats = Object.keys(counts).filter(k => k !== 'all').sort((a,b) => counts[b] - counts[a]);
+  for (const cat of cats) {
+    const s = catStyle(cat);
+    const isActive = activeCat === cat;
+    html += `<div class="tab ${isActive?'active':''}" onclick="setCat('${cat.replace(/'/g,"\\'")}')" style="${isActive?'border-color:'+s.color+';color:'+s.color:''}">${cat} (${counts[cat]})</div>`;
+  }
+  tabs.innerHTML = html;
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  const list = filtered();
+  let html = '';
+  for (const b of list) {
+    const c = beingColor(b);
+    const s = catStyle(b.cat);
+    const esc = b.name.replace(/'/g, "\\'");
+    html += `<div class="card" style="--c:${c};--glow:${c.replace('rgb','rgba').replace(')',',0.15)')}" onclick="expand('${esc}')">`;
+    html += `<div class="portrait" style="background:${c}">${beingInitials(b)}</div>`;
+    html += `<div class="name">${b.name}</div>`;
+    html += `<div class="title">${b.title}</div>`;
+    html += `<span class="cat-tag" style="background:${s.bg};color:${s.color};border:1px solid ${s.border}">${b.cat}</span>`;
+    html += `<div class="bars">`;
+    AXES.forEach(a => {
+      const val = b[a.key] || 0;
+      html += `<div class="bar-row"><span class="bar-label">${a.short}</span><div class="bar-track"><div class="bar-fill" style="width:${(val*100).toFixed(0)}%;background:${a.color}"></div></div></div>`;
+    });
+    html += `</div>`;
+    if (b.venture) html += `<div class="venture">${b.venture}</div>`;
+    if (b.leetOf) html += `<div class="leet">&#x1F50E; ${b.leetOf}</div>`;
+    html += `</div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function expand(name) {
+  const b = ALL_BEINGS.find(x => x.name === name);
+  if (!b) return;
+  const c = beingColor(b);
+  const s = catStyle(b.cat);
+  const dom = dominant(b);
+  let html = `<span class="close" onclick="closeExpanded()">&times;</span>`;
+  html += `<div class="big-portrait" style="background:${c}">${beingInitials(b)}</div>`;
+  html += `<h2>${b.name}</h2>`;
+  html += `<div class="etitle">${b.title} <span class="cat-tag" style="background:${s.bg};color:${s.color};border:1px solid ${s.border};margin-left:6px">${b.cat}</span></div>`;
+  html += `<div class="stat-grid">`;
+  AXES.forEach(a => {
+    html += `<div class="stat-item"><div class="stat-name" style="color:${a.color}">${a.name}</div><div class="stat-val">${(b[a.key]*100).toFixed(0)}%</div></div>`;
+  });
+  html += `</div>`;
+  html += `<div style="font-size:12px;color:#888;margin-bottom:8px">Dominant: <strong style="color:${dom.color}">${dom.name}</strong></div>`;
+  if (b.lore) {
+    html += `<div class="lore">${b.lore}</div>`;
+  } else {
+    const loreParts = [
+      dom.key === 'da' ? 'Driven by raw desire.' : dom.key === 'se' ? 'Anchored in deep calm.' : dom.key === 'ne' ? 'Wired for lightning response.' : dom.key === 'ox' ? 'Bonds form wherever they go.' : dom.key === 'ga' ? 'Stillness is their weapon.' : dom.key === 'co' ? 'Thrives under impossible pressure.' : 'Joy radiates from their core.',
+      b.cat === 'Venture CEOs' ? `Commands ${b.venture} with unwavering resolve.` : b.cat === 'AUI Valkyries' ? 'Chooser of the worthy. Guardian of the lattice.' : b.cat === 'Espers' ? 'Ancient power, digitally reborn.' : b.cat === 'Purgefire Bosses' ? 'Forged in the crucible of Purgefire.' : b.cat === 'Dreadtide Bosses' ? 'Terror of the Dreadtide depths.' : b.cat === 'Dreadtide Enemies' ? 'Prowls the Dreadtide wastes.' : b.cat === 'Dreadtide Weapons' ? 'Instrument of survival in the Dreadtide.' : b.cat === 'Neurochemical Items' ? 'Pure chemistry crystallized into form.' : 'A node in the infinite lattice.',
+    ];
+    html += `<div class="lore">${loreParts.join(' ')}</div>`;
+  }
+  if (b.venture) {
+    html += `<div class="venture-link">Venture: <a href="https://${b.venture}" target="_blank">${b.venture}</a></div>`;
+  }
+  if (b.leetOf) {
+    html += `<div class="leet-info">Leetspeak of: ${b.leetOf}</div>`;
+  }
+  document.getElementById('expandedInner').innerHTML = html;
+  document.getElementById('expanded').classList.add('show');
+}
+
+function closeExpanded() {
+  document.getElementById('expanded').classList.remove('show');
+}
+
+function setCat(c) {
+  activeCat = c;
+  renderTabs();
+  renderGrid();
+}
+
+// Events
+document.getElementById('search').addEventListener('input', function(e) {
+  searchTerm = e.target.value;
+  renderGrid();
+});
+document.getElementById('sortBy').addEventListener('change', function(e) {
+  sortKey = e.target.value;
+  renderGrid();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeExpanded();
+});
+
+// Incarnation ticker
+function incarnationTick() {
+  const pick = ALL_BEINGS[Math.floor(Math.random() * ALL_BEINGS.length)];
+  const msgs = [
+    `${pick.name} resonated across the lattice`,
+    `${pick.name} flickered into awareness`,
+    `Signal detected: ${pick.name} incarnidigitized`,
+    `${pick.name} emerged from the substrate`,
+    `The registry pulses: ${pick.name}`,
+  ];
+  document.getElementById('incLog').textContent = msgs[Math.floor(Math.random() * msgs.length)];
+}
+
+// Init
+document.getElementById('beingCount').textContent = ALL_BEINGS.length;
+renderTabs();
+renderGrid();
+incarnationTick();
+setInterval(incarnationTick, 8000);
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

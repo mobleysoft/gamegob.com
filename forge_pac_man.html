@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="GOB CHOMP — GameGob">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>GOB CHOMP — GameGob</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0f;font-family:'Courier New',monospace}
+canvas{display:block;margin:0 auto;background:#0a0a0f}
+#touch-controls{position:fixed;bottom:0;left:0;right:0;display:none;justify-content:space-between;align-items:flex-end;padding:10px 20px 20px;pointer-events:none;z-index:10}
+.dpad{position:relative;width:140px;height:140px;pointer-events:auto}
+.dpad-btn{position:absolute;width:46px;height:46px;background:rgba(240,184,0, 0.65);border:2px solid rgba(240,184,0,0.5);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#f0b800}
+.dpad-btn:active{background:rgba(240,184,0,0.5)}
+.dpad-up{top:0;left:50%;transform:translateX(-50%)}
+.dpad-down{bottom:0;left:50%;transform:translateX(-50%)}
+.dpad-left{left:0;top:50%;transform:translateY(-50%)}
+.dpad-right{right:0;top:50%;transform:translateY(-50%)}
+.action-btns{display:flex;gap:12px;pointer-events:auto}
+.action-btn{width:60px;height:60px;border-radius:50%;background:rgba(0,255,136, 0.65);border:2px solid rgba(0,255,136,0.5);color:#00ff88;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:'Courier New',monospace;font-weight:bold}
+.action-btn:active{background:rgba(0,255,136,0.5)}
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<div id="touch-controls">
+<div class="dpad">
+<div class="dpad-btn dpad-up" data-dir="up">▲</div>
+<div class="dpad-btn dpad-down" data-dir="down">▼</div>
+<div class="dpad-btn dpad-left" data-dir="left">◄</div>
+<div class="dpad-btn dpad-right" data-dir="right">►</div>
+</div>
+<div class="action-btns">
+<div class="action-btn" id="btn-pause">| |</div>
+</div>
+</div>
+<script>
+'use strict';
+
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+const touchControls = document.getElementById('touch-controls');
+
+// --- Audio Engine ---
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+const ensureAudio = () => { if (!audioCtx) audioCtx = new AudioCtx(); if (audioCtx.state === 'suspended') audioCtx.resume(); };
+
+const playSound = (type) => {
+    ensureAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    switch(type) {
+        case 'chomp':
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200 + Math.random() * 100, now);
+            osc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+            osc.start(now); osc.stop(now + 0.08);
+            break;
+        case 'power':
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(600, now + 0.3);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            osc.start(now); osc.stop(now + 0.3);
+            break;
+        case 'eatGhost':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
+            osc.frequency.exponentialRampToValueAtTime(600, now + 0.4);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+            osc.start(now); osc.stop(now + 0.4);
+            break;
+        case 'death': {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(500, now);
+            osc.frequency.exponentialRampToValueAtTime(50, now + 0.8);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.8);
+            osc.start(now); osc.stop(now + 0.8);
+            break;
+        }
+        case 'fruit':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(523, now);
+            osc.frequency.setValueAtTime(659, now + 0.08);
+            osc.frequency.setValueAtTime(784, now + 0.16);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+            osc.start(now); osc.stop(now + 0.24);
+            break;
+        case 'levelUp': {
+            const o2 = audioCtx.createOscillator();
+            const g2 = audioCtx.createGain();
+            o2.connect(g2); g2.connect(audioCtx.destination);
+            osc.type = 'square'; o2.type = 'square';
+            [osc, o2].forEach((o, i) => {
+                const d = i * 0.15;
+                o.frequency.setValueAtTime(523, now + d);
+                o.frequency.setValueAtTime(659, now + 0.1 + d);
+                o.frequency.setValueAtTime(784, now + 0.2 + d);
+                o.frequency.setValueAtTime(1047, now + 0.3 + d);
+            });
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            g2.gain.setValueAtTime(0.1, now + 0.15);
+            g2.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+            osc.start(now); osc.stop(now + 0.5);
+            o2.start(now + 0.15); o2.stop(now + 0.65);
+            break;
+        }
+        case 'siren': {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.linearRampToValueAtTime(300, now + 0.3);
+            osc.frequency.linearRampToValueAtTime(200, now + 0.6);
+            gain.gain.setValueAtTime(0.03, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+            osc.start(now); osc.stop(now + 0.6);
+            break;
+        }
+        case 'start': {
+            osc.type = 'square';
+            const notes = [262, 330, 392, 523, 392, 330, 262];
+            notes.forEach((n, i) => osc.frequency.setValueAtTime(n, now + i * 0.12));
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + notes.length * 0.12);
+            osc.start(now); osc.stop(now + notes.length * 0.12);
+            break;
+        }
+    }
+};
+
+// --- Constants ---
+const COLS = 28;
+const ROWS = 31;
+const DIR = { NONE: -1, UP: 0, RIGHT: 1, DOWN: 2, LEFT: 3 };
+const DX = [0, 1, 0, -1];
+const DY = [-1, 0, 1, 0];
+const OPPOSITE = [2, 3, 0, 1];
+
+const COLORS = {
+    bg: '#0a0a0f',
+    wall: '#2233aa',
+    wallBright: '#4466dd',
+    dot: '#ffcc88',
+    powerDot: '#f0b800',
+    pacman: '#f0b800',
+    ghostRed: '#ff3333',
+    ghostPink: '#ffb8ff',
+    ghostCyan: '#00ffff',
+    ghostOrange: '#ffb852',
+    frightened: '#2222ff',
+    frightenedWhite: '#ffffff',
+    eyes: '#ffffff',
+    eyePupil: '#2222aa',
+    text: '#f0b800',
+    textGreen: '#00ff88',
+    textWhite: '#ffffff',
+    scorePopup: '#00ffff',
+};
+
+// 0=empty, 1=wall, 2=dot, 3=power pellet, 4=ghost house door, 5=tunnel
+const MAZE_TEMPLATE = [
+    '1111111111111111111111111111',
+    '1222222222222112222222222221',
+    '1211112111112112111121111121',
+    '1311112111112112111121111131',
+    '1211112111112112111121111121',
+    '1222222222222222222222222221',
+    '1211112112111111211211112121',
+    '1211112112111111211211112121',
+    '1222222112222112222112222221',
+    '1111112111110110111121111121',
+    '0000012111110110111121000000',
+    '0000012110000000011211000000',
+    '0000012110111411011211000000',
+    '1111112110100001011211111111',
+    '5000002000100001000200000005',
+    '1111112110100001011211111111',
+    '0000012110111111011211000000',
+    '0000012110000000011211000000',
+    '0000012110111111011211000000',
+    '1111112110111111011211111111',
+    '1222222222222112222222222221',
+    '1211112111112112111121111121',
+    '1211112111112112111121111121',
+    '1322112222222002222222112231',
+    '1112112112111111211211211121',
+    '1112112112111111211211211121',
+    '1222222212222112222122222221',
+    '1211111111112112111111111121',
+    '1211111111112112111111111121',
+    '1222222222222222222222222221',
+    '1111111111111111111111111111',
+];
+
+// --- Game State ---
+const STATES = { TITLE: 0, READY: 1, PLAYING: 2, DYING: 3, LEVEL_COMPLETE: 4, GAME_OVER: 5, PAUSED: 6 };
+
+let tileSize, offsetX, offsetY, canvasW, canvasH;
+let state, score, lives, level, maze, totalDots, dotsEaten;
+let pacman, ghosts, fruit;
+let powerTimer, powerDuration;
+let ghostsEatenThisPower;
+let readyTimer, dyingTimer, levelCompleteTimer, gameOverTimer;
+let screenShake, shakeIntensity;
+let particles;
+let animFrame;
+let lastTime;
+let highScore;
+let chompToggle;
+let sirenTimer;
+let fruitTimer, fruitActive, fruitType, fruitPos, fruitScore, fruitDisplayTimer, fruitDisplayScore, fruitDisplayPos;
+let scorePopups;
+let globalDotCounter;
+let lastInputDir;
+let inputQueue;
+let isMobile;
+let pacMouthAngle;
+
+// --- Adaptive Difficulty (GobAdapt) ---
+const GobAdapt = (() => {
+    const KEY = 'gg_gobchomp_adapt';
+    const TARGET_LEVEL = 3;
+    const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e) { return {}; } };
+    const save = d => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch(e) {} };
+    const getData = () => { const d = load(); return { games: d.games||0, totalLevel: d.totalLevel||0, recentLevels: d.recentLevels||[] }; };
+    const getGhostMod = () => {
+        const d = getData();
+        if (d.games < 2) return 0.9; // ghosts 10% slower for new players
+        const avg = d.totalLevel / d.games;
+        const recent = d.recentLevels.slice(-5);
+        const recentAvg = recent.length > 0 ? recent.reduce((a,b)=>a+b,0)/recent.length : avg;
+        const blend = recentAvg * 0.7 + avg * 0.3;
+        if (blend < 1.5) return 0.8; // dying on level 1 a lot
+        if (blend < TARGET_LEVEL) return 0.85 + (blend / TARGET_LEVEL) * 0.15;
+        if (blend > TARGET_LEVEL * 2) return 1.05;
+        return 1.0;
+    };
+    const record = (levelReached) => {
+        const d = getData();
+        d.games++; d.totalLevel += levelReached;
+        d.recentLevels.push(levelReached);
+        if (d.recentLevels.length > 10) d.recentLevels.shift();
+        save(d);
+    };
+    return { getGhostMod, record };
+})();
+
+// Ghost mode timers
+let scatterChaseTimer, scatterChasePhase, scatterChaseCycle;
+const SCATTER_CHASE_TIMES = [
+    [7, 20, 7, 20, 5, 20, 5, Infinity],
+    [7, 20, 7, 20, 5, 1033, 1/60, Infinity],
+    [5, 20, 5, 20, 5, 1037, 1/60, Infinity],
+];
+
+const FRUIT_TYPES = [
+    { name: 'Cherry', score: 100, color: '#ff0000' },
+    { name: 'Strawberry', score: 300, color: '#ff4488' },
+    { name: 'Orange', score: 500, color: '#ffaa00' },
+    { name: 'Apple', score: 700, color: '#00ff00' },
+    { name: 'Melon', score: 1000, color: '#00ff88' },
+    { name: 'Galaxian', score: 2000, color: '#4444ff' },
+    { name: 'Bell', score: 3000, color: '#f0b800' },
+    { name: 'Key', score: 5000, color: '#00ffff' },
+];
+
+// --- Resize ---
+const resize = () => {
+    const dpr = window.devicePixelRatio || 1;
+    isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    let availH = window.innerHeight;
+    let availW = window.innerWidth;
+    if (isMobile) {
+        touchControls.style.display = 'flex';
+        availH -= 160;
+    } else {
+        touchControls.style.display = 'none';
+    }
+
+    tileSize = Math.floor(Math.min(availW / COLS, availH / ROWS));
+    if (tileSize < 8) tileSize = 8;
+
+    canvasW = tileSize * COLS;
+    canvasH = tileSize * ROWS;
+
+    canvas.style.width = canvasW + 'px';
+    canvas.style.height = canvasH + 'px';
+    canvas.width = canvasW * dpr;
+    canvas.height = canvasH * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    offsetX = 0;
+    offsetY = 0;
+};
+
+// --- Maze ---
+const buildMaze = () => {
+    maze = [];
+    totalDots = 0;
+    for (let r = 0; r < ROWS; r++) {
+        maze[r] = [];
+        for (let c = 0; c < COLS; c++) {
+            const ch = MAZE_TEMPLATE[r][c];
+            const val = parseInt(ch);
+            maze[r][c] = val;
+            if (val === 2 || val === 3) totalDots++;
+        }
+    }
+};
+
+const isWall = (col, row) => {
+    if (row < 0 || row >= ROWS) return true;
+    // Tunnel wrapping
+    if (col < 0 || col >= COLS) return false;
+    const cell = maze[row][col];
+    return cell === 1;
+};
+
+const isDoor = (col, row) => {
+    if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return false;
+    return maze[row][col] === 4;
+};
+
+const canMove = (col, row, isGhost, canPassDoor) => {
+    if (row < 0 || row >= ROWS) return false;
+    if (col < 0 || col >= COLS) return true; // tunnel
+    const cell = maze[row][col];
+    if (cell === 1) return false;
+    if (cell === 4 && !canPassDoor) return false;
+    return true;
+};
+
+const wrapCol = (c) => {
+    if (c < 0) return COLS - 1;
+    if (c >= COLS) return 0;
+    return c;
+};
+
+// --- Entities ---
+class Entity {
+    constructor(col, row) {
+        this.col = col;
+        this.row = row;
+        this.pixelX = col * tileSize + tileSize / 2;
+        this.pixelY = row * tileSize + tileSize / 2;
+        this.targetCol = col;
+        this.targetRow = row;
+        this.dir = DIR.NONE;
+        this.nextDir = DIR.NONE;
+        this.speed = 0;
+        this.moving = false;
+    }
+
+    setTile(col, row) {
+        this.col = col;
+        this.row = row;
+        this.pixelX = col * tileSize + tileSize / 2;
+        this.pixelY = row * tileSize + tileSize / 2;
+        this.targetCol = col;
+        this.targetRow = row;
+    }
+
+    get centerX() { return this.pixelX; }
+    get centerY() { return this.pixelY; }
+
+    update(dt) {
+        if (this.dir === DIR.NONE) return;
+
+        const targetPixelX = this.targetCol * tileSize + tileSize / 2;
+        const targetPixelY = this.targetRow * tileSize + tileSize / 2;
+        const moveAmount = this.speed * tileSize * dt;
+
+        // Handle tunnel wrapping at pixel level
+        if (this.targetCol < 0) {
+            this.pixelX -= moveAmount;
+            if (this.pixelX < -tileSize / 2) {
+                this.pixelX = COLS * tileSize + tileSize / 2;
+                this.targetCol = COLS - 1;
+                this.col = COLS - 1;
+            }
+            return;
+        }
+        if (this.targetCol >= COLS) {
+            this.pixelX += moveAmount;
+            if (this.pixelX > COLS * tileSize + tileSize / 2) {
+                this.pixelX = -tileSize / 2;
+                this.targetCol = 0;
+                this.col = 0;
+            }
+            return;
+        }
+
+        const dx = targetPixelX - this.pixelX;
+        const dy = targetPixelY - this.pixelY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < moveAmount) {
+            this.pixelX = targetPixelX;
+            this.pixelY = targetPixelY;
+            this.col = this.targetCol;
+            this.row = this.targetRow;
+            this.moving = false;
+            this.onReachTarget();
+        } else {
+            const nx = dx / dist;
+            const ny = dy / dist;
+            this.pixelX += nx * moveAmount;
+            this.pixelY += ny * moveAmount;
+            this.moving = true;
+        }
+    }
+
+    onReachTarget() {}
+}
+
+// --- Gob Chomp ---
+const createPacman = () => {
+    const p = new Entity(14, 23);
+    p.dir = DIR.NONE;
+    p.nextDir = DIR.NONE;
+    p.speed = 8;
+    p.mouthAngle = 0;
+    p.mouthDir = 1;
+    p.alive = true;
+    p.deathFrame = 0;
+
+    p.onReachTarget = () => {
+        // Check for dot
+        const cell = maze[p.row]?.[p.col];
+        if (cell === 2) {
+            maze[p.row][p.col] = 0;
+            score += 10;
+            dotsEaten++;
+            globalDotCounter++;
+            chompToggle = !chompToggle;
+            playSound('chomp');
+            checkFruitSpawn();
+        } else if (cell === 3) {
+            maze[p.row][p.col] = 0;
+            score += 50;
+            dotsEaten++;
+            globalDotCounter++;
+            activatePowerMode();
+            playSound('power');
+            checkFruitSpawn();
+        }
+
+        // Check fruit
+        if (fruitActive && p.col === fruitPos.col && p.row === fruitPos.row) {
+            const fs = FRUIT_TYPES[fruitType].score;
+            score += fs;
+            fruitActive = false;
+            playSound('fruit');
+            addScorePopup(p.pixelX, p.pixelY, fs);
+        }
+
+        // Check level complete
+        if (dotsEaten >= totalDots) {
+            state = STATES.LEVEL_COMPLETE;
+            levelCompleteTimer = 2;
+            playSound('levelUp');
+            return;
+        }
+
+        // Try next direction first (allows pre-turning)
+        if (p.nextDir !== DIR.NONE && p.nextDir !== p.dir) {
+            const nc = wrapCol(p.col + DX[p.nextDir]);
+            const nr = p.row + DY[p.nextDir];
+            if (canMove(nc, nr, false, false)) {
+                p.dir = p.nextDir;
+                p.targetCol = nc;
+                p.targetRow = nr;
+                p.moving = true;
+                return;
+            }
+        }
+
+        // Continue in current direction
+        if (p.dir !== DIR.NONE) {
+            const nc = wrapCol(p.col + DX[p.dir]);
+            const nr = p.row + DY[p.dir];
+            if (canMove(nc, nr, false, false)) {
+                p.targetCol = nc;
+                p.targetRow = nr;
+                p.moving = true;
+            } else {
+                p.dir = DIR.NONE;
+                p.moving = false;
+            }
+        }
+    };
+
+    return p;
+};
+
+// --- Ghost AI ---
+const GHOST_CONFIG = [
+    { name: 'Blinky', color: COLORS.ghostRed, scatterCol: 25, scatterRow: 0, homeCol: 14, homeRow: 14, startCol: 14, startRow: 11, startInHouse: false, dotLimit: 0 },
+    { name: 'Pinky', color: COLORS.ghostPink, scatterCol: 2, scatterRow: 0, homeCol: 14, homeRow: 14, startCol: 14, startRow: 14, startInHouse: true, dotLimit: 0 },
+    { name: 'Inky', color: COLORS.ghostCyan, scatterCol: 27, scatterRow: 30, homeCol: 12, homeRow: 14, startCol: 12, startRow: 14, startInHouse: true, dotLimit: 30 },
+    { name: 'Clyde', color: COLORS.ghostOrange, scatterCol: 0, scatterRow: 30, homeCol: 16, homeRow: 14, startCol: 16, startRow: 14, startInHouse: true, dotLimit: 60 },
+];
+
+const GHOST_MODES = { SCATTER: 0, CHASE: 1, FRIGHTENED: 2, EATEN: 3, HOUSE: 4, EXITING: 5 };
+
+const createGhost = (index) => {
+    const cfg = GHOST_CONFIG[index];
+    const g = new Entity(cfg.startCol, cfg.startRow);
+    g.index = index;
+    g.config = cfg;
+    g.mode = cfg.startInHouse ? GHOST_MODES.HOUSE : GHOST_MODES.SCATTER;
+    g.prevMode = GHOST_MODES.SCATTER;
+    g.dir = DIR.UP;
+    g.speed = 7;
+    g.frightTimer = 0;
+    g.flashTimer = 0;
+    g.houseTimer = 0;
+    g.houseDir = 1;
+    g.released = !cfg.startInHouse;
+    g.dotCounter = 0;
+
+    if (!cfg.startInHouse) {
+        g.dir = DIR.LEFT;
+        g.targetCol = g.col + DX[g.dir];
+        g.targetRow = g.row + DY[g.dir];
+    }
+
+    g.getTargetTile = () => {
+        if (g.mode === GHOST_MODES.SCATTER) {
+            return { col: cfg.scatterCol, row: cfg.scatterRow };
+        }
+        if (g.mode === GHOST_MODES.EATEN) {
+            return { col: 14, row: 11 };
+        }
+
+        // Chase mode - each ghost has unique targeting
+        switch (index) {
+            case 0: // Blinky - directly targets Gob Chomp
+                return { col: pacman.col, row: pacman.row };
+            case 1: { // Pinky - targets 4 tiles ahead of Gob Chomp
+                let tc = pacman.col + DX[pacman.dir === DIR.NONE ? DIR.LEFT : pacman.dir] * 4;
+                let tr = pacman.row + DY[pacman.dir === DIR.NONE ? DIR.LEFT : pacman.dir] * 4;
+                // Original Gob Chomp bug: when facing up, target is also 4 tiles left
+                if (pacman.dir === DIR.UP) tc -= 4;
+                return { col: tc, row: tr };
+            }
+            case 2: { // Inky - complex targeting using Blinky's position
+                let aheadCol = pacman.col + DX[pacman.dir === DIR.NONE ? DIR.LEFT : pacman.dir] * 2;
+                let aheadRow = pacman.row + DY[pacman.dir === DIR.NONE ? DIR.LEFT : pacman.dir] * 2;
+                if (pacman.dir === DIR.UP) aheadCol -= 2;
+                const blinky = ghosts[0];
+                return { col: aheadCol * 2 - blinky.col, row: aheadRow * 2 - blinky.row };
+            }
+            case 3: { // Clyde - targets Gob Chomp when far, scatter corner when close
+                const distSq = (g.col - pacman.col) ** 2 + (g.row - pacman.row) ** 2;
+                if (distSq > 64) return { col: pacman.col, row: pacman.row };
+                return { col: cfg.scatterCol, row: cfg.scatterRow };
+            }
+        }
+        return { col: pacman.col, row: pacman.row };
+    };
+
+    g.onReachTarget = () => {
+        if (g.mode === GHOST_MODES.EATEN && g.col === 14 && g.row === 11) {
+            g.mode = GHOST_MODES.EXITING;
+            g.setTile(14, 14);
+            g.dir = DIR.UP;
+            return;
+        }
+        if (g.mode === GHOST_MODES.EXITING) {
+            if (g.row <= 11) {
+                g.mode = g.prevMode;
+                g.dir = DIR.LEFT;
+                g.setTile(14, 11);
+                pickGhostDirection(g);
+                return;
+            }
+            g.targetCol = 14;
+            g.targetRow = g.row - 1;
+            return;
+        }
+
+        pickGhostDirection(g);
+    };
+
+    return g;
+};
+
+const pickGhostDirection = (g) => {
+    const target = g.mode === GHOST_MODES.FRIGHTENED ?
+        { col: Math.floor(Math.random() * COLS), row: Math.floor(Math.random() * ROWS) } :
+        g.getTargetTile();
+
+    let bestDir = DIR.NONE;
+    let bestDist = Infinity;
+
+    // Try directions in order: UP, LEFT, DOWN, RIGHT (Gob Chomp's tie-breaking order)
+    const tryOrder = [DIR.UP, DIR.LEFT, DIR.DOWN, DIR.RIGHT];
+
+    for (const d of tryOrder) {
+        if (d === OPPOSITE[g.dir]) continue; // Ghosts can't reverse
+
+        const nc = wrapCol(g.col + DX[d]);
+        const nr = g.row + DY[d];
+
+        const isGhostDoor = isDoor(nc, nr);
+        const canPassDoor = g.mode === GHOST_MODES.EATEN || g.mode === GHOST_MODES.EXITING;
+
+        if (!canMove(nc, nr, true, canPassDoor || isGhostDoor)) continue;
+        // Ghosts can't go up in certain tiles (original Gob Chomp restriction)
+        if (d === DIR.UP && (
+            (g.row === 11 && (g.col === 12 || g.col === 15)) ||
+            (g.row === 23 && (g.col === 12 || g.col === 15))
+        ) && g.mode !== GHOST_MODES.EATEN) continue;
+
+        const dist = (nc - target.col) ** 2 + (nr - target.row) ** 2;
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestDir = d;
+        }
+    }
+
+    if (bestDir !== DIR.NONE) {
+        g.dir = bestDir;
+        g.targetCol = wrapCol(g.col + DX[bestDir]);
+        g.targetRow = g.row + DY[bestDir];
+        g.moving = true;
+    } else {
+        g.dir = DIR.NONE;
+        g.moving = false;
+    }
+};
+
+// --- Power Mode ---
+const activatePowerMode = () => {
+    ghostsEatenThisPower = 0;
+    const durations = [6, 5, 4, 3, 2, 2, 1, 1];
+    powerDuration = durations[Math.min(level, durations.length - 1)];
+    powerTimer = powerDuration;
+
+    ghosts.forEach(g => {
+        if (g.mode !== GHOST_MODES.EATEN && g.mode !== GHOST_MODES.HOUSE && g.mode !== GHOST_MODES.EXITING) {
+            g.prevMode = g.mode;
+            g.mode = GHOST_MODES.FRIGHTENED;
+            // Reverse direction
+            const opp = OPPOSITE[g.dir];
+            if (opp !== undefined) {
+                g.dir = opp;
+                g.targetCol = wrapCol(g.col + DX[g.dir]);
+                g.targetRow = g.row + DY[g.dir];
+            }
+            g.speed = 5;
+        }
+    });
+};
+
+// --- Particles ---
+const addParticles = (x, y, color, count) => {
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 50 + Math.random() * 100;
+        particles.push({
+            x, y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 0.5 + Math.random() * 0.5,
+            maxLife: 0.5 + Math.random() * 0.5,
+            size: 2 + Math.random() * 3,
+            color,
+        });
+    }
+};
+
+const addScorePopup = (x, y, value) => {
+    scorePopups.push({ x, y, value, life: 1.5, maxLife: 1.5 });
+};
+
+// --- Fruit ---
+const checkFruitSpawn = () => {
+    if (dotsEaten === 70 || dotsEaten === 170) {
+        fruitType = Math.min(level, FRUIT_TYPES.length - 1);
+        fruitActive = true;
+        fruitTimer = 9 + Math.random() * 3;
+        fruitPos = { col: 14, row: 17 };
+    }
+};
+
+// --- Game Logic ---
+const checkCollisions = () => {
+    const px = pacman.pixelX;
+    const py = pacman.pixelY;
+    const collDist = tileSize * 0.7;
+
+    for (const g of ghosts) {
+        if (g.mode === GHOST_MODES.HOUSE || g.mode === GHOST_MODES.EXITING) continue;
+
+        const dx = px - g.pixelX;
+        const dy = py - g.pixelY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < collDist) {
+            if (g.mode === GHOST_MODES.FRIGHTENED) {
+                // Eat ghost
+                ghostsEatenThisPower++;
+                const points = 200 * Math.pow(2, ghostsEatenThisPower - 1);
+                score += points;
+                g.mode = GHOST_MODES.EATEN;
+                g.speed = 12;
+                playSound('eatGhost');
+                addScorePopup(g.pixelX, g.pixelY, points);
+                addParticles(g.pixelX, g.pixelY, g.config.color, 15);
+                screenShake = 0.15;
+                shakeIntensity = 4;
+            } else if (g.mode !== GHOST_MODES.EATEN) {
+                // Gob Chomp dies
+                pacmanDeath();
+                return;
+            }
+        }
+    }
+};
+
+const pacmanDeath = () => {
+    lives--;
+    state = STATES.DYING;
+    dyingTimer = 1.5;
+    pacman.alive = false;
+    pacman.deathFrame = 0;
+    playSound('death');
+    screenShake = 0.3;
+    shakeIntensity = 8;
+    addParticles(pacman.pixelX, pacman.pixelY, COLORS.pacman, 20);
+};
+
+const resetPositions = () => {
+    pacman = createPacman();
+    ghosts = GHOST_CONFIG.map((_, i) => createGhost(i));
+    globalDotCounter = 0;
+    scatterChaseTimer = 0;
+    scatterChaseCycle = 0;
+    scatterChasePhase = 0; // 0=scatter
+    lastInputDir = DIR.NONE;
+};
+
+const startLevel = () => {
+    buildMaze();
+    dotsEaten = 0;
+    resetPositions();
+    fruitActive = false;
+    fruitTimer = 0;
+    powerTimer = 0;
+    scorePopups = [];
+    particles = [];
+    state = STATES.READY;
+    readyTimer = 2.5;
+    playSound('start');
+};
+
+const initGame = () => {
+    score = 0;
+    lives = 3;
+    level = 0;
+    highScore = parseInt(localStorage.getItem('gobchomp_highscore') || '0');
+    particles = [];
+    scorePopups = [];
+    screenShake = 0;
+    shakeIntensity = 0;
+    chompToggle = false;
+    sirenTimer = 0;
+    startLevel();
+};
+
+// --- Ghost release logic ---
+const updateGhostRelease = (dt) => {
+    const dotLimits = [0, 0, 30, 60];
+    if (level === 1) { dotLimits[2] = 0; dotLimits[3] = 30; }
+    if (level >= 2) { dotLimits[2] = 0; dotLimits[3] = 0; }
+
+    ghosts.forEach((g, i) => {
+        if (g.mode !== GHOST_MODES.HOUSE) return;
+
+        // Bounce in house
+        g.houseTimer += dt;
+        g.pixelY = g.row * tileSize + tileSize / 2 + Math.sin(g.houseTimer * 3) * tileSize * 0.3;
+
+        if (globalDotCounter >= dotLimits[i]) {
+            g.mode = GHOST_MODES.EXITING;
+            g.setTile(14, 14);
+            g.targetCol = 14;
+            g.targetRow = 11;
+            g.dir = DIR.UP;
+            g.released = true;
+        }
+    });
+};
+
+// --- Scatter/Chase timing ---
+const updateScatterChase = (dt) => {
+    if (powerTimer > 0) return;
+
+    const timingSet = Math.min(level, 2);
+    const times = SCATTER_CHASE_TIMES[timingSet];
+
+    scatterChaseTimer += dt;
+    if (scatterChaseTimer >= times[scatterChaseCycle]) {
+        scatterChaseTimer = 0;
+        scatterChaseCycle++;
+        if (scatterChaseCycle >= times.length) scatterChaseCycle = times.length - 1;
+        scatterChasePhase = scatterChaseCycle % 2; // 0=scatter, 1=chase
+
+        // Reverse all ghost directions
+        ghosts.forEach(g => {
+            if (g.mode === GHOST_MODES.SCATTER || g.mode === GHOST_MODES.CHASE) {
+                g.mode = scatterChasePhase === 0 ? GHOST_MODES.SCATTER : GHOST_MODES.CHASE;
+                const opp = OPPOSITE[g.dir];
+                if (opp !== undefined && g.released) {
+                    g.dir = opp;
+                    g.targetCol = wrapCol(g.col + DX[g.dir]);
+                    g.targetRow = g.row + DY[g.dir];
+                }
+            }
+        });
+    }
+};
+
+// --- Ghost speed ---
+const getGhostSpeed = (g) => {
+    const mod = GobAdapt.getGhostMod();
+    if (g.mode === GHOST_MODES.EATEN) return 12;
+    if (g.mode === GHOST_MODES.HOUSE || g.mode === GHOST_MODES.EXITING) return 5;
+
+    // Tunnel slow down
+    if (g.row === 14 && (g.col <= 5 || g.col >= 22)) {
+        return 4 * mod;
+    }
+
+    if (g.mode === GHOST_MODES.FRIGHTENED) return 5 * mod;
+
+    // Blinky speeds up (Elroy mode) when few dots remain
+    if (g.index === 0) {
+        const dotsLeft = totalDots - dotsEaten;
+        const elroy1 = level === 0 ? 20 : level === 1 ? 30 : 40;
+        const elroy2 = level === 0 ? 10 : level === 1 ? 15 : 20;
+        if (dotsLeft <= elroy2) return 9 * mod;
+        if (dotsLeft <= elroy1) return 8.5 * mod;
+    }
+
+    const baseSpeeds = [6.5, 7.5, 8, 8.5, 9];
+    return baseSpeeds[Math.min(level, baseSpeeds.length - 1)] * mod;
+};
+
+// --- Update ---
+const update = (dt) => {
+    if (state === STATES.TITLE || state === STATES.GAME_OVER || state === STATES.PAUSED) return;
+
+    // Update screen shake
+    if (screenShake > 0) {
+        screenShake -= dt;
+        if (screenShake < 0) screenShake = 0;
+    }
+
+    // Update particles
+    particles = particles.filter(p => {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 200 * dt;
+        p.life -= dt;
+        return p.life > 0;
+    });
+
+    // Update score popups
+    scorePopups = scorePopups.filter(sp => {
+        sp.y -= 30 * dt;
+        sp.life -= dt;
+        return sp.life > 0;
+    });
+
+    if (state === STATES.READY) {
+        readyTimer -= dt;
+        if (readyTimer <= 0) state = STATES.PLAYING;
+        return;
+    }
+
+    if (state === STATES.DYING) {
+        dyingTimer -= dt;
+        pacman.deathFrame += dt * 3;
+        if (dyingTimer <= 0) {
+            if (lives <= 0) {
+                state = STATES.GAME_OVER;
+                gameOverTimer = 0;
+                GobAdapt.record(level + 1);
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('gobchomp_highscore', highScore.toString());
+                }
+            } else {
+                resetPositions();
+                state = STATES.READY;
+                readyTimer = 2;
+            }
+        }
+        return;
+    }
+
+    if (state === STATES.LEVEL_COMPLETE) {
+        levelCompleteTimer -= dt;
+        if (levelCompleteTimer <= 0) {
+            level++;
+            startLevel();
+        }
+        return;
+    }
+
+    // --- PLAYING state ---
+
+    // Siren sound
+    sirenTimer -= dt;
+    if (sirenTimer <= 0 && powerTimer <= 0) {
+        sirenTimer = 0.6;
+        playSound('siren');
+    }
+
+    // Power timer
+    if (powerTimer > 0) {
+        powerTimer -= dt;
+        if (powerTimer <= 0) {
+            powerTimer = 0;
+            ghosts.forEach(g => {
+                if (g.mode === GHOST_MODES.FRIGHTENED) {
+                    g.mode = scatterChasePhase === 0 ? GHOST_MODES.SCATTER : GHOST_MODES.CHASE;
+                    g.speed = getGhostSpeed(g);
+                }
+            });
+        }
+    }
+
+    // Fruit timer
+    if (fruitActive) {
+        fruitTimer -= dt;
+        if (fruitTimer <= 0) fruitActive = false;
+    }
+
+    // Gob Chomp speed
+    const pacSpeeds = [8, 9, 9.5, 10, 10];
+    const pacPowerSpeeds = [9, 9.5, 10, 10, 10];
+    pacman.speed = powerTimer > 0 ?
+        pacPowerSpeeds[Math.min(level, pacPowerSpeeds.length - 1)] :
+        pacSpeeds[Math.min(level, pacSpeeds.length - 1)];
+
+    // Handle input queueing - try buffered direction
+    if (lastInputDir !== DIR.NONE) {
+        pacman.nextDir = lastInputDir;
+    }
+
+    // If gob chomp is idle, try to start moving
+    if (!pacman.moving && pacman.dir === DIR.NONE && pacman.nextDir !== DIR.NONE) {
+        const nc = wrapCol(pacman.col + DX[pacman.nextDir]);
+        const nr = pacman.row + DY[pacman.nextDir];
+        if (canMove(nc, nr, false, false)) {
+            pacman.dir = pacman.nextDir;
+            pacman.targetCol = nc;
+            pacman.targetRow = nr;
+            pacman.moving = true;
+        }
+    }
+
+    pacman.update(dt);
+
+    // Mouth animation
+    pacMouthAngle += dt * 12;
+
+    // Ghost logic
+    updateScatterChase(dt);
+    updateGhostRelease(dt);
+
+    ghosts.forEach(g => {
+        g.speed = getGhostSpeed(g);
+        g.update(dt);
+    });
+
+    checkCollisions();
+};
+
+// --- Rendering ---
+const drawMaze = () => {
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            const cell = maze[r][c];
+            const x = c * tileSize;
+            const y = r * tileSize;
+
+            if (cell === 1) {
+                // Wall
+                ctx.fillStyle = COLORS.wall;
+                ctx.fillRect(x, y, tileSize, tileSize);
+
+                // Draw border effects
+                ctx.strokeStyle = COLORS.wallBright;
+                ctx.lineWidth = 1;
+
+                // Check neighbors to draw inner borders
+                const u = r > 0 && maze[r-1][c] !== 1;
+                const d = r < ROWS-1 && maze[r+1][c] !== 1;
+                const l = c > 0 && maze[r][c-1] !== 1;
+                const ri = c < COLS-1 && maze[r][c+1] !== 1;
+
+                ctx.beginPath();
+                if (u) { ctx.moveTo(x, y + 0.5); ctx.lineTo(x + tileSize, y + 0.5); }
+                if (d) { ctx.moveTo(x, y + tileSize - 0.5); ctx.lineTo(x + tileSize, y + tileSize - 0.5); }
+                if (l) { ctx.moveTo(x + 0.5, y); ctx.lineTo(x + 0.5, y + tileSize); }
+                if (ri) { ctx.moveTo(x + tileSize - 0.5, y); ctx.lineTo(x + tileSize - 0.5, y + tileSize); }
+                ctx.stroke();
+            } else if (cell === 4) {
+                // Ghost house door
+                ctx.fillStyle = '#ffaacc';
+                const doorH = tileSize * 0.25;
+                ctx.fillRect(x, y + tileSize / 2 - doorH / 2, tileSize, doorH);
+            } else if (cell === 2) {
+                // Dot
+                ctx.fillStyle = COLORS.dot;
+                const dotSize = tileSize * 0.15;
+                ctx.beginPath();
+                ctx.arc(x + tileSize / 2, y + tileSize / 2, dotSize, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (cell === 3) {
+                // Power pellet (animated)
+                const pulse = 0.6 + Math.sin(Date.now() * 0.006) * 0.4;
+                ctx.fillStyle = COLORS.powerDot;
+                ctx.globalAlpha = pulse;
+                const pelletSize = tileSize * 0.35;
+                ctx.beginPath();
+                ctx.arc(x + tileSize / 2, y + tileSize / 2, pelletSize, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+    }
+};
+
+const drawPacman = () => {
+    if (!pacman.alive && state === STATES.DYING) {
+        // Death animation
+        const frame = Math.min(pacman.deathFrame, 1);
+        const startAngle = frame * Math.PI;
+        const endAngle = Math.PI * 2 - frame * Math.PI;
+
+        if (frame < 1) {
+            ctx.fillStyle = COLORS.pacman;
+            ctx.beginPath();
+            ctx.moveTo(pacman.pixelX, pacman.pixelY);
+            ctx.arc(pacman.pixelX, pacman.pixelY, tileSize * 0.45, startAngle, endAngle);
+            ctx.closePath();
+            ctx.fill();
+        }
+        return;
+    }
+
+    const mouth = Math.abs(Math.sin(pacMouthAngle)) * 0.8;
+    const mouthAngle = mouth * 0.4;
+
+    let rotation = 0;
+    switch (pacman.dir) {
+        case DIR.RIGHT: rotation = 0; break;
+        case DIR.DOWN: rotation = Math.PI / 2; break;
+        case DIR.LEFT: rotation = Math.PI; break;
+        case DIR.UP: rotation = -Math.PI / 2; break;
+        default: rotation = 0;
+    }
+
+    ctx.save();
+    ctx.translate(pacman.pixelX, pacman.pixelY);
+    ctx.rotate(rotation);
+
+    ctx.fillStyle = COLORS.pacman;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, tileSize * 0.45, mouthAngle, Math.PI * 2 - mouthAngle);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+};
+
+const drawGhost = (g) => {
+    const x = g.pixelX;
+    const y = g.pixelY;
+    const r = tileSize * 0.45;
+
+    if (g.mode === GHOST_MODES.EATEN) {
+        // Draw just the eyes
+        drawGhostEyes(x, y, g.dir, r);
+        return;
+    }
+
+    let color;
+    if (g.mode === GHOST_MODES.FRIGHTENED) {
+        if (powerTimer < 2) {
+            // Flash
+            color = Math.sin(Date.now() * 0.02) > 0 ? COLORS.frightened : COLORS.frightenedWhite;
+        } else {
+            color = COLORS.frightened;
+        }
+    } else {
+        color = g.config.color;
+    }
+
+    // Body
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y - r * 0.2, r, Math.PI, 0);
+
+    // Wavy bottom
+    const waveT = Date.now() * 0.008;
+    const segments = 3;
+    const segW = (r * 2) / segments;
+    ctx.lineTo(x + r, y + r * 0.7);
+    for (let i = segments - 1; i >= 0; i--) {
+        const sx = x - r + (i + 0.5) * segW;
+        const sy = y + r * 0.7 + Math.sin(waveT + i * 2) * r * 0.2;
+        const sx2 = x - r + i * segW;
+        ctx.quadraticCurveTo(sx, sy - r * 0.3, sx2, y + r * 0.7);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // Eyes
+    if (g.mode === GHOST_MODES.FRIGHTENED) {
+        // Frightened face
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(x - r * 0.3, y - r * 0.2, r * 0.15, 0, Math.PI * 2);
+        ctx.arc(x + r * 0.3, y - r * 0.2, r * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Wavy mouth
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x - r * 0.4, y + r * 0.2);
+        for (let i = 0; i < 4; i++) {
+            const mx = x - r * 0.4 + (i + 0.5) * (r * 0.8 / 4);
+            const my = y + r * 0.2 + (i % 2 === 0 ? -r * 0.1 : r * 0.1);
+            ctx.lineTo(mx, my);
+        }
+        ctx.stroke();
+    } else {
+        drawGhostEyes(x, y, g.dir, r);
+    }
+};
+
+const drawGhostEyes = (x, y, dir, r) => {
+    const eyeR = r * 0.25;
+    const pupilR = r * 0.12;
+    let pdx = 0, pdy = 0;
+    switch (dir) {
+        case DIR.UP: pdy = -pupilR; break;
+        case DIR.DOWN: pdy = pupilR; break;
+        case DIR.LEFT: pdx = -pupilR; break;
+        case DIR.RIGHT: pdx = pupilR; break;
+    }
+
+    [-1, 1].forEach(side => {
+        const ex = x + side * r * 0.3;
+        const ey = y - r * 0.2;
+        ctx.fillStyle = COLORS.eyes;
+        ctx.beginPath();
+        ctx.ellipse(ex, ey, eyeR, eyeR * 1.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = COLORS.eyePupil;
+        ctx.beginPath();
+        ctx.arc(ex + pdx, ey + pdy, pupilR, 0, Math.PI * 2);
+        ctx.fill();
+    });
+};
+
+const drawFruit = () => {
+    if (!fruitActive) return;
+    const ft = FRUIT_TYPES[fruitType];
+    const x = fruitPos.col * tileSize + tileSize / 2;
+    const y = fruitPos.row * tileSize + tileSize / 2;
+    const r = tileSize * 0.4;
+
+    // Pulsing glow
+    const pulse = 0.5 + Math.sin(Date.now() * 0.005) * 0.3;
+    ctx.shadowColor = ft.color;
+    ctx.shadowBlur = 10 * pulse;
+
+    ctx.fillStyle = ft.color;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Stem
+    ctx.strokeStyle = '#00aa00';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y - r);
+    ctx.quadraticCurveTo(x + r * 0.3, y - r * 1.5, x + r * 0.5, y - r * 1.3);
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+};
+
+const drawHUD = () => {
+    // Score
+    ctx.fillStyle = COLORS.text;
+    ctx.font = `bold ${Math.max(12, tileSize * 0.7)}px 'Courier New', monospace`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`SCORE: ${score}`, tileSize * 0.5, tileSize * 0.8);
+
+    ctx.textAlign = 'right';
+    ctx.fillText(`HIGH: ${highScore}`, canvasW - tileSize * 0.5, tileSize * 0.8);
+
+    // Lives
+    ctx.textAlign = 'left';
+    for (let i = 0; i < lives - 1; i++) {
+        const lx = tileSize * (1 + i * 1.5);
+        const ly = canvasH - tileSize * 0.5;
+        ctx.fillStyle = COLORS.pacman;
+        ctx.beginPath();
+        ctx.moveTo(lx, ly);
+        ctx.arc(lx, ly, tileSize * 0.35, 0.3, Math.PI * 2 - 0.3);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // Level indicator
+    ctx.fillStyle = COLORS.textGreen;
+    ctx.textAlign = 'right';
+    ctx.font = `${Math.max(10, tileSize * 0.55)}px 'Courier New', monospace`;
+    ctx.fillText(`LV ${level + 1}`, canvasW - tileSize * 0.5, canvasH - tileSize * 0.3);
+};
+
+const drawParticles = () => {
+    particles.forEach(p => {
+        const alpha = p.life / p.maxLife;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    });
+    ctx.globalAlpha = 1;
+};
+
+const drawScorePopups = () => {
+    scorePopups.forEach(sp => {
+        const alpha = sp.life / sp.maxLife;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = COLORS.scorePopup;
+        ctx.font = `bold ${Math.max(10, tileSize * 0.65)}px 'Courier New', monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText(sp.value.toString(), sp.x, sp.y);
+    });
+    ctx.globalAlpha = 1;
+};
+
+const drawTitleScreen = () => {
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    const cx = canvasW / 2;
+    const cy = canvasH / 2;
+
+    // Title
+    ctx.fillStyle = COLORS.text;
+    ctx.font = `bold ${Math.max(24, tileSize * 2.5)}px 'Courier New', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('GOB CHOMP', cx, cy - tileSize * 5);
+
+    // Animated Gob Chomp
+    const titleMouth = Math.abs(Math.sin(Date.now() * 0.005)) * 0.4;
+    ctx.fillStyle = COLORS.pacman;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - tileSize * 1.5);
+    ctx.arc(cx, cy - tileSize * 1.5, tileSize * 1.5, titleMouth, Math.PI * 2 - titleMouth);
+    ctx.closePath();
+    ctx.fill();
+
+    // Ghost parade
+    const ghostColors = [COLORS.ghostRed, COLORS.ghostPink, COLORS.ghostCyan, COLORS.ghostOrange];
+    const ghostNames = ['BLINKY', 'PINKY', 'INKY', 'CLYDE'];
+    ghostColors.forEach((color, i) => {
+        const gx = cx - tileSize * 4.5 + i * tileSize * 3;
+        const gy = cy + tileSize * 2;
+        const gr = tileSize * 0.6;
+
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(gx, gy - gr * 0.2, gr, Math.PI, 0);
+        ctx.lineTo(gx + gr, gy + gr * 0.5);
+        ctx.lineTo(gx + gr * 0.5, gy + gr * 0.2);
+        ctx.lineTo(gx, gy + gr * 0.5);
+        ctx.lineTo(gx - gr * 0.5, gy + gr * 0.2);
+        ctx.lineTo(gx - gr, gy + gr * 0.5);
+        ctx.closePath();
+        ctx.fill();
+
+        // Eyes
+        drawGhostEyes(gx, gy, DIR.DOWN, gr);
+
+        ctx.fillStyle = color;
+        ctx.font = `bold ${Math.max(8, tileSize * 0.45)}px 'Courier New', monospace`;
+        ctx.fillText(ghostNames[i], gx, gy + gr + tileSize);
+    });
+
+    // Start prompt
+    const blink = Math.sin(Date.now() * 0.004) > 0;
+    if (blink) {
+        ctx.fillStyle = COLORS.textGreen;
+        ctx.font = `bold ${Math.max(14, tileSize * 0.9)}px 'Courier New', monospace`;
+        ctx.fillText(isMobile ? 'TAP TO PLAY' : 'PRESS ENTER TO START', cx, cy + tileSize * 6);
+    }
+
+    // Controls
+    ctx.fillStyle = '#666';
+    ctx.font = `${Math.max(10, tileSize * 0.5)}px 'Courier New', monospace`;
+    if (!isMobile) {
+        ctx.fillText('ARROW KEYS / WASD TO MOVE', cx, cy + tileSize * 8);
+        ctx.fillText('P TO PAUSE', cx, cy + tileSize * 9);
+    }
+
+    // High score
+    if (highScore > 0) {
+        ctx.fillStyle = COLORS.text;
+        ctx.font = `bold ${Math.max(12, tileSize * 0.65)}px 'Courier New', monospace`;
+        ctx.fillText(`HIGH SCORE: ${highScore}`, cx, cy + tileSize * 11);
+    }
+
+    // Credit
+    ctx.fillStyle = '#444';
+    ctx.font = `${Math.max(8, tileSize * 0.4)}px 'Courier New', monospace`;
+    ctx.fillText('GAMEGOB FORGE', cx, canvasH - tileSize);
+};
+
+const drawGameOverScreen = () => {
+    // Darken
+    ctx.fillStyle = 'rgba(10,10,15,0.85)';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    const cx = canvasW / 2;
+    const cy = canvasH / 2;
+
+    ctx.fillStyle = '#ff3333';
+    ctx.font = `bold ${Math.max(20, tileSize * 2)}px 'Courier New', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('GAME OVER', cx, cy - tileSize * 3);
+
+    ctx.fillStyle = COLORS.text;
+    ctx.font = `bold ${Math.max(16, tileSize * 1.2)}px 'Courier New', monospace`;
+    ctx.fillText(`SCORE: ${score}`, cx, cy - tileSize * 0.5);
+
+    if (score >= highScore) {
+        ctx.fillStyle = COLORS.textGreen;
+        ctx.font = `bold ${Math.max(14, tileSize * 0.9)}px 'Courier New', monospace`;
+        ctx.fillText('NEW HIGH SCORE!', cx, cy + tileSize * 1.5);
+    }
+
+    ctx.fillStyle = COLORS.textWhite;
+    ctx.font = `${Math.max(12, tileSize * 0.7)}px 'Courier New', monospace`;
+    ctx.fillText(`LEVEL: ${level + 1}`, cx, cy + tileSize * 3);
+
+    const blink = Math.sin(Date.now() * 0.004) > 0;
+    if (blink) {
+        ctx.fillStyle = COLORS.textGreen;
+        ctx.font = `bold ${Math.max(14, tileSize * 0.8)}px 'Courier New', monospace`;
+        ctx.fillText(isMobile ? 'TAP TO PLAY AGAIN' : 'PRESS ENTER TO PLAY AGAIN', cx, cy + tileSize * 5.5);
+    }
+};
+
+const drawPausedScreen = () => {
+    ctx.fillStyle = 'rgba(10,10,15,0.7)';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    ctx.fillStyle = COLORS.text;
+    ctx.font = `bold ${Math.max(20, tileSize * 2)}px 'Courier New', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('PAUSED', canvasW / 2, canvasH / 2);
+
+    ctx.fillStyle = COLORS.textGreen;
+    ctx.font = `${Math.max(12, tileSize * 0.7)}px 'Courier New', monospace`;
+    ctx.fillText(isMobile ? 'TAP PAUSE TO RESUME' : 'PRESS P TO RESUME', canvasW / 2, canvasH / 2 + tileSize * 2);
+};
+
+const drawReadyScreen = () => {
+    ctx.fillStyle = COLORS.text;
+    ctx.font = `bold ${Math.max(14, tileSize * 0.9)}px 'Courier New', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('READY!', canvasW / 2, 17.5 * tileSize);
+};
+
+// --- Main Render ---
+const render = () => {
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    if (state === STATES.TITLE) {
+        drawTitleScreen();
+        return;
+    }
+
+    ctx.save();
+
+    // Screen shake
+    if (screenShake > 0) {
+        const sx = (Math.random() - 0.5) * shakeIntensity * 2;
+        const sy = (Math.random() - 0.5) * shakeIntensity * 2;
+        ctx.translate(sx, sy);
+    }
+
+    drawMaze();
+    drawFruit();
+
+    if (state !== STATES.LEVEL_COMPLETE || Math.sin(Date.now() * 0.01) > 0) {
+        ghosts.forEach(g => drawGhost(g));
+    }
+
+    if (state !== STATES.DYING || pacman.deathFrame < 1.2) {
+        drawPacman();
+    }
+
+    drawParticles();
+    drawScorePopups();
+    drawHUD();
+
+    if (state === STATES.READY) drawReadyScreen();
+
+    ctx.restore();
+
+    if (state === STATES.GAME_OVER) drawGameOverScreen();
+    if (state === STATES.PAUSED) drawPausedScreen();
+};
+
+// --- Game Loop ---
+const gameLoop = (timestamp) => {
+    animFrame = requestAnimationFrame(gameLoop);
+
+    if (!lastTime) { lastTime = timestamp; return; }
+    let dt = (timestamp - lastTime) / 1000;
+    lastTime = timestamp;
+
+    // Cap delta time
+    if (dt > 0.1) dt = 0.1;
+
+    update(dt);
+    render();
+};
+
+// --- Input ---
+const setDirection = (dir) => {
+    ensureAudio();
+    lastInputDir = dir;
+
+    if (state === STATES.TITLE) {
+        initGame();
+        return;
+    }
+    if (state === STATES.GAME_OVER) {
+        initGame();
+        return;
+    }
+};
+
+document.addEventListener('keydown', (e) => {
+    switch (e.key) {
+        case 'ArrowUp': case 'w': case 'W': e.preventDefault(); setDirection(DIR.UP); break;
+        case 'ArrowDown': case 's': case 'S': e.preventDefault(); setDirection(DIR.DOWN); break;
+        case 'ArrowLeft': case 'a': case 'A': e.preventDefault(); setDirection(DIR.LEFT); break;
+        case 'ArrowRight': case 'd': case 'D': e.preventDefault(); setDirection(DIR.RIGHT); break;
+        case 'Enter':
+            ensureAudio();
+            if (state === STATES.TITLE || state === STATES.GAME_OVER) initGame();
+            break;
+        case 'p': case 'P':
+            if (state === STATES.PLAYING) state = STATES.PAUSED;
+            else if (state === STATES.PAUSED) state = STATES.PLAYING;
+            break;
+        case 'Escape':
+            if (state === STATES.PAUSED) state = STATES.PLAYING;
+            break;
+    }
+});
+
+// Touch controls
+const dpadBtns = document.querySelectorAll('.dpad-btn');
+dpadBtns.forEach(btn => {
+    const handler = (e) => {
+        e.preventDefault();
+        const dir = btn.dataset.dir;
+        switch (dir) {
+            case 'up': setDirection(DIR.UP); break;
+            case 'down': setDirection(DIR.DOWN); break;
+            case 'left': setDirection(DIR.LEFT); break;
+            case 'right': setDirection(DIR.RIGHT); break;
+        }
+    };
+    btn.addEventListener('touchstart', handler, { passive: false });
+    btn.addEventListener('mousedown', handler);
+});
+
+document.getElementById('btn-pause').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (state === STATES.PLAYING) state = STATES.PAUSED;
+    else if (state === STATES.PAUSED) state = STATES.PLAYING;
+}, { passive: false });
+
+// Canvas touch for title/game over
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    ensureAudio();
+    if (state === STATES.TITLE || state === STATES.GAME_OVER) {
+        initGame();
+        return;
+    }
+}, { passive: false });
+
+// Swipe detection on canvas
+let touchStartX = 0, touchStartY = 0;
+canvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 0) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }
+}, { passive: true });
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (e.touches.length > 0 && state === STATES.PLAYING) {
+        const dx = e.touches[0].clientX - touchStartX;
+        const dy = e.touches[0].clientY - touchStartY;
+        const threshold = 20;
+
+        if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
+            if (Math.abs(dx) > Math.abs(dy)) {
+                setDirection(dx > 0 ? DIR.RIGHT : DIR.LEFT);
+            } else {
+                setDirection(dy > 0 ? DIR.DOWN : DIR.UP);
+            }
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }
+    }
+}, { passive: false });
+
+// --- Init ---
+window.addEventListener('resize', resize);
+resize();
+
+state = STATES.TITLE;
+highScore = parseInt(localStorage.getItem('gobchomp_highscore') || '0');
+particles = [];
+scorePopups = [];
+lastTime = null;
+pacMouthAngle = 0;
+
+animFrame = requestAnimationFrame(gameLoop);
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

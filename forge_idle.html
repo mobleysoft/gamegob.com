@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="FORGE IDLE - GameGob">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>FORGE IDLE - GameGob</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+'use strict';
+
+// ─── GobAdapt: Adaptive Difficulty ───
+const GobAdapt = (() => {
+  const KEY = 'gg_idle_adapt';
+  let data;
+  const load = () => { try { data = JSON.parse(localStorage.getItem(KEY)); } catch(e) {} if (!data) data = { sessions: 0, totalTime: 0, recentTimes: [] }; };
+  const save = () => localStorage.setItem(KEY, JSON.stringify(data));
+  load();
+  const TARGET_SESSION = 180; // 3 min target session length
+  const getProgressMod = () => {
+    if (data.sessions < 2) return 1.5; // new players: 50% faster early progression
+    const recent = data.recentTimes.slice(-10);
+    const avg = recent.length ? recent.reduce((a,b)=>a+b,0)/recent.length : TARGET_SESSION;
+    if (avg < TARGET_SESSION * 0.3) return 2.0; // leaving fast: double speed
+    if (avg < TARGET_SESSION) return 1.0 + (1.0 - avg/TARGET_SESSION); // gradual
+    return 1.0;
+  };
+  const record = (sessionSeconds) => {
+    data.sessions++; data.totalTime += sessionSeconds;
+    data.recentTimes.push(sessionSeconds);
+    if (data.recentTimes.length > 10) data.recentTimes.shift();
+    save();
+  };
+  return { getProgressMod, record };
+})();
+let _gobSessionStart = Date.now();
+
+// ─── Canvas Setup ───
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+
+const resize = () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+};
+window.addEventListener('resize', resize);
+resize();
+
+// ─── Colors ───
+const C = {
+  bg: '#0a0a0f',
+  bgLight: '#12121f',
+  bgPanel: '#0e0e1a',
+  gold: '#f0b800',
+  goldDark: '#a07800',
+  green: '#00ff88',
+  greenDark: '#00aa55',
+  red: '#ff3355',
+  cyan: '#00ccff',
+  purple: '#aa55ff',
+  white: '#ffffff',
+  gray: '#666688',
+  grayLight: '#8888aa',
+  grayDark: '#333355',
+  dimText: '#555577',
+};
+
+// ─── Audio ───
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+const ensureAudio = () => { if (!audioCtx) audioCtx = new AudioCtx(); };
+
+const playSound = (type) => {
+  ensureAudio();
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  switch (type) {
+    case 'click':
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, now);
+      osc.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.start(now); osc.stop(now + 0.1);
+      break;
+    case 'buy':
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now); osc.stop(now + 0.15);
+      break;
+    case 'upgrade':
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.exponentialRampToValueAtTime(1400, now + 0.15);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.start(now); osc.stop(now + 0.25);
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.connect(gain2); gain2.connect(audioCtx.destination);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(900, now + 0.05);
+      osc2.frequency.exponentialRampToValueAtTime(1800, now + 0.2);
+      gain2.gain.setValueAtTime(0.08, now + 0.05);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      osc2.start(now + 0.05); osc2.stop(now + 0.3);
+      break;
+    case 'prestige':
+      for (let i = 0; i < 5; i++) {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.connect(g); g.connect(audioCtx.destination);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(400 + i * 200, now + i * 0.08);
+        g.gain.setValueAtTime(0.1, now + i * 0.08);
+        g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.3);
+        o.start(now + i * 0.08); o.stop(now + i * 0.08 + 0.3);
+      }
+      break;
+    case 'achieve':
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(523, now);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.setValueAtTime(0.12, now + 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc.start(now); osc.stop(now + 0.5);
+      const o3 = audioCtx.createOscillator();
+      const g3 = audioCtx.createGain();
+      o3.connect(g3); g3.connect(audioCtx.destination);
+      o3.type = 'triangle';
+      o3.frequency.setValueAtTime(659, now + 0.1);
+      g3.gain.setValueAtTime(0.12, now + 0.1);
+      g3.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      o3.start(now + 0.1); o3.stop(now + 0.6);
+      const o4 = audioCtx.createOscillator();
+      const g4 = audioCtx.createGain();
+      o4.connect(g4); g4.connect(audioCtx.destination);
+      o4.type = 'triangle';
+      o4.frequency.setValueAtTime(784, now + 0.2);
+      g4.gain.setValueAtTime(0.15, now + 0.2);
+      g4.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+      o4.start(now + 0.2); o4.stop(now + 0.8);
+      break;
+    case 'milestone':
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1000, now);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
+      break;
+  }
+};
+
+// ─── Number Formatting ───
+const suffixes = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc',
+  'UDc', 'DDc', 'TDc', 'QaDc', 'QiDc', 'SxDc', 'SpDc', 'OcDc', 'NoDc', 'Vg'];
+
+const formatNum = (n) => {
+  if (n < 0) return '-' + formatNum(-n);
+  if (n < 1000) return Math.floor(n).toString();
+  const tier = Math.floor(Math.log10(n) / 3);
+  if (tier >= suffixes.length) return n.toExponential(2);
+  const suffix = suffixes[tier];
+  const scale = Math.pow(10, tier * 3);
+  const scaled = n / scale;
+  return (scaled < 10 ? scaled.toFixed(2) : scaled < 100 ? scaled.toFixed(1) : Math.floor(scaled)) + suffix;
+};
+
+// ─── Generators ───
+const GENERATORS = [
+  { name: 'Cursor',       icon: '👆', baseCost: 15,      baseProd: 0.1,    desc: 'Auto-clicks for you' },
+  { name: 'Pickaxe',      icon: '⛏️', baseCost: 100,     baseProd: 1,      desc: 'Mines gold nuggets' },
+  { name: 'Forge',        icon: '🔥', baseCost: 1100,    baseProd: 8,      desc: 'Smelts raw ore' },
+  { name: 'Mine',         icon: '⛰️', baseCost: 12000,   baseProd: 47,     desc: 'Deep earth extraction' },
+  { name: 'Foundry',      icon: '🏭', baseCost: 130000,  baseProd: 260,    desc: 'Industrial refinement' },
+  { name: 'Alchemist',    icon: '🧪', baseCost: 1400000, baseProd: 1400,   desc: 'Transmutes base metals' },
+  { name: 'Portal',       icon: '🌀', baseCost: 20e6,    baseProd: 7800,   desc: 'Harvests other dimensions' },
+  { name: 'Time Rift',    icon: '⏳', baseCost: 330e6,   baseProd: 44000,  desc: 'Bends time to produce' },
+  { name: 'Star Engine',  icon: '⭐', baseCost: 5.1e9,   baseProd: 260000, desc: 'Harnesses stellar energy' },
+  { name: 'Void Weaver',  icon: '🕳️', baseCost: 75e9,    baseProd: 1.6e6,  desc: 'Weaves reality itself' },
+];
+
+// ─── Upgrades ───
+const UPGRADE_DEFS = [
+  // Click power upgrades
+  { name: 'Iron Finger',       cost: 100,     type: 'click', mult: 2,   req: { clicks: 10 },      desc: 'Double click power' },
+  { name: 'Steel Finger',      cost: 5000,    type: 'click', mult: 2,   req: { clicks: 100 },     desc: '2x click power' },
+  { name: 'Mithril Finger',    cost: 500000,  type: 'click', mult: 5,   req: { clicks: 500 },     desc: '5x click power' },
+  { name: 'Adamant Finger',    cost: 50e6,    type: 'click', mult: 10,  req: { clicks: 2000 },    desc: '10x click power' },
+  { name: 'Click Frenzy',      cost: 1e9,     type: 'click', mult: 25,  req: { clicks: 10000 },   desc: '25x click power' },
+  // Generator-specific upgrades (one per generator, doubles its output)
+  { name: 'Swift Cursors',     cost: 1000,    type: 'gen', gen: 0, mult: 2, req: { gen0: 10 },  desc: 'Cursors 2x faster' },
+  { name: 'Sharp Picks',       cost: 10000,   type: 'gen', gen: 1, mult: 2, req: { gen1: 10 },  desc: 'Pickaxes 2x faster' },
+  { name: 'Inferno Core',      cost: 110000,  type: 'gen', gen: 2, mult: 2, req: { gen2: 10 },  desc: 'Forges 2x faster' },
+  { name: 'Deep Veins',        cost: 1.2e6,   type: 'gen', gen: 3, mult: 2, req: { gen3: 10 },  desc: 'Mines 2x faster' },
+  { name: 'Assembly Line',     cost: 13e6,    type: 'gen', gen: 4, mult: 2, req: { gen4: 10 },  desc: 'Foundries 2x faster' },
+  { name: 'Philosopher Stone', cost: 140e6,   type: 'gen', gen: 5, mult: 2, req: { gen5: 10 },  desc: 'Alchemists 2x faster' },
+  { name: 'Rift Amplifier',    cost: 2e9,     type: 'gen', gen: 6, mult: 2, req: { gen6: 10 },  desc: 'Portals 2x faster' },
+  { name: 'Temporal Loop',     cost: 33e9,    type: 'gen', gen: 7, mult: 2, req: { gen7: 10 },  desc: 'Time Rifts 2x faster' },
+  { name: 'Supernova Tap',     cost: 510e9,   type: 'gen', gen: 8, mult: 2, req: { gen8: 10 },  desc: 'Star Engines 2x faster' },
+  { name: 'Event Horizon',     cost: 7.5e12,  type: 'gen', gen: 9, mult: 2, req: { gen9: 10 },  desc: 'Void Weavers 2x faster' },
+  // Tier 2 gen upgrades (at 50 owned)
+  { name: 'Cursor Swarm',      cost: 50000,    type: 'gen', gen: 0, mult: 3, req: { gen0: 50 },  desc: 'Cursors 3x production' },
+  { name: 'Diamond Picks',     cost: 500000,   type: 'gen', gen: 1, mult: 3, req: { gen1: 50 },  desc: 'Pickaxes 3x production' },
+  { name: 'Plasma Forge',      cost: 5.5e6,    type: 'gen', gen: 2, mult: 3, req: { gen2: 50 },  desc: 'Forges 3x production' },
+  { name: 'Core Drilling',     cost: 60e6,     type: 'gen', gen: 3, mult: 3, req: { gen3: 50 },  desc: 'Mines 3x production' },
+  { name: 'Nano Foundry',      cost: 650e6,    type: 'gen', gen: 4, mult: 3, req: { gen4: 50 },  desc: 'Foundries 3x production' },
+  { name: 'Transmute All',     cost: 7e9,      type: 'gen', gen: 5, mult: 3, req: { gen5: 50 },  desc: 'Alchemists 3x production' },
+  { name: 'Multiverse Gate',   cost: 100e9,    type: 'gen', gen: 6, mult: 3, req: { gen6: 50 },  desc: 'Portals 3x production' },
+  { name: 'Eternity Engine',   cost: 1.65e12,  type: 'gen', gen: 7, mult: 3, req: { gen7: 50 },  desc: 'Time Rifts 3x production' },
+  // Global multiplier upgrades
+  { name: 'Golden Touch',      cost: 1e6,      type: 'global', mult: 2,  req: { total: 1e6 },    desc: 'All production 2x' },
+  { name: 'Midas Blessing',    cost: 100e6,    type: 'global', mult: 2,  req: { total: 100e6 },  desc: 'All production 2x' },
+  { name: 'Cosmic Wealth',     cost: 10e9,     type: 'global', mult: 2,  req: { total: 10e9 },   desc: 'All production 2x' },
+  { name: 'Infinite Fortune',  cost: 1e12,     type: 'global', mult: 3,  req: { total: 1e12 },   desc: 'All production 3x' },
+  // Click % of CPS
+  { name: 'Click Synergy',     cost: 50000,    type: 'clickcps', pct: 1,   req: { clicks: 200 },   desc: 'Clicks gain +1% of CPS' },
+  { name: 'Click Harmony',     cost: 5e6,      type: 'clickcps', pct: 2,   req: { clicks: 1000 },  desc: 'Clicks gain +2% of CPS' },
+  { name: 'Click Resonance',   cost: 500e6,    type: 'clickcps', pct: 5,   req: { clicks: 5000 },  desc: 'Clicks gain +5% of CPS' },
+];
+
+// ─── Achievements ───
+const ACHIEVEMENT_DEFS = [
+  { name: 'First Click',       desc: 'Click the forge once',             check: s => s.totalClicks >= 1 },
+  { name: 'Clicker',           desc: 'Click 100 times',                  check: s => s.totalClicks >= 100 },
+  { name: 'Maniac',            desc: 'Click 1,000 times',                check: s => s.totalClicks >= 1000 },
+  { name: 'Obsessed',          desc: 'Click 10,000 times',               check: s => s.totalClicks >= 10000 },
+  { name: 'First Gold',        desc: 'Earn 100 gold total',              check: s => s.totalEarned >= 100 },
+  { name: 'Stacking Up',       desc: 'Earn 10,000 gold total',           check: s => s.totalEarned >= 10000 },
+  { name: 'Wealthy',           desc: 'Earn 1 million gold total',        check: s => s.totalEarned >= 1e6 },
+  { name: 'Tycoon',            desc: 'Earn 1 billion gold total',        check: s => s.totalEarned >= 1e9 },
+  { name: 'Mogul',             desc: 'Earn 1 trillion gold total',       check: s => s.totalEarned >= 1e12 },
+  { name: 'First Purchase',    desc: 'Buy your first generator',         check: s => s.genOwned.some(g => g > 0) },
+  { name: 'Collector',         desc: 'Own 50 total generators',          check: s => s.genOwned.reduce((a,b) => a+b, 0) >= 50 },
+  { name: 'Industrialist',     desc: 'Own 100 total generators',         check: s => s.genOwned.reduce((a,b) => a+b, 0) >= 100 },
+  { name: 'Empire Builder',    desc: 'Own 200 total generators',         check: s => s.genOwned.reduce((a,b) => a+b, 0) >= 200 },
+  { name: 'Full Arsenal',      desc: 'Own at least 1 of each generator', check: s => s.genOwned.every(g => g > 0) },
+  { name: 'Speed Runner',      desc: 'Reach 100 CPS',                   check: s => s.cps >= 100 },
+  { name: 'Turbo',             desc: 'Reach 10,000 CPS',                check: s => s.cps >= 10000 },
+  { name: 'Lightspeed',        desc: 'Reach 1 million CPS',             check: s => s.cps >= 1e6 },
+  { name: 'First Prestige',    desc: 'Prestige once',                   check: s => s.totalPrestiges >= 1 },
+  { name: 'Ascendant',         desc: 'Prestige 5 times',                check: s => s.totalPrestiges >= 5 },
+  { name: 'Transcendent',      desc: 'Prestige 10 times',               check: s => s.totalPrestiges >= 10 },
+  { name: 'Upgrade Master',    desc: 'Buy 10 upgrades',                 check: s => s.upgradesBought >= 10 },
+  { name: 'Upgrade Collector', desc: 'Buy 20 upgrades',                 check: s => s.upgradesBought >= 20 },
+  { name: 'Night Shift',       desc: 'Earn offline gold',               check: s => s.offlineEarned > 0 },
+  { name: 'Patience Pays',     desc: 'Earn 1M offline gold',            check: s => s.offlineEarned >= 1e6 },
+];
+
+// ─── Game State ───
+const STATE = { TITLE: 0, PLAYING: 1, PRESTIGE_CONFIRM: 2 };
+let state = STATE.TITLE;
+let titleAlpha = 0;
+let titleDir = 1;
+
+// Save/Load keys
+const SAVE_KEY = 'forge_idle_save_v2';
+
+const defaultGame = () => ({
+  gold: 0,
+  totalEarned: 0,
+  totalClicks: 0,
+  clickPower: 1,
+  clickMult: 1,
+  clickCpsPct: 0,
+  globalMult: 1,
+  genOwned: new Array(GENERATORS.length).fill(0),
+  genMult: new Array(GENERATORS.length).fill(1),
+  upgradesBought: 0,
+  upgradePurchased: new Array(UPGRADE_DEFS.length).fill(false),
+  achievementsUnlocked: new Array(ACHIEVEMENT_DEFS.length).fill(false),
+  // Prestige
+  prestigeCurrency: 0,
+  totalPrestiges: 0,
+  prestigeMult: 1,
+  // Meta
+  cps: 0,
+  offlineEarned: 0,
+  lastSaveTime: Date.now(),
+  startTime: Date.now(),
+  // UI
+  tab: 0, // 0=generators, 1=upgrades, 2=achievements, 3=prestige
+  scrollY: 0,
+});
+
+let game = defaultGame();
+
+// ─── Particles ───
+let particles = [];
+let floatingTexts = [];
+let screenShake = 0;
+let achievementPopup = null;
+let achievementPopupTimer = 0;
+
+class Particle {
+  constructor(x, y, color, vx, vy, life, size) {
+    this.x = x; this.y = y; this.color = color;
+    this.vx = vx; this.vy = vy;
+    this.life = life; this.maxLife = life;
+    this.size = size || 3;
+  }
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.vy += 200 * dt;
+    this.life -= dt;
+  }
+  draw() {
+    const a = Math.max(0, this.life / this.maxLife);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size * a, this.size * a);
+    ctx.globalAlpha = 1;
+  }
+}
+
+class FloatingText {
+  constructor(x, y, text, color) {
+    this.x = x; this.y = y; this.text = text; this.color = color;
+    this.life = 1.2; this.maxLife = 1.2;
+  }
+  update(dt) {
+    this.y -= 60 * dt;
+    this.life -= dt;
+  }
+  draw() {
+    const a = Math.max(0, this.life / this.maxLife);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = this.color;
+    ctx.font = `bold ${16 + (1 - a) * 8}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(this.text, this.x, this.y);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ─── Calculation Helpers ───
+const getGenCost = (genIdx, qty = 1) => {
+  const base = GENERATORS[genIdx].baseCost;
+  const owned = game.genOwned[genIdx];
+  let total = 0;
+  for (let i = 0; i < qty; i++) {
+    total += Math.ceil(base * Math.pow(1.15, owned + i));
+  }
+  return total;
+};
+
+const getGenProduction = (genIdx) => {
+  const base = GENERATORS[genIdx].baseProd;
+  return base * game.genOwned[genIdx] * game.genMult[genIdx] * game.globalMult * game.prestigeMult * GobAdapt.getProgressMod();
+};
+
+const getTotalCPS = () => {
+  let total = 0;
+  for (let i = 0; i < GENERATORS.length; i++) {
+    total += getGenProduction(i);
+  }
+  return total;
+};
+
+const getClickValue = () => {
+  let val = game.clickPower * game.clickMult * game.prestigeMult * GobAdapt.getProgressMod();
+  val += getTotalCPS() * game.clickCpsPct / 100;
+  return Math.max(1, val);
+};
+
+const getPrestigeGain = () => {
+  return Math.floor(Math.pow(game.totalEarned / 1e9, 0.5));
+};
+
+// ─── Check Upgrade Availability ───
+const isUpgradeAvailable = (idx) => {
+  if (game.upgradePurchased[idx]) return false;
+  const u = UPGRADE_DEFS[idx];
+  const req = u.req;
+  if (req.clicks && game.totalClicks < req.clicks) return false;
+  if (req.total && game.totalEarned < req.total) return false;
+  for (let i = 0; i < GENERATORS.length; i++) {
+    if (req[`gen${i}`] && game.genOwned[i] < req[`gen${i}`]) return false;
+  }
+  return true;
+};
+
+// ─── Save/Load ───
+const saveGame = () => {
+  game.lastSaveTime = Date.now();
+  game.cps = getTotalCPS();
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(game));
+  } catch (e) {}
+};
+
+const loadGame = () => {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    const def = defaultGame();
+    // Merge saved into defaults
+    for (const key of Object.keys(def)) {
+      if (saved[key] !== undefined) {
+        if (Array.isArray(def[key]) && Array.isArray(saved[key])) {
+          // Extend arrays if new content
+          game[key] = def[key].map((d, i) => saved[key][i] !== undefined ? saved[key][i] : d);
+        } else {
+          game[key] = saved[key];
+        }
+      } else {
+        game[key] = def[key];
+      }
+    }
+    // Calculate offline progress
+    const elapsed = (Date.now() - game.lastSaveTime) / 1000;
+    if (elapsed > 10) {
+      const cps = getTotalCPS();
+      const offlineGold = cps * elapsed * 0.5; // 50% offline efficiency
+      if (offlineGold > 0) {
+        game.gold += offlineGold;
+        game.totalEarned += offlineGold;
+        game.offlineEarned += offlineGold;
+        floatingTexts.push(new FloatingText(
+          canvas.width / 2, canvas.height / 2 - 50,
+          `Welcome back! +${formatNum(offlineGold)} gold`, C.cyan
+        ));
+      }
+    }
+    return true;
+  } catch (e) { return false; }
+};
+
+// ─── Prestige ───
+const doPrestige = () => {
+  const gain = getPrestigeGain();
+  if (gain <= 0) return;
+  const keepPrestige = game.prestigeCurrency + gain;
+  const keepTotalPrestiges = game.totalPrestiges + 1;
+  const keepAchievements = [...game.achievementsUnlocked];
+  const keepOffline = game.offlineEarned;
+  const keepTotalClicks = game.totalClicks;
+  game = defaultGame();
+  game.prestigeCurrency = keepPrestige;
+  game.totalPrestiges = keepTotalPrestiges;
+  game.prestigeMult = 1 + keepPrestige * 0.05;
+  game.achievementsUnlocked = keepAchievements;
+  game.offlineEarned = keepOffline;
+  game.totalClicks = keepTotalClicks;
+  // Screen effects
+  screenShake = 15;
+  for (let i = 0; i < 80; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 100 + Math.random() * 300;
+    particles.push(new Particle(
+      canvas.width / 2, canvas.height / 2,
+      [C.gold, C.green, C.cyan, C.purple][Math.floor(Math.random() * 4)],
+      Math.cos(angle) * speed, Math.sin(angle) * speed,
+      1 + Math.random(), 3 + Math.random() * 4
+    ));
+  }
+  playSound('prestige');
+  saveGame();
+};
+
+// ─── Check Achievements ───
+const checkAchievements = () => {
+  const s = {
+    totalClicks: game.totalClicks,
+    totalEarned: game.totalEarned,
+    genOwned: game.genOwned,
+    cps: getTotalCPS(),
+    totalPrestiges: game.totalPrestiges,
+    upgradesBought: game.upgradesBought,
+    offlineEarned: game.offlineEarned,
+  };
+  for (let i = 0; i < ACHIEVEMENT_DEFS.length; i++) {
+    if (!game.achievementsUnlocked[i] && ACHIEVEMENT_DEFS[i].check(s)) {
+      game.achievementsUnlocked[i] = true;
+      achievementPopup = ACHIEVEMENT_DEFS[i];
+      achievementPopupTimer = 3;
+      playSound('achieve');
+    }
+  }
+};
+
+// ─── UI Layout ───
+let uiLayout = {};
+let buyQty = 1; // 1, 10, 100
+
+const computeLayout = () => {
+  const W = canvas.width;
+  const H = canvas.height;
+  const isMobile = W < 700;
+
+  if (isMobile) {
+    uiLayout = {
+      // Top bar
+      topBar: { x: 0, y: 0, w: W, h: 70 },
+      // Click area
+      clickArea: { x: 10, y: 75, w: W - 20, h: H * 0.28 },
+      // Tabs
+      tabBar: { x: 0, y: 75 + H * 0.28 + 5, w: W, h: 36 },
+      // Panel area
+      panel: { x: 5, y: 75 + H * 0.28 + 46, w: W - 10, h: H - (75 + H * 0.28 + 46) - 5 },
+      isMobile: true,
+      fontSize: 12,
+      rowHeight: 56,
+    };
+  } else {
+    const panelW = Math.min(420, W * 0.4);
+    uiLayout = {
+      topBar: { x: 0, y: 0, w: W, h: 60 },
+      clickArea: { x: 10, y: 65, w: W - panelW - 25, h: H - 70 },
+      tabBar: { x: W - panelW - 5, y: 65, w: panelW, h: 36 },
+      panel: { x: W - panelW - 5, y: 106, w: panelW, h: H - 116 },
+      isMobile: false,
+      fontSize: 14,
+      rowHeight: 62,
+    };
+  }
+};
+
+// ─── Input ───
+let mouseX = 0, mouseY = 0;
+let mouseDown = false;
+let mouseClicked = false;
+let touchStartY = 0;
+let isDragging = false;
+
+const getInputPos = (e) => {
+  if (e.touches && e.touches.length > 0) {
+    return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+  return { x: e.clientX, y: e.clientY };
+};
+
+const pointInRect = (px, py, r) => px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+
+canvas.addEventListener('mousedown', (e) => {
+  const pos = getInputPos(e);
+  mouseX = pos.x; mouseY = pos.y;
+  mouseDown = true;
+  mouseClicked = true;
+  handleInput(pos.x, pos.y);
+});
+canvas.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX; mouseY = e.clientY;
+});
+canvas.addEventListener('mouseup', () => { mouseDown = false; });
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const pos = getInputPos(e);
+  mouseX = pos.x; mouseY = pos.y;
+  mouseDown = true;
+  mouseClicked = true;
+  touchStartY = pos.y;
+  isDragging = false;
+  handleInput(pos.x, pos.y);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const pos = getInputPos(e);
+  const dy = pos.y - touchStartY;
+  if (Math.abs(dy) > 8) {
+    isDragging = true;
+    game.scrollY -= (pos.y - mouseY);
+    game.scrollY = Math.max(0, game.scrollY);
+  }
+  mouseX = pos.x; mouseY = pos.y;
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  mouseDown = false;
+}, { passive: false });
+
+// Mouse wheel for scrolling panel
+canvas.addEventListener('wheel', (e) => {
+  if (pointInRect(mouseX, mouseY, uiLayout.panel)) {
+    game.scrollY += e.deltaY * 0.5;
+    game.scrollY = Math.max(0, game.scrollY);
+    e.preventDefault();
+  }
+}, { passive: false });
+
+// Keyboard
+document.addEventListener('keydown', (e) => {
+  if (state === STATE.TITLE) {
+    state = STATE.PLAYING;
+    ensureAudio();
+    if (!loadGame()) game = defaultGame();
+    computeLayout();
+    return;
+  }
+  if (e.key === ' ' || e.key === 'Enter') {
+    if (state === STATE.PRESTIGE_CONFIRM) return;
+    // Click
+    doClick(canvas.width * 0.3, canvas.height * 0.5);
+  }
+  if (e.key === '1') game.tab = 0;
+  if (e.key === '2') game.tab = 1;
+  if (e.key === '3') game.tab = 2;
+  if (e.key === '4') game.tab = 3;
+});
+
+// ─── Click Handler ───
+const doClick = (cx, cy) => {
+  const val = getClickValue();
+  game.gold += val;
+  game.totalEarned += val;
+  game.totalClicks++;
+
+  floatingTexts.push(new FloatingText(
+    cx + (Math.random() - 0.5) * 60,
+    cy - 20 + (Math.random() - 0.5) * 30,
+    '+' + formatNum(val), C.gold
+  ));
+
+  // Particles
+  for (let i = 0; i < 6; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 50 + Math.random() * 120;
+    particles.push(new Particle(
+      cx, cy,
+      Math.random() > 0.5 ? C.gold : C.green,
+      Math.cos(angle) * speed, Math.sin(angle) * speed,
+      0.4 + Math.random() * 0.4, 2 + Math.random() * 3
+    ));
+  }
+
+  screenShake = 3;
+  playSound('click');
+};
+
+// ─── Input Handler ───
+const handleInput = (ix, iy) => {
+  if (state === STATE.TITLE) {
+    state = STATE.PLAYING;
+    ensureAudio();
+    if (!loadGame()) game = defaultGame();
+    computeLayout();
+    return;
+  }
+
+  if (state === STATE.PRESTIGE_CONFIRM) {
+    // Yes/No buttons
+    const bw = 120, bh = 50;
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2 + 40;
+    if (pointInRect(ix, iy, { x: cx - bw - 20, y: cy, w: bw, h: bh })) {
+      doPrestige();
+      state = STATE.PLAYING;
+    } else if (pointInRect(ix, iy, { x: cx + 20, y: cy, w: bw, h: bh })) {
+      state = STATE.PLAYING;
+    }
+    return;
+  }
+
+  computeLayout();
+
+  // Click area
+  if (pointInRect(ix, iy, uiLayout.clickArea)) {
+    doClick(ix, iy);
+    return;
+  }
+
+  // Tab bar
+  if (pointInRect(ix, iy, uiLayout.tabBar)) {
+    const tabW = uiLayout.tabBar.w / 4;
+    const tabIdx = Math.floor((ix - uiLayout.tabBar.x) / tabW);
+    if (tabIdx >= 0 && tabIdx <= 3) {
+      game.tab = tabIdx;
+      game.scrollY = 0;
+      playSound('milestone');
+    }
+    return;
+  }
+
+  // Buy quantity (in top bar area - right side)
+  const qtyBtnW = 40;
+  const qtyBtnH = 26;
+  const qtyY = uiLayout.topBar.y + 8;
+  const qtyX = uiLayout.topBar.w - 140;
+  const qtys = [1, 10, 100];
+  for (let i = 0; i < 3; i++) {
+    if (pointInRect(ix, iy, { x: qtyX + i * (qtyBtnW + 4), y: qtyY, w: qtyBtnW, h: qtyBtnH })) {
+      buyQty = qtys[i];
+      playSound('milestone');
+      return;
+    }
+  }
+
+  // Panel items
+  if (pointInRect(ix, iy, uiLayout.panel) && !isDragging) {
+    const panelLocalY = iy - uiLayout.panel.y + game.scrollY;
+    const row = Math.floor(panelLocalY / uiLayout.rowHeight);
+
+    if (game.tab === 0) {
+      // Buy generator
+      if (row >= 0 && row < GENERATORS.length) {
+        const cost = getGenCost(row, buyQty);
+        if (game.gold >= cost) {
+          game.gold -= cost;
+          game.genOwned[row] += buyQty;
+          playSound('buy');
+          screenShake = 2;
+          for (let i = 0; i < 4; i++) {
+            particles.push(new Particle(
+              ix, iy, C.green,
+              (Math.random() - 0.5) * 100, -Math.random() * 100,
+              0.5, 3
+            ));
+          }
+        }
+      }
+    } else if (game.tab === 1) {
+      // Buy upgrade
+      const available = UPGRADE_DEFS.map((u, i) => ({ ...u, idx: i })).filter((u, i) => isUpgradeAvailable(i));
+      if (row >= 0 && row < available.length) {
+        const u = available[row];
+        if (game.gold >= u.cost) {
+          game.gold -= u.cost;
+          game.upgradePurchased[u.idx] = true;
+          game.upgradesBought++;
+          // Apply upgrade
+          if (u.type === 'click') game.clickMult *= u.mult;
+          else if (u.type === 'gen') game.genMult[u.gen] *= u.mult;
+          else if (u.type === 'global') game.globalMult *= u.mult;
+          else if (u.type === 'clickcps') game.clickCpsPct += u.pct;
+          playSound('upgrade');
+          screenShake = 5;
+          for (let i = 0; i < 15; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 80 + Math.random() * 150;
+            particles.push(new Particle(
+              ix, iy, C.purple,
+              Math.cos(angle) * speed, Math.sin(angle) * speed,
+              0.6 + Math.random() * 0.3, 3
+            ));
+          }
+        }
+      }
+    } else if (game.tab === 3) {
+      // Prestige button check
+      const gain = getPrestigeGain();
+      if (gain > 0 && row === 0) {
+        state = STATE.PRESTIGE_CONFIRM;
+        playSound('milestone');
+      }
+    }
+  }
+};
+
+// ─── Drawing Helpers ───
+const drawRoundRect = (x, y, w, h, r, fill, stroke) => {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+};
+
+const drawProgressBar = (x, y, w, h, pct, color) => {
+  drawRoundRect(x, y, w, h, 3, '#1a1a2e');
+  if (pct > 0) {
+    drawRoundRect(x + 1, y + 1, (w - 2) * Math.min(1, pct), h - 2, 2, color);
+  }
+};
+
+// ─── Draw Title Screen ───
+const drawTitle = (dt) => {
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Floating particles in background
+  const time = Date.now() / 1000;
+  for (let i = 0; i < 30; i++) {
+    const px = (Math.sin(time * 0.3 + i * 1.7) * 0.5 + 0.5) * W;
+    const py = (Math.cos(time * 0.2 + i * 2.3) * 0.5 + 0.5) * H;
+    const s = 2 + Math.sin(time + i) * 1.5;
+    ctx.globalAlpha = 0.3 + Math.sin(time * 0.5 + i) * 0.2;
+    ctx.fillStyle = [C.gold, C.green, C.cyan][i % 3];
+    ctx.fillRect(px, py, s, s);
+  }
+  ctx.globalAlpha = 1;
+
+  // Title
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Glow
+  ctx.shadowBlur = 30;
+  ctx.shadowColor = C.gold;
+  ctx.fillStyle = C.gold;
+  ctx.font = `bold ${Math.min(64, W * 0.1)}px monospace`;
+  ctx.fillText('FORGE IDLE', W / 2, H * 0.35);
+  ctx.shadowBlur = 0;
+
+  // Subtitle
+  ctx.fillStyle = C.grayLight;
+  ctx.font = `${Math.min(18, W * 0.035)}px monospace`;
+  ctx.fillText('Build your golden empire', W / 2, H * 0.35 + 50);
+
+  // Anvil icon (simple)
+  const ax = W / 2, ay = H * 0.55;
+  ctx.fillStyle = C.gray;
+  ctx.fillRect(ax - 30, ay - 10, 60, 20);
+  ctx.fillRect(ax - 20, ay + 10, 40, 25);
+  ctx.fillRect(ax - 10, ay + 35, 20, 10);
+  ctx.fillStyle = C.gold;
+  ctx.fillRect(ax - 25, ay - 15, 50, 8);
+
+  // Sparkles on anvil
+  for (let i = 0; i < 5; i++) {
+    const sx = ax + Math.sin(time * 3 + i * 1.3) * 35;
+    const sy = ay - 25 + Math.cos(time * 2 + i * 1.7) * 15;
+    const ss = 2 + Math.sin(time * 4 + i) * 1;
+    ctx.globalAlpha = 0.5 + Math.sin(time * 5 + i * 2) * 0.5;
+    ctx.fillStyle = C.gold;
+    ctx.fillRect(sx, sy, ss, ss);
+  }
+  ctx.globalAlpha = 1;
+
+  // Blink text
+  titleAlpha += titleDir * dt * 1.8;
+  if (titleAlpha >= 1) { titleAlpha = 1; titleDir = -1; }
+  if (titleAlpha <= 0.2) { titleAlpha = 0.2; titleDir = 1; }
+  ctx.globalAlpha = titleAlpha;
+  ctx.fillStyle = C.green;
+  ctx.font = `${Math.min(20, W * 0.04)}px monospace`;
+  ctx.fillText('Click / Tap to Start', W / 2, H * 0.78);
+  ctx.globalAlpha = 1;
+
+  // Credits
+  ctx.fillStyle = C.dimText;
+  ctx.font = `${Math.min(12, W * 0.025)}px monospace`;
+  ctx.fillText('GameGob', W / 2, H - 30);
+};
+
+// ─── Draw Game ───
+const drawGame = (dt) => {
+  const W = canvas.width;
+  const H = canvas.height;
+  const L = uiLayout;
+  game.cps = getTotalCPS();
+
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // ─ Top Bar ─
+  drawRoundRect(L.topBar.x, L.topBar.y, L.topBar.w, L.topBar.h, 0, '#0d0d18');
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+
+  // Gold display
+  ctx.fillStyle = C.gold;
+  ctx.font = `bold ${L.isMobile ? 20 : 24}px monospace`;
+  ctx.fillText(`⚜ ${formatNum(game.gold)}`, 12, L.topBar.h / 2 - (L.isMobile ? 10 : 0));
+
+  ctx.fillStyle = C.grayLight;
+  ctx.font = `${L.isMobile ? 11 : 13}px monospace`;
+  ctx.fillText(`${formatNum(game.cps)}/s  |  Click: ${formatNum(getClickValue())}`, 12, L.topBar.h / 2 + (L.isMobile ? 14 : 16));
+
+  // Buy qty buttons
+  const qtyBtnW = L.isMobile ? 32 : 40;
+  const qtyBtnH = 26;
+  const qtyY = L.topBar.y + (L.topBar.h - qtyBtnH) / 2;
+  const qtyX = L.topBar.w - (L.isMobile ? 115 : 140);
+  const qtys = [1, 10, 100];
+  ctx.textAlign = 'center';
+  for (let i = 0; i < 3; i++) {
+    const bx = qtyX + i * (qtyBtnW + 4);
+    const active = buyQty === qtys[i];
+    drawRoundRect(bx, qtyY, qtyBtnW, qtyBtnH, 4,
+      active ? C.gold : '#1a1a2e',
+      active ? C.gold : C.grayDark
+    );
+    ctx.fillStyle = active ? '#0a0a0f' : C.grayLight;
+    ctx.font = `bold ${L.isMobile ? 10 : 12}px monospace`;
+    ctx.fillText(`x${qtys[i]}`, bx + qtyBtnW / 2, qtyY + qtyBtnH / 2);
+  }
+
+  // Prestige indicator
+  if (game.prestigeCurrency > 0) {
+    ctx.textAlign = 'right';
+    ctx.fillStyle = C.purple;
+    ctx.font = `${L.isMobile ? 10 : 12}px monospace`;
+    ctx.fillText(`★ ${formatNum(game.prestigeCurrency)} (${game.prestigeMult.toFixed(2)}x)`, qtyX - 10, L.topBar.h / 2);
+  }
+
+  // ─ Click Area ─
+  const ca = L.clickArea;
+  drawRoundRect(ca.x, ca.y, ca.w, ca.h, 8, '#0d0d1a', C.grayDark);
+
+  // Forge visualization
+  const fcx = ca.x + ca.w / 2;
+  const fcy = ca.y + ca.h / 2;
+  const time = Date.now() / 1000;
+
+  // Glowing circle
+  const glowR = 40 + Math.sin(time * 2) * 5;
+  const grad = ctx.createRadialGradient(fcx, fcy, 0, fcx, fcy, glowR * 2);
+  grad.addColorStop(0, 'rgba(240, 184, 0, 0.3)');
+  grad.addColorStop(0.5, 'rgba(240, 184, 0, 0.1)');
+  grad.addColorStop(1, 'rgba(240, 184, 0, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(fcx - glowR * 2, fcy - glowR * 2, glowR * 4, glowR * 4);
+
+  // Anvil shape
+  ctx.fillStyle = '#444466';
+  ctx.fillRect(fcx - 35, fcy - 8, 70, 16);
+  ctx.fillRect(fcx - 25, fcy + 8, 50, 20);
+  ctx.fillRect(fcx - 15, fcy + 28, 30, 10);
+  ctx.fillStyle = C.gold;
+  ctx.fillRect(fcx - 30, fcy - 14, 60, 8);
+
+  // Sparkles
+  for (let i = 0; i < 8; i++) {
+    const sa = time * 3 + i * Math.PI / 4;
+    const sr = 30 + Math.sin(time * 2 + i) * 15;
+    const sx = fcx + Math.cos(sa) * sr;
+    const sy = fcy - 20 + Math.sin(sa) * sr * 0.5;
+    const ss = 1.5 + Math.sin(time * 5 + i * 2) * 1;
+    ctx.globalAlpha = 0.3 + Math.sin(time * 4 + i * 1.5) * 0.3;
+    ctx.fillStyle = i % 2 === 0 ? C.gold : C.green;
+    ctx.fillRect(sx, sy, ss, ss);
+  }
+  ctx.globalAlpha = 1;
+
+  // "TAP" hint
+  ctx.textAlign = 'center';
+  ctx.fillStyle = C.dimText;
+  ctx.font = `${L.isMobile ? 12 : 14}px monospace`;
+  ctx.fillText('⚒ TAP TO FORGE ⚒', fcx, ca.y + ca.h - 15);
+
+  // CPS bars along bottom of click area
+  if (game.cps > 0) {
+    const barCount = Math.min(20, Math.floor(Math.log10(game.cps + 1) * 3) + 1);
+    const barW = (ca.w - 20) / barCount;
+    for (let i = 0; i < barCount; i++) {
+      const bh = 4 + Math.sin(time * 3 + i * 0.5) * 3;
+      ctx.fillStyle = C.gold;
+      ctx.globalAlpha = 0.3;
+      ctx.fillRect(ca.x + 10 + i * barW, ca.y + ca.h - 30 - bh, barW - 2, bh);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ─ Tab Bar ─
+  const tb = L.tabBar;
+  const tabNames = ['Gens', 'Upgr', 'Achv', 'Prstg'];
+  const tabW = tb.w / 4;
+  for (let i = 0; i < 4; i++) {
+    const tx = tb.x + i * tabW;
+    const active = game.tab === i;
+    drawRoundRect(tx + 2, tb.y, tabW - 4, tb.h, 4,
+      active ? '#1a1a30' : '#0d0d18',
+      active ? C.gold : C.grayDark
+    );
+    ctx.textAlign = 'center';
+    ctx.fillStyle = active ? C.gold : C.gray;
+    ctx.font = `bold ${L.isMobile ? 10 : 12}px monospace`;
+    ctx.fillText(tabNames[i], tx + tabW / 2, tb.y + tb.h / 2);
+  }
+
+  // ─ Panel ─
+  const p = L.panel;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(p.x, p.y, p.w, p.h);
+  ctx.clip();
+
+  drawRoundRect(p.x, p.y, p.w, p.h, 6, '#0c0c16');
+
+  if (game.tab === 0) drawGeneratorsPanel(p, dt);
+  else if (game.tab === 1) drawUpgradesPanel(p, dt);
+  else if (game.tab === 2) drawAchievementsPanel(p, dt);
+  else if (game.tab === 3) drawPrestigePanel(p, dt);
+
+  ctx.restore();
+
+  // ─ Floating texts ─
+  for (const ft of floatingTexts) ft.draw();
+  // ─ Particles ─
+  for (const pt of particles) pt.draw();
+  // ─ Achievement popup ─
+  if (achievementPopup && achievementPopupTimer > 0) {
+    drawAchievementPopup(dt);
+  }
+};
+
+const drawGeneratorsPanel = (p, dt) => {
+  const rh = uiLayout.rowHeight;
+  const fs = uiLayout.fontSize;
+
+  for (let i = 0; i < GENERATORS.length; i++) {
+    const ry = p.y + i * rh - game.scrollY;
+    if (ry + rh < p.y || ry > p.y + p.h) continue;
+
+    const gen = GENERATORS[i];
+    const cost = getGenCost(i, buyQty);
+    const canBuy = game.gold >= cost;
+    const owned = game.genOwned[i];
+    const prod = getGenProduction(i);
+
+    // Row background
+    drawRoundRect(p.x + 4, ry + 2, p.w - 8, rh - 4, 4,
+      canBuy ? '#141428' : '#0e0e1a',
+      canBuy ? C.goldDark : '#1a1a2e'
+    );
+
+    // Icon
+    ctx.font = `${fs + 4}px monospace`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(gen.icon, p.x + 12, ry + rh / 2 - 4);
+
+    // Name + owned
+    ctx.fillStyle = canBuy ? C.white : C.gray;
+    ctx.font = `bold ${fs}px monospace`;
+    ctx.fillText(`${gen.name}`, p.x + 38, ry + rh * 0.3);
+
+    ctx.fillStyle = C.grayLight;
+    ctx.font = `${fs - 2}px monospace`;
+    ctx.fillText(`owned: ${owned}`, p.x + 38, ry + rh * 0.6);
+
+    // Production
+    if (owned > 0) {
+      ctx.fillStyle = C.green;
+      ctx.font = `${fs - 2}px monospace`;
+      ctx.fillText(`+${formatNum(prod)}/s`, p.x + 38, ry + rh * 0.82);
+    }
+
+    // Cost (right side)
+    ctx.textAlign = 'right';
+    ctx.fillStyle = canBuy ? C.gold : C.red;
+    ctx.font = `bold ${fs}px monospace`;
+    ctx.fillText(`⚜${formatNum(cost)}`, p.x + p.w - 12, ry + rh * 0.35);
+    ctx.fillStyle = C.dimText;
+    ctx.font = `${fs - 3}px monospace`;
+    ctx.fillText(`x${buyQty}`, p.x + p.w - 12, ry + rh * 0.62);
+  }
+
+  // Clamp scroll
+  const maxScroll = Math.max(0, GENERATORS.length * rh - p.h);
+  game.scrollY = Math.min(game.scrollY, maxScroll);
+};
+
+const drawUpgradesPanel = (p, dt) => {
+  const rh = uiLayout.rowHeight;
+  const fs = uiLayout.fontSize;
+
+  const available = UPGRADE_DEFS.map((u, i) => ({ ...u, idx: i })).filter((u, i) => isUpgradeAvailable(i));
+
+  if (available.length === 0) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = C.dimText;
+    ctx.font = `${fs}px monospace`;
+    ctx.fillText('No upgrades available yet', p.x + p.w / 2, p.y + p.h / 2 - 10);
+    ctx.fillText('Buy more generators!', p.x + p.w / 2, p.y + p.h / 2 + 10);
+    return;
+  }
+
+  for (let i = 0; i < available.length; i++) {
+    const ry = p.y + i * rh - game.scrollY;
+    if (ry + rh < p.y || ry > p.y + p.h) continue;
+
+    const u = available[i];
+    const canBuy = game.gold >= u.cost;
+
+    drawRoundRect(p.x + 4, ry + 2, p.w - 8, rh - 4, 4,
+      canBuy ? '#1a1428' : '#0e0e1a',
+      canBuy ? C.purple : '#1a1a2e'
+    );
+
+    // Name
+    ctx.textAlign = 'left';
+    ctx.fillStyle = canBuy ? C.white : C.gray;
+    ctx.font = `bold ${fs}px monospace`;
+    ctx.fillText(u.name, p.x + 12, ry + rh * 0.32);
+
+    // Desc
+    ctx.fillStyle = C.grayLight;
+    ctx.font = `${fs - 2}px monospace`;
+    ctx.fillText(u.desc, p.x + 12, ry + rh * 0.65);
+
+    // Cost
+    ctx.textAlign = 'right';
+    ctx.fillStyle = canBuy ? C.gold : C.red;
+    ctx.font = `bold ${fs}px monospace`;
+    ctx.fillText(`⚜${formatNum(u.cost)}`, p.x + p.w - 12, ry + rh / 2);
+  }
+
+  const maxScroll = Math.max(0, available.length * rh - p.h);
+  game.scrollY = Math.min(game.scrollY, maxScroll);
+};
+
+const drawAchievementsPanel = (p, dt) => {
+  const rh = 50;
+  const fs = uiLayout.fontSize;
+  const unlocked = game.achievementsUnlocked.filter(Boolean).length;
+
+  // Header
+  ctx.textAlign = 'center';
+  ctx.fillStyle = C.gold;
+  ctx.font = `bold ${fs}px monospace`;
+  ctx.fillText(`Achievements: ${unlocked}/${ACHIEVEMENT_DEFS.length}`, p.x + p.w / 2, p.y + 20 - game.scrollY);
+
+  for (let i = 0; i < ACHIEVEMENT_DEFS.length; i++) {
+    const ry = p.y + 35 + i * rh - game.scrollY;
+    if (ry + rh < p.y || ry > p.y + p.h) continue;
+
+    const a = ACHIEVEMENT_DEFS[i];
+    const done = game.achievementsUnlocked[i];
+
+    drawRoundRect(p.x + 4, ry + 2, p.w - 8, rh - 4, 4,
+      done ? '#141e14' : '#0e0e1a',
+      done ? C.greenDark : '#1a1a2e'
+    );
+
+    ctx.textAlign = 'left';
+    ctx.fillStyle = done ? C.green : C.gray;
+    ctx.font = `bold ${fs - 1}px monospace`;
+    ctx.fillText(`${done ? '✓' : '○'} ${a.name}`, p.x + 12, ry + rh * 0.35);
+
+    ctx.fillStyle = done ? C.grayLight : C.dimText;
+    ctx.font = `${fs - 3}px monospace`;
+    ctx.fillText(a.desc, p.x + 28, ry + rh * 0.7);
+  }
+
+  const maxScroll = Math.max(0, 35 + ACHIEVEMENT_DEFS.length * rh - p.h);
+  game.scrollY = Math.min(game.scrollY, maxScroll);
+};
+
+const drawPrestigePanel = (p, dt) => {
+  const fs = uiLayout.fontSize;
+  const gain = getPrestigeGain();
+  const cy = p.y + 20 - game.scrollY;
+
+  ctx.textAlign = 'center';
+
+  // Current prestige currency
+  ctx.fillStyle = C.purple;
+  ctx.font = `bold ${fs + 6}px monospace`;
+  ctx.fillText(`★ ${formatNum(game.prestigeCurrency)} Prestige`, p.x + p.w / 2, cy + 20);
+
+  ctx.fillStyle = C.grayLight;
+  ctx.font = `${fs}px monospace`;
+  ctx.fillText(`Multiplier: ${game.prestigeMult.toFixed(2)}x`, p.x + p.w / 2, cy + 50);
+  ctx.fillText(`Total Prestiges: ${game.totalPrestiges}`, p.x + p.w / 2, cy + 72);
+
+  // Prestige button
+  const btnY = cy + 100;
+  const btnW = p.w - 40;
+  const btnH = 55;
+  const canPrestige = gain > 0;
+
+  drawRoundRect(p.x + 20, btnY, btnW, btnH, 8,
+    canPrestige ? '#2a1a40' : '#141420',
+    canPrestige ? C.purple : C.grayDark
+  );
+
+  ctx.fillStyle = canPrestige ? C.white : C.gray;
+  ctx.font = `bold ${fs + 2}px monospace`;
+  ctx.fillText(canPrestige ? `PRESTIGE for +${formatNum(gain)} ★` : 'Not enough gold', p.x + p.w / 2, btnY + btnH * 0.38);
+
+  ctx.fillStyle = canPrestige ? C.grayLight : C.dimText;
+  ctx.font = `${fs - 2}px monospace`;
+  ctx.fillText(canPrestige ? 'Reset progress, keep ★ & achievements' : `Need ${formatNum(1e9)} total earned`, p.x + p.w / 2, btnY + btnH * 0.72);
+
+  // Explanation
+  ctx.textAlign = 'left';
+  ctx.fillStyle = C.dimText;
+  ctx.font = `${fs - 2}px monospace`;
+  const lines = [
+    '─── How Prestige Works ───',
+    '',
+    '• Prestige resets your gold,',
+    '  generators, and upgrades.',
+    '',
+    '• You keep your ★ Prestige',
+    '  currency and achievements.',
+    '',
+    '• Each ★ gives +5% to ALL',
+    '  production permanently.',
+    '',
+    '• Prestige ★ gained is based',
+    '  on total gold ever earned.',
+    '',
+    `• Formula: √(total / 1B)`,
+    '',
+    `• Total earned: ${formatNum(game.totalEarned)}`,
+  ];
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillStyle = i === 0 ? C.gold : C.dimText;
+    ctx.fillText(lines[i], p.x + 16, btnY + btnH + 30 + i * 18);
+  }
+};
+
+const drawPrestigeConfirm = () => {
+  const W = canvas.width;
+  const H = canvas.height;
+  const gain = getPrestigeGain();
+
+  // Overlay
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Dialog
+  const dw = Math.min(400, W - 40);
+  const dh = 200;
+  const dx = (W - dw) / 2;
+  const dy = (H - dh) / 2 - 30;
+  drawRoundRect(dx, dy, dw, dh, 12, '#14141e', C.purple);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = C.purple;
+  ctx.font = 'bold 22px monospace';
+  ctx.fillText('PRESTIGE?', W / 2, dy + 35);
+
+  ctx.fillStyle = C.white;
+  ctx.font = '14px monospace';
+  ctx.fillText(`You will gain +${formatNum(gain)} ★`, W / 2, dy + 70);
+
+  ctx.fillStyle = C.grayLight;
+  ctx.font = '12px monospace';
+  ctx.fillText('Gold, generators & upgrades reset.', W / 2, dy + 95);
+  ctx.fillText('Achievements & ★ are kept.', W / 2, dy + 115);
+
+  // Buttons
+  const bw = 120, bh = 50;
+  const by = dy + dh / 2 + 40;
+
+  drawRoundRect(W / 2 - bw - 20, by, bw, bh, 6, '#1a2a1a', C.green);
+  ctx.fillStyle = C.green;
+  ctx.font = 'bold 16px monospace';
+  ctx.fillText('YES', W / 2 - bw / 2 - 20, by + bh / 2);
+
+  drawRoundRect(W / 2 + 20, by, bw, bh, 6, '#2a1a1a', C.red);
+  ctx.fillStyle = C.red;
+  ctx.fillText('NO', W / 2 + bw / 2 + 20, by + bh / 2);
+};
+
+const drawAchievementPopup = (dt) => {
+  if (!achievementPopup) return;
+  achievementPopupTimer -= dt;
+  if (achievementPopupTimer <= 0) {
+    achievementPopup = null;
+    return;
+  }
+
+  const W = canvas.width;
+  const alpha = Math.min(1, achievementPopupTimer, (3 - achievementPopupTimer) * 3);
+  ctx.globalAlpha = alpha;
+
+  const pw = Math.min(320, W - 20);
+  const ph = 50;
+  const px = (W - pw) / 2;
+  const py = 70;
+
+  drawRoundRect(px, py, pw, ph, 8, '#1a2e1a', C.green);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = C.green;
+  ctx.font = 'bold 13px monospace';
+  ctx.fillText(`🏆 ${achievementPopup.name}`, W / 2, py + 20);
+  ctx.fillStyle = C.grayLight;
+  ctx.font = '11px monospace';
+  ctx.fillText(achievementPopup.desc, W / 2, py + 38);
+
+  ctx.globalAlpha = 1;
+};
+
+// ─── Main Loop ───
+let lastTime = performance.now();
+let saveTimer = 0;
+let achieveCheckTimer = 0;
+
+const gameLoop = (timestamp) => {
+  const dt = Math.min(0.1, (timestamp - lastTime) / 1000);
+  lastTime = timestamp;
+
+  computeLayout();
+
+  // Update
+  if (state === STATE.PLAYING || state === STATE.PRESTIGE_CONFIRM) {
+    // Production
+    const cps = getTotalCPS();
+    const earned = cps * dt;
+    game.gold += earned;
+    game.totalEarned += earned;
+
+    // Particles
+    particles = particles.filter(p => { p.update(dt); return p.life > 0; });
+    floatingTexts = floatingTexts.filter(ft => { ft.update(dt); return ft.life > 0; });
+
+    // Screen shake decay
+    if (screenShake > 0) screenShake *= 0.85;
+    if (screenShake < 0.3) screenShake = 0;
+
+    // Auto-save every 15 seconds
+    saveTimer += dt;
+    if (saveTimer > 15) { saveTimer = 0; saveGame(); }
+
+    // Achievement check every 2 seconds
+    achieveCheckTimer += dt;
+    if (achieveCheckTimer > 2) { achieveCheckTimer = 0; checkAchievements(); }
+  }
+
+  // Apply screen shake
+  if (screenShake > 0) {
+    ctx.save();
+    ctx.translate(
+      (Math.random() - 0.5) * screenShake,
+      (Math.random() - 0.5) * screenShake
+    );
+  }
+
+  // Draw
+  if (state === STATE.TITLE) {
+    drawTitle(dt);
+  } else if (state === STATE.PLAYING) {
+    drawGame(dt);
+  } else if (state === STATE.PRESTIGE_CONFIRM) {
+    drawGame(dt);
+    drawPrestigeConfirm();
+  }
+
+  if (screenShake > 0) ctx.restore();
+
+  mouseClicked = false;
+  requestAnimationFrame(gameLoop);
+};
+
+requestAnimationFrame(gameLoop);
+
+// ─── Visibility change (save on tab switch) ───
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && state !== STATE.TITLE) {
+    saveGame();
+    GobAdapt.record(Math.round((Date.now() - _gobSessionStart) / 1000));
+    _gobSessionStart = Date.now(); // reset for next visible period
+  }
+});
+
+// ─── Before unload ───
+window.addEventListener('beforeunload', () => {
+  if (state !== STATE.TITLE) {
+    saveGame();
+    GobAdapt.record(Math.round((Date.now() - _gobSessionStart) / 1000));
+  }
+});
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

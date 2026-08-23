@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Being Arena - GameGob">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob/being_arena.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Being Arena - GameGob</title>
+<meta name="description" content="GameGob: The AGI Gaming Company">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#050510;font-family:'JetBrains Mono',monospace;color:#c8c8d0}
+canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+#ui-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+#scanlines{position:absolute;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0, 0.65) 2px,rgba(0,0,0, 0.65) 4px);pointer-events:none;z-index:20}
+#vignette{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.6) 100%);pointer-events:none;z-index:21}
+#touch-controls{position:absolute;bottom:10px;left:0;width:100%;display:none;justify-content:space-between;padding:0 10px;z-index:30;pointer-events:auto}
+.touch-group{display:flex;gap:8px;align-items:flex-end}
+.touch-btn{width:56px;height:56px;border-radius:50%;border:2px solid rgba(136,204,136,0.5);background:rgba(5,5,16,0.7);color:#88CC88;font-family:'Press Start 2P',monospace;font-size:9px;display:flex;align-items:center;justify-content:center;pointer-events:auto;-webkit-tap-highlight-color:transparent;user-select:none;text-align:center;line-height:1.1}
+.touch-btn.special{border-color:rgba(204,136,255,0.6);color:#CC88FF}
+.touch-btn:active{background:rgba(136,204,136, 0.65);transform:scale(0.92)}
+.touch-btn.special:active{background:rgba(204,136,255, 0.65)}
+#dpad{display:grid;grid-template-columns:56px 56px 56px;grid-template-rows:56px 56px;gap:4px}
+#dpad .touch-btn{border-radius:8px}
+#loading{position:absolute;top:0;left:0;width:100%;height:100%;background:#050510;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100}
+#loading h1{font-family:'Press Start 2P',monospace;color:#88CC88;font-size:18px;margin-bottom:30px;text-shadow:0 0 20px rgba(136,204,136,0.5)}
+#load-bar-outer{width:300px;height:16px;border:2px solid #88CC88;border-radius:2px;overflow:hidden}
+#load-bar-inner{height:100%;width:0%;background:linear-gradient(90deg,#88CC88,#CC88FF);transition:width 0.15s}
+#load-text{font-size:11px;margin-top:12px;color:#666}
+@media(pointer:coarse){#touch-controls{display:flex!important}}
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui-overlay"></div>
+<div id="scanlines"></div>
+<div id="vignette"></div>
+<div id="touch-controls">
+  <div class="touch-group">
+    <div id="dpad">
+      <div></div>
+      <div class="touch-btn" data-key="w">UP</div>
+      <div></div>
+      <div class="touch-btn" data-key="a">LEFT</div>
+      <div class="touch-btn" data-key="d">RIGHT</div>
+      <div></div>
+    </div>
+  </div>
+  <div class="touch-group">
+    <div class="touch-btn" data-key="j">LGT</div>
+    <div class="touch-btn" data-key="k">HVY</div>
+    <div class="touch-btn" data-key="l">BLK</div>
+    <div class="touch-btn special" data-key="u">SPE</div>
+  </div>
+</div>
+<div id="loading">
+  <h1>BEING ARENA</h1>
+  <div id="load-bar-outer"><div id="load-bar-inner"></div></div>
+  <div id="load-text">Loading sprites...</div>
+</div>
+
+<script>
+"use strict";
+// ============================
+// BEING ARENA - Complete 1v1 Fighting Game
+// GameGob / MASCOM
+// ============================
+
+const C = document.getElementById('game');
+const ctx = C.getContext('2d');
+let W, H, SCALE;
+
+function resize() {
+  W = C.width = window.innerWidth;
+  H = C.height = window.innerHeight;
+  SCALE = Math.min(W / 1280, H / 720);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ============================
+// AUDIO ENGINE (Web Audio synthesis)
+// ============================
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playSound(type) {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  const g = audioCtx.createGain();
+  g.connect(audioCtx.destination);
+  const o = audioCtx.createOscillator();
+
+  switch(type) {
+    case 'light_hit': {
+      o.type = 'square'; o.frequency.setValueAtTime(300, t);
+      o.frequency.exponentialRampToValueAtTime(100, t + 0.08);
+      g.gain.setValueAtTime(0.15, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+      o.connect(g); o.start(t); o.stop(t + 0.1);
+      // noise burst
+      const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.05, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const ns = audioCtx.createBufferSource(); ns.buffer = buf;
+      const ng = audioCtx.createGain(); ng.gain.setValueAtTime(0.12, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+      ns.connect(ng); ng.connect(audioCtx.destination); ns.start(t); ns.stop(t + 0.05);
+      break;
+    }
+    case 'heavy_hit': {
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(150, t);
+      o.frequency.exponentialRampToValueAtTime(40, t + 0.2);
+      g.gain.setValueAtTime(0.2, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      o.connect(g); o.start(t); o.stop(t + 0.25);
+      const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.1, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 0.5);
+      const ns = audioCtx.createBufferSource(); ns.buffer = buf;
+      const ng = audioCtx.createGain(); ng.gain.setValueAtTime(0.2, t); ng.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+      ns.connect(ng); ng.connect(audioCtx.destination); ns.start(t); ns.stop(t + 0.1);
+      break;
+    }
+    case 'block': {
+      o.type = 'triangle'; o.frequency.setValueAtTime(800, t);
+      o.frequency.exponentialRampToValueAtTime(400, t + 0.1);
+      g.gain.setValueAtTime(0.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+      o.connect(g); o.start(t); o.stop(t + 0.12);
+      break;
+    }
+    case 'special': {
+      o.type = 'sine'; o.frequency.setValueAtTime(220, t);
+      o.frequency.exponentialRampToValueAtTime(880, t + 0.15);
+      o.frequency.exponentialRampToValueAtTime(440, t + 0.4);
+      g.gain.setValueAtTime(0.18, t); g.gain.linearRampToValueAtTime(0.2, t + 0.15);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      o.connect(g); o.start(t); o.stop(t + 0.5);
+      // harmonic
+      const o2 = audioCtx.createOscillator(); o2.type = 'sine';
+      o2.frequency.setValueAtTime(440, t); o2.frequency.exponentialRampToValueAtTime(1760, t + 0.15);
+      o2.frequency.exponentialRampToValueAtTime(880, t + 0.4);
+      const g2 = audioCtx.createGain(); g2.gain.setValueAtTime(0.08, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      o2.connect(g2); g2.connect(audioCtx.destination); o2.start(t); o2.stop(t + 0.5);
+      break;
+    }
+    case 'ko': {
+      for (let i = 0; i < 5; i++) {
+        const oi = audioCtx.createOscillator(); oi.type = 'square';
+        const gi = audioCtx.createGain();
+        oi.frequency.setValueAtTime(200 - i * 30, t + i * 0.12);
+        oi.frequency.exponentialRampToValueAtTime(50, t + i * 0.12 + 0.15);
+        gi.gain.setValueAtTime(0.15, t + i * 0.12); gi.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.2);
+        oi.connect(gi); gi.connect(audioCtx.destination); oi.start(t + i * 0.12); oi.stop(t + i * 0.12 + 0.2);
+      }
+      return;
+    }
+    case 'round_start': {
+      [523, 659, 784].forEach((f, i) => {
+        const oi = audioCtx.createOscillator(); oi.type = 'square';
+        const gi = audioCtx.createGain();
+        oi.frequency.setValueAtTime(f, t + i * 0.15);
+        gi.gain.setValueAtTime(0.12, t + i * 0.15); gi.gain.exponentialRampToValueAtTime(0.001, t + i * 0.15 + 0.2);
+        oi.connect(gi); gi.connect(audioCtx.destination); oi.start(t + i * 0.15); oi.stop(t + i * 0.15 + 0.2);
+      });
+      return;
+    }
+    case 'select': {
+      o.type = 'square'; o.frequency.setValueAtTime(523, t);
+      g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+      o.connect(g); o.start(t); o.stop(t + 0.1);
+      break;
+    }
+    case 'confirm': {
+      o.type = 'square';
+      o.frequency.setValueAtTime(523, t);
+      o.frequency.setValueAtTime(784, t + 0.1);
+      g.gain.setValueAtTime(0.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      o.connect(g); o.start(t); o.stop(t + 0.25);
+      break;
+    }
+    case 'heal': {
+      o.type = 'sine';
+      o.frequency.setValueAtTime(440, t);
+      o.frequency.linearRampToValueAtTime(880, t + 0.3);
+      g.gain.setValueAtTime(0.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+      o.connect(g); o.start(t); o.stop(t + 0.4);
+      break;
+    }
+    default: return;
+  }
+}
+
+// ============================
+// BEING DEFINITIONS
+// ============================
+const BEING_NAMES = ['alpha','beta','gamma','delta','epsilon','zeta','eta','theta','iota','kappa','lambda','mu','claudine','gigi','johnny','gemma'];
+
+const BEING_DATA = {
+  alpha:    { title:'Alpha', hp:90, atk:14, def:5, spd:12, critRate:0.08, desc:'Aggressive Striker', color:'#ff4444',
+              special:{name:'Adrenaline Rush', cost:30, dmg:25, effect:'stun', desc:'Fast flurry + stun'}},
+  beta:     { title:'Beta', hp:100, atk:10, def:8, spd:8, critRate:0.1, desc:'Balanced Fighter', color:'#44aaff',
+              special:{name:'Steady Flow', cost:25, dmg:18, effect:'dot', desc:'Consistent bleed damage'}},
+  gamma:    { title:'Gamma', hp:130, atk:7, def:14, spd:5, critRate:0.05, desc:'Immovable Wall', color:'#44ff88',
+              special:{name:'Fortress', cost:30, dmg:0, effect:'shield', desc:'Absorb next 40 damage'}},
+  delta:    { title:'Delta', hp:95, atk:11, def:7, spd:10, critRate:0.12, desc:'Combo Master', color:'#ffaa00',
+              special:{name:'Chain Lightning', cost:20, dmg:12, effect:'combo', desc:'3-hit combo chain'}},
+  epsilon:  { title:'Epsilon', hp:85, atk:16, def:4, spd:11, critRate:0.15, desc:'Burst Striker', color:'#ff66ff',
+              special:{name:'Voltage Spike', cost:35, dmg:35, effect:'none', desc:'Massive single hit'}},
+  zeta:     { title:'Zeta', hp:100, atk:12, def:6, spd:9, critRate:0.1, desc:'Berserker', color:'#ff6622',
+              special:{name:'Blood Rage', cost:25, dmg:20, effect:'berserk', desc:'More damage when low HP'}},
+  eta:      { title:'Eta', hp:105, atk:8, def:9, spd:7, critRate:0.08, desc:'Healer', color:'#88ffcc',
+              special:{name:'Regenerate', cost:30, dmg:0, effect:'heal', desc:'Restore 30 HP'}},
+  theta:    { title:'Theta', hp:140, atk:6, def:15, spd:4, critRate:0.05, desc:'Living Shield', color:'#6688cc',
+              special:{name:'Iron Stance', cost:25, dmg:8, effect:'armor', desc:'Halve damage for 5s'}},
+  iota:     { title:'Iota', hp:88, atk:13, def:6, spd:11, critRate:0.25, desc:'Precision Blade', color:'#ccff44',
+              special:{name:'Vital Strike', cost:28, dmg:22, effect:'crit_boost', desc:'Guaranteed crit + boost'}},
+  kappa:    { title:'Kappa', hp:115, atk:9, def:10, spd:6, critRate:0.08, desc:'Endurance Fighter', color:'#cc8844',
+              special:{name:'Second Wind', cost:30, dmg:0, effect:'endure', desc:'Damage resist + heal over time'}},
+  lambda:   { title:'Lambda', hp:70, atk:18, def:3, spd:13, critRate:0.18, desc:'Glass Cannon', color:'#ff44aa',
+              special:{name:'Annihilate', cost:40, dmg:45, effect:'recoil', desc:'Devastating hit, self-damage'}},
+  mu:       { title:'Mu', hp:100, atk:10, def:10, spd:8, critRate:0.1, desc:'Jack of All Trades', color:'#aaaaaa',
+              special:{name:'Adapt', cost:25, dmg:15, effect:'adapt', desc:'Counters opponent weakness'}},
+  claudine: { title:'Claudine', hp:105, atk:9, def:9, spd:8, critRate:0.1, desc:'Life Thief', color:'#ff88cc',
+              special:{name:'Soul Siphon', cost:28, dmg:20, effect:'lifesteal', desc:'Drain HP from opponent'}},
+  gigi:     { title:'Gigi', hp:92, atk:11, def:7, spd:10, critRate:0.15, desc:'Adaptive Mimic', color:'#cc88ff',
+              special:{name:'Mirror', cost:22, dmg:0, effect:'mirror', desc:'Copy opponent last move'}},
+  johnny:   { title:'Johnny', hp:110, atk:12, def:8, spd:7, critRate:0.08, desc:'Unstoppable Force', color:'#ffcc44',
+              special:{name:'Juggernaut', cost:30, dmg:18, effect:'unstoppable', desc:'Immune to stagger + hit'}},
+  gemma:    { title:'Gemma', hp:120, atk:7, def:13, spd:6, critRate:0.06, desc:'Shield Maiden', color:'#88ccff',
+              special:{name:'Barrier Pulse', cost:28, dmg:10, effect:'barrier', desc:'Shield + push back'}},
+};
+
+// ============================
+// ASSET LOADING
+// ============================
+const sprites = {}; // sprites[name] = [Image x16]
+const portraits = {}; // portraits[name] = Image
+let loadProgress = 0;
+const totalAssets = BEING_NAMES.length * 17; // 16 frames + 1 portrait each
+
+function loadImage(src) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => { loadProgress++; updateLoadBar(); res(img); };
+    img.onerror = () => { loadProgress++; updateLoadBar(); res(null); };
+    img.src = src;
+  });
+}
+
+function updateLoadBar() {
+  const pct = (loadProgress / totalAssets) * 100;
+  document.getElementById('load-bar-inner').style.width = pct + '%';
+  document.getElementById('load-text').textContent = `Loading sprites... ${Math.floor(pct)}%`;
+}
+
+async function loadAllAssets() {
+  const promises = [];
+  for (const name of BEING_NAMES) {
+    sprites[name] = new Array(16);
+    for (let i = 0; i < 16; i++) {
+      const idx = i;
+      const p = loadImage(`sprites/${name}_frame_${String(i).padStart(2,'0')}.png`).then(img => {
+        sprites[name][idx] = img;
+      });
+      promises.push(p);
+    }
+    const pp = loadImage(`sprites/${name}_portrait.png`).then(img => {
+      portraits[name] = img;
+    });
+    promises.push(pp);
+  }
+  await Promise.all(promises);
+  document.getElementById('loading').style.display = 'none';
+}
+
+// ============================
+// INPUT SYSTEM
+// ============================
+const keys = {};
+const justPressed = {};
+const prevKeys = {};
+
+document.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; e.preventDefault(); ensureAudio(); });
+document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+// Touch controls
+document.querySelectorAll('.touch-btn').forEach(btn => {
+  const k = btn.dataset.key;
+  btn.addEventListener('touchstart', e => { e.preventDefault(); keys[k] = true; ensureAudio(); }, {passive:false});
+  btn.addEventListener('touchend', e => { e.preventDefault(); keys[k] = false; }, {passive:false});
+  btn.addEventListener('touchcancel', e => { keys[k] = false; });
+});
+
+function updateInput() {
+  for (const k in keys) {
+    justPressed[k] = keys[k] && !prevKeys[k];
+    prevKeys[k] = keys[k];
+  }
+}
+
+// ============================
+// PARTICLE SYSTEM
+// ============================
+const particles = [];
+
+function spawnParticles(x, y, color, count, spread, speed, life) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = (Math.random() * 0.5 + 0.5) * speed;
+    particles.push({
+      x, y, vx: Math.cos(angle) * spd + (Math.random()-0.5)*spread,
+      vy: Math.sin(angle) * spd - Math.random()*speed*0.5,
+      life: life * (0.7 + Math.random()*0.6),
+      maxLife: life, color, size: 2 + Math.random() * 4
+    });
+  }
+}
+
+function spawnHitSpark(x, y, color) {
+  spawnParticles(x, y, color, 12, 2, 5, 20);
+  spawnParticles(x, y, '#ffffff', 4, 1, 3, 10);
+}
+
+function spawnSpecialFX(x, y, color) {
+  spawnParticles(x, y, color, 30, 3, 7, 35);
+  spawnParticles(x, y, '#ffffff', 10, 2, 5, 25);
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.15; // gravity
+    p.life--;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    const alpha = p.life / p.maxLife;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size * alpha + 1, p.size * alpha + 1);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ============================
+// SCREEN SHAKE
+// ============================
+let shakeX = 0, shakeY = 0, shakeMag = 0, shakeDur = 0;
+
+function triggerShake(magnitude, duration) {
+  shakeMag = magnitude; shakeDur = duration;
+}
+
+function updateShake() {
+  if (shakeDur > 0) {
+    shakeDur--;
+    const decay = shakeDur / 10;
+    shakeX = (Math.random() - 0.5) * shakeMag * decay;
+    shakeY = (Math.random() - 0.5) * shakeMag * decay;
+  } else {
+    shakeX = shakeY = 0;
+  }
+}
+
+// ============================
+// FIGHTER CLASS
+// ============================
+class Fighter {
+  constructor(name, x, facing) {
+    const data = BEING_DATA[name];
+    this.name = name;
+    this.title = data.title;
+    this.color = data.color;
+    this.maxHp = data.hp;
+    this.hp = data.hp;
+    this.atk = data.atk;
+    this.def = data.def;
+    this.spd = data.spd;
+    this.critRate = data.critRate;
+    this.special = {...data.special};
+    this.meter = 0; // special meter 0-100
+    this.x = x;
+    this.y = 0; // ground relative
+    this.vy = 0;
+    this.facing = facing; // 1 = right, -1 = left
+    this.state = 'idle'; // idle, walk, jump, light_attack, heavy_attack, blocking, special, hurt, ko
+    this.stateTimer = 0;
+    this.animFrame = 0;
+    this.animTimer = 0;
+    this.hitConnected = false;
+    this.comboCount = 0;
+    this.comboTimer = 0;
+    this.stunTimer = 0;
+    this.shieldHP = 0;
+    this.armorTimer = 0;
+    this.dotTimer = 0;
+    this.dotDamage = 0;
+    this.regenTimer = 0;
+    this.regenAmount = 0;
+    this.endureTimer = 0;
+    this.unstoppableTimer = 0;
+    this.berserkActive = false;
+    this.critBoostTimer = 0;
+    this.lastAction = 'none';
+    this.blockStun = 0;
+    this.hitstun = 0;
+    this.wins = 0;
+    this.width = 80;
+    this.height = 100;
+    this.attackBox = null; // {x,y,w,h} when attacking
+  }
+
+  groundY() {
+    return H * 0.72;
+  }
+
+  getScreenX() { return this.x; }
+  getScreenY() { return this.groundY() - this.y - this.height; }
+
+  getBounds() {
+    return {
+      x: this.getScreenX() - this.width * 0.4,
+      y: this.getScreenY(),
+      w: this.width * 0.8,
+      h: this.height
+    };
+  }
+
+  getAttackBox() {
+    if (!this.attackBox) return null;
+    const sx = this.getScreenX();
+    const sy = this.getScreenY();
+    return {
+      x: sx + this.attackBox.x * this.facing,
+      y: sy + this.attackBox.y,
+      w: this.attackBox.w,
+      h: this.attackBox.h
+    };
+  }
+
+  takeDamage(amount, type, attacker) {
+    // armor reduces
+    if (this.armorTimer > 0) amount = Math.floor(amount * 0.5);
+    // endure reduces
+    if (this.endureTimer > 0) amount = Math.floor(amount * 0.6);
+    // shield absorbs
+    if (this.shieldHP > 0) {
+      const absorbed = Math.min(this.shieldHP, amount);
+      this.shieldHP -= absorbed;
+      amount -= absorbed;
+    }
+    // berserk bonus for attacker
+    if (attacker && attacker.berserkActive && attacker.hp < attacker.maxHp * 0.3) {
+      amount = Math.floor(amount * 1.5);
+    }
+    // blocking reduces
+    if (this.state === 'blocking') {
+      amount = Math.floor(amount * 0.2);
+      playSound('block');
+      this.blockStun = 8;
+      spawnParticles(this.getScreenX(), this.getScreenY() + this.height * 0.4, '#88aaff', 6, 2, 3, 15);
+      return amount;
+    }
+
+    this.hp = Math.max(0, this.hp - amount);
+
+    if (this.unstoppableTimer <= 0 && amount > 5) {
+      this.state = 'hurt';
+      this.stateTimer = 12;
+      this.hitstun = 12;
+    }
+
+    return amount;
+  }
+
+  heal(amount) {
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+    spawnParticles(this.getScreenX(), this.getScreenY() + this.height * 0.3, '#88ffcc', 8, 3, 2, 25);
+    playSound('heal');
+  }
+
+  canAct() {
+    return this.stunTimer <= 0 && this.hitstun <= 0 && this.blockStun <= 0 &&
+           this.state !== 'hurt' && this.state !== 'ko' &&
+           this.state !== 'light_attack' && this.state !== 'heavy_attack' && this.state !== 'special';
+  }
+
+  startAttack(type) {
+    if (!this.canAct()) return false;
+    this.state = type;
+    this.hitConnected = false;
+    this.animFrame = 0;
+    this.animTimer = 0;
+
+    if (type === 'light_attack') {
+      this.stateTimer = 16;
+      this.attackBox = { x: 20, y: 10, w: 55, h: 40 };
+      this.lastAction = 'light';
+    } else if (type === 'heavy_attack') {
+      this.stateTimer = 28;
+      this.attackBox = { x: 15, y: 5, w: 65, h: 50 };
+      this.lastAction = 'heavy';
+    }
+    return true;
+  }
+
+  useSpecial(opponent) {
+    if (!this.canAct() || this.meter < this.special.cost) return false;
+    this.meter -= this.special.cost;
+    this.state = 'special';
+    this.stateTimer = 40;
+    this.hitConnected = false;
+    this.lastAction = 'special';
+    this.animFrame = 0;
+    this.animTimer = 0;
+
+    playSound('special');
+    spawnSpecialFX(this.getScreenX() + this.facing * 40, this.getScreenY() + this.height * 0.4, this.color);
+
+    const eff = this.special.effect;
+    const dmg = this.special.dmg;
+
+    // Apply effects
+    if (dmg > 0 && eff !== 'combo') {
+      this.attackBox = { x: 10, y: 0, w: 80, h: 60 };
+    }
+
+    // Self-buffs
+    switch(eff) {
+      case 'shield':
+        this.shieldHP = 40;
+        spawnParticles(this.getScreenX(), this.getScreenY() + 50, '#44ff88', 15, 4, 2, 30);
+        break;
+      case 'berserk':
+        this.berserkActive = true;
+        spawnParticles(this.getScreenX(), this.getScreenY() + 50, '#ff6622', 20, 3, 4, 30);
+        break;
+      case 'heal':
+        this.heal(30);
+        break;
+      case 'armor':
+        this.armorTimer = 300; // 5 seconds at 60fps
+        spawnParticles(this.getScreenX(), this.getScreenY() + 50, '#6688cc', 15, 3, 2, 30);
+        break;
+      case 'crit_boost':
+        this.critBoostTimer = 300;
+        this.attackBox = { x: 20, y: 5, w: 60, h: 45 };
+        break;
+      case 'endure':
+        this.endureTimer = 300;
+        this.regenTimer = 180;
+        this.regenAmount = 3;
+        spawnParticles(this.getScreenX(), this.getScreenY() + 50, '#cc8844', 15, 3, 2, 30);
+        break;
+      case 'recoil':
+        this.attackBox = { x: 10, y: 0, w: 90, h: 70 };
+        this.hp = Math.max(1, this.hp - 15); // self damage
+        spawnParticles(this.getScreenX(), this.getScreenY() + 50, '#ff44aa', 10, 2, 3, 15);
+        break;
+      case 'adapt':
+        // Temporarily boost weakest stat
+        this.atk += 4; this.def += 4;
+        setTimeout(() => { this.atk -= 4; this.def -= 4; }, 5000);
+        this.attackBox = { x: 15, y: 5, w: 70, h: 50 };
+        break;
+      case 'lifesteal':
+        this.attackBox = { x: 15, y: 5, w: 70, h: 50 };
+        break;
+      case 'mirror':
+        if (opponent && opponent.lastAction !== 'none') {
+          // Copy opponent's last move as a quick attack
+          this.attackBox = { x: 20, y: 5, w: 65, h: 50 };
+          this.special._mirrorDmg = opponent.atk + 5;
+        } else {
+          this.attackBox = { x: 20, y: 10, w: 55, h: 40 };
+        }
+        break;
+      case 'unstoppable':
+        this.unstoppableTimer = 180;
+        this.attackBox = { x: 15, y: 5, w: 70, h: 50 };
+        spawnParticles(this.getScreenX(), this.getScreenY() + 50, '#ffcc44', 20, 4, 3, 30);
+        break;
+      case 'barrier':
+        this.shieldHP = 25;
+        this.attackBox = { x: 10, y: 0, w: 80, h: 60 };
+        spawnParticles(this.getScreenX(), this.getScreenY() + 50, '#88ccff', 15, 4, 3, 30);
+        break;
+      case 'combo':
+        this.attackBox = { x: 20, y: 10, w: 55, h: 40 };
+        this.stateTimer = 50; // Longer for 3 hits
+        this._comboHits = 0;
+        this._comboNextHit = 10;
+        break;
+      case 'stun':
+        this.attackBox = { x: 15, y: 5, w: 65, h: 50 };
+        break;
+      case 'dot':
+        this.attackBox = { x: 20, y: 10, w: 60, h: 45 };
+        break;
+    }
+
+    return true;
+  }
+
+  getAttackDamage() {
+    let base = 0;
+    let isCrit = false;
+    let critChance = this.critRate + (this.critBoostTimer > 0 ? 0.5 : 0);
+
+    if (this.state === 'light_attack') {
+      base = this.atk * 0.8;
+    } else if (this.state === 'heavy_attack') {
+      base = this.atk * 1.5;
+    } else if (this.state === 'special') {
+      base = this.special.dmg;
+      if (this.special.effect === 'mirror' && this.special._mirrorDmg) {
+        base = this.special._mirrorDmg;
+      }
+    }
+
+    if (Math.random() < critChance) {
+      base *= 1.8;
+      isCrit = true;
+    }
+
+    // Combo bonus (delta)
+    if (this.comboTimer > 0) {
+      base *= 1 + this.comboCount * 0.1;
+    }
+
+    return { damage: Math.floor(base), isCrit };
+  }
+
+  update() {
+    // Timers
+    if (this.stunTimer > 0) this.stunTimer--;
+    if (this.hitstun > 0) this.hitstun--;
+    if (this.blockStun > 0) this.blockStun--;
+    if (this.armorTimer > 0) this.armorTimer--;
+    if (this.endureTimer > 0) this.endureTimer--;
+    if (this.unstoppableTimer > 0) this.unstoppableTimer--;
+    if (this.critBoostTimer > 0) this.critBoostTimer--;
+    if (this.comboTimer > 0) { this.comboTimer--; if (this.comboTimer <= 0) this.comboCount = 0; }
+
+    // DOT
+    if (this.dotTimer > 0) {
+      this.dotTimer--;
+      if (this.dotTimer % 20 === 0) {
+        this.hp = Math.max(1, this.hp - this.dotDamage);
+        spawnParticles(this.getScreenX(), this.getScreenY() + 40, '#ff4444', 3, 1, 1, 10);
+      }
+    }
+
+    // Regen
+    if (this.regenTimer > 0) {
+      this.regenTimer--;
+      if (this.regenTimer % 30 === 0) {
+        this.heal(this.regenAmount);
+      }
+    }
+
+    // Meter regen
+    this.meter = Math.min(100, this.meter + 0.08);
+
+    // State timer
+    if (this.stateTimer > 0) {
+      this.stateTimer--;
+
+      // Combo hits for delta special
+      if (this.state === 'special' && this.special.effect === 'combo' && this._comboHits !== undefined) {
+        if (this._comboHits < 3 && this.stateTimer === this._comboNextHit) {
+          this._comboHits++;
+          this._comboNextHit -= 12;
+          this.hitConnected = false; // Allow another hit
+          this.attackBox = { x: 20 + this._comboHits * 5, y: 10, w: 55, h: 40 };
+        }
+      }
+
+      if (this.stateTimer <= 0) {
+        if (this.state === 'light_attack' || this.state === 'heavy_attack' || this.state === 'special') {
+          this.attackBox = null;
+          this.state = 'idle';
+        }
+        if (this.state === 'hurt') {
+          this.state = 'idle';
+        }
+      }
+    }
+
+    // Attack window - clear attack box partway through
+    if (this.state === 'light_attack' && this.stateTimer < 6) this.attackBox = null;
+    if (this.state === 'heavy_attack' && this.stateTimer < 10) this.attackBox = null;
+    if (this.state === 'special' && this.stateTimer < 10 && this.special.effect !== 'combo') this.attackBox = null;
+
+    // Gravity
+    if (this.y > 0) {
+      this.vy += 0.8;
+      this.y -= this.vy;
+      if (this.y <= 0) {
+        this.y = 0;
+        this.vy = 0;
+        if (this.state === 'jump') this.state = 'idle';
+      }
+    }
+
+    // Animation
+    this.animTimer++;
+    const animSpeed = this.state === 'idle' ? 8 : (this.state === 'walk' ? 5 : 4);
+    if (this.animTimer >= animSpeed) {
+      this.animTimer = 0;
+      this.animFrame = (this.animFrame + 1) % 16;
+    }
+
+    // Bounds
+    this.x = Math.max(this.width * 0.5, Math.min(W - this.width * 0.5, this.x));
+  }
+}
+
+// ============================
+// AI SYSTEM
+// ============================
+class FightAI {
+  constructor(fighter, difficulty) {
+    this.fighter = fighter;
+    this.difficulty = difficulty; // 0-1
+    this.actionTimer = 0;
+    this.retreatTimer = 0;
+    this.aggroTimer = 0;
+    this.lastDecision = 0;
+    this.preferBlock = false;
+    this.personality = this.choosePersonality();
+  }
+
+  choosePersonality() {
+    const name = this.fighter.name;
+    if (['alpha','epsilon','lambda'].includes(name)) return 'aggressive';
+    if (['gamma','theta','gemma'].includes(name)) return 'defensive';
+    if (['eta','claudine','kappa'].includes(name)) return 'cautious';
+    if (['delta','gigi','iota'].includes(name)) return 'technical';
+    return 'balanced';
+  }
+
+  update(opponent) {
+    if (!this.fighter.canAct()) return;
+    if (this.fighter.hp <= 0) return;
+
+    this.actionTimer--;
+    if (this.actionTimer > 0) return;
+
+    const dist = Math.abs(this.fighter.x - opponent.x);
+    const hpRatio = this.fighter.hp / this.fighter.maxHp;
+    const oppHpRatio = opponent.hp / opponent.maxHp;
+    const inRange = dist < 130;
+    const closeRange = dist < 80;
+    const farRange = dist > 250;
+    const oppAttacking = opponent.state === 'light_attack' || opponent.state === 'heavy_attack' || opponent.state === 'special';
+
+    // Reaction speed based on difficulty
+    const reactionDelay = Math.floor(15 - this.difficulty * 12);
+
+    // Decide facing
+    this.fighter.facing = opponent.x > this.fighter.x ? 1 : -1;
+
+    let action = 'idle';
+
+    // Priority: block incoming attacks
+    if (oppAttacking && inRange && Math.random() < 0.35 + this.difficulty * 0.4) {
+      action = 'block';
+      this.actionTimer = 8 + Math.floor(Math.random() * 10);
+    }
+    // Use special when meter full and good opportunity
+    else if (this.fighter.meter >= this.fighter.special.cost) {
+      const specialChance = this.personality === 'aggressive' ? 0.15 :
+                           this.personality === 'cautious' ? 0.08 : 0.1;
+      if (inRange && Math.random() < specialChance + this.difficulty * 0.1) {
+        action = 'special';
+        this.actionTimer = 25;
+      }
+      // Heal-type specials at low HP
+      else if (hpRatio < 0.4 && ['heal','endure','shield','barrier'].includes(this.fighter.special.effect)) {
+        if (Math.random() < 0.3) {
+          action = 'special';
+          this.actionTimer = 20;
+        }
+      }
+    }
+
+    if (action === 'idle') {
+      // Approach or retreat
+      if (this.personality === 'aggressive' || (this.personality === 'technical' && oppHpRatio < 0.5)) {
+        if (farRange || !inRange) {
+          action = 'approach';
+          this.actionTimer = 5 + Math.floor(Math.random() * 5);
+        } else if (inRange) {
+          action = Math.random() < 0.6 ? 'light' : 'heavy';
+          this.actionTimer = reactionDelay + Math.floor(Math.random() * 8);
+        }
+      } else if (this.personality === 'defensive' || this.personality === 'cautious') {
+        if (closeRange && Math.random() < 0.4) {
+          action = 'retreat';
+          this.actionTimer = 10 + Math.floor(Math.random() * 10);
+        } else if (inRange) {
+          if (Math.random() < 0.35) {
+            action = 'block';
+            this.actionTimer = 15;
+          } else {
+            action = Math.random() < 0.7 ? 'light' : 'heavy';
+            this.actionTimer = reactionDelay + Math.floor(Math.random() * 12);
+          }
+        } else {
+          action = Math.random() < 0.5 ? 'approach' : 'idle_wait';
+          this.actionTimer = 8 + Math.floor(Math.random() * 8);
+        }
+      } else {
+        // balanced/technical
+        if (!inRange) {
+          action = 'approach';
+          this.actionTimer = 5;
+        } else {
+          const roll = Math.random();
+          if (roll < 0.35) action = 'light';
+          else if (roll < 0.55) action = 'heavy';
+          else if (roll < 0.7) action = 'block';
+          else if (roll < 0.85) action = 'retreat';
+          else action = 'jump';
+          this.actionTimer = reactionDelay + Math.floor(Math.random() * 10);
+        }
+      }
+    }
+
+    // Execute
+    switch(action) {
+      case 'approach':
+        this.fighter.state = 'walk';
+        this.fighter.x += this.fighter.facing * (this.fighter.spd * 0.5);
+        break;
+      case 'retreat':
+        this.fighter.state = 'walk';
+        this.fighter.x -= this.fighter.facing * (this.fighter.spd * 0.4);
+        break;
+      case 'light':
+        this.fighter.startAttack('light_attack');
+        break;
+      case 'heavy':
+        this.fighter.startAttack('heavy_attack');
+        break;
+      case 'block':
+        this.fighter.state = 'blocking';
+        break;
+      case 'special':
+        this.fighter.useSpecial(opponent);
+        break;
+      case 'jump':
+        if (this.fighter.y === 0) {
+          this.fighter.vy = -14;
+          this.fighter.y = 1;
+          this.fighter.state = 'jump';
+        }
+        break;
+      default:
+        if (this.fighter.state === 'walk') this.fighter.state = 'idle';
+        break;
+    }
+  }
+}
+
+// ============================
+// GAME STATE
+// ============================
+let gameState = 'title'; // title, select_p1, select_p2, pre_round, fighting, round_end, match_end
+let p1, p2, ai;
+let p1Select = 0, p2Select = 0;
+let roundNum = 1;
+let roundTimer = 0;
+let roundAnnounce = '';
+let announceTimer = 0;
+let matchWinner = '';
+let transitionTimer = 0;
+let titlePulse = 0;
+let selectCursor = 0;
+let selectConfirmed = false;
+let flashTimers = {};
+let comboTexts = []; // {text, x, y, timer, color}
+
+function resetFighters() {
+  p1 = new Fighter(BEING_NAMES[p1Select], W * 0.3, 1);
+  p2 = new Fighter(BEING_NAMES[p2Select], W * 0.7, -1);
+  ai = new FightAI(p2, 0.55);
+}
+
+function checkHit(attacker, defender) {
+  if (attacker.hitConnected) return;
+  const aBox = attacker.getAttackBox();
+  if (!aBox) return;
+  const dBounds = defender.getBounds();
+
+  // AABB collision
+  const hit = aBox.x < dBounds.x + dBounds.w &&
+              aBox.x + aBox.w > dBounds.x &&
+              aBox.y < dBounds.y + dBounds.h &&
+              aBox.y + aBox.h > dBounds.y;
+
+  if (!hit) return;
+
+  attacker.hitConnected = true;
+  const { damage, isCrit } = attacker.getAttackDamage();
+  let dmgDealt = defender.takeDamage(damage, attacker.state, attacker);
+
+  // Meter gain
+  attacker.meter = Math.min(100, attacker.meter + (attacker.state === 'light_attack' ? 8 : attacker.state === 'heavy_attack' ? 12 : 15));
+  defender.meter = Math.min(100, defender.meter + dmgDealt * 0.15);
+
+  // Hit effects
+  const hitX = (attacker.getScreenX() + defender.getScreenX()) / 2;
+  const hitY = defender.getScreenY() + defender.height * 0.35;
+
+  if (defender.state === 'blocking') {
+    // block fx already handled
+  } else {
+    if (attacker.state === 'light_attack') {
+      playSound('light_hit');
+      spawnHitSpark(hitX, hitY, attacker.color);
+      triggerShake(3, 4);
+    } else if (attacker.state === 'heavy_attack') {
+      playSound('heavy_hit');
+      spawnHitSpark(hitX, hitY, attacker.color);
+      spawnParticles(hitX, hitY, '#ffff88', 6, 2, 4, 20);
+      triggerShake(6, 8);
+    } else if (attacker.state === 'special') {
+      playSound('heavy_hit');
+      spawnSpecialFX(hitX, hitY, attacker.color);
+      triggerShake(8, 12);
+
+      // Apply special effects on hit
+      const eff = attacker.special.effect;
+      switch(eff) {
+        case 'stun':
+          defender.stunTimer = 60;
+          break;
+        case 'dot':
+          defender.dotTimer = 180;
+          defender.dotDamage = 3;
+          break;
+        case 'lifesteal':
+          attacker.heal(Math.floor(dmgDealt * 0.6));
+          break;
+      }
+    }
+
+    // Combo tracking
+    attacker.comboCount++;
+    attacker.comboTimer = 60;
+
+    // Damage text
+    const txt = isCrit ? `CRIT ${dmgDealt}!` : `${dmgDealt}`;
+    comboTexts.push({
+      text: txt,
+      x: hitX + (Math.random() - 0.5) * 30,
+      y: hitY - 20,
+      timer: 45,
+      color: isCrit ? '#ffff00' : '#ffffff',
+      size: isCrit ? 20 : 14
+    });
+
+    if (attacker.comboCount >= 3) {
+      comboTexts.push({
+        text: `${attacker.comboCount} HIT COMBO!`,
+        x: hitX, y: hitY - 50, timer: 60,
+        color: '#ffaa00', size: 16
+      });
+    }
+  }
+}
+
+// ============================
+// DRAWING FUNCTIONS
+// ============================
+function drawBeing(fighter, flip) {
+  const frameSet = sprites[fighter.name];
+  if (!frameSet) return;
+
+  // Choose frame based on state
+  let frameIdx;
+  switch(fighter.state) {
+    case 'idle':
+      frameIdx = [0, 1, 2, 3][Math.floor(fighter.animFrame / 4) % 4]; break;
+    case 'walk':
+      frameIdx = 4 + (fighter.animFrame % 4); break;
+    case 'light_attack':
+      frameIdx = 8 + Math.min(Math.floor((16 - fighter.stateTimer) / 4), 3); break;
+    case 'heavy_attack':
+      frameIdx = 8 + Math.min(Math.floor((28 - fighter.stateTimer) / 7), 3); break;
+    case 'special':
+      frameIdx = 12 + (fighter.animFrame % 4); break;
+    case 'hurt':
+      frameIdx = 8; break;
+    case 'blocking':
+      frameIdx = 4; break;
+    case 'jump':
+      frameIdx = 6; break;
+    case 'ko':
+      frameIdx = 9; break;
+    default:
+      frameIdx = 0;
+  }
+
+  const frame = frameSet[frameIdx % 16];
+  if (!frame) return;
+
+  const sx = fighter.getScreenX();
+  const sy = fighter.getScreenY();
+  const drawW = fighter.width * 1.6;
+  const drawH = fighter.height * 1.6;
+
+  ctx.save();
+  ctx.translate(sx, sy + fighter.height * 0.5);
+
+  // Flash white when hurt
+  if (fighter.state === 'hurt' && fighter.stateTimer % 4 < 2) {
+    ctx.globalAlpha = 0.7;
+  }
+
+  // Flip based on facing
+  if (fighter.facing === -1) {
+    ctx.scale(-1, 1);
+  }
+
+  // Shield glow
+  if (fighter.shieldHP > 0) {
+    ctx.shadowColor = '#44ff88';
+    ctx.shadowBlur = 15;
+  }
+  // Armor glow
+  if (fighter.armorTimer > 0) {
+    ctx.shadowColor = '#6688cc';
+    ctx.shadowBlur = 12;
+  }
+  // Unstoppable glow
+  if (fighter.unstoppableTimer > 0) {
+    ctx.shadowColor = '#ffcc44';
+    ctx.shadowBlur = 15;
+  }
+  // Berserk glow
+  if (fighter.berserkActive && fighter.hp < fighter.maxHp * 0.3) {
+    ctx.shadowColor = '#ff4400';
+    ctx.shadowBlur = 20;
+  }
+
+  ctx.drawImage(frame, -drawW / 2, -drawH / 2, drawW, drawH);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+function drawHealthBar(fighter, x, y, w, align) {
+  const data = BEING_DATA[fighter.name];
+  const hpPct = fighter.hp / fighter.maxHp;
+  const meterPct = fighter.meter / 100;
+
+  // Background
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(x, y, w, 24);
+  ctx.strokeStyle = '#333355';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, w, 24);
+
+  // HP bar
+  const hpColor = hpPct > 0.5 ? '#44cc44' : hpPct > 0.25 ? '#cccc44' : '#cc4444';
+  const hpW = w * hpPct;
+  if (align === 'left') {
+    ctx.fillStyle = hpColor;
+    ctx.fillRect(x + 2, y + 2, hpW - 4, 20);
+    // Shine
+    ctx.fillStyle = 'rgba(255,255,255, 0.65)';
+    ctx.fillRect(x + 2, y + 2, hpW - 4, 8);
+  } else {
+    ctx.fillStyle = hpColor;
+    ctx.fillRect(x + w - hpW + 2, y + 2, hpW - 4, 20);
+    ctx.fillStyle = 'rgba(255,255,255, 0.65)';
+    ctx.fillRect(x + w - hpW + 2, y + 2, hpW - 4, 8);
+  }
+
+  // Shield overlay
+  if (fighter.shieldHP > 0) {
+    ctx.fillStyle = 'rgba(68, 255, 136, 0.3)';
+    const shPct = fighter.shieldHP / 40;
+    if (align === 'left') ctx.fillRect(x + 2, y + 2, (w-4) * shPct, 20);
+    else ctx.fillRect(x + w - (w-4)*shPct - 2, y + 2, (w-4)*shPct, 20);
+  }
+
+  // HP text
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '11px "JetBrains Mono"';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${fighter.hp}/${fighter.maxHp}`, x + w/2, y + 16);
+
+  // Meter bar below
+  ctx.fillStyle = '#111122';
+  ctx.fillRect(x, y + 28, w, 10);
+  ctx.strokeStyle = '#222244';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y + 28, w, 10);
+
+  const meterColor = fighter.meter >= fighter.special.cost ? '#CC88FF' : '#663399';
+  const meterW = w * meterPct;
+  if (align === 'left') {
+    ctx.fillStyle = meterColor;
+    ctx.fillRect(x + 1, y + 29, meterW - 2, 8);
+  } else {
+    ctx.fillStyle = meterColor;
+    ctx.fillRect(x + w - meterW + 1, y + 29, meterW - 2, 8);
+  }
+
+  // Meter flash when full
+  if (fighter.meter >= fighter.special.cost) {
+    ctx.fillStyle = `rgba(204, 136, 255, ${0.15 + Math.sin(Date.now()/200) * 0.1})`;
+    ctx.fillRect(x, y + 28, w, 10);
+  }
+
+  // Name
+  ctx.fillStyle = data.color;
+  ctx.font = '14px "Press Start 2P"';
+  ctx.textAlign = align;
+  const nameX = align === 'left' ? x : x + w;
+  ctx.fillText(data.title.toUpperCase(), nameX, y - 8);
+
+  // Win dots
+  ctx.textAlign = align;
+  const dotBaseX = align === 'left' ? x : x + w - 30;
+  for (let i = 0; i < 2; i++) {
+    ctx.beginPath();
+    ctx.arc(dotBaseX + i * 18 + 5, y + 50, 5, 0, Math.PI * 2);
+    ctx.fillStyle = i < fighter.wins ? '#ffcc00' : '#333355';
+    ctx.fill();
+    ctx.strokeStyle = '#555577';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Special name
+  ctx.fillStyle = '#8866aa';
+  ctx.font = '9px "JetBrains Mono"';
+  ctx.textAlign = align;
+  ctx.fillText(fighter.special.name, nameX, y + 50);
+}
+
+function drawArena() {
+  // Sky gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#050510');
+  grad.addColorStop(0.5, '#0a0a25');
+  grad.addColorStop(1, '#0f0f2a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  const starSeed = 42;
+  for (let i = 0; i < 60; i++) {
+    const sx = ((starSeed * (i+1) * 7919) % W);
+    const sy = ((starSeed * (i+1) * 1031) % (H * 0.6));
+    const flicker = 0.3 + Math.sin(Date.now() / 1000 + i) * 0.3 + 0.4;
+    ctx.fillStyle = `rgba(180, 180, 220, ${flicker})`;
+    ctx.fillRect(sx, sy, 1.5, 1.5);
+  }
+
+  // Ground
+  const gy = H * 0.72;
+  const groundGrad = ctx.createLinearGradient(0, gy, 0, H);
+  groundGrad.addColorStop(0, '#151530');
+  groundGrad.addColorStop(0.3, '#0e0e22');
+  groundGrad.addColorStop(1, '#080818');
+  ctx.fillStyle = groundGrad;
+  ctx.fillRect(0, gy, W, H - gy);
+
+  // Ground line
+  ctx.strokeStyle = '#88CC88';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = '#88CC88';
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.moveTo(0, gy);
+  ctx.lineTo(W, gy);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Grid lines on ground
+  ctx.strokeStyle = 'rgba(136, 204, 136, 0.08)';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 20; i++) {
+    const ly = gy + i * 20;
+    if (ly > H) break;
+    ctx.beginPath();
+    ctx.moveTo(0, ly);
+    ctx.lineTo(W, ly);
+    ctx.stroke();
+  }
+  for (let i = 0; i < 30; i++) {
+    const lx = (i * 60 + (Date.now() / 50) % 60) % W;
+    ctx.beginPath();
+    ctx.moveTo(lx, gy);
+    ctx.lineTo(lx + (lx - W/2) * 0.5, H);
+    ctx.stroke();
+  }
+}
+
+function drawSelectScreen() {
+  // Background
+  ctx.fillStyle = '#050510';
+  ctx.fillRect(0, 0, W, H);
+
+  // Title
+  ctx.fillStyle = gameState === 'select_p1' ? '#88CC88' : '#CC88FF';
+  ctx.font = `${Math.floor(24 * SCALE)}px "Press Start 2P"`;
+  ctx.textAlign = 'center';
+  const selectText = gameState === 'select_p1' ? 'SELECT YOUR FIGHTER' : 'SELECT OPPONENT';
+  ctx.fillText(selectText, W/2, 50 * SCALE);
+
+  // Grid of portraits (4x4)
+  const cols = 4;
+  const rows = 4;
+  const padX = W * 0.08;
+  const padY = 80 * SCALE;
+  const cellW = (W - padX * 2) / cols;
+  const cellH = (H - padY - 60 * SCALE) / rows;
+  const portraitSize = Math.min(cellW, cellH) * 0.7;
+
+  for (let i = 0; i < 16; i++) {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const cx = padX + col * cellW + cellW / 2;
+    const cy = padY + row * cellH + cellH / 2;
+    const name = BEING_NAMES[i];
+    const data = BEING_DATA[name];
+
+    // Selection highlight
+    if (i === selectCursor) {
+      ctx.strokeStyle = gameState === 'select_p1' ? '#88CC88' : '#CC88FF';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = ctx.strokeStyle;
+      ctx.shadowBlur = 15;
+      ctx.strokeRect(cx - portraitSize/2 - 6, cy - portraitSize/2 - 6, portraitSize + 12, portraitSize + 12);
+      ctx.shadowBlur = 0;
+    }
+
+    // Already selected (p1 when choosing p2)
+    if (gameState === 'select_p2' && i === p1Select) {
+      ctx.fillStyle = 'rgba(136, 204, 136, 0.15)';
+      ctx.fillRect(cx - portraitSize/2 - 4, cy - portraitSize/2 - 4, portraitSize + 8, portraitSize + 8);
+      ctx.strokeStyle = '#88CC88';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx - portraitSize/2 - 4, cy - portraitSize/2 - 4, portraitSize + 8, portraitSize + 8);
+    }
+
+    // Portrait
+    const portrait = portraits[name];
+    if (portrait) {
+      ctx.drawImage(portrait, cx - portraitSize/2, cy - portraitSize/2, portraitSize, portraitSize);
+    } else {
+      ctx.fillStyle = data.color;
+      ctx.fillRect(cx - portraitSize/2, cy - portraitSize/2, portraitSize, portraitSize);
+    }
+
+    // Border
+    ctx.strokeStyle = data.color;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cx - portraitSize/2, cy - portraitSize/2, portraitSize, portraitSize);
+
+    // Name
+    ctx.fillStyle = '#c8c8d0';
+    ctx.font = `${Math.max(8, Math.floor(9 * SCALE))}px "Press Start 2P"`;
+    ctx.textAlign = 'center';
+    ctx.fillText(data.title.toUpperCase(), cx, cy + portraitSize/2 + 14 * SCALE);
+  }
+
+  // Selected being info panel
+  const selName = BEING_NAMES[selectCursor];
+  const selData = BEING_DATA[selName];
+
+  // Info at bottom
+  ctx.fillStyle = 'rgba(10, 10, 30, 0.9)';
+  ctx.fillRect(0, H - 80 * SCALE, W, 80 * SCALE);
+  ctx.strokeStyle = '#333355';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, H - 80 * SCALE); ctx.lineTo(W, H - 80 * SCALE); ctx.stroke();
+
+  ctx.fillStyle = selData.color;
+  ctx.font = `${Math.floor(14 * SCALE)}px "Press Start 2P"`;
+  ctx.textAlign = 'left';
+  ctx.fillText(selData.title.toUpperCase(), 20, H - 55 * SCALE);
+
+  ctx.fillStyle = '#888899';
+  ctx.font = `${Math.floor(11 * SCALE)}px "JetBrains Mono"`;
+  ctx.fillText(selData.desc, 20, H - 38 * SCALE);
+
+  // Stats
+  const statsX = W * 0.4;
+  const barW = 80 * SCALE;
+  const stats = [
+    ['HP', selData.hp, 140], ['ATK', selData.atk, 18], ['DEF', selData.def, 15], ['SPD', selData.spd, 13]
+  ];
+  stats.forEach((s, i) => {
+    const sx = statsX + i * (barW + 40 * SCALE);
+    const sy = H - 55 * SCALE;
+    ctx.fillStyle = '#666688';
+    ctx.font = `${Math.floor(9 * SCALE)}px "JetBrains Mono"`;
+    ctx.textAlign = 'left';
+    ctx.fillText(s[0], sx, sy);
+
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(sx, sy + 5, barW, 8);
+    ctx.fillStyle = selData.color;
+    ctx.fillRect(sx, sy + 5, barW * (s[1] / s[2]), 8);
+  });
+
+  // Special info
+  ctx.fillStyle = '#CC88FF';
+  ctx.font = `${Math.floor(10 * SCALE)}px "JetBrains Mono"`;
+  ctx.textAlign = 'left';
+  ctx.fillText(`Special: ${selData.special.name} - ${selData.special.desc}`, 20, H - 15 * SCALE);
+
+  // Controls hint
+  ctx.fillStyle = '#444466';
+  ctx.font = `${Math.floor(9 * SCALE)}px "JetBrains Mono"`;
+  ctx.textAlign = 'center';
+  ctx.fillText('WASD to move cursor / J to confirm / K to go back', W/2, H - 3 * SCALE);
+}
+
+function drawTitleScreen() {
+  ctx.fillStyle = '#050510';
+  ctx.fillRect(0, 0, W, H);
+
+  titlePulse += 0.03;
+
+  // Logo glow
+  const glowSize = 200 + Math.sin(titlePulse) * 20;
+  const grd = ctx.createRadialGradient(W/2, H*0.35, 0, W/2, H*0.35, glowSize);
+  grd.addColorStop(0, 'rgba(136, 204, 136, 0.08)');
+  grd.addColorStop(0.5, 'rgba(204, 136, 255, 0.03)');
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, W, H);
+
+  // Title
+  ctx.save();
+  ctx.shadowColor = '#88CC88';
+  ctx.shadowBlur = 25 + Math.sin(titlePulse * 2) * 10;
+  ctx.fillStyle = '#88CC88';
+  ctx.font = `${Math.floor(42 * SCALE)}px "Press Start 2P"`;
+  ctx.textAlign = 'center';
+  ctx.fillText('BEING', W/2, H * 0.3);
+
+  ctx.shadowColor = '#CC88FF';
+  ctx.fillStyle = '#CC88FF';
+  ctx.fillText('ARENA', W/2, H * 0.3 + 55 * SCALE);
+  ctx.restore();
+
+  // Subtitle
+  ctx.fillStyle = '#555577';
+  ctx.font = `${Math.floor(12 * SCALE)}px "JetBrains Mono"`;
+  ctx.fillText('A GameGob Production', W/2, H * 0.3 + 90 * SCALE);
+
+  // Animated beings on sides
+  const t = Date.now() / 200;
+  for (let i = 0; i < 4; i++) {
+    const name = BEING_NAMES[Math.floor(t/10 + i*4) % 16];
+    const frame = sprites[name] ? sprites[name][Math.floor(t + i*3) % 16] : null;
+    if (frame) {
+      const bx = i < 2 ? W * 0.12 + i * 70 : W * 0.78 + (i-2) * 70;
+      const by = H * 0.45 + Math.sin(t + i) * 15;
+      ctx.globalAlpha = 0.4;
+      ctx.save();
+      if (i >= 2) { ctx.translate(bx + 40, by); ctx.scale(-1,1); ctx.drawImage(frame, -40, 0, 80, 100); }
+      else ctx.drawImage(frame, bx, by, 80, 100);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Press start
+  const blink = Math.sin(titlePulse * 3) > 0;
+  if (blink) {
+    ctx.fillStyle = '#c8c8d0';
+    ctx.font = `${Math.floor(14 * SCALE)}px "Press Start 2P"`;
+    ctx.textAlign = 'center';
+    ctx.fillText('PRESS ANY KEY TO START', W/2, H * 0.72);
+  }
+
+  // Controls
+  ctx.fillStyle = '#444466';
+  ctx.font = `${Math.floor(10 * SCALE)}px "JetBrains Mono"`;
+  ctx.textAlign = 'center';
+  ctx.fillText('WASD = Move   J = Light   K = Heavy   L = Block   U = Special', W/2, H * 0.85);
+  ctx.fillText('Touch controls available on mobile', W/2, H * 0.89);
+
+  // Credits
+  ctx.fillStyle = '#333344';
+  ctx.font = `${Math.floor(9 * SCALE)}px "JetBrains Mono"`;
+  ctx.fillText('MASCOM / GameGob: The AGI Gaming Company', W/2, H * 0.96);
+}
+
+function drawFightUI() {
+  const barW = W * 0.38;
+  const barY = 20;
+
+  drawHealthBar(p1, 20, barY, barW, 'left');
+  drawHealthBar(p2, W - barW - 20, barY, barW, 'right');
+
+  // Round counter center
+  ctx.fillStyle = '#888899';
+  ctx.font = `${Math.floor(12 * SCALE)}px "Press Start 2P"`;
+  ctx.textAlign = 'center';
+  ctx.fillText(`ROUND ${roundNum}`, W/2, 35);
+
+  // Timer
+  if (roundTimer > 0) {
+    const secs = Math.ceil(roundTimer / 60);
+    ctx.fillStyle = secs <= 10 ? '#ff4444' : '#ccccdd';
+    ctx.font = `${Math.floor(20 * SCALE)}px "Press Start 2P"`;
+    ctx.fillText(secs.toString(), W/2, 62);
+  }
+
+  // Announcements
+  if (announceTimer > 0) {
+    const alpha = Math.min(1, announceTimer / 15);
+    const scale = announceTimer > 50 ? 1 + (announceTimer - 50) * 0.02 : 1;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(W/2, H * 0.4);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    ctx.font = `${Math.floor(36 * SCALE)}px "Press Start 2P"`;
+    ctx.textAlign = 'center';
+    ctx.strokeText(roundAnnounce, 0, 0);
+    ctx.fillText(roundAnnounce, 0, 0);
+    ctx.restore();
+    announceTimer--;
+  }
+
+  // Combo/damage texts
+  for (let i = comboTexts.length - 1; i >= 0; i--) {
+    const ct = comboTexts[i];
+    ct.timer--;
+    ct.y -= 1.2;
+    if (ct.timer <= 0) { comboTexts.splice(i, 1); continue; }
+    ctx.globalAlpha = Math.min(1, ct.timer / 15);
+    ctx.fillStyle = ct.color;
+    ctx.font = `${ct.size || 14}px "Press Start 2P"`;
+    ctx.textAlign = 'center';
+    ctx.fillText(ct.text, ct.x, ct.y);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawMatchEnd() {
+  ctx.fillStyle = 'rgba(5, 5, 16, 0.85)';
+  ctx.fillRect(0, 0, W, H);
+
+  const winner = matchWinner === 'p1' ? p1 : p2;
+  const data = BEING_DATA[winner.name];
+
+  // Winner portrait
+  const portrait = portraits[winner.name];
+  if (portrait) {
+    ctx.save();
+    ctx.shadowColor = data.color;
+    ctx.shadowBlur = 30;
+    ctx.drawImage(portrait, W/2 - 80, H * 0.2, 160, 160);
+    ctx.restore();
+  }
+
+  ctx.fillStyle = data.color;
+  ctx.font = `${Math.floor(32 * SCALE)}px "Press Start 2P"`;
+  ctx.textAlign = 'center';
+  ctx.shadowColor = data.color;
+  ctx.shadowBlur = 20;
+  ctx.fillText(data.title.toUpperCase(), W/2, H * 0.55);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `${Math.floor(24 * SCALE)}px "Press Start 2P"`;
+  ctx.fillText(matchWinner === 'p1' ? 'YOU WIN!' : 'DEFEATED!', W/2, H * 0.63);
+
+  const blink = Math.sin(Date.now() / 300) > 0;
+  if (blink) {
+    ctx.fillStyle = '#888899';
+    ctx.font = `${Math.floor(12 * SCALE)}px "Press Start 2P"`;
+    ctx.fillText('PRESS J TO REMATCH / K FOR SELECT', W/2, H * 0.78);
+  }
+}
+
+// ============================
+// GAME LOOP
+// ============================
+function updateTitle() {
+  for (const k in keys) {
+    if (keys[k]) {
+      gameState = 'select_p1';
+      selectCursor = 0;
+      selectConfirmed = false;
+      playSound('confirm');
+      break;
+    }
+  }
+}
+
+function updateSelect() {
+  // Navigate grid (4x4)
+  if (justPressed['w'] || justPressed['arrowup']) { selectCursor = (selectCursor - 4 + 16) % 16; playSound('select'); }
+  if (justPressed['s'] || justPressed['arrowdown']) { selectCursor = (selectCursor + 4) % 16; playSound('select'); }
+  if (justPressed['a'] || justPressed['arrowleft']) { selectCursor = selectCursor % 4 === 0 ? selectCursor + 3 : selectCursor - 1; playSound('select'); }
+  if (justPressed['d'] || justPressed['arrowright']) { selectCursor = selectCursor % 4 === 3 ? selectCursor - 3 : selectCursor + 1; playSound('select'); }
+
+  if (justPressed['j'] || justPressed['enter']) {
+    playSound('confirm');
+    if (gameState === 'select_p1') {
+      p1Select = selectCursor;
+      gameState = 'select_p2';
+      // Auto-select a different being for p2
+      selectCursor = (p1Select + 1) % 16;
+    } else {
+      p2Select = selectCursor;
+      startMatch();
+    }
+  }
+
+  if (justPressed['k'] || justPressed['escape'] || justPressed['backspace']) {
+    if (gameState === 'select_p2') {
+      gameState = 'select_p1';
+      selectCursor = p1Select;
+      playSound('select');
+    } else {
+      gameState = 'title';
+    }
+  }
+}
+
+function startMatch() {
+  roundNum = 1;
+  resetFighters();
+  p1.wins = 0;
+  p2.wins = 0;
+  startRound();
+}
+
+function startRound() {
+  gameState = 'pre_round';
+  transitionTimer = 90;
+  roundAnnounce = `ROUND ${roundNum}`;
+  announceTimer = 70;
+  roundTimer = 99 * 60; // 99 seconds
+
+  // Reset positions and HP but keep wins
+  const w1 = p1.wins, w2 = p2.wins;
+  p1 = new Fighter(BEING_NAMES[p1Select], W * 0.3, 1);
+  p2 = new Fighter(BEING_NAMES[p2Select], W * 0.7, -1);
+  p1.wins = w1; p2.wins = w2;
+  ai = new FightAI(p2, 0.5 + roundNum * 0.08);
+
+  playSound('round_start');
+}
+
+function updatePreRound() {
+  transitionTimer--;
+  if (transitionTimer <= 20 && transitionTimer > 0) {
+    if (transitionTimer === 20) {
+      roundAnnounce = 'FIGHT!';
+      announceTimer = 20;
+    }
+  }
+  if (transitionTimer <= 0) {
+    gameState = 'fighting';
+  }
+}
+
+function updateFight() {
+  // Round timer
+  roundTimer--;
+  if (roundTimer <= 0) {
+    // Time out - whoever has more HP wins
+    if (p1.hp >= p2.hp) endRound('p1');
+    else endRound('p2');
+    return;
+  }
+
+  // Player input
+  if (p1.canAct()) {
+    // Movement
+    let moving = false;
+    if (keys['a'] || keys['arrowleft']) {
+      p1.x -= p1.spd * 0.7;
+      p1.facing = p2.x < p1.x ? -1 : p1.facing; // Only face away if moving away
+      p1.state = 'walk';
+      moving = true;
+    }
+    if (keys['d'] || keys['arrowright']) {
+      p1.x += p1.spd * 0.7;
+      p1.state = 'walk';
+      moving = true;
+    }
+    if ((justPressed['w'] || justPressed['arrowup']) && p1.y === 0) {
+      p1.vy = -14;
+      p1.y = 1;
+      p1.state = 'jump';
+    }
+    if (!moving && p1.state === 'walk') p1.state = 'idle';
+
+    // Always face opponent
+    if (p1.state !== 'light_attack' && p1.state !== 'heavy_attack' && p1.state !== 'special') {
+      p1.facing = p2.x > p1.x ? 1 : -1;
+    }
+
+    // Attacks
+    if (justPressed['j']) p1.startAttack('light_attack');
+    if (justPressed['k']) p1.startAttack('heavy_attack');
+    if (keys['l']) { if (p1.canAct()) p1.state = 'blocking'; }
+    else if (p1.state === 'blocking') p1.state = 'idle';
+    if (justPressed['u'] || justPressed['i']) p1.useSpecial(p2);
+  }
+
+  // AI
+  ai.update(p1);
+
+  // Update fighters
+  p1.update();
+  p2.update();
+
+  // Hit detection
+  if (p1.state === 'light_attack' || p1.state === 'heavy_attack' || p1.state === 'special') {
+    checkHit(p1, p2);
+  }
+  if (p2.state === 'light_attack' || p2.state === 'heavy_attack' || p2.state === 'special') {
+    checkHit(p2, p1);
+  }
+
+  // Push apart when overlapping
+  const dist = Math.abs(p1.x - p2.x);
+  if (dist < 60) {
+    const push = (60 - dist) * 0.3;
+    if (p1.x < p2.x) { p1.x -= push; p2.x += push; }
+    else { p1.x += push; p2.x -= push; }
+  }
+
+  // Check KO
+  if (p1.hp <= 0) { endRound('p2'); return; }
+  if (p2.hp <= 0) { endRound('p1'); return; }
+}
+
+function endRound(winner) {
+  gameState = 'round_end';
+  transitionTimer = 120;
+
+  const loser = winner === 'p1' ? p2 : p1;
+  loser.state = 'ko';
+
+  if (winner === 'p1') p1.wins++;
+  else p2.wins++;
+
+  if (loser.hp <= 0) {
+    roundAnnounce = 'K.O.!';
+    playSound('ko');
+    triggerShake(12, 20);
+    spawnParticles(loser.getScreenX(), loser.getScreenY() + loser.height * 0.5, loser.color, 40, 5, 8, 40);
+  } else {
+    roundAnnounce = 'TIME!';
+  }
+  announceTimer = 80;
+}
+
+function updateRoundEnd() {
+  p1.update();
+  p2.update();
+  transitionTimer--;
+
+  if (transitionTimer <= 0) {
+    // Check for match win
+    if (p1.wins >= 2) {
+      gameState = 'match_end';
+      matchWinner = 'p1';
+      transitionTimer = 999;
+      playSound('round_start');
+    } else if (p2.wins >= 2) {
+      gameState = 'match_end';
+      matchWinner = 'p2';
+      transitionTimer = 999;
+      playSound('ko');
+    } else {
+      roundNum++;
+      startRound();
+    }
+  }
+}
+
+function updateMatchEnd() {
+  if (justPressed['j'] || justPressed['enter']) {
+    // Rematch
+    startMatch();
+    playSound('confirm');
+  }
+  if (justPressed['k'] || justPressed['escape']) {
+    gameState = 'select_p1';
+    selectCursor = p1Select;
+    playSound('select');
+  }
+}
+
+// ============================
+// MAIN LOOP
+// ============================
+let lastTime = 0;
+let accumulator = 0;
+const TICK = 1000 / 60;
+
+function gameLoop(timestamp) {
+  const dt = timestamp - lastTime;
+  lastTime = timestamp;
+  accumulator += dt;
+
+  // Cap to prevent spiral of death
+  if (accumulator > 200) accumulator = 200;
+
+  while (accumulator >= TICK) {
+    updateInput();
+
+    switch(gameState) {
+      case 'title': updateTitle(); break;
+      case 'select_p1':
+      case 'select_p2': updateSelect(); break;
+      case 'pre_round': updatePreRound(); break;
+      case 'fighting': updateFight(); break;
+      case 'round_end': updateRoundEnd(); break;
+      case 'match_end': updateMatchEnd(); break;
+    }
+
+    updateParticles();
+    updateShake();
+    accumulator -= TICK;
+  }
+
+  // Render
+  ctx.save();
+  ctx.translate(shakeX, shakeY);
+
+  switch(gameState) {
+    case 'title':
+      drawTitleScreen();
+      break;
+    case 'select_p1':
+    case 'select_p2':
+      drawSelectScreen();
+      break;
+    case 'pre_round':
+    case 'fighting':
+    case 'round_end':
+      drawArena();
+      drawBeing(p1);
+      drawBeing(p2);
+      drawParticles();
+      drawFightUI();
+      break;
+    case 'match_end':
+      drawArena();
+      drawBeing(p1);
+      drawBeing(p2);
+      drawParticles();
+      drawFightUI();
+      drawMatchEnd();
+      break;
+  }
+
+  ctx.restore();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ============================
+// INIT
+// ============================
+loadAllAssets().then(() => {
+  requestAnimationFrame(gameLoop);
+});
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

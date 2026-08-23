@@ -1,0 +1,2121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Ghost Eater — Capture, Upgrade, Conquer">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob/forge_ghost_eater.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Ghost Eater — Capture, Upgrade, Conquer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+canvas { display: block; margin: 0 auto; }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+'use strict';
+
+// ============================================================
+// GHOST EATER — Capture, Upgrade, Conquer
+// A maze-chase remix with gadget loadouts, meta-progression,
+// procedural mazes, and persistent upgrades
+// ============================================================
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// --- Audio Engine ---
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+const ensureAudio = () => { if (!audioCtx) audioCtx = new AudioCtx(); };
+
+const playSound = (freq, dur, type = 'square', vol = 0.15, slide = 0) => {
+  ensureAudio();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  if (slide) osc.frequency.linearRampToValueAtTime(freq + slide, audioCtx.currentTime + dur);
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + dur);
+};
+
+const SFX = {
+  eat: () => playSound(440, 0.08, 'sine', 0.12, 200),
+  powerUp: () => { playSound(523, 0.1, 'square', 0.12); setTimeout(() => playSound(659, 0.1, 'square', 0.12), 100); setTimeout(() => playSound(784, 0.15, 'square', 0.15), 200); },
+  capture: () => { playSound(300, 0.2, 'sawtooth', 0.15, 400); setTimeout(() => playSound(600, 0.15, 'sine', 0.1), 100); },
+  vacuum: () => playSound(100, 0.3, 'sawtooth', 0.08, 50),
+  trap: () => playSound(200, 0.2, 'triangle', 0.1, -100),
+  flash: () => playSound(800, 0.15, 'sine', 0.12, -400),
+  portal: () => { playSound(200, 0.3, 'sine', 0.1, 600); playSound(800, 0.3, 'sine', 0.08, -600); },
+  hit: () => playSound(150, 0.3, 'sawtooth', 0.2, -100),
+  die: () => { playSound(400, 0.4, 'square', 0.15, -300); setTimeout(() => playSound(200, 0.5, 'sawtooth', 0.12, -150), 200); },
+  levelUp: () => { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playSound(f, 0.15, 'sine', 0.12), i * 120)); },
+  gadgetUp: () => { playSound(600, 0.1, 'triangle', 0.1); setTimeout(() => playSound(900, 0.15, 'triangle', 0.12), 120); },
+  menuSelect: () => playSound(660, 0.1, 'sine', 0.1),
+  unlock: () => { [440, 554, 659, 880].forEach((f, i) => setTimeout(() => playSound(f, 0.2, 'sine', 0.1), i * 100)); },
+};
+
+// --- Constants ---
+const COLORS = {
+  bg: '#0a0a0f',
+  gold: '#f0b800',
+  green: '#00ff88',
+  red: '#ff3344',
+  blue: '#4488ff',
+  purple: '#cc44ff',
+  cyan: '#00ddff',
+  white: '#eeeeff',
+  wall: '#1a1a3f',
+  wallBorder: '#3333aa',
+  dot: '#f0b800',
+  darkBg: '#06060a',
+};
+
+const GADGETS = {
+  VACUUM: 0,
+  TRAP: 1,
+  FLASH: 2,
+  PORTAL: 3,
+};
+
+const GADGET_INFO = [
+  { name: 'Vacuum', key: '1/A', color: '#ff6644', icon: 'V', desc: 'Pulls ghosts toward you', cooldownBase: 3, durationBase: 1.5 },
+  { name: 'Trap', key: '2/S', color: '#44ff66', icon: 'T', desc: 'Places a ghost trap', cooldownBase: 5, durationBase: 4 },
+  { name: 'Flashlight', key: '3/D', color: '#ffff44', icon: 'F', desc: 'Stuns ghosts in a cone', cooldownBase: 4, durationBase: 0.8 },
+  { name: 'Portal Gun', key: '4/F', color: '#aa44ff', icon: 'P', desc: 'Teleport across the maze', cooldownBase: 8, durationBase: 0 },
+];
+
+const DIR = { NONE: -1, UP: 0, RIGHT: 1, DOWN: 2, LEFT: 3 };
+const DX = [0, 1, 0, -1];
+const DY = [-1, 0, 1, 0];
+
+const TILE = { EMPTY: 0, WALL: 1, DOT: 2, POWER: 3, GADGET_PICKUP: 4, HEALTH_PICKUP: 5 };
+
+// --- Seeded RNG ---
+class SeededRNG {
+  constructor(seed) { this.seed = seed; }
+  next() {
+    this.seed = (this.seed * 16807 + 0) % 2147483647;
+    return (this.seed - 1) / 2147483646;
+  }
+  nextInt(min, max) { return Math.floor(this.next() * (max - min + 1)) + min; }
+}
+
+// --- Save Data (Meta-Progression) ---
+const SAVE_KEY = 'ghosteater_save_v2';
+let saveData = {
+  totalGhostsCaptured: 0,
+  totalDotsEaten: 0,
+  totalRuns: 0,
+  bestScore: 0,
+  bestFloor: 0,
+  xp: 0,
+  level: 1,
+  gadgetXP: [0, 0, 0, 0],
+  gadgetLevels: [1, 1, 1, 1],
+  unlockedGadgets: [true, false, false, false],
+  upgrades: { maxHP: 0, speed: 0, dotValue: 0, cooldownReduction: 0, captureRange: 0 },
+  achievements: {},
+};
+
+const loadSave = () => {
+  try {
+    const d = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (d) saveData = { ...saveData, ...d };
+  } catch (e) {}
+};
+const writeSave = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); } catch (e) {} };
+loadSave();
+
+const ACHIEVEMENTS = [
+  { id: 'first_capture', name: 'First Catch', desc: 'Capture your first ghost', check: () => saveData.totalGhostsCaptured >= 1 },
+  { id: 'ghost_hunter', name: 'Ghost Hunter', desc: 'Capture 50 ghosts total', check: () => saveData.totalGhostsCaptured >= 50 },
+  { id: 'ghost_master', name: 'Ghost Master', desc: 'Capture 200 ghosts total', check: () => saveData.totalGhostsCaptured >= 200 },
+  { id: 'floor5', name: 'Deep Diver', desc: 'Reach floor 5', check: () => saveData.bestFloor >= 5 },
+  { id: 'floor10', name: 'Dungeon Crawler', desc: 'Reach floor 10', check: () => saveData.bestFloor >= 10 },
+  { id: 'score10k', name: 'Score Chaser', desc: 'Score 10,000 in one run', check: () => saveData.bestScore >= 10000 },
+  { id: 'score50k', name: 'High Roller', desc: 'Score 50,000 in one run', check: () => saveData.bestScore >= 50000 },
+  { id: 'all_gadgets', name: 'Fully Loaded', desc: 'Unlock all 4 gadgets', check: () => saveData.unlockedGadgets.every(g => g) },
+  { id: 'level10', name: 'Veteran', desc: 'Reach account level 10', check: () => saveData.level >= 10 },
+  { id: 'dots1000', name: 'Hungry', desc: 'Eat 1000 dots total', check: () => saveData.totalDotsEaten >= 1000 },
+];
+
+const XP_PER_LEVEL = (lv) => 100 + lv * 50;
+const GADGET_XP_PER_LEVEL = (lv) => 20 + lv * 15;
+
+const getUpgradeCost = (type, level) => (level + 1) * 500;
+const getUpgradeMax = (type) => 5;
+
+// --- Particles ---
+class Particle {
+  constructor(x, y, vx, vy, life, color, size = 3) {
+    this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+    this.life = life; this.maxLife = life; this.color = color; this.size = size;
+  }
+  update(dt) {
+    this.x += this.vx * dt; this.y += this.vy * dt;
+    this.vy += 80 * dt;
+    this.life -= dt;
+  }
+  draw(ctx) {
+    const a = Math.max(0, this.life / this.maxLife);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x - this.size / 2, this.y - this.size / 2, this.size * a + 1, this.size * a + 1);
+    ctx.globalAlpha = 1;
+  }
+}
+
+let particles = [];
+const spawnParticles = (x, y, color, count = 8, speed = 120, size = 3) => {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = speed * (0.3 + Math.random() * 0.7);
+    particles.push(new Particle(x, y, Math.cos(angle) * spd, Math.sin(angle) * spd, 0.4 + Math.random() * 0.4, color, size));
+  }
+};
+
+// --- Screen Shake ---
+let shakeAmount = 0;
+let shakeTime = 0;
+const triggerShake = (amount = 5, dur = 0.15) => { shakeAmount = amount; shakeTime = dur; };
+
+// --- Flash ---
+let flashColor = null;
+let flashTime = 0;
+const triggerFlash = (color = '#fff', dur = 0.08) => { flashColor = color; flashTime = dur; };
+
+// --- Floating Text ---
+class FloatingText {
+  constructor(x, y, text, color = COLORS.gold) {
+    this.x = x; this.y = y; this.text = text; this.color = color;
+    this.life = 1.0; this.vy = -40;
+  }
+  update(dt) { this.y += this.vy * dt; this.life -= dt; }
+  draw(ctx, ts) {
+    const a = Math.max(0, this.life);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = this.color;
+    ctx.font = `bold ${Math.floor(ts * 0.6)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(this.text, this.x, this.y);
+    ctx.globalAlpha = 1;
+  }
+}
+let floatingTexts = [];
+
+// --- Maze Generation ---
+const MAZE_W = 21;
+const MAZE_H = 21;
+
+const generateMaze = (floor, seed) => {
+  const rng = new SeededRNG(seed + floor * 9973);
+  const grid = Array.from({ length: MAZE_H }, () => Array(MAZE_W).fill(TILE.WALL));
+
+  // Recursive backtracker on odd cells
+  const carve = (cx, cy) => {
+    grid[cy][cx] = TILE.EMPTY;
+    const dirs = [0, 1, 2, 3].sort(() => rng.next() - 0.5);
+    for (const d of dirs) {
+      const nx = cx + DX[d] * 2;
+      const ny = cy + DY[d] * 2;
+      if (nx > 0 && nx < MAZE_W - 1 && ny > 0 && ny < MAZE_H - 1 && grid[ny][nx] === TILE.WALL) {
+        grid[cy + DY[d]][cx + DX[d]] = TILE.EMPTY;
+        carve(nx, ny);
+      }
+    }
+  };
+  carve(1, 1);
+
+  // Open extra passages for playability
+  const extraPassages = 15 + floor * 2;
+  for (let i = 0; i < extraPassages; i++) {
+    const x = rng.nextInt(2, MAZE_W - 3);
+    const y = rng.nextInt(2, MAZE_H - 3);
+    if (grid[y][x] === TILE.WALL) {
+      let adj = 0;
+      for (let d = 0; d < 4; d++) {
+        if (grid[y + DY[d]] && grid[y + DY[d]][x + DX[d]] === TILE.EMPTY) adj++;
+      }
+      if (adj >= 2) grid[y][x] = TILE.EMPTY;
+    }
+  }
+
+  // Place dots on all empty cells
+  for (let y = 0; y < MAZE_H; y++) {
+    for (let x = 0; x < MAZE_W; x++) {
+      if (grid[y][x] === TILE.EMPTY) grid[y][x] = TILE.DOT;
+    }
+  }
+
+  // Player spawn at (1,1) - clear area
+  grid[1][1] = TILE.EMPTY;
+  grid[1][2] = TILE.DOT;
+  grid[2][1] = TILE.DOT;
+
+  // Place power pellets
+  const powerCount = 4 + Math.floor(floor * 0.5);
+  let placed = 0;
+  for (let attempt = 0; attempt < 200 && placed < powerCount; attempt++) {
+    const x = rng.nextInt(1, MAZE_W - 2);
+    const y = rng.nextInt(1, MAZE_H - 2);
+    if (grid[y][x] === TILE.DOT) {
+      grid[y][x] = TILE.POWER;
+      placed++;
+    }
+  }
+
+  // Place gadget pickups (if not all unlocked)
+  if (!saveData.unlockedGadgets.every(g => g)) {
+    for (let attempt = 0; attempt < 50; attempt++) {
+      const x = rng.nextInt(1, MAZE_W - 2);
+      const y = rng.nextInt(1, MAZE_H - 2);
+      if (grid[y][x] === TILE.DOT && rng.next() < 0.3) {
+        grid[y][x] = TILE.GADGET_PICKUP;
+        break;
+      }
+    }
+  }
+
+  // Place health pickups
+  const hpCount = Math.max(1, 3 - Math.floor(floor / 3));
+  placed = 0;
+  for (let attempt = 0; attempt < 100 && placed < hpCount; attempt++) {
+    const x = rng.nextInt(1, MAZE_W - 2);
+    const y = rng.nextInt(1, MAZE_H - 2);
+    if (grid[y][x] === TILE.DOT) {
+      grid[y][x] = TILE.HEALTH_PICKUP;
+      placed++;
+    }
+  }
+
+  return grid;
+};
+
+// --- Ghost Class ---
+class Ghost {
+  constructor(x, y, type, floor) {
+    this.x = x; this.y = y;
+    this.type = type; // 0=chaser, 1=ambusher, 2=patrol, 3=random
+    this.dir = DIR.RIGHT;
+    this.speed = 2.5 + floor * 0.15 + type * 0.2;
+    this.baseSpeed = this.speed;
+    this.vulnerable = false;
+    this.vulnerableTimer = 0;
+    this.stunned = false;
+    this.stunnedTimer = 0;
+    this.trapped = false;
+    this.trappedTimer = 0;
+    this.beingVacuumed = false;
+    this.hp = 1 + Math.floor(floor / 3);
+    this.maxHP = this.hp;
+    this.moveTimer = 0;
+    this.pointValue = 100 + type * 50 + floor * 25;
+    this.colors = [COLORS.red, COLORS.cyan, '#ff88cc', '#ffaa44'][type] || COLORS.red;
+    this.eyeAngle = 0;
+    this.bobPhase = Math.random() * Math.PI * 2;
+  }
+  isActive() { return !this.trapped || this.trappedTimer > 0; }
+}
+
+// --- Trap Object ---
+class Trap {
+  constructor(x, y, duration) {
+    this.x = x; this.y = y;
+    this.life = duration; this.maxLife = duration;
+    this.active = true;
+    this.capturedGhost = null;
+  }
+}
+
+// --- Portal ---
+class Portal {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.life = 5;
+    this.phase = 0;
+  }
+}
+
+// --- Game State ---
+const STATE = { TITLE: 0, PLAYING: 1, PAUSED: 2, GAMEOVER: 3, UPGRADE: 4, FLOOR_CLEAR: 5 };
+let gameState = STATE.TITLE;
+let stateTimer = 0;
+
+// Game vars
+let maze = null;
+let tileSize = 0;
+let offsetX = 0, offsetY = 0;
+let player = null;
+let ghosts = [];
+let traps = [];
+let portals = [];
+let score = 0;
+let floor = 1;
+let dotsRemaining = 0;
+let totalDots = 0;
+let runGhostsCaptured = 0;
+let runDotsEaten = 0;
+let combo = 0;
+let comboTimer = 0;
+let powerTimer = 0;
+let gadgetCooldowns = [0, 0, 0, 0];
+let gadgetActive = [0, 0, 0, 0]; // active durations
+let selectedGadget = 0;
+let vacuumAngle = 0;
+let flashDir = DIR.RIGHT;
+let transitionTimer = 0;
+let inputDir = DIR.NONE;
+let nextDir = DIR.NONE;
+let keys = {};
+let touchStartX = 0, touchStartY = 0;
+let isMobile = false;
+let touchDPad = { active: false, dir: DIR.NONE };
+let touchAction = false;
+let touchGadgetSwitch = false;
+let newAchievements = [];
+let achievementDisplayTimer = 0;
+
+// --- Player ---
+const createPlayer = () => ({
+  x: 1, y: 1,
+  dir: DIR.RIGHT,
+  nextDir: DIR.NONE,
+  speed: 3.5 + saveData.upgrades.speed * 0.3,
+  maxHP: 3 + saveData.upgrades.maxHP,
+  hp: 3 + saveData.upgrades.maxHP,
+  moveProgress: 0,
+  mouthAngle: 0,
+  mouthDir: 1,
+  invincibleTimer: 0,
+});
+
+// --- Resize ---
+const resize = () => {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  canvas.width = w;
+  canvas.height = h;
+  tileSize = Math.floor(Math.min(w / (MAZE_W + 2), (h - 120) / (MAZE_H + 2)));
+  if (tileSize < 10) tileSize = 10;
+  offsetX = Math.floor((w - MAZE_W * tileSize) / 2);
+  offsetY = Math.floor((h - MAZE_H * tileSize) / 2) + 30;
+  isMobile = 'ontouchstart' in window || w < 800;
+};
+window.addEventListener('resize', resize);
+resize();
+
+// --- Maze Helpers ---
+const isWalkable = (tx, ty) => {
+  if (tx < 0 || tx >= MAZE_W || ty < 0 || ty >= MAZE_H) return false;
+  return maze[ty][tx] !== TILE.WALL;
+};
+
+const tileToScreen = (tx, ty) => ({
+  x: offsetX + tx * tileSize + tileSize / 2,
+  y: offsetY + ty * tileSize + tileSize / 2,
+});
+
+// --- Init Floor ---
+const initFloor = () => {
+  const seed = saveData.totalRuns * 1000 + floor;
+  maze = generateMaze(floor, seed);
+  player = createPlayer();
+  ghosts = [];
+  traps = [];
+  portals = [];
+  powerTimer = 0;
+  gadgetCooldowns = [0, 0, 0, 0];
+  gadgetActive = [0, 0, 0, 0];
+  particles = [];
+  floatingTexts = [];
+  combo = 0;
+  comboTimer = 0;
+
+  // Count dots
+  dotsRemaining = 0;
+  totalDots = 0;
+  for (let y = 0; y < MAZE_H; y++) {
+    for (let x = 0; x < MAZE_W; x++) {
+      if (maze[y][x] === TILE.DOT || maze[y][x] === TILE.POWER) {
+        dotsRemaining++;
+        totalDots++;
+      }
+    }
+  }
+
+  // Spawn ghosts
+  const ghostCount = Math.min(3 + Math.floor(floor * 0.8), 12);
+  const rng = new SeededRNG(seed + 777);
+  for (let i = 0; i < ghostCount; i++) {
+    let gx, gy;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      gx = rng.nextInt(Math.floor(MAZE_W / 2), MAZE_W - 2);
+      gy = rng.nextInt(Math.floor(MAZE_H / 2), MAZE_H - 2);
+      if (isWalkable(gx, gy) && (Math.abs(gx - 1) + Math.abs(gy - 1)) > 8) break;
+    }
+    ghosts.push(new Ghost(gx, gy, i % 4, floor));
+  }
+};
+
+// --- Input ---
+window.addEventListener('keydown', (e) => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key === 'ArrowUp' || e.key === 'w') nextDir = DIR.UP;
+  if (e.key === 'ArrowRight' || e.key === 'd' && !['1','2','3','4'].includes(e.key)) nextDir = DIR.RIGHT;
+  if (e.key === 'ArrowDown' || e.key === 's' && !['1','2','3','4'].includes(e.key)) nextDir = DIR.DOWN;
+  if (e.key === 'ArrowLeft' || e.key === 'a' && !['1','2','3','4'].includes(e.key)) nextDir = DIR.LEFT;
+  if (e.key === 'w') nextDir = DIR.UP;
+  if (e.key === 'a') nextDir = DIR.LEFT;
+  if (e.key === 's') nextDir = DIR.DOWN;
+  if (e.key === 'd') nextDir = DIR.RIGHT;
+
+  if (e.key === '1') selectedGadget = 0;
+  if (e.key === '2') selectedGadget = 1;
+  if (e.key === '3') selectedGadget = 2;
+  if (e.key === '4') selectedGadget = 3;
+  if (e.key === ' ' || e.key === 'e') useGadget();
+  if (e.key === 'q' || e.key === 'Tab') {
+    e.preventDefault();
+    cycleGadget();
+  }
+
+  if (gameState === STATE.TITLE && (e.key === 'Enter' || e.key === ' ')) startGame();
+  if (gameState === STATE.GAMEOVER && (e.key === 'Enter' || e.key === ' ')) goToUpgradeScreen();
+  if (gameState === STATE.UPGRADE && (e.key === 'Enter' || e.key === ' ') && stateTimer > 0.5) startGame();
+  if (gameState === STATE.FLOOR_CLEAR && (e.key === 'Enter' || e.key === ' ') && stateTimer > 1) nextFloor();
+});
+
+window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+// Touch controls
+let touchId = null;
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  ensureAudio();
+  const touch = e.changedTouches[0];
+  const tx = touch.clientX;
+  const ty = touch.clientY;
+
+  if (gameState === STATE.TITLE) { startGame(); return; }
+  if (gameState === STATE.GAMEOVER && stateTimer > 0.5) { goToUpgradeScreen(); return; }
+  if (gameState === STATE.UPGRADE) {
+    handleUpgradeTap(tx, ty);
+    return;
+  }
+  if (gameState === STATE.FLOOR_CLEAR && stateTimer > 1) { nextFloor(); return; }
+
+  if (gameState !== STATE.PLAYING) return;
+
+  const cw = canvas.width;
+  const ch = canvas.height;
+
+  // Right side: action button area
+  if (tx > cw * 0.75) {
+    // Top-right: gadget switch
+    if (ty < ch * 0.5) {
+      cycleGadget();
+    } else {
+      // Bottom-right: use gadget
+      useGadget();
+    }
+    return;
+  }
+
+  // Left side: D-pad
+  if (tx < cw * 0.4) {
+    touchStartX = tx;
+    touchStartY = ty;
+    touchDPad.active = true;
+    touchId = touch.identifier;
+    return;
+  }
+
+  // Middle tap: use gadget
+  useGadget();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (!touchDPad.active) return;
+  for (const touch of e.changedTouches) {
+    if (touch.identifier === touchId) {
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+      if (Math.abs(dx) + Math.abs(dy) > 15) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+          nextDir = dx > 0 ? DIR.RIGHT : DIR.LEFT;
+        } else {
+          nextDir = dy > 0 ? DIR.DOWN : DIR.UP;
+        }
+      }
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  for (const touch of e.changedTouches) {
+    if (touch.identifier === touchId) {
+      touchDPad.active = false;
+      touchId = null;
+    }
+  }
+}, { passive: false });
+
+// Mouse click for title/gameover
+canvas.addEventListener('click', (e) => {
+  ensureAudio();
+  if (gameState === STATE.TITLE) startGame();
+  else if (gameState === STATE.GAMEOVER && stateTimer > 0.5) goToUpgradeScreen();
+  else if (gameState === STATE.UPGRADE) handleUpgradeTap(e.clientX, e.clientY);
+  else if (gameState === STATE.FLOOR_CLEAR && stateTimer > 1) nextFloor();
+});
+
+const cycleGadget = () => {
+  let next = (selectedGadget + 1) % 4;
+  let tries = 0;
+  while (!saveData.unlockedGadgets[next] && tries < 4) {
+    next = (next + 1) % 4;
+    tries++;
+  }
+  if (saveData.unlockedGadgets[next]) {
+    selectedGadget = next;
+    SFX.menuSelect();
+  }
+};
+
+// --- Gadget Use ---
+const useGadget = () => {
+  if (gameState !== STATE.PLAYING) return;
+  if (!saveData.unlockedGadgets[selectedGadget]) return;
+  if (gadgetCooldowns[selectedGadget] > 0) return;
+
+  const g = selectedGadget;
+  const info = GADGET_INFO[g];
+  const level = saveData.gadgetLevels[g];
+  const cdReduction = 1 - saveData.upgrades.cooldownReduction * 0.08;
+  const cooldown = info.cooldownBase * cdReduction / (1 + (level - 1) * 0.15);
+  const duration = info.durationBase * (1 + (level - 1) * 0.2);
+
+  gadgetCooldowns[g] = cooldown;
+
+  // Earn gadget XP
+  saveData.gadgetXP[g] += 1;
+  const xpNeeded = GADGET_XP_PER_LEVEL(saveData.gadgetLevels[g]);
+  if (saveData.gadgetXP[g] >= xpNeeded) {
+    saveData.gadgetXP[g] -= xpNeeded;
+    saveData.gadgetLevels[g]++;
+    SFX.gadgetUp();
+    const pos = tileToScreen(player.x, player.y);
+    floatingTexts.push(new FloatingText(pos.x, pos.y - 20, `${info.name} Lv${saveData.gadgetLevels[g]}!`, info.color));
+  }
+
+  switch (g) {
+    case GADGETS.VACUUM: {
+      SFX.vacuum();
+      gadgetActive[g] = duration;
+      vacuumAngle = player.dir * Math.PI / 2 - Math.PI / 2;
+      break;
+    }
+    case GADGETS.TRAP: {
+      SFX.trap();
+      const trap = new Trap(Math.round(player.x), Math.round(player.y), duration);
+      traps.push(trap);
+      const pos = tileToScreen(trap.x, trap.y);
+      spawnParticles(pos.x, pos.y, GADGET_INFO[GADGETS.TRAP].color, 6, 60);
+      break;
+    }
+    case GADGETS.FLASH: {
+      SFX.flash();
+      gadgetActive[g] = duration;
+      flashDir = player.dir;
+      triggerFlash(GADGET_INFO[GADGETS.FLASH].color, 0.1);
+      // Stun ghosts in cone
+      const px = player.x;
+      const py = player.y;
+      const range = 4 + level;
+      ghosts.forEach(ghost => {
+        const dx = ghost.x - px;
+        const dy = ghost.y - py;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < range) {
+          const angle = Math.atan2(dy, dx);
+          const faceAngle = [- Math.PI / 2, 0, Math.PI / 2, Math.PI][flashDir];
+          let angleDiff = angle - faceAngle;
+          while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+          while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+          if (Math.abs(angleDiff) < Math.PI / 3) {
+            ghost.stunned = true;
+            ghost.stunnedTimer = 1.5 + level * 0.3;
+            const gpos = tileToScreen(ghost.x, ghost.y);
+            spawnParticles(gpos.x, gpos.y, '#ffff44', 5, 40);
+          }
+        }
+      });
+      break;
+    }
+    case GADGETS.PORTAL: {
+      SFX.portal();
+      // Place entry portal at player position
+      const entryPortal = new Portal(Math.round(player.x), Math.round(player.y));
+      // Find a distant walkable tile
+      let bestX = player.x, bestY = player.y, bestDist = 0;
+      const rng = new SeededRNG(Date.now());
+      for (let attempt = 0; attempt < 50; attempt++) {
+        const tx = rng.nextInt(1, MAZE_W - 2);
+        const ty = rng.nextInt(1, MAZE_H - 2);
+        if (isWalkable(tx, ty)) {
+          const dist = Math.abs(tx - player.x) + Math.abs(ty - player.y);
+          if (dist > bestDist) {
+            bestDist = dist;
+            bestX = tx;
+            bestY = ty;
+          }
+        }
+      }
+      const exitPortal = new Portal(bestX, bestY);
+      portals = [entryPortal, exitPortal];
+      // Teleport player
+      player.x = bestX;
+      player.y = bestY;
+      const pos = tileToScreen(bestX, bestY);
+      spawnParticles(pos.x, pos.y, GADGET_INFO[GADGETS.PORTAL].color, 15, 100, 4);
+      triggerShake(6, 0.2);
+      break;
+    }
+  }
+};
+
+// --- Start Game ---
+const startGame = () => {
+  ensureAudio();
+  SFX.menuSelect();
+  gameState = STATE.PLAYING;
+  score = 0;
+  floor = 1;
+  runGhostsCaptured = 0;
+  runDotsEaten = 0;
+  saveData.totalRuns++;
+  initFloor();
+  stateTimer = 0;
+};
+
+const goToUpgradeScreen = () => {
+  gameState = STATE.UPGRADE;
+  stateTimer = 0;
+  SFX.menuSelect();
+};
+
+const nextFloor = () => {
+  floor++;
+  initFloor();
+  gameState = STATE.PLAYING;
+  stateTimer = 0;
+  SFX.levelUp();
+};
+
+// --- Upgrade Screen ---
+const upgradeButtons = [];
+const buildUpgradeButtons = () => {
+  upgradeButtons.length = 0;
+  const types = ['maxHP', 'speed', 'dotValue', 'cooldownReduction', 'captureRange'];
+  const names = ['Max HP', 'Speed', 'Dot Value', 'Cooldown Reduction', 'Capture Range'];
+  const cw = canvas.width;
+  const ch = canvas.height;
+  const bw = Math.min(280, cw * 0.8);
+  const bh = 44;
+  const startY = ch * 0.3;
+  types.forEach((type, i) => {
+    const lv = saveData.upgrades[type];
+    const maxLv = getUpgradeMax(type);
+    const cost = lv >= maxLv ? -1 : getUpgradeCost(type, lv);
+    upgradeButtons.push({
+      x: cw / 2 - bw / 2,
+      y: startY + i * (bh + 12),
+      w: bw, h: bh,
+      type, name: names[i], level: lv, maxLevel: maxLv, cost,
+    });
+  });
+  // Play button
+  upgradeButtons.push({
+    x: cw / 2 - bw / 2,
+    y: startY + types.length * (bh + 12) + 20,
+    w: bw, h: bh + 6,
+    type: 'play', name: 'PLAY AGAIN', level: 0, maxLevel: 0, cost: 0,
+  });
+};
+
+const handleUpgradeTap = (tx, ty) => {
+  buildUpgradeButtons();
+  for (const btn of upgradeButtons) {
+    if (tx >= btn.x && tx <= btn.x + btn.w && ty >= btn.y && ty <= btn.y + btn.h) {
+      if (btn.type === 'play') {
+        startGame();
+        return;
+      }
+      const lv = saveData.upgrades[btn.type];
+      if (lv < btn.maxLevel && score >= btn.cost) {
+        // Spend XP/score from saveData
+        saveData.upgrades[btn.type]++;
+        SFX.powerUp();
+        writeSave();
+        buildUpgradeButtons();
+        return;
+      }
+    }
+  }
+};
+
+// --- Capture Ghost ---
+const captureGhost = (ghost, index) => {
+  const pos = tileToScreen(ghost.x, ghost.y);
+  const comboMult = Math.min(combo + 1, 8);
+  const points = ghost.pointValue * comboMult;
+  score += points;
+  combo++;
+  comboTimer = 3;
+  runGhostsCaptured++;
+  saveData.totalGhostsCaptured++;
+  saveData.xp += 10 + floor;
+
+  // Check level up
+  while (saveData.xp >= XP_PER_LEVEL(saveData.level)) {
+    saveData.xp -= XP_PER_LEVEL(saveData.level);
+    saveData.level++;
+    SFX.unlock();
+    floatingTexts.push(new FloatingText(canvas.width / 2, canvas.height / 2, `LEVEL ${saveData.level}!`, COLORS.gold));
+
+    // Unlock gadgets at levels
+    if (saveData.level >= 3 && !saveData.unlockedGadgets[1]) {
+      saveData.unlockedGadgets[1] = true;
+      floatingTexts.push(new FloatingText(canvas.width / 2, canvas.height / 2 + 30, 'TRAP UNLOCKED!', GADGET_INFO[1].color));
+    }
+    if (saveData.level >= 5 && !saveData.unlockedGadgets[2]) {
+      saveData.unlockedGadgets[2] = true;
+      floatingTexts.push(new FloatingText(canvas.width / 2, canvas.height / 2 + 30, 'FLASHLIGHT UNLOCKED!', GADGET_INFO[2].color));
+    }
+    if (saveData.level >= 8 && !saveData.unlockedGadgets[3]) {
+      saveData.unlockedGadgets[3] = true;
+      floatingTexts.push(new FloatingText(canvas.width / 2, canvas.height / 2 + 30, 'PORTAL GUN UNLOCKED!', GADGET_INFO[3].color));
+    }
+  }
+
+  spawnParticles(pos.x, pos.y, ghost.colors, 15, 150, 4);
+  floatingTexts.push(new FloatingText(pos.x, pos.y, `+${points}`, COLORS.gold));
+  if (comboMult > 1) floatingTexts.push(new FloatingText(pos.x, pos.y + 18, `x${comboMult} COMBO`, COLORS.green));
+
+  SFX.capture();
+  triggerShake(4, 0.15);
+  triggerFlash(ghost.colors, 0.06);
+
+  ghosts.splice(index, 1);
+
+  // Check achievements
+  checkAchievements();
+  writeSave();
+};
+
+// --- Check Achievements ---
+const checkAchievements = () => {
+  for (const ach of ACHIEVEMENTS) {
+    if (!saveData.achievements[ach.id] && ach.check()) {
+      saveData.achievements[ach.id] = true;
+      newAchievements.push(ach);
+      achievementDisplayTimer = 3;
+      SFX.unlock();
+    }
+  }
+};
+
+// --- Player Hit ---
+const playerHit = () => {
+  if (player.invincibleTimer > 0) return;
+  player.hp--;
+  player.invincibleTimer = 1.5;
+  SFX.hit();
+  triggerShake(8, 0.2);
+  triggerFlash(COLORS.red, 0.1);
+  const pos = tileToScreen(player.x, player.y);
+  spawnParticles(pos.x, pos.y, COLORS.red, 12, 120);
+
+  if (player.hp <= 0) {
+    gameOver();
+  }
+};
+
+const gameOver = () => {
+  SFX.die();
+  gameState = STATE.GAMEOVER;
+  stateTimer = 0;
+  if (score > saveData.bestScore) saveData.bestScore = score;
+  if (floor > saveData.bestFloor) saveData.bestFloor = floor;
+  checkAchievements();
+  writeSave();
+};
+
+// --- Update ---
+let lastTime = 0;
+const update = (dt) => {
+  stateTimer += dt;
+
+  // Timers
+  if (shakeTime > 0) shakeTime -= dt;
+  if (flashTime > 0) flashTime -= dt;
+  if (comboTimer > 0) { comboTimer -= dt; if (comboTimer <= 0) combo = 0; }
+  if (achievementDisplayTimer > 0) {
+    achievementDisplayTimer -= dt;
+    if (achievementDisplayTimer <= 0 && newAchievements.length > 0) {
+      newAchievements.shift();
+      if (newAchievements.length > 0) achievementDisplayTimer = 3;
+    }
+  }
+
+  // Particles
+  particles = particles.filter(p => { p.update(dt); return p.life > 0; });
+  floatingTexts = floatingTexts.filter(ft => { ft.update(dt); return ft.life > 0; });
+
+  if (gameState !== STATE.PLAYING) return;
+
+  // Gadget cooldowns
+  for (let i = 0; i < 4; i++) {
+    if (gadgetCooldowns[i] > 0) gadgetCooldowns[i] = Math.max(0, gadgetCooldowns[i] - dt);
+    if (gadgetActive[i] > 0) gadgetActive[i] = Math.max(0, gadgetActive[i] - dt);
+  }
+
+  // Power timer
+  if (powerTimer > 0) {
+    powerTimer -= dt;
+    if (powerTimer <= 0) {
+      ghosts.forEach(g => { g.vulnerable = false; });
+    }
+  }
+
+  // Player movement
+  player.mouthAngle += player.mouthDir * dt * 8;
+  if (player.mouthAngle > 0.4) { player.mouthAngle = 0.4; player.mouthDir = -1; }
+  if (player.mouthAngle < 0) { player.mouthAngle = 0; player.mouthDir = 1; }
+  if (player.invincibleTimer > 0) player.invincibleTimer -= dt;
+
+  // Try to change direction
+  const px = Math.round(player.x);
+  const py = Math.round(player.y);
+
+  if (nextDir !== DIR.NONE) {
+    const tnx = px + DX[nextDir];
+    const tny = py + DY[nextDir];
+    if (isWalkable(tnx, tny)) {
+      player.dir = nextDir;
+      nextDir = DIR.NONE;
+    }
+  }
+
+  // Move player
+  if (player.dir !== DIR.NONE) {
+    const moveAmount = player.speed * dt;
+    const newX = player.x + DX[player.dir] * moveAmount;
+    const newY = player.y + DY[player.dir] * moveAmount;
+
+    const targetX = px + DX[player.dir];
+    const targetY = py + DY[player.dir];
+
+    if (isWalkable(targetX, targetY)) {
+      player.x = newX;
+      player.y = newY;
+
+      // Snap to grid if close
+      const distToTarget = Math.abs(player.x - Math.round(player.x)) + Math.abs(player.y - Math.round(player.y));
+      if (distToTarget < 0.05) {
+        player.x = Math.round(player.x);
+        player.y = Math.round(player.y);
+      }
+    } else {
+      player.x = Math.round(player.x);
+      player.y = Math.round(player.y);
+    }
+  }
+
+  // Clamp player
+  player.x = Math.max(0, Math.min(MAZE_W - 1, player.x));
+  player.y = Math.max(0, Math.min(MAZE_H - 1, player.y));
+
+  // Collect items
+  const tpx = Math.round(player.x);
+  const tpy = Math.round(player.y);
+  if (tpx >= 0 && tpx < MAZE_W && tpy >= 0 && tpy < MAZE_H) {
+    const tile = maze[tpy][tpx];
+    if (tile === TILE.DOT) {
+      maze[tpy][tpx] = TILE.EMPTY;
+      const dotValue = 10 + saveData.upgrades.dotValue * 5;
+      score += dotValue;
+      dotsRemaining--;
+      runDotsEaten++;
+      saveData.totalDotsEaten++;
+      SFX.eat();
+      const pos = tileToScreen(tpx, tpy);
+      spawnParticles(pos.x, pos.y, COLORS.gold, 3, 40, 2);
+    } else if (tile === TILE.POWER) {
+      maze[tpy][tpx] = TILE.EMPTY;
+      score += 50;
+      dotsRemaining--;
+      powerTimer = 6;
+      ghosts.forEach(g => { g.vulnerable = true; g.vulnerableTimer = 6; });
+      SFX.powerUp();
+      triggerFlash(COLORS.blue, 0.12);
+      const pos = tileToScreen(tpx, tpy);
+      spawnParticles(pos.x, pos.y, COLORS.blue, 10, 80, 4);
+    } else if (tile === TILE.GADGET_PICKUP) {
+      maze[tpy][tpx] = TILE.EMPTY;
+      // Unlock next gadget
+      for (let i = 0; i < 4; i++) {
+        if (!saveData.unlockedGadgets[i]) {
+          saveData.unlockedGadgets[i] = true;
+          SFX.unlock();
+          const pos = tileToScreen(tpx, tpy);
+          floatingTexts.push(new FloatingText(pos.x, pos.y, `${GADGET_INFO[i].name} UNLOCKED!`, GADGET_INFO[i].color));
+          spawnParticles(pos.x, pos.y, GADGET_INFO[i].color, 20, 120, 5);
+          triggerShake(6, 0.2);
+          writeSave();
+          break;
+        }
+      }
+    } else if (tile === TILE.HEALTH_PICKUP) {
+      maze[tpy][tpx] = TILE.EMPTY;
+      if (player.hp < player.maxHP) {
+        player.hp++;
+        SFX.powerUp();
+        const pos = tileToScreen(tpx, tpy);
+        floatingTexts.push(new FloatingText(pos.x, pos.y, '+1 HP', COLORS.green));
+        spawnParticles(pos.x, pos.y, COLORS.green, 8, 60, 3);
+      }
+    }
+  }
+
+  // Traps update
+  traps = traps.filter(trap => {
+    trap.life -= dt;
+    if (trap.life <= 0) {
+      trap.active = false;
+      return false;
+    }
+    // Check ghost collisions
+    if (trap.active && !trap.capturedGhost) {
+      for (let i = ghosts.length - 1; i >= 0; i--) {
+        const g = ghosts[i];
+        if (g.trapped) continue;
+        const dist = Math.abs(g.x - trap.x) + Math.abs(g.y - trap.y);
+        if (dist < 0.8) {
+          g.trapped = true;
+          g.trappedTimer = trap.life;
+          trap.capturedGhost = g;
+          const pos = tileToScreen(trap.x, trap.y);
+          spawnParticles(pos.x, pos.y, GADGET_INFO[GADGETS.TRAP].color, 8, 50);
+          SFX.trap();
+
+          // If ghost is vulnerable or low HP, auto-capture
+          if (g.vulnerable || g.hp <= 1) {
+            captureGhost(g, i);
+            trap.active = false;
+          } else {
+            g.hp--;
+            const gpos = tileToScreen(g.x, g.y);
+            floatingTexts.push(new FloatingText(gpos.x, gpos.y, 'TRAPPED!', GADGET_INFO[GADGETS.TRAP].color));
+          }
+          break;
+        }
+      }
+    }
+    return true;
+  });
+
+  // Portals update
+  portals = portals.filter(p => {
+    p.life -= dt;
+    p.phase += dt * 4;
+    return p.life > 0;
+  });
+
+  // Vacuum effect
+  if (gadgetActive[GADGETS.VACUUM] > 0) {
+    const range = 4 + saveData.upgrades.captureRange + saveData.gadgetLevels[GADGETS.VACUUM] * 0.5;
+    const pullStr = 3 + saveData.gadgetLevels[GADGETS.VACUUM] * 0.5;
+    ghosts.forEach(g => {
+      if (g.trapped) return;
+      const dx = player.x - g.x;
+      const dy = player.y - g.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < range && dist > 0.3) {
+        // Check if in the vacuum cone direction
+        const angle = Math.atan2(dy, dx);
+        const faceAngle = [- Math.PI / 2, 0, Math.PI / 2, Math.PI][player.dir];
+        let angleDiff = angle - faceAngle;
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+        if (Math.abs(angleDiff) < Math.PI / 2.5) {
+          g.beingVacuumed = true;
+          const pullX = (dx / dist) * pullStr * dt;
+          const pullY = (dy / dist) * pullStr * dt;
+          const nx = g.x + pullX;
+          const ny = g.y + pullY;
+          if (isWalkable(Math.round(nx), Math.round(ny))) {
+            g.x = nx;
+            g.y = ny;
+          }
+        }
+      }
+    });
+  }
+
+  // Ghost update
+  for (let i = ghosts.length - 1; i >= 0; i--) {
+    const g = ghosts[i];
+    g.bobPhase += dt * 3;
+
+    if (g.stunned) {
+      g.stunnedTimer -= dt;
+      if (g.stunnedTimer <= 0) g.stunned = false;
+      continue;
+    }
+    if (g.trapped) {
+      g.trappedTimer -= dt;
+      if (g.trappedTimer <= 0) g.trapped = false;
+      continue;
+    }
+
+    if (g.vulnerable) {
+      g.vulnerableTimer -= dt;
+      if (g.vulnerableTimer <= 0) g.vulnerable = false;
+    }
+
+    // Ghost AI movement
+    g.moveTimer -= dt;
+    if (g.moveTimer <= 0) {
+      g.moveTimer = 0.25;
+      const gx = Math.round(g.x);
+      const gy = Math.round(g.y);
+
+      let bestDir = g.dir;
+      const possibleDirs = [];
+      for (let d = 0; d < 4; d++) {
+        if (d === (g.dir + 2) % 4 && Math.random() > 0.1) continue; // Don't reverse unless random
+        if (isWalkable(gx + DX[d], gy + DY[d])) possibleDirs.push(d);
+      }
+
+      if (possibleDirs.length === 0) {
+        // Reverse
+        bestDir = (g.dir + 2) % 4;
+      } else if (g.vulnerable) {
+        // Flee from player
+        let bestDist = -1;
+        for (const d of possibleDirs) {
+          const nx = gx + DX[d];
+          const ny = gy + DY[d];
+          const dist = Math.abs(nx - player.x) + Math.abs(ny - player.y);
+          if (dist > bestDist) { bestDist = dist; bestDir = d; }
+        }
+        if (Math.random() < 0.3) bestDir = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
+      } else {
+        switch (g.type) {
+          case 0: // Chaser - always chase
+            {
+              let bestDist = Infinity;
+              for (const d of possibleDirs) {
+                const nx = gx + DX[d];
+                const ny = gy + DY[d];
+                const dist = Math.abs(nx - player.x) + Math.abs(ny - player.y);
+                if (dist < bestDist) { bestDist = dist; bestDir = d; }
+              }
+            }
+            break;
+          case 1: // Ambusher - target ahead of player
+            {
+              const targetX = player.x + DX[player.dir] * 4;
+              const targetY = player.y + DY[player.dir] * 4;
+              let bestDist = Infinity;
+              for (const d of possibleDirs) {
+                const nx = gx + DX[d];
+                const ny = gy + DY[d];
+                const dist = Math.abs(nx - targetX) + Math.abs(ny - targetY);
+                if (dist < bestDist) { bestDist = dist; bestDir = d; }
+              }
+            }
+            break;
+          case 2: // Patrol - mostly random but charges when close
+            {
+              const dist = Math.abs(gx - player.x) + Math.abs(gy - player.y);
+              if (dist < 5) {
+                let bDist = Infinity;
+                for (const d of possibleDirs) {
+                  const nx = gx + DX[d];
+                  const ny = gy + DY[d];
+                  const dd = Math.abs(nx - player.x) + Math.abs(ny - player.y);
+                  if (dd < bDist) { bDist = dd; bestDir = d; }
+                }
+              } else {
+                bestDir = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
+              }
+            }
+            break;
+          case 3: // Random
+          default:
+            bestDir = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
+            break;
+        }
+      }
+      g.dir = bestDir;
+    }
+
+    // Move ghost
+    const spd = g.vulnerable ? g.baseSpeed * 0.5 : g.speed;
+    const nx = g.x + DX[g.dir] * spd * dt;
+    const ny = g.y + DY[g.dir] * spd * dt;
+    if (isWalkable(Math.round(nx), Math.round(ny))) {
+      g.x = nx;
+      g.y = ny;
+    } else {
+      g.x = Math.round(g.x);
+      g.y = Math.round(g.y);
+      g.moveTimer = 0;
+    }
+    g.eyeAngle = Math.atan2(player.y - g.y, player.x - g.x);
+
+    // Ghost-player collision
+    const dist = Math.sqrt((g.x - player.x) ** 2 + (g.y - player.y) ** 2);
+    if (dist < 0.7) {
+      if (g.vulnerable || g.beingVacuumed) {
+        captureGhost(g, i);
+      } else if (!g.stunned && !g.trapped) {
+        playerHit();
+      }
+    }
+    g.beingVacuumed = false;
+  }
+
+  // Check floor clear
+  if (dotsRemaining <= 0) {
+    gameState = STATE.FLOOR_CLEAR;
+    stateTimer = 0;
+    const floorBonus = floor * 500;
+    score += floorBonus;
+    saveData.xp += 25 + floor * 5;
+    if (floor > saveData.bestFloor) saveData.bestFloor = floor;
+    checkAchievements();
+    writeSave();
+    SFX.levelUp();
+  }
+};
+
+// --- Draw ---
+const draw = (time) => {
+  const cw = canvas.width;
+  const ch = canvas.height;
+  ctx.fillStyle = COLORS.bg;
+  ctx.fillRect(0, 0, cw, ch);
+
+  if (gameState === STATE.TITLE) {
+    drawTitle(time);
+  } else if (gameState === STATE.PLAYING || gameState === STATE.FLOOR_CLEAR) {
+    ctx.save();
+    if (shakeTime > 0) {
+      ctx.translate(
+        (Math.random() - 0.5) * shakeAmount * 2,
+        (Math.random() - 0.5) * shakeAmount * 2
+      );
+    }
+    drawMaze(time);
+    drawTraps(time);
+    drawPortals(time);
+    drawGhosts(time);
+    drawGadgetEffects(time);
+    drawPlayer(time);
+    particles.forEach(p => p.draw(ctx));
+    floatingTexts.forEach(ft => ft.draw(ctx, tileSize));
+    ctx.restore();
+
+    if (flashTime > 0 && flashColor) {
+      ctx.globalAlpha = flashTime * 5;
+      ctx.fillStyle = flashColor;
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.globalAlpha = 1;
+    }
+
+    drawHUD(time);
+    if (isMobile) drawTouchControls(time);
+
+    if (gameState === STATE.FLOOR_CLEAR) {
+      drawFloorClear(time);
+    }
+  } else if (gameState === STATE.GAMEOVER) {
+    drawGameOver(time);
+  } else if (gameState === STATE.UPGRADE) {
+    drawUpgradeScreen(time);
+  }
+
+  // Achievement notification
+  if (newAchievements.length > 0 && achievementDisplayTimer > 0) {
+    drawAchievementNotification(time);
+  }
+};
+
+const drawTitle = (time) => {
+  const cw = canvas.width;
+  const ch = canvas.height;
+  const t = stateTimer;
+
+  // Background ghost silhouettes
+  for (let i = 0; i < 5; i++) {
+    const x = cw * (0.15 + i * 0.18) + Math.sin(t * 0.5 + i) * 20;
+    const y = ch * 0.35 + Math.cos(t * 0.7 + i * 2) * 15;
+    ctx.globalAlpha = 0.08;
+    drawGhostShape(x, y, 40, '#ff4444');
+    ctx.globalAlpha = 1;
+  }
+
+  // Title
+  const titleSize = Math.min(cw * 0.1, 72);
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = `bold ${titleSize}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const titleY = ch * 0.22;
+
+  // Glow
+  ctx.shadowColor = COLORS.gold;
+  ctx.shadowBlur = 20 + Math.sin(t * 3) * 10;
+  ctx.fillText('GHOST', cw / 2, titleY - titleSize * 0.55);
+  ctx.fillStyle = COLORS.green;
+  ctx.shadowColor = COLORS.green;
+  ctx.fillText('EATER', cw / 2, titleY + titleSize * 0.55);
+  ctx.shadowBlur = 0;
+
+  // Subtitle
+  ctx.fillStyle = COLORS.white;
+  ctx.font = `${Math.min(cw * 0.035, 20)}px monospace`;
+  ctx.globalAlpha = 0.7;
+  ctx.fillText('Capture. Upgrade. Conquer.', cw / 2, titleY + titleSize * 1.3);
+  ctx.globalAlpha = 1;
+
+  // Stats
+  const statsY = ch * 0.48;
+  ctx.font = `${Math.min(cw * 0.03, 16)}px monospace`;
+  ctx.fillStyle = COLORS.gold;
+  ctx.fillText(`Best Score: ${saveData.bestScore.toLocaleString()}`, cw / 2, statsY);
+  ctx.fillText(`Best Floor: ${saveData.bestFloor}  |  Level: ${saveData.level}`, cw / 2, statsY + 24);
+  ctx.fillText(`Ghosts Captured: ${saveData.totalGhostsCaptured}`, cw / 2, statsY + 48);
+
+  // Gadget display
+  const gadgetY = ch * 0.62;
+  ctx.font = `${Math.min(cw * 0.025, 14)}px monospace`;
+  ctx.fillStyle = '#888';
+  ctx.fillText('GADGET LOADOUT', cw / 2, gadgetY - 20);
+  GADGET_INFO.forEach((info, i) => {
+    const gx = cw / 2 + (i - 1.5) * 70;
+    const unlocked = saveData.unlockedGadgets[i];
+    ctx.globalAlpha = unlocked ? 1 : 0.3;
+    ctx.fillStyle = unlocked ? info.color : '#444';
+    ctx.fillRect(gx - 20, gadgetY, 40, 40);
+    ctx.fillStyle = '#000';
+    ctx.font = `bold 18px monospace`;
+    ctx.fillText(info.icon, gx, gadgetY + 24);
+    ctx.font = `10px monospace`;
+    ctx.fillStyle = unlocked ? info.color : '#666';
+    ctx.fillText(unlocked ? `Lv${saveData.gadgetLevels[i]}` : '???', gx, gadgetY + 55);
+    ctx.globalAlpha = 1;
+  });
+
+  // Start prompt
+  const blink = Math.sin(t * 4) > 0;
+  if (blink) {
+    ctx.fillStyle = COLORS.green;
+    ctx.font = `bold ${Math.min(cw * 0.04, 24)}px monospace`;
+    ctx.fillText(isMobile ? 'TAP TO PLAY' : 'PRESS ENTER TO PLAY', cw / 2, ch * 0.82);
+  }
+
+  // Controls info
+  ctx.fillStyle = '#555';
+  ctx.font = `${Math.min(cw * 0.022, 12)}px monospace`;
+  if (!isMobile) {
+    ctx.fillText('Arrow Keys / WASD: Move  |  1-4: Select Gadget  |  Space: Use Gadget  |  Q: Cycle Gadget', cw / 2, ch * 0.92);
+  } else {
+    ctx.fillText('Left: D-Pad  |  Right Top: Switch Gadget  |  Right Bottom: Use Gadget', cw / 2, ch * 0.92);
+  }
+};
+
+const drawMaze = (time) => {
+  for (let y = 0; y < MAZE_H; y++) {
+    for (let x = 0; x < MAZE_W; x++) {
+      const sx = offsetX + x * tileSize;
+      const sy = offsetY + y * tileSize;
+      const tile = maze[y][x];
+
+      if (tile === TILE.WALL) {
+        ctx.fillStyle = COLORS.wall;
+        ctx.fillRect(sx, sy, tileSize, tileSize);
+        // Border glow
+        ctx.strokeStyle = COLORS.wallBorder;
+        ctx.lineWidth = 1;
+        // Draw only exposed edges
+        if (y > 0 && maze[y - 1][x] !== TILE.WALL) { ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + tileSize, sy); ctx.stroke(); }
+        if (y < MAZE_H - 1 && maze[y + 1][x] !== TILE.WALL) { ctx.beginPath(); ctx.moveTo(sx, sy + tileSize); ctx.lineTo(sx + tileSize, sy + tileSize); ctx.stroke(); }
+        if (x > 0 && maze[y][x - 1] !== TILE.WALL) { ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, sy + tileSize); ctx.stroke(); }
+        if (x < MAZE_W - 1 && maze[y][x + 1] !== TILE.WALL) { ctx.beginPath(); ctx.moveTo(sx + tileSize, sy); ctx.lineTo(sx + tileSize, sy + tileSize); ctx.stroke(); }
+      } else if (tile === TILE.DOT) {
+        const r = tileSize * 0.12;
+        ctx.fillStyle = COLORS.dot;
+        ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        ctx.arc(sx + tileSize / 2, sy + tileSize / 2, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      } else if (tile === TILE.POWER) {
+        const r = tileSize * 0.3;
+        const pulse = 0.8 + Math.sin(time * 0.005) * 0.2;
+        ctx.fillStyle = COLORS.blue;
+        ctx.shadowColor = COLORS.blue;
+        ctx.shadowBlur = 8;
+        ctx.globalAlpha = pulse;
+        ctx.beginPath();
+        ctx.arc(sx + tileSize / 2, sy + tileSize / 2, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      } else if (tile === TILE.GADGET_PICKUP) {
+        const pulse = 0.7 + Math.sin(time * 0.006) * 0.3;
+        ctx.fillStyle = COLORS.purple;
+        ctx.shadowColor = COLORS.purple;
+        ctx.shadowBlur = 10;
+        ctx.globalAlpha = pulse;
+        const r = tileSize * 0.3;
+        ctx.beginPath();
+        // Star shape
+        for (let i = 0; i < 5; i++) {
+          const angle = (i * Math.PI * 2) / 5 - Math.PI / 2 + time * 0.002;
+          const ox = r * Math.cos(angle);
+          const oy = r * Math.sin(angle);
+          if (i === 0) ctx.moveTo(sx + tileSize / 2 + ox, sy + tileSize / 2 + oy);
+          else ctx.lineTo(sx + tileSize / 2 + ox, sy + tileSize / 2 + oy);
+          const innerAngle = angle + Math.PI / 5;
+          ctx.lineTo(sx + tileSize / 2 + r * 0.4 * Math.cos(innerAngle), sy + tileSize / 2 + r * 0.4 * Math.sin(innerAngle));
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      } else if (tile === TILE.HEALTH_PICKUP) {
+        const pulse = 0.7 + Math.sin(time * 0.004) * 0.3;
+        ctx.fillStyle = COLORS.green;
+        ctx.shadowColor = COLORS.green;
+        ctx.shadowBlur = 6;
+        ctx.globalAlpha = pulse;
+        const r = tileSize * 0.2;
+        const cx = sx + tileSize / 2;
+        const cy = sy + tileSize / 2;
+        ctx.fillRect(cx - r, cy - r * 0.35, r * 2, r * 0.7);
+        ctx.fillRect(cx - r * 0.35, cy - r, r * 0.7, r * 2);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+};
+
+const drawGhostShape = (x, y, size, color) => {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y - size * 0.15, size * 0.45, Math.PI, 0);
+  ctx.lineTo(x + size * 0.45, y + size * 0.35);
+  // Wavy bottom
+  const waves = 3;
+  for (let i = waves; i >= 0; i--) {
+    const wx = x - size * 0.45 + (i / waves) * size * 0.9;
+    const wy = y + size * 0.35 + (i % 2 === 0 ? -size * 0.1 : 0);
+    ctx.lineTo(wx, wy);
+  }
+  ctx.closePath();
+  ctx.fill();
+};
+
+const drawGhosts = (time) => {
+  ghosts.forEach(g => {
+    const pos = tileToScreen(g.x, g.y);
+    const bob = Math.sin(g.bobPhase) * 2;
+    const size = tileSize * 0.9;
+
+    if (g.stunned) {
+      ctx.globalAlpha = 0.5 + Math.sin(time * 0.02) * 0.3;
+    }
+    if (g.trapped) {
+      ctx.globalAlpha = 0.4;
+    }
+
+    const color = g.vulnerable
+      ? (powerTimer < 2 && Math.sin(time * 0.015) > 0 ? '#ffffff' : '#4444ff')
+      : g.colors;
+
+    drawGhostShape(pos.x, pos.y + bob, size, color);
+
+    // Eyes
+    const eyeSize = size * 0.12;
+    const eyeOffX = size * 0.15;
+    const ex = Math.cos(g.eyeAngle) * eyeSize * 0.5;
+    const ey = Math.sin(g.eyeAngle) * eyeSize * 0.5;
+
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(pos.x - eyeOffX, pos.y - size * 0.15 + bob, eyeSize, 0, Math.PI * 2);
+    ctx.arc(pos.x + eyeOffX, pos.y - size * 0.15 + bob, eyeSize, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = g.vulnerable ? '#f00' : '#00f';
+    ctx.beginPath();
+    ctx.arc(pos.x - eyeOffX + ex, pos.y - size * 0.15 + bob + ey, eyeSize * 0.5, 0, Math.PI * 2);
+    ctx.arc(pos.x + eyeOffX + ex, pos.y - size * 0.15 + bob + ey, eyeSize * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Stunned indicator
+    if (g.stunned) {
+      ctx.fillStyle = '#ffff44';
+      ctx.font = `${Math.floor(tileSize * 0.5)}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText('★', pos.x, pos.y - size * 0.5 + bob);
+    }
+
+    // HP bar for tough ghosts
+    if (g.maxHP > 1) {
+      const bw = size * 0.7;
+      const bh = 3;
+      const bx = pos.x - bw / 2;
+      const by = pos.y - size * 0.55 + bob;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.fillStyle = g.hp > g.maxHP * 0.5 ? COLORS.green : COLORS.red;
+      ctx.fillRect(bx, by, bw * (g.hp / g.maxHP), bh);
+    }
+
+    ctx.globalAlpha = 1;
+  });
+};
+
+const drawPlayer = (time) => {
+  const pos = tileToScreen(player.x, player.y);
+
+  // Invincibility flash
+  if (player.invincibleTimer > 0 && Math.sin(time * 0.03) > 0) return;
+
+  const size = tileSize * 0.85;
+  const r = size / 2;
+  const dirAngle = [- Math.PI / 2, 0, Math.PI / 2, Math.PI][player.dir] || 0;
+  const mouth = player.mouthAngle;
+
+  // Glow
+  ctx.shadowColor = COLORS.gold;
+  ctx.shadowBlur = 8;
+
+  ctx.fillStyle = COLORS.gold;
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, r, dirAngle + mouth, dirAngle + Math.PI * 2 - mouth);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.closePath();
+  ctx.fill();
+
+  // Eye
+  const eyeAngle = dirAngle - 0.5;
+  const eyeX = pos.x + Math.cos(eyeAngle) * r * 0.35;
+  const eyeY = pos.y + Math.sin(eyeAngle) * r * 0.35;
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(eyeX, eyeY, r * 0.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+};
+
+const drawGadgetEffects = (time) => {
+  // Vacuum cone
+  if (gadgetActive[GADGETS.VACUUM] > 0) {
+    const pos = tileToScreen(player.x, player.y);
+    const dirAngle = [- Math.PI / 2, 0, Math.PI / 2, Math.PI][player.dir];
+    const range = (4 + saveData.upgrades.captureRange + saveData.gadgetLevels[GADGETS.VACUUM] * 0.5) * tileSize;
+    const coneAngle = Math.PI / 2.5;
+
+    ctx.save();
+    ctx.globalAlpha = 0.15 + Math.sin(time * 0.01) * 0.05;
+    ctx.fillStyle = GADGET_INFO[GADGETS.VACUUM].color;
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    ctx.arc(pos.x, pos.y, range, dirAngle - coneAngle / 2, dirAngle + coneAngle / 2);
+    ctx.closePath();
+    ctx.fill();
+
+    // Suction lines
+    ctx.strokeStyle = GADGET_INFO[GADGETS.VACUUM].color;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.3;
+    for (let i = 0; i < 5; i++) {
+      const a = dirAngle + (Math.random() - 0.5) * coneAngle;
+      const d = Math.random() * range;
+      const sx = pos.x + Math.cos(a) * d;
+      const sy = pos.y + Math.sin(a) * d;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx - Math.cos(a) * 15, sy - Math.sin(a) * 15);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Flash cone
+  if (gadgetActive[GADGETS.FLASH] > 0) {
+    const pos = tileToScreen(player.x, player.y);
+    const dirAngle = [- Math.PI / 2, 0, Math.PI / 2, Math.PI][flashDir];
+    const range = (4 + saveData.gadgetLevels[GADGETS.FLASH]) * tileSize;
+
+    ctx.save();
+    ctx.globalAlpha = gadgetActive[GADGETS.FLASH] * 0.8;
+    const grad = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, range);
+    grad.addColorStop(0, 'rgba(255,255,100,0.6)');
+    grad.addColorStop(1, 'rgba(255,255,100,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+    ctx.arc(pos.x, pos.y, range, dirAngle - Math.PI / 3, dirAngle + Math.PI / 3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+};
+
+const drawTraps = (time) => {
+  traps.forEach(trap => {
+    const pos = tileToScreen(trap.x, trap.y);
+    const life = trap.life / trap.maxLife;
+    const pulse = 0.5 + Math.sin(time * 0.008) * 0.3;
+
+    ctx.globalAlpha = life * pulse;
+    ctx.strokeStyle = GADGET_INFO[GADGETS.TRAP].color;
+    ctx.lineWidth = 2;
+    const r = tileSize * 0.4;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Inner cross
+    ctx.beginPath();
+    ctx.moveTo(pos.x - r * 0.5, pos.y);
+    ctx.lineTo(pos.x + r * 0.5, pos.y);
+    ctx.moveTo(pos.x, pos.y - r * 0.5);
+    ctx.lineTo(pos.x, pos.y + r * 0.5);
+    ctx.stroke();
+
+    if (trap.capturedGhost) {
+      ctx.fillStyle = GADGET_INFO[GADGETS.TRAP].color;
+      ctx.globalAlpha = life * 0.5;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, r * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.globalAlpha = 1;
+  });
+};
+
+const drawPortals = (time) => {
+  portals.forEach(p => {
+    const pos = tileToScreen(p.x, p.y);
+    const life = p.life / 5;
+    const r = tileSize * 0.4;
+
+    ctx.save();
+    ctx.globalAlpha = life;
+    ctx.strokeStyle = GADGET_INFO[GADGETS.PORTAL].color;
+    ctx.lineWidth = 2;
+
+    for (let ring = 0; ring < 3; ring++) {
+      const rr = r * (1 + ring * 0.15) * (0.8 + Math.sin(p.phase + ring) * 0.2);
+      ctx.beginPath();
+      ctx.ellipse(pos.x, pos.y, rr, rr * 0.6, p.phase * 0.5 + ring, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = GADGET_INFO[GADGETS.PORTAL].color;
+    ctx.globalAlpha = life * 0.2;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  });
+};
+
+const drawHUD = (time) => {
+  const cw = canvas.width;
+  const hudY = 8;
+  const fontSize = Math.min(cw * 0.035, 18);
+
+  // Score
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = `bold ${fontSize}px monospace`;
+  ctx.textAlign = 'left';
+  ctx.fillText(`Score: ${score.toLocaleString()}`, 10, hudY + fontSize);
+
+  // Floor
+  ctx.fillStyle = COLORS.green;
+  ctx.textAlign = 'center';
+  ctx.fillText(`Floor ${floor}`, cw / 2, hudY + fontSize);
+
+  // Dots remaining
+  ctx.fillStyle = '#888';
+  ctx.font = `${fontSize * 0.7}px monospace`;
+  ctx.fillText(`${dotsRemaining}/${totalDots} dots`, cw / 2, hudY + fontSize * 2);
+
+  // Combo
+  if (combo > 0) {
+    ctx.fillStyle = COLORS.gold;
+    ctx.font = `bold ${fontSize * 0.8}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(`x${Math.min(combo + 1, 8)} COMBO`, cw / 2, hudY + fontSize * 3.2);
+  }
+
+  // HP
+  ctx.textAlign = 'right';
+  for (let i = 0; i < player.maxHP; i++) {
+    const hx = cw - 10 - (player.maxHP - 1 - i) * (fontSize + 4);
+    const filled = i < player.hp;
+    ctx.fillStyle = filled ? COLORS.red : '#333';
+    ctx.font = `${fontSize}px monospace`;
+    ctx.fillText('♥', hx, hudY + fontSize);
+  }
+
+  // Power timer
+  if (powerTimer > 0) {
+    ctx.fillStyle = COLORS.blue;
+    ctx.font = `bold ${fontSize * 0.8}px monospace`;
+    ctx.textAlign = 'right';
+    ctx.fillText(`POWER: ${powerTimer.toFixed(1)}s`, cw - 10, hudY + fontSize * 2.2);
+  }
+
+  // Gadget bar at bottom
+  const barH = 50;
+  const barY = canvas.height - barH - (isMobile ? 10 : 5);
+  const gadgetW = Math.min(70, cw / 5);
+  const totalW = gadgetW * 4 + 12;
+  const barX = (cw - totalW) / 2;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(barX - 5, barY - 5, totalW + 10, barH + 10);
+
+  GADGET_INFO.forEach((info, i) => {
+    const gx = barX + i * (gadgetW + 4);
+    const unlocked = saveData.unlockedGadgets[i];
+    const selected = i === selectedGadget;
+    const onCooldown = gadgetCooldowns[i] > 0;
+    const active = gadgetActive[i] > 0;
+
+    // Background
+    ctx.fillStyle = selected ? 'rgba(255,255,255, 0.65)' : 'rgba(255,255,255, 0.65)';
+    if (active) ctx.fillStyle = `${info.color}33`;
+    ctx.fillRect(gx, barY, gadgetW, barH);
+
+    if (selected) {
+      ctx.strokeStyle = COLORS.gold;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(gx, barY, gadgetW, barH);
+    }
+
+    if (!unlocked) {
+      ctx.fillStyle = '#333';
+      ctx.font = `bold 16px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText('?', gx + gadgetW / 2, barY + barH / 2 + 5);
+      return;
+    }
+
+    // Icon
+    ctx.fillStyle = onCooldown ? '#666' : info.color;
+    ctx.font = `bold 20px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(info.icon, gx + gadgetW / 2, barY + 20);
+
+    // Level
+    ctx.fillStyle = '#aaa';
+    ctx.font = `9px monospace`;
+    ctx.fillText(`Lv${saveData.gadgetLevels[i]}`, gx + gadgetW / 2, barY + 32);
+
+    // Cooldown overlay
+    if (onCooldown) {
+      const cdInfo = GADGET_INFO[i];
+      const cdReduction = 1 - saveData.upgrades.cooldownReduction * 0.08;
+      const maxCd = cdInfo.cooldownBase * cdReduction / (1 + (saveData.gadgetLevels[i] - 1) * 0.15);
+      const cdPct = gadgetCooldowns[i] / maxCd;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(gx, barY, gadgetW, barH * cdPct);
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold 11px monospace`;
+      ctx.fillText(gadgetCooldowns[i].toFixed(1), gx + gadgetW / 2, barY + barH - 5);
+    }
+
+    // Key hint
+    if (!isMobile) {
+      ctx.fillStyle = '#555';
+      ctx.font = `8px monospace`;
+      ctx.fillText(info.key.split('/')[0], gx + gadgetW / 2, barY + barH - 3);
+    }
+  });
+
+  // XP bar
+  const xpBarW = Math.min(200, cw * 0.3);
+  const xpBarH = 6;
+  const xpBarX = 10;
+  const xpBarY = hudY + fontSize * 1.6;
+  const xpPct = saveData.xp / XP_PER_LEVEL(saveData.level);
+  ctx.fillStyle = '#222';
+  ctx.fillRect(xpBarX, xpBarY, xpBarW, xpBarH);
+  ctx.fillStyle = COLORS.green;
+  ctx.fillRect(xpBarX, xpBarY, xpBarW * xpPct, xpBarH);
+  ctx.fillStyle = '#888';
+  ctx.font = `${Math.min(10, fontSize * 0.5)}px monospace`;
+  ctx.textAlign = 'left';
+  ctx.fillText(`Lv${saveData.level}`, xpBarX + xpBarW + 5, xpBarY + xpBarH);
+};
+
+const drawTouchControls = (time) => {
+  const cw = canvas.width;
+  const ch = canvas.height;
+  const alpha = 0.15;
+
+  // D-Pad (left side)
+  const padCX = cw * 0.15;
+  const padCY = ch * 0.7;
+  const padR = Math.min(cw * 0.12, 60);
+
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+
+  // Up
+  ctx.beginPath();
+  ctx.moveTo(padCX, padCY - padR * 0.3);
+  ctx.lineTo(padCX - padR * 0.3, padCY - padR * 0.05);
+  ctx.lineTo(padCX + padR * 0.3, padCY - padR * 0.05);
+  ctx.closePath();
+  ctx.stroke();
+  // Draw triangle pointing up
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.moveTo(padCX, padCY - padR);
+  ctx.lineTo(padCX - 12, padCY - padR + 18);
+  ctx.lineTo(padCX + 12, padCY - padR + 18);
+  ctx.closePath();
+  ctx.fill();
+
+  // Down
+  ctx.beginPath();
+  ctx.moveTo(padCX, padCY + padR);
+  ctx.lineTo(padCX - 12, padCY + padR - 18);
+  ctx.lineTo(padCX + 12, padCY + padR - 18);
+  ctx.closePath();
+  ctx.fill();
+
+  // Left
+  ctx.beginPath();
+  ctx.moveTo(padCX - padR, padCY);
+  ctx.lineTo(padCX - padR + 18, padCY - 12);
+  ctx.lineTo(padCX - padR + 18, padCY + 12);
+  ctx.closePath();
+  ctx.fill();
+
+  // Right
+  ctx.beginPath();
+  ctx.moveTo(padCX + padR, padCY);
+  ctx.lineTo(padCX + padR - 18, padCY - 12);
+  ctx.lineTo(padCX + padR - 18, padCY + 12);
+  ctx.closePath();
+  ctx.fill();
+
+  // D-Pad label
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('SWIPE', padCX, padCY + 4);
+
+  // Action buttons (right side)
+  const btnR = Math.min(cw * 0.08, 35);
+
+  // Switch gadget button (top right)
+  const switchX = cw * 0.85;
+  const switchY = ch * 0.55;
+  ctx.beginPath();
+  ctx.arc(switchX, switchY, btnR, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.font = 'bold 14px monospace';
+  ctx.fillText('Q', switchX, switchY + 5);
+  ctx.font = '8px monospace';
+  ctx.fillText('SWITCH', switchX, switchY + btnR + 12);
+
+  // Use gadget button (bottom right)
+  const useX = cw * 0.85;
+  const useY = ch * 0.75;
+  ctx.strokeStyle = GADGET_INFO[selectedGadget].color;
+  ctx.beginPath();
+  ctx.arc(useX, useY, btnR * 1.2, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = GADGET_INFO[selectedGadget].color;
+  ctx.font = 'bold 18px monospace';
+  ctx.fillText(GADGET_INFO[selectedGadget].icon, useX, useY + 6);
+  ctx.font = '8px monospace';
+  ctx.fillText('USE', useX, useY + btnR * 1.2 + 12);
+
+  ctx.globalAlpha = 1;
+};
+
+const drawFloorClear = (time) => {
+  const cw = canvas.width;
+  const ch = canvas.height;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(0, 0, cw, ch);
+
+  ctx.fillStyle = COLORS.green;
+  ctx.font = `bold ${Math.min(cw * 0.08, 48)}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.shadowColor = COLORS.green;
+  ctx.shadowBlur = 15;
+  ctx.fillText(`FLOOR ${floor} CLEAR!`, cw / 2, ch * 0.35);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = `${Math.min(cw * 0.04, 24)}px monospace`;
+  ctx.fillText(`+${floor * 500} Floor Bonus`, cw / 2, ch * 0.45);
+  ctx.fillText(`Score: ${score.toLocaleString()}`, cw / 2, ch * 0.52);
+  ctx.fillText(`Ghosts Captured: ${runGhostsCaptured}`, cw / 2, ch * 0.58);
+
+  if (stateTimer > 1) {
+    const blink = Math.sin(stateTimer * 5) > 0;
+    if (blink) {
+      ctx.fillStyle = COLORS.green;
+      ctx.font = `bold ${Math.min(cw * 0.04, 22)}px monospace`;
+      ctx.fillText(isMobile ? 'TAP TO CONTINUE' : 'PRESS ENTER', cw / 2, ch * 0.72);
+    }
+  }
+};
+
+const drawGameOver = (time) => {
+  const cw = canvas.width;
+  const ch = canvas.height;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(0, 0, cw, ch);
+
+  ctx.fillStyle = COLORS.red;
+  ctx.font = `bold ${Math.min(cw * 0.09, 56)}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.shadowColor = COLORS.red;
+  ctx.shadowBlur = 20;
+  ctx.fillText('GAME OVER', cw / 2, ch * 0.25);
+  ctx.shadowBlur = 0;
+
+  const fontSize = Math.min(cw * 0.035, 20);
+  ctx.font = `${fontSize}px monospace`;
+  ctx.fillStyle = COLORS.gold;
+  ctx.fillText(`Final Score: ${score.toLocaleString()}`, cw / 2, ch * 0.38);
+  ctx.fillText(`Floor Reached: ${floor}`, cw / 2, ch * 0.44);
+  ctx.fillText(`Ghosts Captured: ${runGhostsCaptured}`, cw / 2, ch * 0.50);
+  ctx.fillText(`Dots Eaten: ${runDotsEaten}`, cw / 2, ch * 0.56);
+
+  if (score >= saveData.bestScore) {
+    ctx.fillStyle = COLORS.green;
+    ctx.font = `bold ${fontSize}px monospace`;
+    ctx.fillText('★ NEW HIGH SCORE! ★', cw / 2, ch * 0.63);
+  }
+
+  ctx.fillStyle = '#888';
+  ctx.font = `${fontSize * 0.8}px monospace`;
+  ctx.fillText(`Best Score: ${saveData.bestScore.toLocaleString()}  |  Best Floor: ${saveData.bestFloor}`, cw / 2, ch * 0.70);
+  ctx.fillText(`Total Ghosts: ${saveData.totalGhostsCaptured}  |  Level: ${saveData.level}`, cw / 2, ch * 0.76);
+
+  if (stateTimer > 0.5) {
+    const blink = Math.sin(stateTimer * 4) > 0;
+    if (blink) {
+      ctx.fillStyle = COLORS.gold;
+      ctx.font = `bold ${Math.min(cw * 0.04, 22)}px monospace`;
+      ctx.fillText(isMobile ? 'TAP FOR UPGRADES' : 'PRESS ENTER FOR UPGRADES', cw / 2, ch * 0.88);
+    }
+  }
+};
+
+const drawUpgradeScreen = (time) => {
+  const cw = canvas.width;
+  const ch = canvas.height;
+
+  ctx.fillStyle = COLORS.darkBg;
+  ctx.fillRect(0, 0, cw, ch);
+
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = `bold ${Math.min(cw * 0.06, 36)}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('UPGRADES', cw / 2, ch * 0.12);
+
+  ctx.fillStyle = '#888';
+  ctx.font = `${Math.min(cw * 0.03, 16)}px monospace`;
+  ctx.fillText(`Score Available: ${score.toLocaleString()}  |  Account Level: ${saveData.level}`, cw / 2, ch * 0.2);
+
+  buildUpgradeButtons();
+
+  upgradeButtons.forEach(btn => {
+    const isPlay = btn.type === 'play';
+    const canBuy = !isPlay && btn.level < btn.maxLevel && score >= btn.cost;
+    const maxedOut = !isPlay && btn.level >= btn.maxLevel;
+
+    // Background
+    ctx.fillStyle = isPlay ? '#114422' : (canBuy ? '#1a1a3f' : '#111118');
+    ctx.fillRect(btn.x, btn.y, btn.w, btn.h);
+
+    // Border
+    ctx.strokeStyle = isPlay ? COLORS.green : (canBuy ? COLORS.gold : '#333');
+    ctx.lineWidth = isPlay ? 2 : 1;
+    ctx.strokeRect(btn.x, btn.y, btn.w, btn.h);
+
+    ctx.textAlign = 'left';
+    ctx.font = `bold ${Math.min(14, btn.h * 0.35)}px monospace`;
+    ctx.fillStyle = isPlay ? COLORS.green : COLORS.white;
+    ctx.fillText(btn.name, btn.x + 10, btn.y + btn.h * 0.45);
+
+    if (!isPlay) {
+      ctx.textAlign = 'right';
+      ctx.font = `${Math.min(12, btn.h * 0.3)}px monospace`;
+
+      if (maxedOut) {
+        ctx.fillStyle = COLORS.green;
+        ctx.fillText('MAX', btn.x + btn.w - 10, btn.y + btn.h * 0.4);
+      } else {
+        ctx.fillStyle = canBuy ? COLORS.gold : '#666';
+        ctx.fillText(`Cost: ${btn.cost}`, btn.x + btn.w - 10, btn.y + btn.h * 0.4);
+      }
+
+      // Level pips
+      ctx.textAlign = 'left';
+      for (let i = 0; i < btn.maxLevel; i++) {
+        const px = btn.x + 10 + i * 16;
+        const py = btn.y + btn.h * 0.7;
+        ctx.fillStyle = i < btn.level ? COLORS.green : '#333';
+        ctx.fillRect(px, py, 12, 6);
+      }
+    }
+  });
+
+  // Gadget levels
+  const gadgetY = upgradeButtons[upgradeButtons.length - 1].y + 70;
+  ctx.fillStyle = '#888';
+  ctx.font = `${Math.min(cw * 0.025, 14)}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('GADGET LEVELS', cw / 2, gadgetY);
+
+  GADGET_INFO.forEach((info, i) => {
+    const gx = cw / 2 + (i - 1.5) * 70;
+    const unlocked = saveData.unlockedGadgets[i];
+    ctx.globalAlpha = unlocked ? 1 : 0.3;
+    ctx.fillStyle = unlocked ? info.color : '#444';
+    ctx.font = 'bold 14px monospace';
+    ctx.fillText(unlocked ? `${info.name} Lv${saveData.gadgetLevels[i]}` : '???', gx + 20, gadgetY + 22);
+    if (unlocked) {
+      const xpPct = saveData.gadgetXP[i] / GADGET_XP_PER_LEVEL(saveData.gadgetLevels[i]);
+      ctx.fillStyle = '#222';
+      ctx.fillRect(gx - 15, gadgetY + 28, 70, 4);
+      ctx.fillStyle = info.color;
+      ctx.fillRect(gx - 15, gadgetY + 28, 70 * xpPct, 4);
+    }
+    ctx.globalAlpha = 1;
+  });
+
+  // Achievements
+  const achY = gadgetY + 55;
+  ctx.fillStyle = '#888';
+  ctx.font = `${Math.min(cw * 0.025, 14)}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('ACHIEVEMENTS', cw / 2, achY);
+
+  const achCols = Math.min(5, Math.floor(cw / 100));
+  ACHIEVEMENTS.forEach((ach, i) => {
+    const col = i % achCols;
+    const row = Math.floor(i / achCols);
+    const ax = cw / 2 + (col - (achCols - 1) / 2) * 90;
+    const ay = achY + 18 + row * 30;
+    const earned = saveData.achievements[ach.id];
+
+    ctx.fillStyle = earned ? COLORS.gold : '#222';
+    ctx.font = `${earned ? 'bold ' : ''}10px monospace`;
+    ctx.fillText(earned ? ach.name : '???', ax, ay);
+  });
+};
+
+const drawAchievementNotification = (time) => {
+  if (newAchievements.length === 0) return;
+  const ach = newAchievements[0];
+  const cw = canvas.width;
+
+  const alpha = Math.min(1, achievementDisplayTimer, stateTimer);
+  ctx.globalAlpha = alpha;
+
+  const bw = Math.min(300, cw * 0.8);
+  const bh = 50;
+  const bx = cw / 2 - bw / 2;
+  const by = 60;
+
+  ctx.fillStyle = '#1a1a00';
+  ctx.strokeStyle = COLORS.gold;
+  ctx.lineWidth = 2;
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.strokeRect(bx, by, bw, bh);
+
+  ctx.fillStyle = COLORS.gold;
+  ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('★ ACHIEVEMENT UNLOCKED ★', cw / 2, by + 20);
+  ctx.fillStyle = '#fff';
+  ctx.font = '12px monospace';
+  ctx.fillText(`${ach.name} — ${ach.desc}`, cw / 2, by + 38);
+
+  ctx.globalAlpha = 1;
+};
+
+// --- Main Loop ---
+const gameLoop = (timestamp) => {
+  if (!lastTime) lastTime = timestamp;
+  let dt = (timestamp - lastTime) / 1000;
+  lastTime = timestamp;
+  if (dt > 0.1) dt = 0.1; // Cap dt
+
+  update(dt);
+  draw(timestamp);
+  requestAnimationFrame(gameLoop);
+};
+
+requestAnimationFrame(gameLoop);
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

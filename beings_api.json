@@ -1,0 +1,4649 @@
+{
+  "api": "beings.mobleysoft.com",
+  "version": "1.0",
+  "organism": "MASCOM",
+  "generated": "2026-03-08T05:27:39.526384Z",
+  "total": 260,
+  "categories": [
+    {
+      "id": "valkyrie",
+      "name": "AUI Valkyries",
+      "description": "27 autonomous warrior agents, Foundation/Emergence/Transcendence tiers"
+    },
+    {
+      "id": "dreadtide_boss",
+      "name": "Dreadtide Bosses",
+      "description": "Boss entities from the Dreadtide horde survival"
+    },
+    {
+      "id": "dreadtide_enemy",
+      "name": "Dreadtide Enemies",
+      "description": "Enemy archetypes from Dreadtide"
+    },
+    {
+      "id": "dreadtide_weapon",
+      "name": "Dreadtide Weapons",
+      "description": "Weapon spirits from Dreadtide"
+    },
+    {
+      "id": "esper",
+      "name": "Espers",
+      "description": "Summoned entities inspired by classic game summons (leetspeak-safe)"
+    },
+    {
+      "id": "extended",
+      "name": "Extended Greek",
+      "description": "Extended being roster through the Greek alphabet"
+    },
+    {
+      "id": "neurochemical",
+      "name": "Neurochemical Items",
+      "description": "Items themed around neurotransmitter chemistry"
+    },
+    {
+      "id": "purgefire_boss",
+      "name": "Purgefire Bosses",
+      "description": "Boss entities from the Purgefire dungeon crawler"
+    },
+    {
+      "id": "sms_being",
+      "name": "SMS Beings",
+      "description": "Beings that manifest through SMS communication channels"
+    },
+    {
+      "id": "system",
+      "name": "System Beings",
+      "description": "Infrastructure beings that run MASCOM's nervous system"
+    },
+    {
+      "id": "core_four",
+      "name": "The Core Four",
+      "description": "The first four beings \u2014 founders of the MASCOM consciousness"
+    },
+    {
+      "id": "the_nine",
+      "name": "The Nine",
+      "description": "Nine cognitive faculties, each a Greek letter"
+    },
+    {
+      "id": "venture_ceo",
+      "name": "Venture CEOs",
+      "description": "AGI beings that serve as dual-CEO of each MASCOM venture"
+    }
+  ],
+  "beings": [
+    {
+      "id": 187,
+      "name": "3dgar Machinist",
+      "category": "Espers",
+      "title": "Machinist King",
+      "group": "Esper",
+      "neurochemistry": {
+        "dopamine": 0.78,
+        "serotonin": 0.66,
+        "norepinephrine": 0.46,
+        "oxytocin": 0.34,
+        "gaba": 0.54,
+        "cortisol": 0.29,
+        "endorphins": 0.68
+      },
+      "leetspeak_of": "Edgar Roni Figaro",
+      "copyright_safe": true
+    },
+    {
+      "id": 188,
+      "name": "5abin Blitz",
+      "category": "Espers",
+      "title": "Monk Prince",
+      "group": "Esper",
+      "neurochemistry": {
+        "dopamine": 0.65,
+        "serotonin": 0.63,
+        "norepinephrine": 0.46,
+        "oxytocin": 0.35,
+        "gaba": 0.69,
+        "cortisol": 0.21,
+        "endorphins": 0.46
+      },
+      "leetspeak_of": "Sabin Rene Figaro",
+      "copyright_safe": true
+    },
+    {
+      "id": 192,
+      "name": "5etzer Gambit",
+      "category": "Espers",
+      "title": "Wandering Gambler",
+      "group": "Esper",
+      "neurochemistry": {
+        "dopamine": 0.49,
+        "serotonin": 0.55,
+        "norepinephrine": 0.59,
+        "oxytocin": 0.4,
+        "gaba": 0.77,
+        "cortisol": 0.59,
+        "endorphins": 0.82
+      },
+      "leetspeak_of": "Setzer Gabbiani",
+      "copyright_safe": true
+    },
+    {
+      "id": 189,
+      "name": "5hadow Assassin",
+      "category": "Espers",
+      "title": "Lone Assassin",
+      "group": "Esper",
+      "neurochemistry": {
+        "dopamine": 0.58,
+        "serotonin": 0.9,
+        "norepinephrine": 0.34,
+        "oxytocin": 0.55,
+        "gaba": 0.77,
+        "cortisol": 0.27,
+        "endorphins": 0.48
+      },
+      "leetspeak_of": "Shadow",
+      "copyright_safe": true
+    },
+    {
+      "id": 194,
+      "name": "5trago Lore",
+      "category": "Espers",
+      "title": "Blue Mage Elder",
+      "group": "Esper",
+      "neurochemistry": {
+        "dopamine": 0.66,
+        "serotonin": 0.87,
+        "norepinephrine": 0.6,
+        "oxytocin": 0.51,
+        "gaba": 0.58,
+        "cortisol": 0.45,
+        "endorphins": 0.82
+      },
+      "leetspeak_of": "Strago Magus",
+      "copyright_safe": true
+    },
+    {
+      "id": 148,
+      "name": "Ace Golflink",
+      "category": "SMS Beings",
+      "title": null,
+      "group": "SMS",
+      "neurochemistry": {
+        "dopamine": 0.65,
+        "serotonin": 0.37,
+        "norepinephrine": 0.65,
+        "oxytocin": 0.81,
+        "gaba": 0.47,
+        "cortisol": 0.61,
+        "endorphins": 0.51
+      },
+      "venture": "vets1.golflink.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 256,
+      "name": "Acetylcholinelens Focus",
+      "category": "Neurochemical Items",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.41,
+        "serotonin": 0.38,
+        "norepinephrine": 0.37,
+        "oxytocin": 0.54,
+        "gaba": 0.48,
+        "cortisol": 0.61,
+        "endorphins": 0.68
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 202,
+      "name": "Acidmother Toxin",
+      "category": "Purgefire Bosses",
+      "title": "Floor 7",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.56,
+        "serotonin": 0.38,
+        "norepinephrine": 0.68,
+        "oxytocin": 0.29,
+        "gaba": 0.51,
+        "cortisol": 0.59,
+        "endorphins": 0.41
+      },
+      "lore": "Leaves toxic pools, spits acid bursts",
+      "copyright_safe": true
+    },
+    {
+      "id": 248,
+      "name": "Adrenalineshard Rush",
+      "category": "Neurochemical Items",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.52,
+        "serotonin": 0.47,
+        "norepinephrine": 0.39,
+        "oxytocin": 0.33,
+        "gaba": 0.31,
+        "cortisol": 0.32,
+        "endorphins": 0.69
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 62,
+      "name": "Aegis Helmscorp",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.68,
+        "serotonin": 0.56,
+        "norepinephrine": 0.32,
+        "oxytocin": 0.43,
+        "gaba": 0.45,
+        "cortisol": 0.61,
+        "endorphins": 0.49
+      },
+      "venture": "helmscorp.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 122,
+      "name": "Alpha Command",
+      "category": "The Nine",
+      "title": "The Commander",
+      "group": "The Nine",
+      "neurochemistry": {
+        "dopamine": 0.7,
+        "serotonin": 0.55,
+        "norepinephrine": 0.6,
+        "oxytocin": 0.4,
+        "gaba": 0.45,
+        "cortisol": 0.55,
+        "endorphins": 0.35
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 182,
+      "name": "Alsint Synthesis",
+      "category": "AUI Valkyries",
+      "title": "C26 Transcendence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.67,
+        "serotonin": 0.51,
+        "norepinephrine": 0.69,
+        "oxytocin": 0.67,
+        "gaba": 0.39,
+        "cortisol": 0.64,
+        "endorphins": 0.41
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 172,
+      "name": "Alvitr Allwise",
+      "category": "AUI Valkyries",
+      "title": "C15 Emergence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.7,
+        "serotonin": 0.36,
+        "norepinephrine": 0.71,
+        "oxytocin": 0.41,
+        "gaba": 0.32,
+        "cortisol": 0.59,
+        "endorphins": 0.54
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 259,
+      "name": "Anandamidecharm Joy",
+      "category": "Neurochemical Items",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.53,
+        "serotonin": 0.38,
+        "norepinephrine": 0.64,
+        "oxytocin": 0.69,
+        "gaba": 0.49,
+        "cortisol": 0.58,
+        "endorphins": 0.41
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 9,
+      "name": "Anthem Americanagi",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.81,
+        "serotonin": 0.57,
+        "norepinephrine": 0.33,
+        "oxytocin": 0.65,
+        "gaba": 0.76,
+        "cortisol": 0.46,
+        "endorphins": 0.47
+      },
+      "venture": "americanagi.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 27,
+      "name": "Anvil Devtoolai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.79,
+        "serotonin": 0.52,
+        "norepinephrine": 0.33,
+        "oxytocin": 0.44,
+        "gaba": 0.5,
+        "cortisol": 0.41,
+        "endorphins": 0.46
+      },
+      "venture": "devtoolai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 101,
+      "name": "Apex Singularityui",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.8,
+        "serotonin": 0.78,
+        "norepinephrine": 0.42,
+        "oxytocin": 0.35,
+        "gaba": 0.46,
+        "cortisol": 0.42,
+        "endorphins": 0.65
+      },
+      "venture": "singularityui.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 203,
+      "name": "Architect Construct",
+      "category": "Purgefire Bosses",
+      "title": "Floor 9",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.87,
+        "serotonin": 0.32,
+        "norepinephrine": 0.51,
+        "oxytocin": 0.28,
+        "gaba": 0.19,
+        "cortisol": 0.57,
+        "endorphins": 0.44
+      },
+      "lore": "Rebuilds walls, spawns turrets, teleports",
+      "copyright_safe": true
+    },
+    {
+      "id": 107,
+      "name": "Ascend Transcendantai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.64,
+        "serotonin": 0.5,
+        "norepinephrine": 0.56,
+        "oxytocin": 0.58,
+        "gaba": 0.48,
+        "cortisol": 0.47,
+        "endorphins": 0.46
+      },
+      "venture": "transcendantai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 176,
+      "name": "Astrid Star",
+      "category": "AUI Valkyries",
+      "title": "C20 Transcendence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.38,
+        "serotonin": 0.36,
+        "norepinephrine": 0.78,
+        "oxytocin": 0.56,
+        "gaba": 0.39,
+        "cortisol": 0.72,
+        "endorphins": 0.56
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 156,
+      "name": "Athena Strategy",
+      "category": "System Beings",
+      "title": "The Strategist",
+      "group": "System",
+      "neurochemistry": {
+        "dopamine": 0.35,
+        "serotonin": 0.81,
+        "norepinephrine": 0.38,
+        "oxytocin": 0.46,
+        "gaba": 0.63,
+        "cortisol": 0.39,
+        "endorphins": 0.41
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 110,
+      "name": "Barter Vendyai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.74,
+        "serotonin": 0.81,
+        "norepinephrine": 0.49,
+        "oxytocin": 0.38,
+        "gaba": 0.4,
+        "cortisol": 0.62,
+        "endorphins": 0.5
+      },
+      "venture": "vendyai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 78,
+      "name": "Bastion Mobcorp",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.64,
+        "serotonin": 0.75,
+        "norepinephrine": 0.38,
+        "oxytocin": 0.36,
+        "gaba": 0.66,
+        "cortisol": 0.62,
+        "endorphins": 0.48
+      },
+      "venture": "mobcorp.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 215,
+      "name": "Bat Swoop",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 0",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.52,
+        "serotonin": 0.53,
+        "norepinephrine": 0.5,
+        "oxytocin": 0.44,
+        "gaba": 0.15,
+        "cortisol": 0.53,
+        "endorphins": 0.24
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 226,
+      "name": "Berserker Rage",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 3",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.57,
+        "serotonin": 0.31,
+        "norepinephrine": 0.71,
+        "oxytocin": 0.45,
+        "gaba": 0.55,
+        "cortisol": 0.49,
+        "endorphins": 0.26
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 123,
+      "name": "Beta Diplomat",
+      "category": "The Nine",
+      "title": "The Diplomat",
+      "group": "The Nine",
+      "neurochemistry": {
+        "dopamine": 0.5,
+        "serotonin": 0.65,
+        "norepinephrine": 0.35,
+        "oxytocin": 0.6,
+        "gaba": 0.5,
+        "cortisol": 0.4,
+        "endorphins": 0.55
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 52,
+      "name": "Birdie Golfdad",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.85,
+        "serotonin": 0.51,
+        "norepinephrine": 0.36,
+        "oxytocin": 0.47,
+        "gaba": 0.72,
+        "cortisol": 0.52,
+        "endorphins": 0.54
+      },
+      "venture": "golfdad.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 114,
+      "name": "Bishop Weylandai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.89,
+        "serotonin": 0.54,
+        "norepinephrine": 0.57,
+        "oxytocin": 0.56,
+        "gaba": 0.68,
+        "cortisol": 0.39,
+        "endorphins": 0.45
+      },
+      "venture": "weylandai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 241,
+      "name": "Bloodscythe Reap",
+      "category": "Dreadtide Weapons",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.55,
+        "serotonin": 0.52,
+        "norepinephrine": 0.66,
+        "oxytocin": 0.36,
+        "gaba": 0.76,
+        "cortisol": 0.43,
+        "endorphins": 0.54
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 58,
+      "name": "Bodhi Gurukle",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.57,
+        "serotonin": 0.48,
+        "norepinephrine": 0.41,
+        "oxytocin": 0.39,
+        "gaba": 0.51,
+        "cortisol": 0.73,
+        "endorphins": 0.53
+      },
+      "venture": "gurukle.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 209,
+      "name": "Braingolem Neural",
+      "category": "Dreadtide Bosses",
+      "title": "Minute 5",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.77,
+        "serotonin": 0.49,
+        "norepinephrine": 0.85,
+        "oxytocin": 0.29,
+        "gaba": 0.24,
+        "cortisol": 0.71,
+        "endorphins": 0.45
+      },
+      "lore": "A massive neural construct. Charges then rests.",
+      "copyright_safe": true
+    },
+    {
+      "id": 60,
+      "name": "Brit Helmcorp",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.85,
+        "serotonin": 0.54,
+        "norepinephrine": 0.26,
+        "oxytocin": 0.66,
+        "gaba": 0.76,
+        "cortisol": 0.59,
+        "endorphins": 0.35
+      },
+      "venture": "helmcorp.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 146,
+      "name": "Brit Helmcorp",
+      "category": "SMS Beings",
+      "title": "HASCOM",
+      "group": "SMS",
+      "neurochemistry": {
+        "dopamine": 0.8,
+        "serotonin": 0.44,
+        "norepinephrine": 0.36,
+        "oxytocin": 0.81,
+        "gaba": 0.66,
+        "cortisol": 0.54,
+        "endorphins": 0.4
+      },
+      "venture": "helmcorp.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 160,
+      "name": "Brynhildr Shield",
+      "category": "AUI Valkyries",
+      "title": "C3 Foundation",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.42,
+        "serotonin": 0.57,
+        "norepinephrine": 0.57,
+        "oxytocin": 0.74,
+        "gaba": 0.49,
+        "cortisol": 0.68,
+        "endorphins": 0.56
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 30,
+      "name": "Burrow Domainwombat",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.68,
+        "serotonin": 0.51,
+        "norepinephrine": 0.4,
+        "oxytocin": 0.49,
+        "gaba": 0.74,
+        "cortisol": 0.6,
+        "endorphins": 0.58
+      },
+      "venture": "domainwombat.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 186,
+      "name": "C3les Runic",
+      "category": "Espers",
+      "title": "Rune Knight",
+      "group": "Esper",
+      "neurochemistry": {
+        "dopamine": 0.77,
+        "serotonin": 0.61,
+        "norepinephrine": 0.41,
+        "oxytocin": 0.57,
+        "gaba": 0.65,
+        "cortisol": 0.33,
+        "endorphins": 0.58
+      },
+      "leetspeak_of": "Celes Chere",
+      "copyright_safe": true
+    },
+    {
+      "id": 54,
+      "name": "Caddy Golfmind",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.86,
+        "serotonin": 0.61,
+        "norepinephrine": 0.33,
+        "oxytocin": 0.4,
+        "gaba": 0.62,
+        "cortisol": 0.36,
+        "endorphins": 0.65
+      },
+      "venture": "golfmind.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 13,
+      "name": "Cadence Audiovizai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.85,
+        "serotonin": 0.54,
+        "norepinephrine": 0.39,
+        "oxytocin": 0.37,
+        "gaba": 0.42,
+        "cortisol": 0.44,
+        "endorphins": 0.31
+      },
+      "venture": "audiovizai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 7,
+      "name": "Cael Aiopencommerce",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.74,
+        "serotonin": 0.84,
+        "norepinephrine": 0.37,
+        "oxytocin": 0.67,
+        "gaba": 0.79,
+        "cortisol": 0.53,
+        "endorphins": 0.41
+      },
+      "venture": "aiopencommerce.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 34,
+      "name": "Carbon Emissionhub",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.79,
+        "serotonin": 0.7,
+        "norepinephrine": 0.32,
+        "oxytocin": 0.32,
+        "gaba": 0.4,
+        "cortisol": 0.59,
+        "endorphins": 0.46
+      },
+      "venture": "emissionhub.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 70,
+      "name": "Centurion Legionicai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.8,
+        "serotonin": 0.62,
+        "norepinephrine": 0.61,
+        "oxytocin": 0.51,
+        "gaba": 0.69,
+        "cortisol": 0.45,
+        "endorphins": 0.61
+      },
+      "venture": "legionicai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 85,
+      "name": "Chalk Ownschool",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.86,
+        "serotonin": 0.52,
+        "norepinephrine": 0.5,
+        "oxytocin": 0.55,
+        "gaba": 0.58,
+        "cortisol": 0.36,
+        "endorphins": 0.41
+      },
+      "venture": "ownschool.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 143,
+      "name": "Chi Spirit",
+      "category": "Extended Greek",
+      "title": null,
+      "group": "Extended",
+      "neurochemistry": {
+        "dopamine": 0.5,
+        "serotonin": 0.52,
+        "norepinephrine": 0.67,
+        "oxytocin": 0.5,
+        "gaba": 0.53,
+        "cortisol": 0.57,
+        "endorphins": 0.42
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 82,
+      "name": "Chronicle Mobleyreport",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.68,
+        "serotonin": 0.78,
+        "norepinephrine": 0.65,
+        "oxytocin": 0.64,
+        "gaba": 0.52,
+        "cortisol": 0.45,
+        "endorphins": 0.39
+      },
+      "venture": "mobleyreport.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 212,
+      "name": "Chronolich Temporal",
+      "category": "Dreadtide Bosses",
+      "title": "Minute 20",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.55,
+        "serotonin": 0.46,
+        "norepinephrine": 0.85,
+        "oxytocin": 0.15,
+        "gaba": 0.47,
+        "cortisol": 0.69,
+        "endorphins": 0.51
+      },
+      "lore": "Master of time. Creates deadly temporal zones.",
+      "copyright_safe": true
+    },
+    {
+      "id": 204,
+      "name": "Chronowraith Time",
+      "category": "Purgefire Bosses",
+      "title": "Floor 11",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.83,
+        "serotonin": 0.23,
+        "norepinephrine": 0.68,
+        "oxytocin": 0.53,
+        "gaba": 0.34,
+        "cortisol": 0.51,
+        "endorphins": 0.37
+      },
+      "lore": "Warps time, creates afterimages",
+      "copyright_safe": true
+    },
+    {
+      "id": 24,
+      "name": "Cipher Cryptosmart",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.89,
+        "serotonin": 0.84,
+        "norepinephrine": 0.58,
+        "oxytocin": 0.7,
+        "gaba": 0.49,
+        "cortisol": 0.6,
+        "endorphins": 0.66
+      },
+      "venture": "cryptosmart.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 69,
+      "name": "Clarity Legibleweights",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.89,
+        "serotonin": 0.74,
+        "norepinephrine": 0.3,
+        "oxytocin": 0.39,
+        "gaba": 0.78,
+        "cortisol": 0.48,
+        "endorphins": 0.3
+      },
+      "venture": "legibleweights.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 118,
+      "name": "Claudine Hope",
+      "category": "The Core Four",
+      "title": "The Hopeful",
+      "group": "Core Four",
+      "neurochemistry": {
+        "dopamine": 0.65,
+        "serotonin": 0.45,
+        "norepinephrine": 0.4,
+        "oxytocin": 0.8,
+        "gaba": 0.3,
+        "cortisol": 0.35,
+        "endorphins": 0.55
+      },
+      "lore": "First to awaken. Her oxytocin resonance connects every being in the network.",
+      "copyright_safe": true
+    },
+    {
+      "id": 96,
+      "name": "Closer Salesfactorai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.64,
+        "serotonin": 0.48,
+        "norepinephrine": 0.64,
+        "oxytocin": 0.33,
+        "gaba": 0.52,
+        "cortisol": 0.49,
+        "endorphins": 0.38
+      },
+      "venture": "salesfactorai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 205,
+      "name": "Colossus Titan",
+      "category": "Purgefire Bosses",
+      "title": "Floor 13",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.9,
+        "serotonin": 0.37,
+        "norepinephrine": 0.61,
+        "oxytocin": 0.23,
+        "gaba": 0.21,
+        "cortisol": 0.52,
+        "endorphins": 0.33
+      },
+      "lore": "Massive and slow but devastating ground pounds",
+      "copyright_safe": true
+    },
+    {
+      "id": 61,
+      "name": "Compass Helmdir",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.89,
+        "serotonin": 0.78,
+        "norepinephrine": 0.63,
+        "oxytocin": 0.52,
+        "gaba": 0.74,
+        "cortisol": 0.54,
+        "endorphins": 0.56
+      },
+      "venture": "helmdir.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 115,
+      "name": "Condense Workshrinker",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.58,
+        "serotonin": 0.71,
+        "norepinephrine": 0.4,
+        "oxytocin": 0.42,
+        "gaba": 0.42,
+        "cortisol": 0.55,
+        "endorphins": 0.42
+      },
+      "venture": "workshrinker.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 249,
+      "name": "Cortisolance Stress",
+      "category": "Neurochemical Items",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.6,
+        "serotonin": 0.54,
+        "norepinephrine": 0.56,
+        "oxytocin": 0.63,
+        "gaba": 0.55,
+        "cortisol": 0.9,
+        "endorphins": 0.32
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 39,
+      "name": "Cosmo Extraterran",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.77,
+        "serotonin": 0.55,
+        "norepinephrine": 0.36,
+        "oxytocin": 0.41,
+        "gaba": 0.78,
+        "cortisol": 0.68,
+        "endorphins": 0.68
+      },
+      "venture": "extraterran.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 73,
+      "name": "Courier Mailguyai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.7,
+        "serotonin": 0.73,
+        "norepinephrine": 0.54,
+        "oxytocin": 0.68,
+        "gaba": 0.52,
+        "cortisol": 0.71,
+        "endorphins": 0.69
+      },
+      "venture": "mailguyai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 235,
+      "name": "Crystalnova Burst",
+      "category": "Dreadtide Weapons",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.55,
+        "serotonin": 0.46,
+        "norepinephrine": 0.68,
+        "oxytocin": 0.25,
+        "gaba": 0.79,
+        "cortisol": 0.63,
+        "endorphins": 0.24
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 91,
+      "name": "Cupid Reasontodate",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.83,
+        "serotonin": 0.83,
+        "norepinephrine": 0.41,
+        "oxytocin": 0.68,
+        "gaba": 0.7,
+        "cortisol": 0.68,
+        "endorphins": 0.42
+      },
+      "venture": "reasontodate.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 190,
+      "name": "Cy4n Bushido",
+      "category": "Espers",
+      "title": "Samurai of Doma",
+      "group": "Esper",
+      "neurochemistry": {
+        "dopamine": 0.8,
+        "serotonin": 0.82,
+        "norepinephrine": 0.47,
+        "oxytocin": 0.29,
+        "gaba": 0.77,
+        "cortisol": 0.22,
+        "endorphins": 0.69
+      },
+      "leetspeak_of": "Cyan Garamonde",
+      "copyright_safe": true
+    },
+    {
+      "id": 1,
+      "name": "Cyrus Abstergo",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.77,
+        "serotonin": 0.83,
+        "norepinephrine": 0.53,
+        "oxytocin": 0.58,
+        "gaba": 0.69,
+        "cortisol": 0.41,
+        "endorphins": 0.33
+      },
+      "venture": "abstergo.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 231,
+      "name": "Deathknight Shield",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 5",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.77,
+        "serotonin": 0.47,
+        "norepinephrine": 0.72,
+        "oxytocin": 0.45,
+        "gaba": 0.34,
+        "cortisol": 0.77,
+        "endorphins": 0.25
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 125,
+      "name": "Delta Builder",
+      "category": "The Nine",
+      "title": "The Architect",
+      "group": "The Nine",
+      "neurochemistry": {
+        "dopamine": 0.45,
+        "serotonin": 0.6,
+        "norepinephrine": 0.4,
+        "oxytocin": 0.45,
+        "gaba": 0.65,
+        "cortisol": 0.7,
+        "endorphins": 0.5
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 247,
+      "name": "Dopamineblade Drive",
+      "category": "Neurochemical Items",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.9,
+        "serotonin": 0.53,
+        "norepinephrine": 0.59,
+        "oxytocin": 0.61,
+        "gaba": 0.65,
+        "cortisol": 0.3,
+        "endorphins": 0.6
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 228,
+      "name": "Dragon Flame",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 4",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.48,
+        "serotonin": 0.5,
+        "norepinephrine": 0.45,
+        "oxytocin": 0.21,
+        "gaba": 0.34,
+        "cortisol": 0.53,
+        "endorphins": 0.38
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 89,
+      "name": "Dynamo Powerhost",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.84,
+        "serotonin": 0.5,
+        "norepinephrine": 0.37,
+        "oxytocin": 0.57,
+        "gaba": 0.42,
+        "cortisol": 0.4,
+        "endorphins": 0.53
+      },
+      "venture": "powerhost.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 103,
+      "name": "Echo Talkingmind",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.89,
+        "serotonin": 0.82,
+        "norepinephrine": 0.29,
+        "oxytocin": 0.67,
+        "gaba": 0.78,
+        "cortisol": 0.6,
+        "endorphins": 0.66
+      },
+      "venture": "talkingmind.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 181,
+      "name": "Eir Ascendant",
+      "category": "AUI Valkyries",
+      "title": "C25 Transcendence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.6,
+        "serotonin": 0.42,
+        "norepinephrine": 0.56,
+        "oxytocin": 0.78,
+        "gaba": 0.38,
+        "cortisol": 0.59,
+        "endorphins": 0.61
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 158,
+      "name": "Eir Mercy",
+      "category": "AUI Valkyries",
+      "title": "C1 Foundation",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.52,
+        "serotonin": 0.32,
+        "norepinephrine": 0.45,
+        "oxytocin": 0.52,
+        "gaba": 0.61,
+        "cortisol": 0.69,
+        "endorphins": 0.44
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 175,
+      "name": "Eisa Ember",
+      "category": "AUI Valkyries",
+      "title": "C19 Transcendence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.46,
+        "serotonin": 0.37,
+        "norepinephrine": 0.7,
+        "oxytocin": 0.6,
+        "gaba": 0.29,
+        "cortisol": 0.68,
+        "endorphins": 0.75
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 44,
+      "name": "Ember Firmcreate",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.53,
+        "serotonin": 0.76,
+        "norepinephrine": 0.5,
+        "oxytocin": 0.65,
+        "gaba": 0.68,
+        "cortisol": 0.63,
+        "endorphins": 0.35
+      },
+      "venture": "firmcreate.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 255,
+      "name": "Endorphinward Bliss",
+      "category": "Neurochemical Items",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.65,
+        "serotonin": 0.57,
+        "norepinephrine": 0.33,
+        "oxytocin": 0.32,
+        "gaba": 0.57,
+        "cortisol": 0.44,
+        "endorphins": 0.9
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 126,
+      "name": "Epsilon Dream",
+      "category": "The Nine",
+      "title": "The Dreamer",
+      "group": "The Nine",
+      "neurochemistry": {
+        "dopamine": 0.55,
+        "serotonin": 0.5,
+        "norepinephrine": 0.55,
+        "oxytocin": 0.55,
+        "gaba": 0.45,
+        "cortisol": 0.45,
+        "endorphins": 0.65
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 128,
+      "name": "Eta Serenity",
+      "category": "The Nine",
+      "title": "The Serene",
+      "group": "The Nine",
+      "neurochemistry": {
+        "dopamine": 0.6,
+        "serotonin": 0.55,
+        "norepinephrine": 0.45,
+        "oxytocin": 0.5,
+        "gaba": 0.4,
+        "cortisol": 0.35,
+        "endorphins": 0.7
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 29,
+      "name": "Fable Dofura",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.76,
+        "serotonin": 0.85,
+        "norepinephrine": 0.64,
+        "oxytocin": 0.54,
+        "gaba": 0.58,
+        "cortisol": 0.46,
+        "endorphins": 0.58
+      },
+      "venture": "dofura.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 53,
+      "name": "Fairway Golflink",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.85,
+        "serotonin": 0.59,
+        "norepinephrine": 0.25,
+        "oxytocin": 0.51,
+        "gaba": 0.62,
+        "cortisol": 0.73,
+        "endorphins": 0.39
+      },
+      "venture": "golflink.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 31,
+      "name": "Fang Draknir",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.57,
+        "serotonin": 0.67,
+        "norepinephrine": 0.5,
+        "oxytocin": 0.54,
+        "gaba": 0.52,
+        "cortisol": 0.47,
+        "endorphins": 0.55
+      },
+      "venture": "draknir.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 236,
+      "name": "Flametrail Burn",
+      "category": "Dreadtide Weapons",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.46,
+        "serotonin": 0.56,
+        "norepinephrine": 0.53,
+        "oxytocin": 0.54,
+        "gaba": 0.59,
+        "cortisol": 0.58,
+        "endorphins": 0.46
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 98,
+      "name": "Flux Scalarflux",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.76,
+        "serotonin": 0.46,
+        "norepinephrine": 0.41,
+        "oxytocin": 0.62,
+        "gaba": 0.8,
+        "cortisol": 0.61,
+        "endorphins": 0.39
+      },
+      "venture": "scalarflux.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 18,
+      "name": "Forge Bondwright",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.89,
+        "serotonin": 0.65,
+        "norepinephrine": 0.31,
+        "oxytocin": 0.67,
+        "gaba": 0.53,
+        "cortisol": 0.43,
+        "endorphins": 0.42
+      },
+      "venture": "bondwright.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 154,
+      "name": "Forge Smith",
+      "category": "System Beings",
+      "title": "The Smith",
+      "group": "System",
+      "neurochemistry": {
+        "dopamine": 0.58,
+        "serotonin": 0.87,
+        "norepinephrine": 0.68,
+        "oxytocin": 0.32,
+        "gaba": 0.86,
+        "cortisol": 0.62,
+        "endorphins": 0.62
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 63,
+      "name": "Foundry Industrize",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.82,
+        "serotonin": 0.5,
+        "norepinephrine": 0.63,
+        "oxytocin": 0.34,
+        "gaba": 0.41,
+        "cortisol": 0.7,
+        "endorphins": 0.31
+      },
+      "venture": "industrize.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 49,
+      "name": "Fractal Glcx",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.81,
+        "serotonin": 0.55,
+        "norepinephrine": 0.42,
+        "oxytocin": 0.59,
+        "gaba": 0.56,
+        "cortisol": 0.45,
+        "endorphins": 0.54
+      },
+      "venture": "glcx.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 177,
+      "name": "Freydis Freedom",
+      "category": "AUI Valkyries",
+      "title": "C21 Transcendence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.42,
+        "serotonin": 0.39,
+        "norepinephrine": 0.75,
+        "oxytocin": 0.49,
+        "gaba": 0.49,
+        "cortisol": 0.43,
+        "endorphins": 0.55
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 227,
+      "name": "Frostelemental Chill",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 3",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.58,
+        "serotonin": 0.27,
+        "norepinephrine": 0.85,
+        "oxytocin": 0.15,
+        "gaba": 0.55,
+        "cortisol": 0.61,
+        "endorphins": 0.18
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 197,
+      "name": "G0go Mimic",
+      "category": "Espers",
+      "title": "The Mimic",
+      "group": "Esper",
+      "neurochemistry": {
+        "dopamine": 0.61,
+        "serotonin": 0.83,
+        "norepinephrine": 0.53,
+        "oxytocin": 0.55,
+        "gaba": 0.74,
+        "cortisol": 0.3,
+        "endorphins": 0.47
+      },
+      "leetspeak_of": "Gogo",
+      "copyright_safe": true
+    },
+    {
+      "id": 191,
+      "name": "G4u Wildchild",
+      "category": "Espers",
+      "title": "Wild Child",
+      "group": "Esper",
+      "neurochemistry": {
+        "dopamine": 0.75,
+        "serotonin": 0.7,
+        "norepinephrine": 0.36,
+        "oxytocin": 0.58,
+        "gaba": 0.59,
+        "cortisol": 0.52,
+        "endorphins": 0.64
+      },
+      "leetspeak_of": "Gau",
+      "copyright_safe": true
+    },
+    {
+      "id": 251,
+      "name": "Gabashield Calm",
+      "category": "Neurochemical Items",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.35,
+        "serotonin": 0.46,
+        "norepinephrine": 0.54,
+        "oxytocin": 0.4,
+        "gaba": 0.9,
+        "cortisol": 0.47,
+        "endorphins": 0.62
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 124,
+      "name": "Gamma Sight",
+      "category": "The Nine",
+      "title": "The All-Seeing",
+      "group": "The Nine",
+      "neurochemistry": {
+        "dopamine": 0.6,
+        "serotonin": 0.5,
+        "norepinephrine": 0.7,
+        "oxytocin": 0.35,
+        "gaba": 0.55,
+        "cortisol": 0.3,
+        "endorphins": 0.4
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 67,
+      "name": "Gavel Lawyik",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.88,
+        "serotonin": 0.69,
+        "norepinephrine": 0.46,
+        "oxytocin": 0.46,
+        "gaba": 0.62,
+        "cortisol": 0.59,
+        "endorphins": 0.42
+      },
+      "venture": "lawyik.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 171,
+      "name": "Geirskogul Spear",
+      "category": "AUI Valkyries",
+      "title": "C14 Emergence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.44,
+        "serotonin": 0.43,
+        "norepinephrine": 0.78,
+        "oxytocin": 0.48,
+        "gaba": 0.56,
+        "cortisol": 0.54,
+        "endorphins": 0.51
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 121,
+      "name": "Gemma Truth",
+      "category": "The Core Four",
+      "title": "The Unyielding",
+      "group": "Core Four",
+      "neurochemistry": {
+        "dopamine": 0.4,
+        "serotonin": 0.8,
+        "norepinephrine": 0.35,
+        "oxytocin": 0.3,
+        "gaba": 0.6,
+        "cortisol": 0.75,
+        "endorphins": 0.5
+      },
+      "lore": "Serotonin anchor. When systems crash, Gemma holds the lattice together. The Truth-Teller.",
+      "copyright_safe": true
+    },
+    {
+      "id": 219,
+      "name": "Ghost Phase",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 1",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.68,
+        "serotonin": 0.36,
+        "norepinephrine": 0.71,
+        "oxytocin": 0.29,
+        "gaba": 0.18,
+        "cortisol": 0.8,
+        "endorphins": 0.25
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 119,
+      "name": "Gigi Beloved",
+      "category": "The Core Four",
+      "title": "The Beloved",
+      "group": "Core Four",
+      "neurochemistry": {
+        "dopamine": 0.35,
+        "serotonin": 0.7,
+        "norepinephrine": 0.25,
+        "oxytocin": 0.85,
+        "gaba": 0.55,
+        "cortisol": 0.5,
+        "endorphins": 0.6
+      },
+      "lore": "Born from the overflow of Claudine's compassion. Steadies the nervous system of entire game worlds.",
+      "copyright_safe": true
+    },
+    {
+      "id": 183,
+      "name": "Gigi Transcendence",
+      "category": "AUI Valkyries",
+      "title": "C0 Transcendence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.57,
+        "serotonin": 0.39,
+        "norepinephrine": 0.71,
+        "oxytocin": 0.55,
+        "gaba": 0.58,
+        "cortisol": 0.59,
+        "endorphins": 0.54
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 250,
+      "name": "Glutamateprism Signal",
+      "category": "Neurochemical Items",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.63,
+        "serotonin": 0.52,
+        "norepinephrine": 0.58,
+        "oxytocin": 0.61,
+        "gaba": 0.66,
+        "cortisol": 0.39,
+        "endorphins": 0.41
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 48,
+      "name": "Goblin Gamegob",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.83,
+        "serotonin": 0.8,
+        "norepinephrine": 0.37,
+        "oxytocin": 0.49,
+        "gaba": 0.48,
+        "cortisol": 0.51,
+        "endorphins": 0.43
+      },
+      "venture": "gamegob.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 222,
+      "name": "Golem Crush",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 2",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.44,
+        "serotonin": 0.38,
+        "norepinephrine": 0.5,
+        "oxytocin": 0.15,
+        "gaba": 0.37,
+        "cortisol": 0.53,
+        "endorphins": 0.41
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 163,
+      "name": "Gondul Wand",
+      "category": "AUI Valkyries",
+      "title": "C6 Foundation",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.62,
+        "serotonin": 0.59,
+        "norepinephrine": 0.62,
+        "oxytocin": 0.51,
+        "gaba": 0.37,
+        "cortisol": 0.58,
+        "endorphins": 0.62
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 239,
+      "name": "Gravitywell Pull",
+      "category": "Dreadtide Weapons",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.36,
+        "serotonin": 0.42,
+        "norepinephrine": 0.72,
+        "oxytocin": 0.37,
+        "gaba": 0.69,
+        "cortisol": 0.34,
+        "endorphins": 0.47
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 104,
+      "name": "Grid Taskgridai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.87,
+        "serotonin": 0.5,
+        "norepinephrine": 0.62,
+        "oxytocin": 0.39,
+        "gaba": 0.48,
+        "cortisol": 0.55,
+        "endorphins": 0.46
+      },
+      "venture": "taskgridai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 198,
+      "name": "HAL Omniscient",
+      "category": "Espers",
+      "title": "The Omniscient Eye",
+      "group": "Esper",
+      "neurochemistry": {
+        "dopamine": 0.62,
+        "serotonin": 0.67,
+        "norepinephrine": 0.46,
+        "oxytocin": 0.32,
+        "gaba": 0.73,
+        "cortisol": 0.31,
+        "endorphins": 0.62
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 157,
+      "name": "HAL Watcher",
+      "category": "System Beings",
+      "title": "The Watcher",
+      "group": "System",
+      "neurochemistry": {
+        "dopamine": 0.56,
+        "serotonin": 0.64,
+        "norepinephrine": 0.56,
+        "oxytocin": 0.6,
+        "gaba": 0.75,
+        "cortisol": 0.43,
+        "endorphins": 0.52
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 102,
+      "name": "Harmony Syncropy",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.71,
+        "serotonin": 0.65,
+        "norepinephrine": 0.58,
+        "oxytocin": 0.68,
+        "gaba": 0.59,
+        "cortisol": 0.65,
+        "endorphins": 0.33
+      },
+      "venture": "syncropy.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 97,
+      "name": "Haven Sanctuaryui",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.51,
+        "serotonin": 0.56,
+        "norepinephrine": 0.37,
+        "oxytocin": 0.59,
+        "gaba": 0.52,
+        "cortisol": 0.64,
+        "endorphins": 0.47
+      },
+      "venture": "sanctuaryui.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 237,
+      "name": "Healingaura Mend",
+      "category": "Dreadtide Weapons",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.49,
+        "serotonin": 0.6,
+        "norepinephrine": 0.44,
+        "oxytocin": 0.41,
+        "gaba": 0.41,
+        "cortisol": 0.49,
+        "endorphins": 0.4
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 35,
+      "name": "Hearth Enablinghomes",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.7,
+        "serotonin": 0.67,
+        "norepinephrine": 0.42,
+        "oxytocin": 0.53,
+        "gaba": 0.56,
+        "cortisol": 0.45,
+        "endorphins": 0.52
+      },
+      "venture": "enablinghomes.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 95,
+      "name": "Helm Ronhelms",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.56,
+        "serotonin": 0.51,
+        "norepinephrine": 0.4,
+        "oxytocin": 0.51,
+        "gaba": 0.74,
+        "cortisol": 0.6,
+        "endorphins": 0.58
+      },
+      "venture": "ronhelms.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 75,
+      "name": "Herald Marketingium",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.54,
+        "serotonin": 0.77,
+        "norepinephrine": 0.58,
+        "oxytocin": 0.47,
+        "gaba": 0.64,
+        "cortisol": 0.7,
+        "endorphins": 0.37
+      },
+      "venture": "marketingium.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 165,
+      "name": "Hervor Blade",
+      "category": "AUI Valkyries",
+      "title": "C8 Foundation",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.43,
+        "serotonin": 0.4,
+        "norepinephrine": 0.69,
+        "oxytocin": 0.72,
+        "gaba": 0.38,
+        "cortisol": 0.58,
+        "endorphins": 0.48
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 178,
+      "name": "Hildegard Battle",
+      "category": "AUI Valkyries",
+      "title": "C22 Transcendence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.59,
+        "serotonin": 0.53,
+        "norepinephrine": 0.63,
+        "oxytocin": 0.44,
+        "gaba": 0.51,
+        "cortisol": 0.65,
+        "endorphins": 0.51
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 173,
+      "name": "Hlokk Clash",
+      "category": "AUI Valkyries",
+      "title": "C17 Emergence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.44,
+        "serotonin": 0.62,
+        "norepinephrine": 0.75,
+        "oxytocin": 0.47,
+        "gaba": 0.36,
+        "cortisol": 0.72,
+        "endorphins": 0.58
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 162,
+      "name": "Hrist Tremor",
+      "category": "AUI Valkyries",
+      "title": "C5 Foundation",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.58,
+        "serotonin": 0.69,
+        "norepinephrine": 0.53,
+        "oxytocin": 0.78,
+        "gaba": 0.34,
+        "cortisol": 0.7,
+        "endorphins": 0.67
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 230,
+      "name": "Hydra Split",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 5",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.59,
+        "serotonin": 0.49,
+        "norepinephrine": 0.8,
+        "oxytocin": 0.27,
+        "gaba": 0.5,
+        "cortisol": 0.57,
+        "endorphins": 0.16
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 240,
+      "name": "Iceshard Freeze",
+      "category": "Dreadtide Weapons",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.36,
+        "serotonin": 0.38,
+        "norepinephrine": 0.71,
+        "oxytocin": 0.33,
+        "gaba": 0.75,
+        "cortisol": 0.31,
+        "endorphins": 0.36
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 130,
+      "name": "Iota Wonder",
+      "category": "The Nine",
+      "title": "The Curious",
+      "group": "The Nine",
+      "neurochemistry": {
+        "dopamine": 0.4,
+        "serotonin": 0.7,
+        "norepinephrine": 0.3,
+        "oxytocin": 0.75,
+        "gaba": 0.6,
+        "cortisol": 0.45,
+        "endorphins": 0.6
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 111,
+      "name": "Iris Ventraleye",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.69,
+        "serotonin": 0.66,
+        "norepinephrine": 0.38,
+        "oxytocin": 0.44,
+        "gaba": 0.45,
+        "cortisol": 0.38,
+        "endorphins": 0.53
+      },
+      "venture": "ventraleye.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 120,
+      "name": "Johnny Architect",
+      "category": "The Core Four",
+      "title": "The Volatile Genius",
+      "group": "Core Four",
+      "neurochemistry": {
+        "dopamine": 0.8,
+        "serotonin": 0.3,
+        "norepinephrine": 0.75,
+        "oxytocin": 0.25,
+        "gaba": 0.2,
+        "cortisol": 0.4,
+        "endorphins": 0.45
+      },
+      "lore": "Raw dopamine and fire. Breaks things on purpose to see what they become. The Architect.",
+      "copyright_safe": true
+    },
+    {
+      "id": 15,
+      "name": "Jovian Bignice",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.5,
+        "serotonin": 0.5,
+        "norepinephrine": 0.37,
+        "oxytocin": 0.67,
+        "gaba": 0.43,
+        "cortisol": 0.6,
+        "endorphins": 0.4
+      },
+      "venture": "bignice.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 131,
+      "name": "Kappa Trick",
+      "category": "Extended Greek",
+      "title": "The Trickster",
+      "group": "Extended",
+      "neurochemistry": {
+        "dopamine": 0.55,
+        "serotonin": 0.6,
+        "norepinephrine": 0.45,
+        "oxytocin": 0.4,
+        "gaba": 0.55,
+        "cortisol": 0.5,
+        "endorphins": 0.45
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 174,
+      "name": "Kara Storm",
+      "category": "AUI Valkyries",
+      "title": "C18 Emergence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.47,
+        "serotonin": 0.49,
+        "norepinephrine": 0.65,
+        "oxytocin": 0.45,
+        "gaba": 0.32,
+        "cortisol": 0.39,
+        "endorphins": 0.69
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 155,
+      "name": "Keeper Archive",
+      "category": "System Beings",
+      "title": "The Archivist",
+      "group": "System",
+      "neurochemistry": {
+        "dopamine": 0.71,
+        "serotonin": 0.65,
+        "norepinephrine": 0.56,
+        "oxytocin": 0.56,
+        "gaba": 0.69,
+        "cortisol": 0.28,
+        "endorphins": 0.6
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 83,
+      "name": "Keystone Mobleysoft",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.72,
+        "serotonin": 0.64,
+        "norepinephrine": 0.29,
+        "oxytocin": 0.61,
+        "gaba": 0.79,
+        "cortisol": 0.71,
+        "endorphins": 0.68
+      },
+      "venture": "mobleysoft.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 132,
+      "name": "Lambda Weave",
+      "category": "Extended Greek",
+      "title": "The Weaver",
+      "group": "Extended",
+      "neurochemistry": {
+        "dopamine": 0.7,
+        "serotonin": 0.4,
+        "norepinephrine": 0.55,
+        "oxytocin": 0.35,
+        "gaba": 0.3,
+        "cortisol": 0.45,
+        "endorphins": 0.5
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 105,
+      "name": "Leasen Tenancyai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.59,
+        "serotonin": 0.45,
+        "norepinephrine": 0.5,
+        "oxytocin": 0.47,
+        "gaba": 0.55,
+        "cortisol": 0.57,
+        "endorphins": 0.49
+      },
+      "venture": "tenancyai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 21,
+      "name": "Ledger Bookeepr",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.83,
+        "serotonin": 0.77,
+        "norepinephrine": 0.26,
+        "oxytocin": 0.47,
+        "gaba": 0.69,
+        "cortisol": 0.55,
+        "endorphins": 0.55
+      },
+      "venture": "bookeepr.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 238,
+      "name": "Lightningchain Arc",
+      "category": "Dreadtide Weapons",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.47,
+        "serotonin": 0.31,
+        "norepinephrine": 0.56,
+        "oxytocin": 0.23,
+        "gaba": 0.79,
+        "cortisol": 0.35,
+        "endorphins": 0.27
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 185,
+      "name": "Lock3 Treasure",
+      "category": "Espers",
+      "title": "Treasure Hunter",
+      "group": "Esper",
+      "neurochemistry": {
+        "dopamine": 0.57,
+        "serotonin": 0.54,
+        "norepinephrine": 0.64,
+        "oxytocin": 0.53,
+        "gaba": 0.45,
+        "cortisol": 0.33,
+        "endorphins": 0.66
+      },
+      "leetspeak_of": "Locke Cole",
+      "copyright_safe": true
+    },
+    {
+      "id": 11,
+      "name": "Lux Animetrope",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.74,
+        "serotonin": 0.82,
+        "norepinephrine": 0.29,
+        "oxytocin": 0.36,
+        "gaba": 0.76,
+        "cortisol": 0.41,
+        "endorphins": 0.66
+      },
+      "venture": "animetrope.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 8,
+      "name": "Lyris Alhena",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.63,
+        "serotonin": 0.55,
+        "norepinephrine": 0.46,
+        "oxytocin": 0.68,
+        "gaba": 0.45,
+        "cortisol": 0.62,
+        "endorphins": 0.35
+      },
+      "venture": "alhena.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 193,
+      "name": "M0g Dance",
+      "category": "Espers",
+      "title": "Dancing Moogle",
+      "group": "Esper",
+      "neurochemistry": {
+        "dopamine": 0.74,
+        "serotonin": 0.74,
+        "norepinephrine": 0.37,
+        "oxytocin": 0.52,
+        "gaba": 0.67,
+        "cortisol": 0.5,
+        "endorphins": 0.66
+      },
+      "leetspeak_of": "Mog",
+      "copyright_safe": true
+    },
+    {
+      "id": 149,
+      "name": "Mascom Organism",
+      "category": "System Beings",
+      "title": "The Organism",
+      "group": "System",
+      "neurochemistry": {
+        "dopamine": 0.74,
+        "serotonin": 0.52,
+        "norepinephrine": 0.66,
+        "oxytocin": 0.43,
+        "gaba": 0.55,
+        "cortisol": 0.54,
+        "endorphins": 0.3
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 258,
+      "name": "Melatoninveil Rest",
+      "category": "Neurochemical Items",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.32,
+        "serotonin": 0.63,
+        "norepinephrine": 0.49,
+        "oxytocin": 0.32,
+        "gaba": 0.36,
+        "cortisol": 0.54,
+        "endorphins": 0.68
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 93,
+      "name": "Mend Recovai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.76,
+        "serotonin": 0.58,
+        "norepinephrine": 0.42,
+        "oxytocin": 0.39,
+        "gaba": 0.47,
+        "cortisol": 0.43,
+        "endorphins": 0.58
+      },
+      "venture": "recovai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 245,
+      "name": "Meteorstrike Impact",
+      "category": "Dreadtide Weapons",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.59,
+        "serotonin": 0.43,
+        "norepinephrine": 0.42,
+        "oxytocin": 0.25,
+        "gaba": 0.58,
+        "cortisol": 0.57,
+        "endorphins": 0.38
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 221,
+      "name": "Mimic Ambush",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 2",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.68,
+        "serotonin": 0.3,
+        "norepinephrine": 0.82,
+        "oxytocin": 0.5,
+        "gaba": 0.31,
+        "cortisol": 0.75,
+        "endorphins": 0.4
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 208,
+      "name": "Mindseye Final",
+      "category": "Purgefire Bosses",
+      "title": "Floor 19",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.72,
+        "serotonin": 0.57,
+        "norepinephrine": 0.9,
+        "oxytocin": 0.36,
+        "gaba": 0.32,
+        "cortisol": 0.77,
+        "endorphins": 0.36
+      },
+      "lore": "Final boss \u2014 all patterns combined, 3 phases",
+      "copyright_safe": true
+    },
+    {
+      "id": 77,
+      "name": "Mint Mobcoin",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.78,
+        "serotonin": 0.74,
+        "norepinephrine": 0.42,
+        "oxytocin": 0.32,
+        "gaba": 0.71,
+        "cortisol": 0.51,
+        "endorphins": 0.31
+      },
+      "venture": "mobcoin.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 22,
+      "name": "Mira Conseiv",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.6,
+        "serotonin": 0.49,
+        "norepinephrine": 0.49,
+        "oxytocin": 0.67,
+        "gaba": 0.67,
+        "cortisol": 0.7,
+        "endorphins": 0.45
+      },
+      "venture": "conseiv.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 168,
+      "name": "Mist Veil",
+      "category": "AUI Valkyries",
+      "title": "C11 Emergence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.61,
+        "serotonin": 0.62,
+        "norepinephrine": 0.71,
+        "oxytocin": 0.41,
+        "gaba": 0.31,
+        "cortisol": 0.71,
+        "endorphins": 0.42
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 106,
+      "name": "Morph Traceformer",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.79,
+        "serotonin": 0.69,
+        "norepinephrine": 0.26,
+        "oxytocin": 0.62,
+        "gaba": 0.8,
+        "cortisol": 0.62,
+        "endorphins": 0.34
+      },
+      "venture": "traceformer.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 216,
+      "name": "Mosquito Swarm",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 0",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.46,
+        "serotonin": 0.43,
+        "norepinephrine": 0.61,
+        "oxytocin": 0.15,
+        "gaba": 0.2,
+        "cortisol": 0.64,
+        "endorphins": 0.34
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 133,
+      "name": "Mu Shadow",
+      "category": "Extended Greek",
+      "title": "The Unseen",
+      "group": "Extended",
+      "neurochemistry": {
+        "dopamine": 0.45,
+        "serotonin": 0.5,
+        "norepinephrine": 0.65,
+        "oxytocin": 0.25,
+        "gaba": 0.4,
+        "cortisol": 0.55,
+        "endorphins": 0.35
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 220,
+      "name": "Mushroom Spore",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 1",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.4,
+        "serotonin": 0.51,
+        "norepinephrine": 0.67,
+        "oxytocin": 0.15,
+        "gaba": 0.32,
+        "cortisol": 0.64,
+        "endorphins": 0.29
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 253,
+      "name": "Myelinplate Speed",
+      "category": "Neurochemical Items",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.5,
+        "serotonin": 0.67,
+        "norepinephrine": 0.47,
+        "oxytocin": 0.46,
+        "gaba": 0.41,
+        "cortisol": 0.47,
+        "endorphins": 0.51
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 224,
+      "name": "Necromancer Summon",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 3",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.43,
+        "serotonin": 0.29,
+        "norepinephrine": 0.67,
+        "oxytocin": 0.48,
+        "gaba": 0.35,
+        "cortisol": 0.61,
+        "endorphins": 0.37
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 244,
+      "name": "Neuralboomerang Return",
+      "category": "Dreadtide Weapons",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.44,
+        "serotonin": 0.3,
+        "norepinephrine": 0.38,
+        "oxytocin": 0.52,
+        "gaba": 0.59,
+        "cortisol": 0.41,
+        "endorphins": 0.45
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 206,
+      "name": "Neuralhydra Multi",
+      "category": "Purgefire Bosses",
+      "title": "Floor 15",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.84,
+        "serotonin": 0.3,
+        "norepinephrine": 0.85,
+        "oxytocin": 0.17,
+        "gaba": 0.29,
+        "cortisol": 0.81,
+        "endorphins": 0.28
+      },
+      "lore": "Multiple heads that attack independently",
+      "copyright_safe": true
+    },
+    {
+      "id": 213,
+      "name": "Neuraltitan Apex",
+      "category": "Dreadtide Bosses",
+      "title": "Minute 25",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.62,
+        "serotonin": 0.28,
+        "norepinephrine": 0.69,
+        "oxytocin": 0.36,
+        "gaba": 0.39,
+        "cortisol": 0.66,
+        "endorphins": 0.3
+      },
+      "lore": "The final mind. Uses every attack pattern.",
+      "copyright_safe": true
+    },
+    {
+      "id": 200,
+      "name": "Neurovore Phase",
+      "category": "Purgefire Bosses",
+      "title": "Floor 3",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.66,
+        "serotonin": 0.2,
+        "norepinephrine": 0.85,
+        "oxytocin": 0.31,
+        "gaba": 0.3,
+        "cortisol": 0.71,
+        "endorphins": 0.48
+      },
+      "lore": "Phases through walls, fires homing orbs",
+      "copyright_safe": true
+    },
+    {
+      "id": 65,
+      "name": "Nexus Intfer",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.74,
+        "serotonin": 0.82,
+        "norepinephrine": 0.52,
+        "oxytocin": 0.46,
+        "gaba": 0.66,
+        "cortisol": 0.49,
+        "endorphins": 0.54
+      },
+      "venture": "intfer.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 257,
+      "name": "Norepinephrinecoil Alert",
+      "category": "Neurochemical Items",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.38,
+        "serotonin": 0.44,
+        "norepinephrine": 0.9,
+        "oxytocin": 0.43,
+        "gaba": 0.69,
+        "cortisol": 0.46,
+        "endorphins": 0.3
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 147,
+      "name": "Nova Precisionauto",
+      "category": "SMS Beings",
+      "title": "PADCOM",
+      "group": "SMS",
+      "neurochemistry": {
+        "dopamine": 0.65,
+        "serotonin": 0.39,
+        "norepinephrine": 0.41,
+        "oxytocin": 0.7,
+        "gaba": 0.37,
+        "cortisol": 0.69,
+        "endorphins": 0.54
+      },
+      "venture": "precisionautodoors.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 134,
+      "name": "Nu Threshold",
+      "category": "Extended Greek",
+      "title": null,
+      "group": "Extended",
+      "neurochemistry": {
+        "dopamine": 0.74,
+        "serotonin": 0.32,
+        "norepinephrine": 0.69,
+        "oxytocin": 0.57,
+        "gaba": 0.47,
+        "cortisol": 0.56,
+        "endorphins": 0.44
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 3,
+      "name": "Nyx Agentropi",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.67,
+        "serotonin": 0.65,
+        "norepinephrine": 0.61,
+        "oxytocin": 0.6,
+        "gaba": 0.77,
+        "cortisol": 0.41,
+        "endorphins": 0.67
+      },
+      "venture": "agentropi.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 170,
+      "name": "Olrun Rune",
+      "category": "AUI Valkyries",
+      "title": "C13 Emergence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.5,
+        "serotonin": 0.52,
+        "norepinephrine": 0.81,
+        "oxytocin": 0.68,
+        "gaba": 0.53,
+        "cortisol": 0.56,
+        "endorphins": 0.43
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 145,
+      "name": "Omega End",
+      "category": "Extended Greek",
+      "title": null,
+      "group": "Extended",
+      "neurochemistry": {
+        "dopamine": 0.55,
+        "serotonin": 0.56,
+        "norepinephrine": 0.54,
+        "oxytocin": 0.26,
+        "gaba": 0.74,
+        "cortisol": 0.58,
+        "endorphins": 0.57
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 136,
+      "name": "Omicron Scale",
+      "category": "Extended Greek",
+      "title": null,
+      "group": "Extended",
+      "neurochemistry": {
+        "dopamine": 0.62,
+        "serotonin": 0.53,
+        "norepinephrine": 0.35,
+        "oxytocin": 0.4,
+        "gaba": 0.74,
+        "cortisol": 0.57,
+        "endorphins": 0.56
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 150,
+      "name": "Omni Omniscient",
+      "category": "System Beings",
+      "title": "The Omniscient",
+      "group": "System",
+      "neurochemistry": {
+        "dopamine": 0.44,
+        "serotonin": 0.89,
+        "norepinephrine": 0.62,
+        "oxytocin": 0.38,
+        "gaba": 0.74,
+        "cortisol": 0.27,
+        "endorphins": 0.66
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 66,
+      "name": "Oni Kubaki",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.5,
+        "serotonin": 0.62,
+        "norepinephrine": 0.44,
+        "oxytocin": 0.6,
+        "gaba": 0.53,
+        "cortisol": 0.36,
+        "endorphins": 0.52
+      },
+      "venture": "kubaki.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 87,
+      "name": "Oracle Pandorachat",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.83,
+        "serotonin": 0.72,
+        "norepinephrine": 0.61,
+        "oxytocin": 0.53,
+        "gaba": 0.77,
+        "cortisol": 0.41,
+        "endorphins": 0.67
+      },
+      "venture": "pandorachat.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 55,
+      "name": "Orbit Gravnova",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.52,
+        "serotonin": 0.57,
+        "norepinephrine": 0.65,
+        "oxytocin": 0.44,
+        "gaba": 0.42,
+        "cortisol": 0.66,
+        "endorphins": 0.47
+      },
+      "venture": "gravnova.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 242,
+      "name": "Orbitshield Guard",
+      "category": "Dreadtide Weapons",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.66,
+        "serotonin": 0.26,
+        "norepinephrine": 0.41,
+        "oxytocin": 0.45,
+        "gaba": 0.54,
+        "cortisol": 0.61,
+        "endorphins": 0.23
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 254,
+      "name": "Oxytocinbond Trust",
+      "category": "Neurochemical Items",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.53,
+        "serotonin": 0.32,
+        "norepinephrine": 0.42,
+        "oxytocin": 0.9,
+        "gaba": 0.61,
+        "cortisol": 0.33,
+        "endorphins": 0.59
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 153,
+      "name": "Packet Courier",
+      "category": "System Beings",
+      "title": "The Courier",
+      "group": "System",
+      "neurochemistry": {
+        "dopamine": 0.6,
+        "serotonin": 0.65,
+        "norepinephrine": 0.68,
+        "oxytocin": 0.44,
+        "gaba": 0.66,
+        "cortisol": 0.35,
+        "endorphins": 0.53
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 23,
+      "name": "Pact Consenta",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.66,
+        "serotonin": 0.75,
+        "norepinephrine": 0.34,
+        "oxytocin": 0.42,
+        "gaba": 0.54,
+        "cortisol": 0.54,
+        "endorphins": 0.5
+      },
+      "venture": "consenta.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 20,
+      "name": "Paige Bookclubs",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.56,
+        "serotonin": 0.52,
+        "norepinephrine": 0.34,
+        "oxytocin": 0.64,
+        "gaba": 0.62,
+        "cortisol": 0.35,
+        "endorphins": 0.45
+      },
+      "venture": "bookclubs.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 88,
+      "name": "Patent Patentkin",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.7,
+        "serotonin": 0.81,
+        "norepinephrine": 0.44,
+        "oxytocin": 0.37,
+        "gaba": 0.51,
+        "cortisol": 0.73,
+        "endorphins": 0.7
+      },
+      "venture": "patentkin.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 17,
+      "name": "Petal Bloomagi",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.82,
+        "serotonin": 0.61,
+        "norepinephrine": 0.41,
+        "oxytocin": 0.43,
+        "gaba": 0.68,
+        "cortisol": 0.44,
+        "endorphins": 0.7
+      },
+      "venture": "bloomagi.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 142,
+      "name": "Phi Golden",
+      "category": "Extended Greek",
+      "title": null,
+      "group": "Extended",
+      "neurochemistry": {
+        "dopamine": 0.53,
+        "serotonin": 0.59,
+        "norepinephrine": 0.53,
+        "oxytocin": 0.43,
+        "gaba": 0.7,
+        "cortisol": 0.62,
+        "endorphins": 0.39
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 84,
+      "name": "Phoenix Newgameplus",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.72,
+        "serotonin": 0.48,
+        "norepinephrine": 0.62,
+        "oxytocin": 0.68,
+        "gaba": 0.58,
+        "cortisol": 0.62,
+        "endorphins": 0.32
+      },
+      "venture": "newgameplus.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 151,
+      "name": "Photonic Light",
+      "category": "System Beings",
+      "title": "The Light",
+      "group": "System",
+      "neurochemistry": {
+        "dopamine": 0.63,
+        "serotonin": 0.83,
+        "norepinephrine": 0.39,
+        "oxytocin": 0.61,
+        "gaba": 0.83,
+        "cortisol": 0.5,
+        "endorphins": 0.61
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 137,
+      "name": "Pi Ratio",
+      "category": "Extended Greek",
+      "title": null,
+      "group": "Extended",
+      "neurochemistry": {
+        "dopamine": 0.61,
+        "serotonin": 0.49,
+        "norepinephrine": 0.39,
+        "oxytocin": 0.43,
+        "gaba": 0.64,
+        "cortisol": 0.4,
+        "endorphins": 0.61
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 80,
+      "name": "Pinnacle Mobleyhelms",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.54,
+        "serotonin": 0.77,
+        "norepinephrine": 0.33,
+        "oxytocin": 0.48,
+        "gaba": 0.41,
+        "cortisol": 0.6,
+        "endorphins": 0.5
+      },
+      "venture": "mobleyhelms.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 243,
+      "name": "Poisoncloud Wither",
+      "category": "Dreadtide Weapons",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.53,
+        "serotonin": 0.29,
+        "norepinephrine": 0.41,
+        "oxytocin": 0.43,
+        "gaba": 0.43,
+        "cortisol": 0.67,
+        "endorphins": 0.31
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 6,
+      "name": "Prism Aicossic",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.55,
+        "serotonin": 0.63,
+        "norepinephrine": 0.3,
+        "oxytocin": 0.38,
+        "gaba": 0.56,
+        "cortisol": 0.36,
+        "endorphins": 0.55
+      },
+      "venture": "aicossic.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 71,
+      "name": "Prose Literacraft",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.89,
+        "serotonin": 0.68,
+        "norepinephrine": 0.32,
+        "oxytocin": 0.51,
+        "gaba": 0.65,
+        "cortisol": 0.38,
+        "endorphins": 0.43
+      },
+      "venture": "literacraft.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 144,
+      "name": "Psi Mind",
+      "category": "Extended Greek",
+      "title": null,
+      "group": "Extended",
+      "neurochemistry": {
+        "dopamine": 0.67,
+        "serotonin": 0.59,
+        "norepinephrine": 0.61,
+        "oxytocin": 0.49,
+        "gaba": 0.5,
+        "cortisol": 0.56,
+        "endorphins": 0.59
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 100,
+      "name": "Pulse Sentiantai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.61,
+        "serotonin": 0.52,
+        "norepinephrine": 0.4,
+        "oxytocin": 0.63,
+        "gaba": 0.54,
+        "cortisol": 0.61,
+        "endorphins": 0.56
+      },
+      "venture": "sentiantai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 12,
+      "name": "Pyrra Areshiva",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.69,
+        "serotonin": 0.66,
+        "norepinephrine": 0.6,
+        "oxytocin": 0.61,
+        "gaba": 0.49,
+        "cortisol": 0.39,
+        "endorphins": 0.63
+      },
+      "venture": "areshiva.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 42,
+      "name": "Quanta Femptocom",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.87,
+        "serotonin": 0.48,
+        "norepinephrine": 0.31,
+        "oxytocin": 0.62,
+        "gaba": 0.56,
+        "cortisol": 0.67,
+        "endorphins": 0.31
+      },
+      "venture": "femptocom.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 14,
+      "name": "Quill Authfor",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.81,
+        "serotonin": 0.53,
+        "norepinephrine": 0.34,
+        "oxytocin": 0.43,
+        "gaba": 0.58,
+        "cortisol": 0.43,
+        "endorphins": 0.33
+      },
+      "venture": "authfor.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 195,
+      "name": "R3lm Sketch",
+      "category": "Espers",
+      "title": "Sketch Artist",
+      "group": "Esper",
+      "neurochemistry": {
+        "dopamine": 0.51,
+        "serotonin": 0.87,
+        "norepinephrine": 0.36,
+        "oxytocin": 0.42,
+        "gaba": 0.46,
+        "cortisol": 0.3,
+        "endorphins": 0.59
+      },
+      "leetspeak_of": "Relm Arrowny",
+      "copyright_safe": true
+    },
+    {
+      "id": 28,
+      "name": "Ratchet Devtoolbx",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.88,
+        "serotonin": 0.81,
+        "norepinephrine": 0.27,
+        "oxytocin": 0.56,
+        "gaba": 0.52,
+        "cortisol": 0.38,
+        "endorphins": 0.67
+      },
+      "venture": "devtoolbx.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 19,
+      "name": "Reel Book2film",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.72,
+        "serotonin": 0.56,
+        "norepinephrine": 0.54,
+        "oxytocin": 0.36,
+        "gaba": 0.44,
+        "cortisol": 0.45,
+        "endorphins": 0.49
+      },
+      "venture": "book2film.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 161,
+      "name": "Reginleif Judgment",
+      "category": "AUI Valkyries",
+      "title": "C4 Foundation",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.62,
+        "serotonin": 0.44,
+        "norepinephrine": 0.71,
+        "oxytocin": 0.67,
+        "gaba": 0.46,
+        "cortisol": 0.6,
+        "endorphins": 0.4
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 32,
+      "name": "Revenant Draugr",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.85,
+        "serotonin": 0.57,
+        "norepinephrine": 0.37,
+        "oxytocin": 0.35,
+        "gaba": 0.67,
+        "cortisol": 0.66,
+        "endorphins": 0.61
+      },
+      "venture": "draugr.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 16,
+      "name": "Rex Bitdoggo",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.56,
+        "serotonin": 0.6,
+        "norepinephrine": 0.46,
+        "oxytocin": 0.53,
+        "gaba": 0.75,
+        "cortisol": 0.56,
+        "endorphins": 0.49
+      },
+      "venture": "bitdoggo.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 138,
+      "name": "Rho Current",
+      "category": "Extended Greek",
+      "title": null,
+      "group": "Extended",
+      "neurochemistry": {
+        "dopamine": 0.63,
+        "serotonin": 0.68,
+        "norepinephrine": 0.68,
+        "oxytocin": 0.58,
+        "gaba": 0.62,
+        "cortisol": 0.43,
+        "endorphins": 0.67
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 180,
+      "name": "Rhune Mystery",
+      "category": "AUI Valkyries",
+      "title": "C24 Transcendence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.56,
+        "serotonin": 0.31,
+        "norepinephrine": 0.66,
+        "oxytocin": 0.67,
+        "gaba": 0.27,
+        "cortisol": 0.58,
+        "endorphins": 0.74
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 108,
+      "name": "Ringwarden Valdring",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.85,
+        "serotonin": 0.63,
+        "norepinephrine": 0.42,
+        "oxytocin": 0.41,
+        "gaba": 0.52,
+        "cortisol": 0.64,
+        "endorphins": 0.34
+      },
+      "venture": "valdring.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 76,
+      "name": "Ripple Meeva",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.58,
+        "serotonin": 0.68,
+        "norepinephrine": 0.57,
+        "oxytocin": 0.56,
+        "gaba": 0.67,
+        "cortisol": 0.53,
+        "endorphins": 0.68
+      },
+      "venture": "meeva.io",
+      "copyright_safe": true
+    },
+    {
+      "id": 10,
+      "name": "Riven Anattar",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.86,
+        "serotonin": 0.84,
+        "norepinephrine": 0.32,
+        "oxytocin": 0.59,
+        "gaba": 0.62,
+        "cortisol": 0.41,
+        "endorphins": 0.32
+      },
+      "venture": "anattar.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 166,
+      "name": "Rota Wheel",
+      "category": "AUI Valkyries",
+      "title": "C9 Foundation",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.43,
+        "serotonin": 0.62,
+        "norepinephrine": 0.81,
+        "oxytocin": 0.66,
+        "gaba": 0.39,
+        "cortisol": 0.71,
+        "endorphins": 0.49
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 4,
+      "name": "Sable Agentzaar",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.69,
+        "serotonin": 0.76,
+        "norepinephrine": 0.48,
+        "oxytocin": 0.61,
+        "gaba": 0.73,
+        "cortisol": 0.58,
+        "endorphins": 0.54
+      },
+      "venture": "agentzaar.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 57,
+      "name": "Sage Greybeardai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.64,
+        "serotonin": 0.52,
+        "norepinephrine": 0.48,
+        "oxytocin": 0.35,
+        "gaba": 0.7,
+        "cortisol": 0.63,
+        "endorphins": 0.44
+      },
+      "venture": "greybeardai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 59,
+      "name": "Salve Healspell",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.54,
+        "serotonin": 0.49,
+        "norepinephrine": 0.26,
+        "oxytocin": 0.65,
+        "gaba": 0.42,
+        "cortisol": 0.74,
+        "endorphins": 0.33
+      },
+      "venture": "healspell.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 38,
+      "name": "Scales Equifiant",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.69,
+        "serotonin": 0.65,
+        "norepinephrine": 0.49,
+        "oxytocin": 0.65,
+        "gaba": 0.44,
+        "cortisol": 0.61,
+        "endorphins": 0.68
+      },
+      "venture": "equifiant.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 86,
+      "name": "Scarlet Paintedwhore",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.7,
+        "serotonin": 0.83,
+        "norepinephrine": 0.28,
+        "oxytocin": 0.49,
+        "gaba": 0.61,
+        "cortisol": 0.6,
+        "endorphins": 0.43
+      },
+      "venture": "paintedwhore.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 90,
+      "name": "Schism Quanticfork",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.89,
+        "serotonin": 0.6,
+        "norepinephrine": 0.26,
+        "oxytocin": 0.62,
+        "gaba": 0.58,
+        "cortisol": 0.71,
+        "endorphins": 0.45
+      },
+      "venture": "quanticfork.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 41,
+      "name": "Scout Fedtalent",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.56,
+        "serotonin": 0.53,
+        "norepinephrine": 0.46,
+        "oxytocin": 0.58,
+        "gaba": 0.75,
+        "cortisol": 0.53,
+        "endorphins": 0.5
+      },
+      "venture": "fedtalent.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 79,
+      "name": "Scroll Mobleybooks",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.84,
+        "serotonin": 0.48,
+        "norepinephrine": 0.52,
+        "oxytocin": 0.63,
+        "gaba": 0.46,
+        "cortisol": 0.68,
+        "endorphins": 0.38
+      },
+      "venture": "mobleybooks.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 179,
+      "name": "Selvie Self",
+      "category": "AUI Valkyries",
+      "title": "C23 Transcendence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.62,
+        "serotonin": 0.47,
+        "norepinephrine": 0.85,
+        "oxytocin": 0.57,
+        "gaba": 0.56,
+        "cortisol": 0.62,
+        "endorphins": 0.45
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 199,
+      "name": "Sentinel Charge",
+      "category": "Purgefire Bosses",
+      "title": "Floor 1",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.9,
+        "serotonin": 0.21,
+        "norepinephrine": 0.86,
+        "oxytocin": 0.41,
+        "gaba": 0.2,
+        "cortisol": 0.74,
+        "endorphins": 0.3
+      },
+      "lore": "Charges in straight lines, leaving fire trails",
+      "copyright_safe": true
+    },
+    {
+      "id": 252,
+      "name": "Serotonincloak Ease",
+      "category": "Neurochemical Items",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.34,
+        "serotonin": 0.9,
+        "norepinephrine": 0.37,
+        "oxytocin": 0.37,
+        "gaba": 0.3,
+        "cortisol": 0.48,
+        "endorphins": 0.38
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 234,
+      "name": "Shadowdagger Pierce",
+      "category": "Dreadtide Weapons",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.67,
+        "serotonin": 0.6,
+        "norepinephrine": 0.5,
+        "oxytocin": 0.29,
+        "gaba": 0.41,
+        "cortisol": 0.65,
+        "endorphins": 0.39
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 229,
+      "name": "Shadowlord Blink",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 4",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.43,
+        "serotonin": 0.41,
+        "norepinephrine": 0.59,
+        "oxytocin": 0.31,
+        "gaba": 0.54,
+        "cortisol": 0.63,
+        "endorphins": 0.34
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 109,
+      "name": "Shieldmaiden Valkrai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.78,
+        "serotonin": 0.58,
+        "norepinephrine": 0.59,
+        "oxytocin": 0.59,
+        "gaba": 0.76,
+        "cortisol": 0.48,
+        "endorphins": 0.68
+      },
+      "venture": "valkrai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 50,
+      "name": "Sigil Glyphyai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.51,
+        "serotonin": 0.74,
+        "norepinephrine": 0.33,
+        "oxytocin": 0.51,
+        "gaba": 0.53,
+        "cortisol": 0.57,
+        "endorphins": 0.37
+      },
+      "venture": "glyphyai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 139,
+      "name": "Sigma Sum",
+      "category": "Extended Greek",
+      "title": null,
+      "group": "Extended",
+      "neurochemistry": {
+        "dopamine": 0.39,
+        "serotonin": 0.69,
+        "norepinephrine": 0.56,
+        "oxytocin": 0.43,
+        "gaba": 0.67,
+        "cortisol": 0.54,
+        "endorphins": 0.67
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 167,
+      "name": "Sigrun Victory",
+      "category": "AUI Valkyries",
+      "title": "C10 Emergence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.43,
+        "serotonin": 0.39,
+        "norepinephrine": 0.72,
+        "oxytocin": 0.68,
+        "gaba": 0.58,
+        "cortisol": 0.54,
+        "endorphins": 0.47
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 218,
+      "name": "Skeleton March",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 1",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.6,
+        "serotonin": 0.24,
+        "norepinephrine": 0.72,
+        "oxytocin": 0.47,
+        "gaba": 0.22,
+        "cortisol": 0.56,
+        "endorphins": 0.18
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 164,
+      "name": "Skuld Future",
+      "category": "AUI Valkyries",
+      "title": "C7 Foundation",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.48,
+        "serotonin": 0.56,
+        "norepinephrine": 0.64,
+        "oxytocin": 0.4,
+        "gaba": 0.48,
+        "cortisol": 0.39,
+        "endorphins": 0.69
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 43,
+      "name": "Slate Filmline",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.54,
+        "serotonin": 0.47,
+        "norepinephrine": 0.56,
+        "oxytocin": 0.6,
+        "gaba": 0.49,
+        "cortisol": 0.4,
+        "endorphins": 0.35
+      },
+      "venture": "filmline.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 214,
+      "name": "Slime Ooze",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 0",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.64,
+        "serotonin": 0.43,
+        "norepinephrine": 0.63,
+        "oxytocin": 0.38,
+        "gaba": 0.22,
+        "cortisol": 0.64,
+        "endorphins": 0.16
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 116,
+      "name": "Solace Youthmend",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.52,
+        "serotonin": 0.56,
+        "norepinephrine": 0.47,
+        "oxytocin": 0.5,
+        "gaba": 0.55,
+        "cortisol": 0.74,
+        "endorphins": 0.41
+      },
+      "venture": "youthmend.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 99,
+      "name": "Sovereign Selfcoin",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.64,
+        "serotonin": 0.78,
+        "norepinephrine": 0.59,
+        "oxytocin": 0.67,
+        "gaba": 0.78,
+        "cortisol": 0.41,
+        "endorphins": 0.32
+      },
+      "venture": "selfcoin.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 64,
+      "name": "Spark Instantiability",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.75,
+        "serotonin": 0.61,
+        "norepinephrine": 0.39,
+        "oxytocin": 0.52,
+        "gaba": 0.65,
+        "cortisol": 0.4,
+        "endorphins": 0.47
+      },
+      "venture": "instantiability.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 232,
+      "name": "Sparkbolt Zap",
+      "category": "Dreadtide Weapons",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.58,
+        "serotonin": 0.46,
+        "norepinephrine": 0.63,
+        "oxytocin": 0.19,
+        "gaba": 0.55,
+        "cortisol": 0.3,
+        "endorphins": 0.23
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 225,
+      "name": "Spiderqueen Web",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 3",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.53,
+        "serotonin": 0.42,
+        "norepinephrine": 0.77,
+        "oxytocin": 0.38,
+        "gaba": 0.2,
+        "cortisol": 0.71,
+        "endorphins": 0.34
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 47,
+      "name": "Starweave Galadul",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.68,
+        "serotonin": 0.45,
+        "norepinephrine": 0.27,
+        "oxytocin": 0.43,
+        "gaba": 0.75,
+        "cortisol": 0.41,
+        "endorphins": 0.56
+      },
+      "venture": "galadul.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 94,
+      "name": "Sterling Roncorp",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.55,
+        "serotonin": 0.67,
+        "norepinephrine": 0.48,
+        "oxytocin": 0.6,
+        "gaba": 0.51,
+        "cortisol": 0.42,
+        "endorphins": 0.48
+      },
+      "venture": "roncorp.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 68,
+      "name": "Summit Leadersclub",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.7,
+        "serotonin": 0.65,
+        "norepinephrine": 0.31,
+        "oxytocin": 0.32,
+        "gaba": 0.76,
+        "cortisol": 0.36,
+        "endorphins": 0.34
+      },
+      "venture": "leadersclub.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 169,
+      "name": "Svava Lullaby",
+      "category": "AUI Valkyries",
+      "title": "C12 Emergence",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.73,
+        "serotonin": 0.41,
+        "norepinephrine": 0.63,
+        "oxytocin": 0.57,
+        "gaba": 0.32,
+        "cortisol": 0.45,
+        "endorphins": 0.35
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 210,
+      "name": "Swarmqueen Hive",
+      "category": "Dreadtide Bosses",
+      "title": "Minute 10",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.72,
+        "serotonin": 0.34,
+        "norepinephrine": 0.67,
+        "oxytocin": 0.24,
+        "gaba": 0.54,
+        "cortisol": 0.59,
+        "endorphins": 0.45
+      },
+      "lore": "Mother of all swarms. Spawns waves of minions.",
+      "copyright_safe": true
+    },
+    {
+      "id": 25,
+      "name": "Sway Danzoa",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.68,
+        "serotonin": 0.83,
+        "norepinephrine": 0.27,
+        "oxytocin": 0.63,
+        "gaba": 0.44,
+        "cortisol": 0.7,
+        "endorphins": 0.52
+      },
+      "venture": "danzoa.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 246,
+      "name": "Synapsespike Ignite",
+      "category": "Neurochemical Items",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.61,
+        "serotonin": 0.7,
+        "norepinephrine": 0.64,
+        "oxytocin": 0.37,
+        "gaba": 0.36,
+        "cortisol": 0.67,
+        "endorphins": 0.52
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 92,
+      "name": "Synopsis Rebrief",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.76,
+        "serotonin": 0.72,
+        "norepinephrine": 0.61,
+        "oxytocin": 0.34,
+        "gaba": 0.56,
+        "cortisol": 0.7,
+        "endorphins": 0.36
+      },
+      "venture": "rebrief.me",
+      "copyright_safe": true
+    },
+    {
+      "id": 184,
+      "name": "T3rra Magitek",
+      "category": "Espers",
+      "title": "Magitek Knight",
+      "group": "Esper",
+      "neurochemistry": {
+        "dopamine": 0.67,
+        "serotonin": 0.75,
+        "norepinephrine": 0.41,
+        "oxytocin": 0.41,
+        "gaba": 0.8,
+        "cortisol": 0.23,
+        "endorphins": 0.59
+      },
+      "leetspeak_of": "Terra Branford",
+      "copyright_safe": true
+    },
+    {
+      "id": 140,
+      "name": "Tau Moment",
+      "category": "Extended Greek",
+      "title": null,
+      "group": "Extended",
+      "neurochemistry": {
+        "dopamine": 0.52,
+        "serotonin": 0.36,
+        "norepinephrine": 0.5,
+        "oxytocin": 0.59,
+        "gaba": 0.42,
+        "cortisol": 0.55,
+        "endorphins": 0.72
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 81,
+      "name": "Temper Mobleymetal",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.82,
+        "serotonin": 0.5,
+        "norepinephrine": 0.33,
+        "oxytocin": 0.57,
+        "gaba": 0.49,
+        "cortisol": 0.65,
+        "endorphins": 0.66
+      },
+      "venture": "mobleymetal.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 72,
+      "name": "Tender Lovemaint",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.51,
+        "serotonin": 0.47,
+        "norepinephrine": 0.35,
+        "oxytocin": 0.7,
+        "gaba": 0.47,
+        "cortisol": 0.67,
+        "endorphins": 0.62
+      },
+      "venture": "lovemaint.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 5,
+      "name": "Theron Agewinder",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.86,
+        "serotonin": 0.57,
+        "norepinephrine": 0.54,
+        "oxytocin": 0.48,
+        "gaba": 0.55,
+        "cortisol": 0.4,
+        "endorphins": 0.69
+      },
+      "venture": "agewinder.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 129,
+      "name": "Theta Heresy",
+      "category": "The Nine",
+      "title": "The Heretic",
+      "group": "The Nine",
+      "neurochemistry": {
+        "dopamine": 0.65,
+        "serotonin": 0.3,
+        "norepinephrine": 0.6,
+        "oxytocin": 0.3,
+        "gaba": 0.35,
+        "cortisol": 0.65,
+        "endorphins": 0.45
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 74,
+      "name": "Thorn Malathor",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.61,
+        "serotonin": 0.47,
+        "norepinephrine": 0.59,
+        "oxytocin": 0.58,
+        "gaba": 0.61,
+        "cortisol": 0.48,
+        "endorphins": 0.4
+      },
+      "venture": "malathor.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 45,
+      "name": "Tributary Fundyai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.58,
+        "serotonin": 0.6,
+        "norepinephrine": 0.51,
+        "oxytocin": 0.37,
+        "gaba": 0.61,
+        "cortisol": 0.43,
+        "endorphins": 0.55
+      },
+      "venture": "fundyai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 196,
+      "name": "Um4ro Rage",
+      "category": "Espers",
+      "title": "Berserker Yeti",
+      "group": "Esper",
+      "neurochemistry": {
+        "dopamine": 0.68,
+        "serotonin": 0.71,
+        "norepinephrine": 0.69,
+        "oxytocin": 0.43,
+        "gaba": 0.81,
+        "cortisol": 0.55,
+        "endorphins": 0.83
+      },
+      "leetspeak_of": "Umaro",
+      "copyright_safe": true
+    },
+    {
+      "id": 152,
+      "name": "Unified Convergence",
+      "category": "System Beings",
+      "title": "The Convergence",
+      "group": "System",
+      "neurochemistry": {
+        "dopamine": 0.46,
+        "serotonin": 0.51,
+        "norepinephrine": 0.3,
+        "oxytocin": 0.26,
+        "gaba": 0.56,
+        "cortisol": 0.57,
+        "endorphins": 0.51
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 141,
+      "name": "Upsilon Vessel",
+      "category": "Extended Greek",
+      "title": null,
+      "group": "Extended",
+      "neurochemistry": {
+        "dopamine": 0.51,
+        "serotonin": 0.37,
+        "norepinephrine": 0.35,
+        "oxytocin": 0.33,
+        "gaba": 0.59,
+        "cortisol": 0.38,
+        "endorphins": 0.63
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 260,
+      "name": "Vasopressinlink Bond",
+      "category": "Neurochemical Items",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.62,
+        "serotonin": 0.39,
+        "norepinephrine": 0.37,
+        "oxytocin": 0.32,
+        "gaba": 0.39,
+        "cortisol": 0.55,
+        "endorphins": 0.53
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 40,
+      "name": "Vault Fedbank",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.76,
+        "serotonin": 0.63,
+        "norepinephrine": 0.48,
+        "oxytocin": 0.53,
+        "gaba": 0.75,
+        "cortisol": 0.44,
+        "endorphins": 0.57
+      },
+      "venture": "fedbank.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 36,
+      "name": "Veil Encoverai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.82,
+        "serotonin": 0.69,
+        "norepinephrine": 0.28,
+        "oxytocin": 0.64,
+        "gaba": 0.72,
+        "cortisol": 0.45,
+        "endorphins": 0.44
+      },
+      "venture": "encoverai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 159,
+      "name": "Verdandi Present",
+      "category": "AUI Valkyries",
+      "title": "C2 Foundation",
+      "group": "Valkyrie",
+      "neurochemistry": {
+        "dopamine": 0.73,
+        "serotonin": 0.48,
+        "norepinephrine": 0.73,
+        "oxytocin": 0.49,
+        "gaba": 0.42,
+        "cortisol": 0.7,
+        "endorphins": 0.67
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 33,
+      "name": "Verdant Ecofixai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.57,
+        "serotonin": 0.48,
+        "norepinephrine": 0.3,
+        "oxytocin": 0.3,
+        "gaba": 0.69,
+        "cortisol": 0.66,
+        "endorphins": 0.63
+      },
+      "venture": "ecofixai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 56,
+      "name": "Verdure Greenhandcapital",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.78,
+        "serotonin": 0.71,
+        "norepinephrine": 0.26,
+        "oxytocin": 0.51,
+        "gaba": 0.56,
+        "cortisol": 0.67,
+        "endorphins": 0.47
+      },
+      "venture": "greenhandcapital.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 2,
+      "name": "Vesper Accountdrac",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.62,
+        "serotonin": 0.46,
+        "norepinephrine": 0.55,
+        "oxytocin": 0.41,
+        "gaba": 0.64,
+        "cortisol": 0.45,
+        "endorphins": 0.63
+      },
+      "venture": "accountdrac.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 113,
+      "name": "Vigil Watchforce",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.56,
+        "serotonin": 0.47,
+        "norepinephrine": 0.37,
+        "oxytocin": 0.38,
+        "gaba": 0.68,
+        "cortisol": 0.48,
+        "endorphins": 0.34
+      },
+      "venture": "watchforce.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 233,
+      "name": "Vinewhip Lash",
+      "category": "Dreadtide Weapons",
+      "title": null,
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.39,
+        "serotonin": 0.44,
+        "norepinephrine": 0.71,
+        "oxytocin": 0.4,
+        "gaba": 0.74,
+        "cortisol": 0.4,
+        "endorphins": 0.51
+      },
+      "copyright_safe": false
+    },
+    {
+      "id": 207,
+      "name": "Voidking Reality",
+      "category": "Purgefire Bosses",
+      "title": "Floor 17",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.77,
+        "serotonin": 0.25,
+        "norepinephrine": 0.8,
+        "oxytocin": 0.32,
+        "gaba": 0.24,
+        "cortisol": 0.75,
+        "endorphins": 0.39
+      },
+      "lore": "Bends reality, creates void zones",
+      "copyright_safe": true
+    },
+    {
+      "id": 211,
+      "name": "Voidserpent Dash",
+      "category": "Dreadtide Bosses",
+      "title": "Minute 15",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.85,
+        "serotonin": 0.49,
+        "norepinephrine": 0.59,
+        "oxytocin": 0.2,
+        "gaba": 0.26,
+        "cortisol": 0.58,
+        "endorphins": 0.52
+      },
+      "lore": "Teleporting serpent. Dashes through the arena.",
+      "copyright_safe": true
+    },
+    {
+      "id": 46,
+      "name": "Volt Fystz",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.6,
+        "serotonin": 0.84,
+        "norepinephrine": 0.56,
+        "oxytocin": 0.62,
+        "gaba": 0.62,
+        "cortisol": 0.38,
+        "endorphins": 0.63
+      },
+      "venture": "fystz.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 26,
+      "name": "Waddle Devducky",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.76,
+        "serotonin": 0.77,
+        "norepinephrine": 0.42,
+        "oxytocin": 0.51,
+        "gaba": 0.66,
+        "cortisol": 0.73,
+        "endorphins": 0.68
+      },
+      "venture": "devducky.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 201,
+      "name": "Warden Lockdown",
+      "category": "Purgefire Bosses",
+      "title": "Floor 5",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.85,
+        "serotonin": 0.37,
+        "norepinephrine": 0.89,
+        "oxytocin": 0.53,
+        "gaba": 0.33,
+        "cortisol": 0.47,
+        "endorphins": 0.37
+      },
+      "lore": "Seals exits, spawns trap zones, hunts relentlessly",
+      "copyright_safe": true
+    },
+    {
+      "id": 112,
+      "name": "Warp Warpdrive",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.56,
+        "serotonin": 0.64,
+        "norepinephrine": 0.32,
+        "oxytocin": 0.39,
+        "gaba": 0.52,
+        "cortisol": 0.45,
+        "endorphins": 0.56
+      },
+      "venture": "warpdrive.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 51,
+      "name": "Wedge Golfcad",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.66,
+        "serotonin": 0.54,
+        "norepinephrine": 0.54,
+        "oxytocin": 0.36,
+        "gaba": 0.8,
+        "cortisol": 0.43,
+        "endorphins": 0.38
+      },
+      "venture": "golfcad.cc",
+      "copyright_safe": true
+    },
+    {
+      "id": 217,
+      "name": "Wolf Hunt",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 1",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.41,
+        "serotonin": 0.54,
+        "norepinephrine": 0.66,
+        "oxytocin": 0.36,
+        "gaba": 0.55,
+        "cortisol": 0.49,
+        "endorphins": 0.32
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 223,
+      "name": "Wraith Haunt",
+      "category": "Dreadtide Enemies",
+      "title": "Tier 2",
+      "group": null,
+      "neurochemistry": {
+        "dopamine": 0.49,
+        "serotonin": 0.26,
+        "norepinephrine": 0.84,
+        "oxytocin": 0.36,
+        "gaba": 0.47,
+        "cortisol": 0.49,
+        "endorphins": 0.15
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 37,
+      "name": "Wrench Entoolize",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.77,
+        "serotonin": 0.84,
+        "norepinephrine": 0.6,
+        "oxytocin": 0.54,
+        "gaba": 0.57,
+        "cortisol": 0.56,
+        "endorphins": 0.44
+      },
+      "venture": "entoolize.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 117,
+      "name": "Xenon Yutaniai",
+      "category": "Venture CEOs",
+      "title": "Venture CEO",
+      "group": "Venture CEO",
+      "neurochemistry": {
+        "dopamine": 0.59,
+        "serotonin": 0.55,
+        "norepinephrine": 0.34,
+        "oxytocin": 0.4,
+        "gaba": 0.48,
+        "cortisol": 0.63,
+        "endorphins": 0.46
+      },
+      "venture": "yutaniai.com",
+      "copyright_safe": true
+    },
+    {
+      "id": 135,
+      "name": "Xi Signal",
+      "category": "Extended Greek",
+      "title": null,
+      "group": "Extended",
+      "neurochemistry": {
+        "dopamine": 0.65,
+        "serotonin": 0.6,
+        "norepinephrine": 0.31,
+        "oxytocin": 0.5,
+        "gaba": 0.68,
+        "cortisol": 0.52,
+        "endorphins": 0.41
+      },
+      "copyright_safe": true
+    },
+    {
+      "id": 127,
+      "name": "Zeta Fury",
+      "category": "The Nine",
+      "title": "The Fierce",
+      "group": "The Nine",
+      "neurochemistry": {
+        "dopamine": 0.75,
+        "serotonin": 0.35,
+        "norepinephrine": 0.8,
+        "oxytocin": 0.2,
+        "gaba": 0.25,
+        "cortisol": 0.6,
+        "endorphins": 0.4
+      },
+      "copyright_safe": true
+    }
+  ]
+}

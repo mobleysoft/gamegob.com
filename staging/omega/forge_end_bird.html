@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="EndBird — Eat, Grow, Explode">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob/forge_end_bird.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>EndBird — Eat, Grow, Explode</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+body{background:#0a0a0f;overflow:hidden;font-family:'Courier New',monospace;display:flex;justify-content:center;align-items:center;height:100vh;width:100vw}
+canvas{display:block;image-rendering:pixelated}
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+'use strict';
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// ─── CONSTANTS ───
+const BG = '#0a0a0f';
+const GOLD = '#f0b800';
+const GREEN = '#00ff88';
+const RED = '#ff3355';
+const CYAN = '#00ddff';
+const WHITE = '#ffffff';
+const MAGENTA = '#ff44cc';
+
+// ─── SIZE TIERS ───
+const TIERS = [
+  { name: 'Quantum', minSize: 4, maxSize: 12, bg: '#05050a', food: ['quark','photon','neutrino','gluon'], foodColors: ['#ff55ff','#ffff55','#55ffff','#ff8844'], enemyNames: ['electron','positron'], desc: 'Subatomic Realm' },
+  { name: 'Atomic', minSize: 12, maxSize: 25, bg: '#080810', food: ['hydrogen','helium','carbon','oxygen'], foodColors: ['#aaaaff','#ffddaa','#555555','#5555ff'], enemyNames: ['ion','radical'], desc: 'Atomic Scale' },
+  { name: 'Micro', minSize: 25, maxSize: 50, bg: '#0a0a14', food: ['bacteria','virus','amino acid','protein'], foodColors: ['#44ff44','#ff4444','#ffaa44','#44aaff'], enemyNames: ['phage','amoeba'], desc: 'Microscopic World' },
+  { name: 'Insect', minSize: 50, maxSize: 90, bg: '#0c0c18', food: ['ant','fly','beetle','moth'], foodColors: ['#884422','#888888','#226622','#ccccaa'], enemyNames: ['spider','wasp'], desc: 'Insect Kingdom' },
+  { name: 'Animal', minSize: 90, maxSize: 150, bg: '#0e0e1c', food: ['mouse','fish','rabbit','frog'], foodColors: ['#aaaaaa','#4488cc','#cc8844','#44cc44'], enemyNames: ['hawk','fox'], desc: 'Animal World' },
+  { name: 'Mega', minSize: 150, maxSize: 250, bg: '#101020', food: ['elephant','whale','dinosaur','mammoth'], foodColors: ['#888888','#4466aa','#668844','#886644'], enemyNames: ['titan','kraken'], desc: 'Megafauna Era' },
+  { name: 'Planetary', minSize: 250, maxSize: 400, bg: '#0a0a20', food: ['moon','asteroid','comet','dwarf planet'], foodColors: ['#cccccc','#886644','#88ccff','#aa8866'], enemyNames: ['black hole','rogue planet'], desc: 'Planetary Scale' },
+  { name: 'Stellar', minSize: 400, maxSize: 600, bg: '#08082a', food: ['red dwarf','yellow star','blue giant','neutron star'], foodColors: ['#ff4422','#ffdd44','#4488ff','#ddddff'], enemyNames: ['supernova','pulsar'], desc: 'Stellar Realm' },
+  { name: 'Galactic', minSize: 600, maxSize: 900, bg: '#060630', food: ['nebula','star cluster','galaxy arm','dark matter'], foodColors: ['#ff44aa','#ffff88','#8844ff','#333366'], enemyNames: ['quasar','void'], desc: 'Galactic Scale' },
+  { name: 'Cosmic', minSize: 900, maxSize: 1500, bg: '#040440', food: ['galaxy','galaxy cluster','supercluster','universe'], foodColors: ['#aa88ff','#ffaa44','#ff88ff','#ffffff'], enemyNames: ['entropy','antimatter wave'], desc: 'THE COSMOS' },
+];
+
+// ─── AUDIO ENGINE ───
+let audioCtx = null;
+const ensureAudio = () => { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); };
+
+const playSound = (freq, type, dur, vol = 0.15) => {
+  ensureAudio();
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + dur);
+  } catch(e) {}
+};
+
+const sfx = {
+  eat: () => { playSound(600, 'sine', 0.1, 0.12); playSound(900, 'sine', 0.08, 0.1); },
+  grow: () => { playSound(200, 'triangle', 0.3, 0.15); playSound(400, 'triangle', 0.2, 0.1); },
+  tierUp: () => {
+    [300,400,500,700,900].forEach((f,i) => setTimeout(() => playSound(f, 'sine', 0.15, 0.12), i * 80));
+  },
+  hit: () => { playSound(100, 'sawtooth', 0.2, 0.2); playSound(60, 'square', 0.3, 0.15); },
+  death: () => {
+    [400,300,200,100,60].forEach((f,i) => setTimeout(() => playSound(f, 'sawtooth', 0.3, 0.2), i * 100));
+  },
+  click: () => playSound(800, 'sine', 0.05, 0.08),
+  unlock: () => {
+    [500,700,900,1200].forEach((f,i) => setTimeout(() => playSound(f, 'sine', 0.2, 0.1), i * 100));
+  },
+  explode: () => {
+    for (let i = 0; i < 8; i++) setTimeout(() => playSound(40 + Math.random()*100, 'sawtooth', 0.4, 0.15), i * 50);
+  },
+};
+
+// ─── SAVE DATA ───
+const defaultSave = () => ({
+  totalScore: 0,
+  highScore: 0,
+  runsCompleted: 0,
+  totalEaten: 0,
+  highestTier: 0,
+  xp: 0,
+  level: 1,
+  upgrades: { speed: 0, magnet: 0, armor: 0, startSize: 0, xpMult: 0 },
+  achievements: {},
+  unlockedTiers: [0],
+});
+
+let save;
+const loadSave = () => {
+  try {
+    const d = JSON.parse(localStorage.getItem('endbird_save'));
+    save = d ? { ...defaultSave(), ...d, upgrades: { ...defaultSave().upgrades, ...(d.upgrades||{}) } } : defaultSave();
+  } catch(e) { save = defaultSave(); }
+};
+const saveSave = () => { try { localStorage.setItem('endbird_save', JSON.stringify(save)); } catch(e) {} };
+loadSave();
+
+// ─── UPGRADE DEFS ───
+const UPGRADE_DEFS = {
+  speed: { name: 'Swift Wings', desc: 'Move faster', maxLvl: 10, costBase: 50, costMult: 1.8, effect: l => 1 + l * 0.08, icon: '>' },
+  magnet: { name: 'Gravity Pull', desc: 'Attract food', maxLvl: 8, costBase: 80, costMult: 2.0, effect: l => l * 30, icon: '@' },
+  armor: { name: 'Thick Shell', desc: 'Extra HP', maxLvl: 5, costBase: 120, costMult: 2.5, effect: l => l, icon: '#' },
+  startSize: { name: 'Born Big', desc: 'Start larger', maxLvl: 6, costBase: 200, costMult: 2.2, effect: l => l * 3, icon: '+' },
+  xpMult: { name: 'Wise Eyes', desc: 'More XP', maxLvl: 5, costBase: 150, costMult: 2.5, effect: l => 1 + l * 0.2, icon: '*' },
+};
+
+const getUpgradeCost = (key) => {
+  const def = UPGRADE_DEFS[key];
+  return Math.floor(def.costBase * Math.pow(def.costMult, save.upgrades[key]));
+};
+
+// ─── ACHIEVEMENT DEFS ───
+const ACHIEVEMENTS = [
+  { id: 'first_eat', name: 'First Bite', desc: 'Eat your first thing', check: s => s.totalEaten >= 1 },
+  { id: 'eat_100', name: 'Hungry Bird', desc: 'Eat 100 things total', check: s => s.totalEaten >= 100 },
+  { id: 'eat_1000', name: 'Devourer', desc: 'Eat 1000 things total', check: s => s.totalEaten >= 1000 },
+  { id: 'tier_3', name: 'Bug Hunter', desc: 'Reach insect scale', check: s => s.highestTier >= 3 },
+  { id: 'tier_5', name: 'Giant', desc: 'Reach mega scale', check: s => s.highestTier >= 5 },
+  { id: 'tier_7', name: 'Star Eater', desc: 'Reach stellar scale', check: s => s.highestTier >= 7 },
+  { id: 'tier_9', name: 'Cosmic Entity', desc: 'Reach cosmic scale', check: s => s.highestTier >= 9 },
+  { id: 'score_10k', name: 'Ten Thousand', desc: 'Score 10,000 in one run', check: () => false },
+  { id: 'score_100k', name: 'Hundred Thousand', desc: 'Score 100,000 in one run', check: () => false },
+  { id: 'runs_10', name: 'Persistent', desc: 'Complete 10 runs', check: s => s.runsCompleted >= 10 },
+  { id: 'level_10', name: 'Veteran', desc: 'Reach level 10', check: s => s.level >= 10 },
+  { id: 'max_upgrade', name: 'Maxed Out', desc: 'Max any upgrade', check: s => Object.keys(s.upgrades).some(k => s.upgrades[k] >= UPGRADE_DEFS[k].maxLvl) },
+];
+
+// ─── RESIZE ───
+let W, H;
+const resize = () => {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W;
+  canvas.height = H;
+};
+window.addEventListener('resize', resize);
+resize();
+
+// ─── INPUT ───
+const keys = {};
+const touch = { active: false, x: 0, y: 0, dx: 0, dy: 0, startX: 0, startY: 0, actionDown: false };
+let mousePos = { x: W/2, y: H/2 };
+
+window.addEventListener('keydown', e => { keys[e.key] = true; keys[e.code] = true; });
+window.addEventListener('keyup', e => { keys[e.key] = false; keys[e.code] = false; });
+window.addEventListener('mousemove', e => { mousePos.x = e.clientX; mousePos.y = e.clientY; });
+
+let touchId = null;
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  ensureAudio();
+  const t = e.changedTouches[0];
+  touch.active = true;
+  touch.startX = touch.x = t.clientX;
+  touch.startY = touch.y = t.clientY;
+  touch.dx = 0;
+  touch.dy = 0;
+  touchId = t.identifier;
+  mousePos.x = t.clientX;
+  mousePos.y = t.clientY;
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier === touchId) {
+      touch.x = t.clientX;
+      touch.y = t.clientY;
+      touch.dx = touch.x - touch.startX;
+      touch.dy = touch.y - touch.startY;
+      mousePos.x = t.clientX;
+      mousePos.y = t.clientY;
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier === touchId) {
+      touch.active = false;
+      touch.dx = 0;
+      touch.dy = 0;
+      touchId = null;
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('mousedown', e => { ensureAudio(); });
+
+// ─── PARTICLES ───
+class Particle {
+  constructor(x, y, vx, vy, color, life, size = 3) {
+    this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+    this.color = color; this.life = this.maxLife = life; this.size = size;
+    this.friction = 0.98;
+  }
+  update(dt) {
+    this.vx *= this.friction;
+    this.vy *= this.friction;
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.life -= dt;
+  }
+  draw(cx, cy) {
+    const a = Math.max(0, this.life / this.maxLife);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = this.color;
+    const sx = this.x - cx + W/2;
+    const sy = this.y - cy + H/2;
+    ctx.fillRect(sx - this.size/2, sy - this.size/2, this.size * a + 1, this.size * a + 1);
+    ctx.globalAlpha = 1;
+  }
+}
+
+let particles = [];
+const spawnParticles = (x, y, count, color, speed = 200, life = 0.5, size = 3) => {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = Math.random() * speed;
+    particles.push(new Particle(x, y, Math.cos(angle)*spd, Math.sin(angle)*spd, color, life + Math.random()*0.3, size));
+  }
+};
+
+// ─── SCREEN SHAKE ───
+let shakeX = 0, shakeY = 0, shakeMag = 0, shakeTime = 0;
+const startShake = (mag, dur) => { shakeMag = mag; shakeTime = dur; };
+
+// ─── NOTIFICATION ───
+let notifications = [];
+const notify = (text, color = GOLD, dur = 2.0) => {
+  notifications.push({ text, color, life: dur, maxLife: dur });
+};
+
+// ─── GAME STATE ───
+const STATE = { TITLE: 0, PLAYING: 1, GAMEOVER: 2, UPGRADE: 3, PAUSED: 4 };
+let state = STATE.TITLE;
+let titleTime = 0;
+let gameOverTime = 0;
+
+// ─── GAME WORLD ───
+let player, camera, foods, enemies, worldSize, score, combo, comboTimer;
+let currentTier, tierProgress, runTime, eatenThisRun, runXP;
+let sizeGoal, tierTransitionTimer, bgStars;
+let invincibleTimer, flashTimer;
+let explodeReady, explodeCooldown;
+
+// ─── BIRD ANIMATION ───
+const BIRD_FRAMES = 4;
+let birdFrame = 0, birdFrameTimer = 0;
+
+const drawBird = (x, y, size, facing, frame, tier) => {
+  const s = size;
+  const f = facing; // 1 = right, -1 = left
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(f, 1);
+
+  // Wing flap based on frame
+  const wingAngle = Math.sin(frame * Math.PI / 2) * 0.4;
+  const wingY = Math.sin(frame * Math.PI / 2) * s * 0.15;
+
+  // Glow based on tier
+  const glowColor = TIERS[Math.min(tier, TIERS.length-1)].foodColors[0];
+  ctx.shadowColor = glowColor;
+  ctx.shadowBlur = s * 0.3 + Math.sin(birdFrameTimer * 3) * 3;
+
+  // Body
+  ctx.fillStyle = tierBodyColor(tier);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, s * 0.5, s * 0.35, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Wing
+  ctx.fillStyle = tierWingColor(tier);
+  ctx.save();
+  ctx.rotate(wingAngle);
+  ctx.beginPath();
+  ctx.ellipse(-s * 0.05, -s * 0.15 + wingY, s * 0.4, s * 0.15, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Head
+  ctx.fillStyle = tierHeadColor(tier);
+  ctx.beginPath();
+  ctx.arc(s * 0.3, -s * 0.1, s * 0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eye
+  ctx.fillStyle = WHITE;
+  ctx.beginPath();
+  ctx.arc(s * 0.38, -s * 0.15, s * 0.07, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(s * 0.4, -s * 0.15, s * 0.04, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Beak
+  ctx.fillStyle = GOLD;
+  ctx.beginPath();
+  ctx.moveTo(s * 0.48, -s * 0.1);
+  ctx.lineTo(s * 0.65, -s * 0.05);
+  ctx.lineTo(s * 0.48, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  // Tail feathers
+  ctx.fillStyle = tierWingColor(tier);
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.45, i * s * 0.08);
+    ctx.lineTo(-s * 0.7, i * s * 0.15 + Math.sin(frame + i) * s * 0.05);
+    ctx.lineTo(-s * 0.5, i * s * 0.04);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // Invincibility flash
+  if (invincibleTimer > 0 && Math.floor(invincibleTimer * 10) % 2 === 0) {
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = WHITE;
+    ctx.beginPath();
+    ctx.ellipse(x, y, s * 0.55, s * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+};
+
+const tierBodyColor = t => {
+  const colors = ['#aa44ff','#4488ff','#44ff88','#ffaa22','#ff4444','#ff44aa','#44ffff','#ffff44','#ffffff','#ffd700'];
+  return colors[Math.min(t, colors.length-1)];
+};
+const tierWingColor = t => {
+  const colors = ['#7722cc','#2266cc','#22cc66','#cc8800','#cc2222','#cc2288','#22cccc','#cccc22','#cccccc','#ccaa00'];
+  return colors[Math.min(t, colors.length-1)];
+};
+const tierHeadColor = t => {
+  const colors = ['#cc66ff','#66aaff','#66ffaa','#ffcc44','#ff6666','#ff66cc','#66ffff','#ffff66','#ffffff','#ffe44d'];
+  return colors[Math.min(t, colors.length-1)];
+};
+
+// ─── FOOD ENTITY ───
+class Food {
+  constructor(tier) {
+    const td = TIERS[Math.min(tier, TIERS.length-1)];
+    const idx = Math.floor(Math.random() * td.food.length);
+    this.name = td.food[idx];
+    this.color = td.foodColors[idx];
+    this.size = td.minSize * (0.3 + Math.random() * 0.5);
+    this.x = (Math.random() - 0.5) * worldSize;
+    this.y = (Math.random() - 0.5) * worldSize;
+    this.vx = (Math.random() - 0.5) * 30;
+    this.vy = (Math.random() - 0.5) * 30;
+    this.bobPhase = Math.random() * Math.PI * 2;
+    this.value = Math.floor(td.minSize * (1 + tier * 0.5));
+    this.alive = true;
+    this.tier = tier;
+    this.pulse = 0;
+  }
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.bobPhase += dt * 2;
+    this.pulse += dt * 3;
+    // Bounce off world edges
+    if (Math.abs(this.x) > worldSize/2) { this.vx *= -1; this.x = Math.sign(this.x) * worldSize/2; }
+    if (Math.abs(this.y) > worldSize/2) { this.vy *= -1; this.y = Math.sign(this.y) * worldSize/2; }
+    // Magnet pull
+    if (save.upgrades.magnet > 0) {
+      const magnetRange = UPGRADE_DEFS.magnet.effect(save.upgrades.magnet);
+      const dx = player.x - this.x;
+      const dy = player.y - this.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < magnetRange + player.size && dist > 1) {
+        const pull = 100 * (1 - dist / (magnetRange + player.size));
+        this.vx += (dx / dist) * pull * dt;
+        this.vy += (dy / dist) * pull * dt;
+      }
+    }
+  }
+  draw(cx, cy) {
+    const sx = this.x - cx + W/2;
+    const sy = this.y - cy + H/2 + Math.sin(this.bobPhase) * 3;
+    if (sx < -50 || sx > W+50 || sy < -50 || sy > H+50) return;
+    const pulseS = 1 + Math.sin(this.pulse) * 0.1;
+    const r = this.size * 0.5 * pulseS;
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.4;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r * 1.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    // Label
+    if (player.size < this.size * 3) {
+      ctx.fillStyle = WHITE;
+      ctx.font = `${Math.max(8, Math.min(12, r * 0.8))}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText(this.name, sx, sy + r + 12);
+    }
+  }
+}
+
+// ─── ENEMY ENTITY ───
+class Enemy {
+  constructor(tier, playerSize) {
+    const td = TIERS[Math.min(tier, TIERS.length-1)];
+    const idx = Math.floor(Math.random() * td.enemyNames.length);
+    this.name = td.enemyNames[idx];
+    this.color = RED;
+    this.size = playerSize * (0.8 + Math.random() * 1.2);
+    this.x = (Math.random() - 0.5) * worldSize;
+    this.y = (Math.random() - 0.5) * worldSize;
+    this.vx = (Math.random() - 0.5) * 80;
+    this.vy = (Math.random() - 0.5) * 80;
+    this.alive = true;
+    this.hp = Math.ceil(tier * 0.5 + 1);
+    this.maxHp = this.hp;
+    this.speed = 50 + tier * 10;
+    this.tier = tier;
+    this.aggroRange = 200 + tier * 20;
+    this.pulse = Math.random() * Math.PI * 2;
+    this.value = Math.floor(td.minSize * (2 + tier));
+  }
+  update(dt) {
+    this.pulse += dt * 4;
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist < this.aggroRange) {
+      if (this.size > player.size * 0.8) {
+        // Chase player if bigger
+        this.vx += (dx / dist) * this.speed * dt * 2;
+        this.vy += (dy / dist) * this.speed * dt * 2;
+      } else {
+        // Flee if smaller
+        this.vx -= (dx / dist) * this.speed * dt * 1.5;
+        this.vy -= (dy / dist) * this.speed * dt * 1.5;
+      }
+    } else {
+      // Wander
+      this.vx += (Math.random() - 0.5) * 50 * dt;
+      this.vy += (Math.random() - 0.5) * 50 * dt;
+    }
+
+    // Friction
+    this.vx *= 0.98;
+    this.vy *= 0.98;
+    // Clamp speed
+    const spd = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+    if (spd > this.speed * 2) {
+      this.vx = (this.vx/spd) * this.speed * 2;
+      this.vy = (this.vy/spd) * this.speed * 2;
+    }
+
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+
+    if (Math.abs(this.x) > worldSize/2) { this.vx *= -1; this.x = Math.sign(this.x) * worldSize/2; }
+    if (Math.abs(this.y) > worldSize/2) { this.vy *= -1; this.y = Math.sign(this.y) * worldSize/2; }
+  }
+  draw(cx, cy) {
+    const sx = this.x - cx + W/2;
+    const sy = this.y - cy + H/2;
+    if (sx < -80 || sx > W+80 || sy < -80 || sy > H+80) return;
+    const pulseS = 1 + Math.sin(this.pulse) * 0.08;
+    const r = this.size * 0.5 * pulseS;
+
+    // Danger glow
+    ctx.fillStyle = this.size > player.size ? '#ff000033' : '#00ff0011';
+    ctx.beginPath();
+    ctx.arc(sx, sy, r * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body
+    ctx.fillStyle = this.size > player.size ? RED : '#ff884488';
+    ctx.beginPath();
+    // Spiky shape for enemies
+    const points = 6 + Math.floor(this.tier / 2);
+    for (let i = 0; i < points * 2; i++) {
+      const angle = (i / (points * 2)) * Math.PI * 2;
+      const rad = i % 2 === 0 ? r : r * 0.6;
+      const px = sx + Math.cos(angle) * rad;
+      const py = sy + Math.sin(angle) * rad;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // HP bar
+    if (this.hp < this.maxHp) {
+      const barW = r * 2;
+      const barH = 4;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(sx - barW/2, sy - r - 10, barW, barH);
+      ctx.fillStyle = RED;
+      ctx.fillRect(sx - barW/2, sy - r - 10, barW * (this.hp / this.maxHp), barH);
+    }
+
+    // Name
+    ctx.fillStyle = this.size > player.size ? RED : '#ff8844';
+    ctx.font = `${Math.max(9, Math.min(13, r * 0.5))}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(this.name, sx, sy + r + 14);
+
+    // Size comparison indicator
+    if (this.size > player.size) {
+      ctx.fillStyle = RED;
+      ctx.font = '10px monospace';
+      ctx.fillText('DANGER', sx, sy - r - 14);
+    }
+  }
+}
+
+// ─── BACKGROUND STARS ───
+const generateStars = (tier) => {
+  bgStars = [];
+  const count = 100 + tier * 30;
+  for (let i = 0; i < count; i++) {
+    bgStars.push({
+      x: (Math.random() - 0.5) * worldSize * 1.5,
+      y: (Math.random() - 0.5) * worldSize * 1.5,
+      size: Math.random() * 2 + 0.5,
+      brightness: Math.random(),
+      twinkleSpeed: 1 + Math.random() * 3,
+      depth: 0.2 + Math.random() * 0.8, // parallax
+    });
+  }
+};
+
+// ─── INIT GAME ───
+const initGame = (startTier = 0) => {
+  const td = TIERS[startTier];
+  const startSizeBonus = UPGRADE_DEFS.startSize.effect(save.upgrades.startSize);
+
+  player = {
+    x: 0, y: 0,
+    vx: 0, vy: 0,
+    size: td.minSize + startSizeBonus,
+    maxHp: 3 + UPGRADE_DEFS.armor.effect(save.upgrades.armor),
+    hp: 3 + UPGRADE_DEFS.armor.effect(save.upgrades.armor),
+    facing: 1,
+    speed: 200 * UPGRADE_DEFS.speed.effect(save.upgrades.speed),
+  };
+
+  camera = { x: 0, y: 0 };
+  foods = [];
+  enemies = [];
+  score = 0;
+  combo = 0;
+  comboTimer = 0;
+  currentTier = startTier;
+  tierProgress = 0;
+  sizeGoal = td.maxSize;
+  runTime = 0;
+  eatenThisRun = 0;
+  runXP = 0;
+  invincibleTimer = 0;
+  flashTimer = 0;
+  explodeReady = false;
+  explodeCooldown = 0;
+  tierTransitionTimer = 0;
+
+  worldSize = 800 + currentTier * 200;
+  generateStars(currentTier);
+  spawnFoods(currentTier, 25 + currentTier * 5);
+  spawnEnemies(currentTier, 3 + currentTier);
+
+  state = STATE.PLAYING;
+  notifications = [];
+  notify(td.desc, CYAN, 2.5);
+};
+
+const spawnFoods = (tier, count) => {
+  for (let i = 0; i < count; i++) {
+    foods.push(new Food(tier));
+  }
+};
+
+const spawnEnemies = (tier, count) => {
+  for (let i = 0; i < count; i++) {
+    const e = new Enemy(tier, player.size);
+    // Don't spawn too close to player
+    const dx = e.x - player.x;
+    const dy = e.y - player.y;
+    if (Math.sqrt(dx*dx+dy*dy) < 150) {
+      e.x = player.x + (Math.random() > 0.5 ? 1 : -1) * (200 + Math.random() * 200);
+      e.y = player.y + (Math.random() > 0.5 ? 1 : -1) * (200 + Math.random() * 200);
+    }
+    enemies.push(e);
+  }
+};
+
+// ─── TIER TRANSITION ───
+const advanceTier = () => {
+  currentTier++;
+  if (currentTier >= TIERS.length) {
+    // You ate the universe — game complete!
+    endRun(true);
+    return;
+  }
+
+  const td = TIERS[currentTier];
+  worldSize = 800 + currentTier * 200;
+  sizeGoal = td.maxSize;
+  tierTransitionTimer = 2.0;
+
+  // Update unlocks
+  if (!save.unlockedTiers.includes(currentTier)) {
+    save.unlockedTiers.push(currentTier);
+    sfx.unlock();
+    notify(`UNLOCKED: ${td.name} start!`, MAGENTA, 3);
+  }
+
+  if (currentTier > save.highestTier) {
+    save.highestTier = currentTier;
+  }
+
+  sfx.tierUp();
+  notify(`ASCENDED: ${td.desc}`, GOLD, 3);
+  generateStars(currentTier);
+
+  // Spawn new entities for this tier
+  spawnFoods(currentTier, 25 + currentTier * 5);
+  spawnEnemies(currentTier, 3 + currentTier);
+
+  // Clear old small foods
+  foods = foods.filter(f => f.tier >= currentTier - 1);
+
+  // Refill HP partially
+  player.hp = Math.min(player.maxHp, player.hp + 1);
+
+  // Screen effect
+  startShake(8, 0.3);
+  spawnParticles(player.x, player.y, 40, GOLD, 300, 1.0, 5);
+};
+
+// ─── EXPLODE ABILITY ───
+const doExplode = () => {
+  if (!explodeReady || explodeCooldown > 0) return;
+  explodeCooldown = 8; // 8 second cooldown
+  explodeReady = false;
+
+  sfx.explode();
+  startShake(15, 0.5);
+
+  const range = player.size * 3;
+  spawnParticles(player.x, player.y, 60, GOLD, 400, 1.5, 6);
+  spawnParticles(player.x, player.y, 40, RED, 350, 1.0, 4);
+
+  // Damage/destroy nearby enemies
+  for (const e of enemies) {
+    const dx = e.x - player.x;
+    const dy = e.y - player.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < range) {
+      e.hp -= 3;
+      const pushF = 500 * (1 - dist/range);
+      e.vx += (dx/dist) * pushF;
+      e.vy += (dy/dist) * pushF;
+      if (e.hp <= 0) {
+        e.alive = false;
+        score += e.value * 2;
+        spawnParticles(e.x, e.y, 15, RED, 200, 0.5);
+      }
+    }
+  }
+
+  // Push away foods
+  for (const f of foods) {
+    const dx = f.x - player.x;
+    const dy = f.y - player.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < range && dist > 1) {
+      const pushF = 300 * (1 - dist/range);
+      f.vx += (dx/dist) * pushF;
+      f.vy += (dy/dist) * pushF;
+    }
+  }
+};
+
+// ─── END RUN ───
+const endRun = (victory = false) => {
+  state = STATE.GAMEOVER;
+  gameOverTime = 0;
+
+  const xpMult = UPGRADE_DEFS.xpMult.effect(save.upgrades.xpMult);
+  runXP = Math.floor(score * 0.1 * xpMult + eatenThisRun * 2 * xpMult + currentTier * 50 * xpMult);
+  if (victory) {
+    runXP *= 3;
+    notify('THE UNIVERSE IS CONSUMED', GOLD, 4);
+  }
+
+  save.totalScore += score;
+  save.xp += runXP;
+  save.totalEaten += eatenThisRun;
+  save.runsCompleted++;
+  if (score > save.highScore) save.highScore = score;
+
+  // Level up
+  while (save.xp >= save.level * 100) {
+    save.xp -= save.level * 100;
+    save.level++;
+    notify(`Level ${save.level}!`, GOLD, 2);
+  }
+
+  // Check achievements
+  checkAchievements();
+
+  if (victory) sfx.tierUp();
+  else sfx.death();
+
+  saveSave();
+};
+
+const checkAchievements = () => {
+  for (const a of ACHIEVEMENTS) {
+    if (!save.achievements[a.id]) {
+      if (a.id === 'score_10k' && score >= 10000) { save.achievements[a.id] = true; notify(`Achievement: ${a.name}!`, MAGENTA, 3); sfx.unlock(); }
+      else if (a.id === 'score_100k' && score >= 100000) { save.achievements[a.id] = true; notify(`Achievement: ${a.name}!`, MAGENTA, 3); sfx.unlock(); }
+      else if (a.check(save)) { save.achievements[a.id] = true; notify(`Achievement: ${a.name}!`, MAGENTA, 3); sfx.unlock(); }
+    }
+  }
+};
+
+// ─── UPDATE ───
+const update = (dt) => {
+  // Shake
+  if (shakeTime > 0) {
+    shakeTime -= dt;
+    shakeX = (Math.random() - 0.5) * shakeMag * 2;
+    shakeY = (Math.random() - 0.5) * shakeMag * 2;
+    shakeMag *= 0.9;
+  } else {
+    shakeX = shakeY = 0;
+  }
+
+  // Particles
+  particles = particles.filter(p => { p.update(dt); return p.life > 0; });
+
+  // Notifications
+  notifications = notifications.filter(n => { n.life -= dt; return n.life > 0; });
+
+  if (state === STATE.TITLE) {
+    titleTime += dt;
+    if (keys[' '] || keys['Enter'] || touch.active) {
+      sfx.click();
+      state = STATE.UPGRADE;
+      keys[' '] = false;
+      keys['Enter'] = false;
+      touch.active = false;
+    }
+    return;
+  }
+
+  if (state === STATE.GAMEOVER) {
+    gameOverTime += dt;
+    if (gameOverTime > 1.0 && (keys[' '] || keys['Enter'] || touch.active)) {
+      sfx.click();
+      state = STATE.UPGRADE;
+      keys[' '] = false;
+      keys['Enter'] = false;
+      touch.active = false;
+    }
+    return;
+  }
+
+  if (state === STATE.UPGRADE) {
+    // Handled by click/touch in draw
+    return;
+  }
+
+  if (state !== STATE.PLAYING) return;
+
+  runTime += dt;
+
+  // ─── PLAYER MOVEMENT ───
+  let moveX = 0, moveY = 0;
+
+  // Keyboard
+  if (keys['ArrowLeft'] || keys['a'] || keys['A']) moveX -= 1;
+  if (keys['ArrowRight'] || keys['d'] || keys['D']) moveX += 1;
+  if (keys['ArrowUp'] || keys['w'] || keys['W']) moveY -= 1;
+  if (keys['ArrowDown'] || keys['s'] || keys['S']) moveY += 1;
+
+  // Touch - joystick style
+  if (touch.active) {
+    const deadzone = 15;
+    if (Math.abs(touch.dx) > deadzone || Math.abs(touch.dy) > deadzone) {
+      const mag = Math.sqrt(touch.dx*touch.dx + touch.dy*touch.dy);
+      moveX = touch.dx / mag;
+      moveY = touch.dy / mag;
+    }
+  }
+
+  // Normalize
+  const moveMag = Math.sqrt(moveX*moveX + moveY*moveY);
+  if (moveMag > 0) {
+    moveX /= moveMag;
+    moveY /= moveMag;
+  }
+
+  // Apply movement with physics
+  const accel = player.speed * 3;
+  player.vx += moveX * accel * dt;
+  player.vy += moveY * accel * dt;
+
+  // Friction
+  player.vx *= 0.92;
+  player.vy *= 0.92;
+
+  // Clamp speed
+  const pSpd = Math.sqrt(player.vx*player.vx + player.vy*player.vy);
+  if (pSpd > player.speed) {
+    player.vx = (player.vx/pSpd) * player.speed;
+    player.vy = (player.vy/pSpd) * player.speed;
+  }
+
+  player.x += player.vx * dt;
+  player.y += player.vy * dt;
+
+  // Facing
+  if (Math.abs(player.vx) > 10) player.facing = player.vx > 0 ? 1 : -1;
+
+  // World bounds (soft bounce)
+  const half = worldSize / 2;
+  if (player.x < -half) { player.x = -half; player.vx = Math.abs(player.vx) * 0.5; }
+  if (player.x > half) { player.x = half; player.vx = -Math.abs(player.vx) * 0.5; }
+  if (player.y < -half) { player.y = -half; player.vy = Math.abs(player.vy) * 0.5; }
+  if (player.y > half) { player.y = half; player.vy = -Math.abs(player.vy) * 0.5; }
+
+  // Bird animation
+  birdFrameTimer += dt;
+  if (birdFrameTimer > 0.1) {
+    birdFrame = (birdFrame + 1) % BIRD_FRAMES;
+    birdFrameTimer -= 0.1;
+  }
+
+  // Camera follow
+  camera.x += (player.x - camera.x) * 4 * dt;
+  camera.y += (player.y - camera.y) * 4 * dt;
+
+  // Timers
+  if (invincibleTimer > 0) invincibleTimer -= dt;
+  if (flashTimer > 0) flashTimer -= dt;
+  comboTimer -= dt;
+  if (comboTimer <= 0) combo = 0;
+  if (explodeCooldown > 0) explodeCooldown -= dt;
+  if (tierTransitionTimer > 0) tierTransitionTimer -= dt;
+
+  // Explode charge: every 20 things eaten
+  if (eatenThisRun > 0 && eatenThisRun % 20 === 0 && !explodeReady && explodeCooldown <= 0) {
+    explodeReady = true;
+    notify('EXPLODE READY! [Space/Tap Action]', RED, 2);
+  }
+
+  // Explode input
+  if (keys[' '] && explodeReady) {
+    doExplode();
+    keys[' '] = false;
+  }
+
+  // ─── FOOD COLLISION ───
+  for (const f of foods) {
+    if (!f.alive) continue;
+    f.update(dt);
+
+    const dx = player.x - f.x;
+    const dy = player.y - f.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const eatDist = (player.size + f.size) * 0.4;
+
+    if (dist < eatDist && player.size > f.size * 0.6) {
+      f.alive = false;
+      eatenThisRun++;
+
+      // Grow
+      const growAmount = f.size * 0.08;
+      player.size += growAmount;
+
+      // Score
+      combo++;
+      comboTimer = 2.0;
+      const comboMult = Math.min(combo, 10);
+      const pts = f.value * comboMult;
+      score += pts;
+
+      sfx.eat();
+      spawnParticles(f.x, f.y, 8, f.color, 100, 0.3, 2);
+
+      if (combo >= 5) notify(`${combo}x COMBO!`, GOLD, 1);
+
+      // Check tier advance
+      if (player.size >= sizeGoal) {
+        advanceTier();
+      }
+    }
+  }
+
+  // Remove dead foods
+  foods = foods.filter(f => f.alive);
+
+  // Replenish foods
+  const minFoods = 15 + currentTier * 5;
+  while (foods.length < minFoods) {
+    foods.push(new Food(currentTier));
+  }
+  // Occasionally spawn previous tier foods (small snacks)
+  if (currentTier > 0 && foods.length < minFoods + 10 && Math.random() < 0.02) {
+    foods.push(new Food(currentTier - 1));
+  }
+
+  // ─── ENEMY COLLISION ───
+  for (const e of enemies) {
+    if (!e.alive) continue;
+    e.update(dt);
+
+    const dx = player.x - e.x;
+    const dy = player.y - e.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const hitDist = (player.size + e.size) * 0.35;
+
+    if (dist < hitDist) {
+      if (player.size > e.size * 1.2) {
+        // Eat the enemy!
+        e.hp--;
+        if (e.hp <= 0) {
+          e.alive = false;
+          player.size += e.size * 0.15;
+          const pts = e.value * 3;
+          score += pts;
+          eatenThisRun++;
+          sfx.grow();
+          spawnParticles(e.x, e.y, 20, RED, 200, 0.6, 4);
+          startShake(5, 0.2);
+          notify(`+${pts}`, GREEN, 1);
+
+          if (player.size >= sizeGoal) advanceTier();
+        } else {
+          // Knock it back
+          const pushF = 300;
+          e.vx -= (dx/dist) * pushF;
+          e.vy -= (dy/dist) * pushF;
+          sfx.hit();
+          spawnParticles(e.x, e.y, 8, RED, 150, 0.3);
+          startShake(3, 0.1);
+        }
+      } else if (invincibleTimer <= 0) {
+        // Take damage
+        player.hp--;
+        invincibleTimer = 1.5;
+        flashTimer = 0.3;
+        sfx.hit();
+        startShake(10, 0.3);
+        spawnParticles(player.x, player.y, 15, RED, 200, 0.5, 3);
+
+        // Knockback
+        const pushF = 300;
+        player.vx += (dx/dist) * pushF;
+        player.vy += (dy/dist) * pushF;
+
+        // Shrink slightly
+        player.size *= 0.9;
+
+        notify(`-HP (${player.hp}/${player.maxHp})`, RED, 1.5);
+
+        if (player.hp <= 0) {
+          spawnParticles(player.x, player.y, 50, RED, 300, 1.0, 5);
+          endRun(false);
+          return;
+        }
+      }
+    }
+  }
+
+  // Remove dead enemies
+  enemies = enemies.filter(e => e.alive);
+
+  // Replenish enemies
+  const minEnemies = 2 + currentTier;
+  while (enemies.length < minEnemies) {
+    spawnEnemies(currentTier, 1);
+  }
+
+  // Difficulty scaling: spawn tougher enemies over time
+  if (runTime > 30 && Math.random() < 0.001 * dt * 60) {
+    const e = new Enemy(currentTier, player.size);
+    e.size = player.size * (1.0 + Math.random() * 0.5);
+    e.hp = Math.ceil(currentTier * 0.5 + 2);
+    e.maxHp = e.hp;
+    enemies.push(e);
+  }
+};
+
+// ─── DRAW ───
+const draw = () => {
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, W, H);
+
+  if (state === STATE.TITLE) {
+    drawTitle();
+    drawParticlesUI();
+    drawNotifications();
+    return;
+  }
+
+  if (state === STATE.UPGRADE) {
+    drawUpgradeScreen();
+    drawNotifications();
+    return;
+  }
+
+  if (state === STATE.GAMEOVER) {
+    drawGameOver();
+    drawParticlesUI();
+    drawNotifications();
+    return;
+  }
+
+  if (state !== STATE.PLAYING) return;
+
+  ctx.save();
+  ctx.translate(shakeX, shakeY);
+
+  const cx = camera.x;
+  const cy = camera.y;
+
+  // Background
+  const td = TIERS[Math.min(currentTier, TIERS.length-1)];
+  ctx.fillStyle = td.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars with parallax
+  for (const s of bgStars) {
+    const sx = (s.x - cx * s.depth) % (W * 2);
+    const sy = (s.y - cy * s.depth) % (H * 2);
+    const screenX = ((sx % W) + W) % W;
+    const screenY = ((sy % H) + H) % H;
+    const twinkle = 0.5 + 0.5 * Math.sin(runTime * s.twinkleSpeed + s.brightness * 10);
+    ctx.globalAlpha = s.brightness * twinkle * 0.8;
+    ctx.fillStyle = WHITE;
+    ctx.fillRect(screenX, screenY, s.size, s.size);
+  }
+  ctx.globalAlpha = 1;
+
+  // World boundary
+  const bx1 = -worldSize/2 - cx + W/2;
+  const by1 = -worldSize/2 - cy + H/2;
+  const bx2 = worldSize/2 - cx + W/2;
+  const by2 = worldSize/2 - cy + H/2;
+  ctx.strokeStyle = '#ffffff11';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(bx1, by1, bx2 - bx1, by2 - by1);
+
+  // Grid lines (subtle)
+  const gridSize = 100;
+  ctx.strokeStyle = '#ffffff06';
+  ctx.lineWidth = 1;
+  const startGX = Math.floor((-worldSize/2) / gridSize) * gridSize;
+  const startGY = Math.floor((-worldSize/2) / gridSize) * gridSize;
+  for (let gx = startGX; gx <= worldSize/2; gx += gridSize) {
+    const sx = gx - cx + W/2;
+    if (sx > -10 && sx < W + 10) {
+      ctx.beginPath();
+      ctx.moveTo(sx, Math.max(0, by1));
+      ctx.lineTo(sx, Math.min(H, by2));
+      ctx.stroke();
+    }
+  }
+  for (let gy = startGY; gy <= worldSize/2; gy += gridSize) {
+    const sy = gy - cy + H/2;
+    if (sy > -10 && sy < H + 10) {
+      ctx.beginPath();
+      ctx.moveTo(Math.max(0, bx1), sy);
+      ctx.lineTo(Math.min(W, bx2), sy);
+      ctx.stroke();
+    }
+  }
+
+  // Draw foods
+  for (const f of foods) f.draw(cx, cy);
+
+  // Draw enemies
+  for (const e of enemies) e.draw(cx, cy);
+
+  // Draw particles (world space)
+  for (const p of particles) p.draw(cx, cy);
+
+  // Draw player
+  if (flashTimer <= 0 || Math.floor(flashTimer * 20) % 2 === 0) {
+    const px = player.x - cx + W/2;
+    const py = player.y - cy + H/2;
+    drawBird(px, py, player.size, player.facing, birdFrame, currentTier);
+  }
+
+  // Magnet range indicator
+  if (save.upgrades.magnet > 0) {
+    const magnetRange = UPGRADE_DEFS.magnet.effect(save.upgrades.magnet);
+    const px = player.x - cx + W/2;
+    const py = player.y - cy + H/2;
+    ctx.strokeStyle = '#00ff8811';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(px, py, magnetRange + player.size, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+
+  // ─── HUD ───
+  drawHUD();
+  drawTouchControls();
+  drawNotifications();
+
+  // Tier transition overlay
+  if (tierTransitionTimer > 0) {
+    const a = Math.min(1, tierTransitionTimer / 1.0);
+    ctx.fillStyle = `rgba(255,255,255,${a * 0.3})`;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = GOLD;
+    ctx.font = 'bold 36px monospace';
+    ctx.textAlign = 'center';
+    ctx.globalAlpha = a;
+    ctx.fillText(TIERS[Math.min(currentTier, TIERS.length-1)].desc, W/2, H/2);
+    ctx.font = '18px monospace';
+    ctx.fillText(`Tier ${currentTier + 1} / ${TIERS.length}`, W/2, H/2 + 40);
+    ctx.globalAlpha = 1;
+  }
+};
+
+const drawHUD = () => {
+  const td = TIERS[Math.min(currentTier, TIERS.length-1)];
+  const pad = 15;
+
+  // Score
+  ctx.fillStyle = GOLD;
+  ctx.font = 'bold 20px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(`Score: ${score.toLocaleString()}`, pad, 30);
+
+  // Combo
+  if (combo > 1) {
+    ctx.fillStyle = GREEN;
+    ctx.font = 'bold 16px monospace';
+    ctx.fillText(`${combo}x Combo`, pad, 52);
+  }
+
+  // Tier
+  ctx.fillStyle = CYAN;
+  ctx.font = '14px monospace';
+  ctx.fillText(`${td.name} (${td.desc})`, pad, 72);
+
+  // HP
+  ctx.fillStyle = '#333';
+  const hpBarW = 120;
+  const hpBarH = 12;
+  ctx.fillRect(pad, 80, hpBarW, hpBarH);
+  const hpPct = player.hp / player.maxHp;
+  ctx.fillStyle = hpPct > 0.5 ? GREEN : hpPct > 0.25 ? GOLD : RED;
+  ctx.fillRect(pad, 80, hpBarW * hpPct, hpBarH);
+  ctx.fillStyle = WHITE;
+  ctx.font = '10px monospace';
+  ctx.fillText(`HP ${player.hp}/${player.maxHp}`, pad + 4, 90);
+
+  // Size progress bar
+  ctx.fillStyle = '#333';
+  const sizeBarW = 150;
+  ctx.fillRect(pad, 98, sizeBarW, 10);
+  const sizePct = Math.min(1, (player.size - TIERS[Math.min(currentTier, TIERS.length-1)].minSize) / (sizeGoal - TIERS[Math.min(currentTier, TIERS.length-1)].minSize));
+  ctx.fillStyle = MAGENTA;
+  ctx.fillRect(pad, 98, sizeBarW * sizePct, 10);
+  ctx.fillStyle = WHITE;
+  ctx.font = '9px monospace';
+  ctx.fillText(`Size: ${player.size.toFixed(0)} / ${sizeGoal}`, pad + 4, 107);
+
+  // Explode indicator
+  const explodeX = W - 80;
+  if (explodeReady) {
+    ctx.fillStyle = RED;
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('EXPLODE', explodeX, 30);
+    ctx.font = '10px monospace';
+    ctx.fillText('[SPACE]', explodeX, 44);
+  } else if (explodeCooldown > 0) {
+    ctx.fillStyle = '#555';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${Math.ceil(explodeCooldown)}s`, explodeX, 30);
+  }
+
+  // Eaten count
+  ctx.fillStyle = '#888';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(`Eaten: ${eatenThisRun}`, W - pad, 65);
+  ctx.fillText(`Time: ${formatTime(runTime)}`, W - pad, 80);
+
+  // Minimap
+  const mmSize = 80;
+  const mmX = W - mmSize - pad;
+  const mmY = H - mmSize - pad - 60;
+  ctx.fillStyle = '#00000088';
+  ctx.fillRect(mmX, mmY, mmSize, mmSize);
+  ctx.strokeStyle = '#ffffff33';
+  ctx.strokeRect(mmX, mmY, mmSize, mmSize);
+
+  const mmScale = mmSize / worldSize;
+  // Player dot
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(mmX + mmSize/2 + player.x * mmScale - 2, mmY + mmSize/2 + player.y * mmScale - 2, 4, 4);
+  // Food dots
+  ctx.fillStyle = GREEN;
+  for (const f of foods) {
+    ctx.fillRect(mmX + mmSize/2 + f.x * mmScale, mmY + mmSize/2 + f.y * mmScale, 1, 1);
+  }
+  // Enemy dots
+  ctx.fillStyle = RED;
+  for (const e of enemies) {
+    ctx.fillRect(mmX + mmSize/2 + e.x * mmScale - 1, mmY + mmSize/2 + e.y * mmScale - 1, 2, 2);
+  }
+};
+
+const drawTouchControls = () => {
+  if (!('ontouchstart' in window)) return;
+
+  // Virtual joystick indicator
+  if (touch.active && (Math.abs(touch.dx) > 15 || Math.abs(touch.dy) > 15)) {
+    ctx.strokeStyle = '#ffffff33';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(touch.startX, touch.startY, 40, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const clampDist = Math.min(40, Math.sqrt(touch.dx*touch.dx + touch.dy*touch.dy));
+    const angle = Math.atan2(touch.dy, touch.dx);
+    ctx.fillStyle = '#ffffff55';
+    ctx.beginPath();
+    ctx.arc(touch.startX + Math.cos(angle)*clampDist, touch.startY + Math.sin(angle)*clampDist, 15, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Explode button (bottom right)
+  if (explodeReady) {
+    const bx = W - 60;
+    const by = H - 80;
+    ctx.fillStyle = '#ff333366';
+    ctx.beginPath();
+    ctx.arc(bx, by, 30, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = RED;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(bx, by, 30, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = WHITE;
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('BOOM', bx, by + 4);
+  }
+};
+
+const formatTime = (t) => {
+  const m = Math.floor(t / 60);
+  const s = Math.floor(t % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
+
+const drawParticlesUI = () => {
+  for (const p of particles) {
+    const a = Math.max(0, p.life / p.maxLife);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size * a + 1, p.size * a + 1);
+  }
+  ctx.globalAlpha = 1;
+};
+
+const drawNotifications = () => {
+  let ny = H * 0.25;
+  for (const n of notifications) {
+    const a = Math.min(1, n.life / 0.5) * Math.min(1, (n.maxLife - (n.maxLife - n.life)) / 0.3);
+    ctx.globalAlpha = Math.max(0, a);
+    ctx.fillStyle = n.color;
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(n.text, W/2, ny);
+    ny += 24;
+  }
+  ctx.globalAlpha = 1;
+};
+
+// ─── TITLE SCREEN ───
+const drawTitle = () => {
+  // Animated bg
+  for (let i = 0; i < 50; i++) {
+    const x = ((i * 137 + titleTime * 20 * (i % 3 + 1)) % (W + 100)) - 50;
+    const y = ((i * 89 + titleTime * 10 * ((i+1) % 3 + 1)) % (H + 100)) - 50;
+    ctx.globalAlpha = 0.1 + Math.sin(titleTime * 2 + i) * 0.05;
+    ctx.fillStyle = [GOLD, GREEN, CYAN, MAGENTA][i % 4];
+    ctx.fillRect(x, y, 2, 2);
+  }
+  ctx.globalAlpha = 1;
+
+  const centerY = H * 0.35;
+
+  // Title
+  ctx.fillStyle = GOLD;
+  ctx.font = `bold ${Math.min(64, W * 0.1)}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.shadowColor = GOLD;
+  ctx.shadowBlur = 20 + Math.sin(titleTime * 3) * 10;
+  ctx.fillText('ENDBIRD', W/2, centerY);
+  ctx.shadowBlur = 0;
+
+  // Subtitle
+  ctx.fillStyle = GREEN;
+  ctx.font = `${Math.min(20, W * 0.035)}px monospace`;
+  ctx.fillText('Eat, Grow, Explode.', W/2, centerY + 40);
+
+  // Tagline
+  ctx.fillStyle = '#888';
+  ctx.font = `${Math.min(14, W * 0.025)}px monospace`;
+  ctx.fillText('From quarks to cosmos. Devour everything.', W/2, centerY + 70);
+
+  // Stats
+  ctx.fillStyle = CYAN;
+  ctx.font = '13px monospace';
+  ctx.fillText(`Level ${save.level} | High Score: ${save.highScore.toLocaleString()} | Runs: ${save.runsCompleted}`, W/2, centerY + 110);
+
+  // Prompt
+  const blink = Math.sin(titleTime * 4) > 0;
+  if (blink) {
+    ctx.fillStyle = WHITE;
+    ctx.font = 'bold 18px monospace';
+    ctx.fillText('Press ENTER or Tap to Start', W/2, centerY + 160);
+  }
+
+  // Bird preview
+  const previewSize = 40 + Math.sin(titleTime * 2) * 5;
+  drawBird(W/2, centerY - 80, previewSize, 1, Math.floor(titleTime * 6) % 4, Math.floor(titleTime) % TIERS.length);
+
+  // Controls
+  ctx.fillStyle = '#555';
+  ctx.font = '11px monospace';
+  ctx.fillText('WASD / Arrow Keys / Touch to move', W/2, H - 60);
+  ctx.fillText('SPACE to Explode when charged', W/2, H - 44);
+  ctx.fillText('Eat smaller things. Avoid bigger things.', W/2, H - 28);
+};
+
+// ─── UPGRADE SCREEN ───
+let upgradeHover = -1;
+let startHover = false;
+let selectedStartTier = 0;
+
+const drawUpgradeScreen = () => {
+  ctx.fillStyle = '#0a0a14';
+  ctx.fillRect(0, 0, W, H);
+
+  const centerX = W / 2;
+  let y = 40;
+
+  // Title
+  ctx.fillStyle = GOLD;
+  ctx.font = 'bold 24px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('UPGRADE LAB', centerX, y);
+  y += 30;
+
+  // XP bar
+  const xpNeeded = save.level * 100;
+  ctx.fillStyle = '#222';
+  const xpBarW = Math.min(300, W * 0.7);
+  ctx.fillRect(centerX - xpBarW/2, y, xpBarW, 14);
+  ctx.fillStyle = CYAN;
+  ctx.fillRect(centerX - xpBarW/2, y, xpBarW * (save.xp / xpNeeded), 14);
+  ctx.fillStyle = WHITE;
+  ctx.font = '10px monospace';
+  ctx.fillText(`Level ${save.level} — XP: ${save.xp}/${xpNeeded}`, centerX, y + 11);
+  y += 30;
+
+  // Currency
+  ctx.fillStyle = GOLD;
+  ctx.font = '16px monospace';
+  ctx.fillText(`Total Score: ${save.totalScore.toLocaleString()}`, centerX, y);
+  y += 30;
+
+  // Upgrades
+  const keys_list = Object.keys(UPGRADE_DEFS);
+  const cardW = Math.min(160, (W - 40) / keys_list.length - 10);
+  const cardH = 140;
+  const totalW = keys_list.length * (cardW + 10) - 10;
+  const startX = centerX - totalW / 2;
+
+  upgradeHover = -1;
+
+  keys_list.forEach((key, i) => {
+    const def = UPGRADE_DEFS[key];
+    const lvl = save.upgrades[key];
+    const cost = getUpgradeCost(key);
+    const maxed = lvl >= def.maxLvl;
+    const canBuy = !maxed && save.totalScore >= cost;
+
+    const cx = startX + i * (cardW + 10);
+    const cy = y;
+
+    // Hit test
+    const mx = mousePos.x;
+    const my = mousePos.y;
+    const hover = mx >= cx && mx <= cx + cardW && my >= cy && my <= cy + cardH;
+    if (hover) upgradeHover = i;
+
+    // Card bg
+    ctx.fillStyle = hover ? '#1a1a2a' : '#111118';
+    ctx.fillRect(cx, cy, cardW, cardH);
+    ctx.strokeStyle = canBuy ? GREEN : maxed ? GOLD : '#333';
+    ctx.lineWidth = hover ? 2 : 1;
+    ctx.strokeRect(cx, cy, cardW, cardH);
+
+    // Icon
+    ctx.fillStyle = maxed ? GOLD : canBuy ? GREEN : '#555';
+    ctx.font = 'bold 24px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(def.icon, cx + cardW/2, cy + 28);
+
+    // Name
+    ctx.fillStyle = WHITE;
+    ctx.font = 'bold 11px monospace';
+    ctx.fillText(def.name, cx + cardW/2, cy + 48);
+
+    // Level
+    ctx.fillStyle = CYAN;
+    ctx.font = '10px monospace';
+    ctx.fillText(`Lv ${lvl}/${def.maxLvl}`, cx + cardW/2, cy + 64);
+
+    // Desc
+    ctx.fillStyle = '#888';
+    ctx.font = '9px monospace';
+    ctx.fillText(def.desc, cx + cardW/2, cy + 80);
+
+    // Effect
+    ctx.fillStyle = GREEN;
+    ctx.font = '9px monospace';
+    const effectVal = def.effect(lvl);
+    ctx.fillText(`Now: ${typeof effectVal === 'number' && effectVal % 1 !== 0 ? effectVal.toFixed(1) + 'x' : effectVal}`, cx + cardW/2, cy + 96);
+
+    // Cost
+    if (!maxed) {
+      ctx.fillStyle = canBuy ? GOLD : RED;
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText(`${cost.toLocaleString()}`, cx + cardW/2, cy + 116);
+      if (hover && canBuy) {
+        ctx.fillStyle = GREEN;
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText('CLICK TO BUY', cx + cardW/2, cy + 132);
+      }
+    } else {
+      ctx.fillStyle = GOLD;
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText('MAXED', cx + cardW/2, cy + 116);
+    }
+  });
+
+  y += cardH + 25;
+
+  // Starting tier selector
+  ctx.fillStyle = WHITE;
+  ctx.font = 'bold 16px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('Starting Scale:', centerX, y);
+  y += 20;
+
+  const tierBtnW = Math.min(90, (W - 40) / Math.min(save.unlockedTiers.length, 5) - 5);
+  const tierTotalW = Math.min(save.unlockedTiers.length, 5) * (tierBtnW + 5) - 5;
+  const tierStartX = centerX - tierTotalW / 2;
+
+  const displayTiers = save.unlockedTiers.slice(0, 5);
+  displayTiers.forEach((tierIdx, i) => {
+    const tx = tierStartX + i * (tierBtnW + 5);
+    const selected = tierIdx === selectedStartTier;
+    const td = TIERS[tierIdx];
+
+    ctx.fillStyle = selected ? '#222244' : '#111118';
+    ctx.fillRect(tx, y, tierBtnW, 36);
+    ctx.strokeStyle = selected ? GOLD : '#333';
+    ctx.lineWidth = selected ? 2 : 1;
+    ctx.strokeRect(tx, y, tierBtnW, 36);
+
+    ctx.fillStyle = selected ? GOLD : '#aaa';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(td.name, tx + tierBtnW/2, y + 15);
+    ctx.fillStyle = '#666';
+    ctx.font = '8px monospace';
+    ctx.fillText(td.desc, tx + tierBtnW/2, y + 28);
+
+    // Hit test for tier selection
+    const mx = mousePos.x, my2 = mousePos.y;
+    if (mx >= tx && mx <= tx + tierBtnW && my2 >= y && my2 <= y + 36) {
+      if (typeof lastClickTime !== 'undefined' && lastClickTime > 0) {
+        selectedStartTier = tierIdx;
+        sfx.click();
+      }
+    }
+  });
+
+  y += 55;
+
+  // Play button
+  const playBtnW = 200;
+  const playBtnH = 50;
+  const pbx = centerX - playBtnW/2;
+  const pby = y;
+  const playHover = mousePos.x >= pbx && mousePos.x <= pbx + playBtnW && mousePos.y >= pby && mousePos.y <= pby + playBtnH;
+  startHover = playHover;
+
+  ctx.fillStyle = playHover ? '#004422' : '#002211';
+  ctx.fillRect(pbx, pby, playBtnW, playBtnH);
+  ctx.strokeStyle = GREEN;
+  ctx.lineWidth = playHover ? 3 : 1;
+  ctx.strokeRect(pbx, pby, playBtnW, playBtnH);
+
+  ctx.fillStyle = GREEN;
+  ctx.font = 'bold 20px monospace';
+  ctx.fillText('START RUN', centerX, pby + 32);
+
+  y += playBtnH + 20;
+
+  // Achievements
+  ctx.fillStyle = '#666';
+  ctx.font = '12px monospace';
+  ctx.fillText(`Achievements: ${Object.keys(save.achievements).length}/${ACHIEVEMENTS.length}`, centerX, y);
+  y += 18;
+
+  const achPerRow = Math.min(6, Math.floor((W - 40) / 140));
+  const achW = Math.min(130, (W - 40) / achPerRow - 10);
+  const achTotalW = Math.min(achPerRow, ACHIEVEMENTS.length) * (achW + 5) - 5;
+  const achStartX = centerX - achTotalW / 2;
+
+  ACHIEVEMENTS.slice(0, achPerRow * 2).forEach((a, i) => {
+    const row = Math.floor(i / achPerRow);
+    const col = i % achPerRow;
+    const ax = achStartX + col * (achW + 5);
+    const ay = y + row * 32;
+    const unlocked = save.achievements[a.id];
+
+    ctx.fillStyle = unlocked ? '#1a1a22' : '#0a0a0f';
+    ctx.fillRect(ax, ay, achW, 26);
+    ctx.strokeStyle = unlocked ? GOLD : '#222';
+    ctx.strokeRect(ax, ay, achW, 26);
+
+    ctx.fillStyle = unlocked ? GOLD : '#444';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(unlocked ? a.name : '???', ax + achW/2, ay + 11);
+    ctx.fillStyle = unlocked ? '#888' : '#333';
+    ctx.font = '7px monospace';
+    ctx.fillText(unlocked ? a.desc : 'Locked', ax + achW/2, ay + 22);
+  });
+};
+
+let lastClickTime = 0;
+canvas.addEventListener('click', (e) => {
+  lastClickTime = performance.now();
+  ensureAudio();
+
+  if (state === STATE.UPGRADE) {
+    const mx = e.clientX;
+    const my = e.clientY;
+
+    // Check upgrade cards
+    const keys_list = Object.keys(UPGRADE_DEFS);
+    const cardW = Math.min(160, (W - 40) / keys_list.length - 10);
+    const cardH = 140;
+    const totalW = keys_list.length * (cardW + 10) - 10;
+    const startX = W/2 - totalW/2;
+    const cardY = 130;
+
+    keys_list.forEach((key, i) => {
+      const cx = startX + i * (cardW + 10);
+      if (mx >= cx && mx <= cx + cardW && my >= cardY && my <= cardY + cardH) {
+        const def = UPGRADE_DEFS[key];
+        const lvl = save.upgrades[key];
+        const cost = getUpgradeCost(key);
+        if (lvl < def.maxLvl && save.totalScore >= cost) {
+          save.totalScore -= cost;
+          save.upgrades[key]++;
+          sfx.unlock();
+          notify(`${def.name} Lv${save.upgrades[key]}!`, GREEN, 1.5);
+          saveSave();
+        } else if (lvl >= def.maxLvl) {
+          sfx.click();
+        } else {
+          sfx.hit();
+          notify('Not enough score!', RED, 1);
+        }
+      }
+    });
+
+    // Check tier buttons
+    const tierBtnY = cardY + cardH + 45;
+    const tierBtnW = Math.min(90, (W - 40) / Math.min(save.unlockedTiers.length, 5) - 5);
+    const tierTotalW = Math.min(save.unlockedTiers.length, 5) * (tierBtnW + 5) - 5;
+    const tierStartX = W/2 - tierTotalW/2;
+    const displayTiers = save.unlockedTiers.slice(0, 5);
+    displayTiers.forEach((tierIdx, i) => {
+      const tx = tierStartX + i * (tierBtnW + 5);
+      if (mx >= tx && mx <= tx + tierBtnW && my >= tierBtnY && my <= tierBtnY + 36) {
+        selectedStartTier = tierIdx;
+        sfx.click();
+      }
+    });
+
+    // Check play button
+    const playBtnW = 200;
+    const playBtnH = 50;
+    const pbx = W/2 - playBtnW/2;
+    const pby = tierBtnY + 55;
+    if (mx >= pbx && mx <= pbx + playBtnW && my >= pby && my <= pby + playBtnH) {
+      sfx.click();
+      initGame(selectedStartTier);
+    }
+  }
+
+  // Explode button (touch)
+  if (state === STATE.PLAYING && explodeReady) {
+    const bx = W - 60;
+    const by = H - 80;
+    const dx = mx - bx;
+    const dy = my - by;
+    const mx2 = e.clientX, my2 = e.clientY;
+    if (Math.sqrt((mx2-bx)**2 + (my2-by)**2) < 35) {
+      doExplode();
+    }
+  }
+
+  setTimeout(() => { lastClickTime = 0; }, 100);
+});
+
+// ─── GAME OVER SCREEN ───
+const drawGameOver = () => {
+  ctx.fillStyle = '#0a0a0fcc';
+  ctx.fillRect(0, 0, W, H);
+
+  const centerY = H * 0.3;
+  ctx.textAlign = 'center';
+
+  ctx.fillStyle = RED;
+  ctx.font = `bold ${Math.min(48, W * 0.08)}px monospace`;
+  ctx.fillText('GAME OVER', W/2, centerY);
+
+  ctx.fillStyle = GOLD;
+  ctx.font = 'bold 24px monospace';
+  ctx.fillText(`Score: ${score.toLocaleString()}`, W/2, centerY + 50);
+
+  ctx.fillStyle = GREEN;
+  ctx.font = '16px monospace';
+  ctx.fillText(`+${runXP} XP earned`, W/2, centerY + 80);
+
+  ctx.fillStyle = CYAN;
+  ctx.font = '14px monospace';
+  ctx.fillText(`Eaten: ${eatenThisRun} | Time: ${formatTime(runTime)}`, W/2, centerY + 110);
+  ctx.fillText(`Highest Tier: ${TIERS[Math.min(currentTier, TIERS.length-1)].name}`, W/2, centerY + 130);
+
+  if (score >= save.highScore && score > 0) {
+    ctx.fillStyle = GOLD;
+    ctx.font = 'bold 18px monospace';
+    ctx.shadowColor = GOLD;
+    ctx.shadowBlur = 15;
+    ctx.fillText('NEW HIGH SCORE!', W/2, centerY + 165);
+    ctx.shadowBlur = 0;
+  }
+
+  if (gameOverTime > 1.0) {
+    const blink = Math.sin(gameOverTime * 4) > 0;
+    if (blink) {
+      ctx.fillStyle = WHITE;
+      ctx.font = 'bold 16px monospace';
+      ctx.fillText('Press ENTER or Tap to Continue', W/2, centerY + 210);
+    }
+  }
+};
+
+// ─── GAME LOOP ───
+let lastTime = 0;
+const loop = (time) => {
+  const dt = Math.min(0.05, (time - lastTime) / 1000);
+  lastTime = time;
+
+  resize();
+  update(dt);
+  draw();
+
+  requestAnimationFrame(loop);
+};
+
+requestAnimationFrame((time) => {
+  lastTime = time;
+  requestAnimationFrame(loop);
+});
+
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

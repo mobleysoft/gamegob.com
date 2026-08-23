@@ -1,0 +1,1770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="HexCheckers — Strategize, Upgrade, Dominate">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob/forge_hex_checkers.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>HexCheckers — Strategize, Upgrade, Dominate</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas { display: block; margin: 0 auto; }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+'use strict';
+
+// ============================================================
+// HexCheckers — Hexagonal Checkers with Meta-Progression
+// ============================================================
+
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+
+// Colors
+const C = {
+  bg: '#0a0a0f',
+  bg2: '#111122',
+  gold: '#f0b800',
+  goldDark: '#a07800',
+  green: '#00ff88',
+  greenDark: '#008844',
+  red: '#ff3355',
+  redDark: '#991133',
+  blue: '#3388ff',
+  blueDark: '#1144aa',
+  purple: '#aa44ff',
+  white: '#ffffff',
+  gray: '#555566',
+  darkGray: '#222233',
+  cellLight: '#1a1a2e',
+  cellMid: '#16213e',
+  cellDark: '#0f3460',
+  playerPiece: '#00ff88',
+  playerKing: '#44ffbb',
+  aiPiece: '#ff3355',
+  aiKing: '#ff6688',
+  frozen: '#66ccff',
+};
+
+// Audio
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+const ensureAudio = () => { if (!audioCtx) audioCtx = new AudioCtx(); };
+
+const playSound = (type) => {
+  ensureAudio();
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  switch(type) {
+    case 'move':
+      osc.type = 'sine'; osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(660, now + 0.1);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now); osc.stop(now + 0.15);
+      break;
+    case 'capture':
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now);
+      osc.frequency.exponentialRampToValueAtTime(800, now + 0.15);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.start(now); osc.stop(now + 0.25);
+      break;
+    case 'king':
+      osc.type = 'triangle'; osc.frequency.setValueAtTime(523, now);
+      osc.frequency.setValueAtTime(659, now + 0.1);
+      osc.frequency.setValueAtTime(784, now + 0.2);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      osc.start(now); osc.stop(now + 0.4);
+      break;
+    case 'buy':
+      osc.type = 'sine'; osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(1760, now + 0.1);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
+      break;
+    case 'bomb':
+      osc.type = 'square'; osc.frequency.setValueAtTime(150, now);
+      osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      osc.start(now); osc.stop(now + 0.4);
+      break;
+    case 'freeze':
+      osc.type = 'sine'; osc.frequency.setValueAtTime(2000, now);
+      osc.frequency.exponentialRampToValueAtTime(500, now + 0.3);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.start(now); osc.stop(now + 0.35);
+      break;
+    case 'teleport':
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(3000, now + 0.15);
+      osc.frequency.exponentialRampToValueAtTime(300, now + 0.3);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.start(now); osc.stop(now + 0.35);
+      break;
+    case 'win':
+      osc.type = 'triangle';
+      [523, 659, 784, 1047].forEach((f, i) => {
+        osc.frequency.setValueAtTime(f, now + i * 0.15);
+      });
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+      osc.start(now); osc.stop(now + 0.7);
+      break;
+    case 'lose':
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(100, now + 0.5);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      osc.start(now); osc.stop(now + 0.6);
+      break;
+    case 'click':
+      osc.type = 'sine'; osc.frequency.setValueAtTime(600, now);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc.start(now); osc.stop(now + 0.05);
+      break;
+    case 'error':
+      osc.type = 'square'; osc.frequency.setValueAtTime(200, now);
+      osc.frequency.setValueAtTime(150, now + 0.1);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now); osc.stop(now + 0.2);
+      break;
+    case 'levelup':
+      osc.type = 'triangle';
+      [440, 554, 659, 880].forEach((f, i) => {
+        osc.frequency.setValueAtTime(f, now + i * 0.12);
+      });
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      osc.start(now); osc.stop(now + 0.6);
+      break;
+  }
+};
+
+// ============================================================
+// Persistence
+// ============================================================
+const SAVE_KEY = 'hexcheckers_save_v2';
+
+const defaultSave = () => ({
+  coins: 0,
+  totalWins: 0,
+  totalGames: 0,
+  totalCaptures: 0,
+  league: 0,
+  leagueWins: 0,
+  xp: 0,
+  level: 1,
+  upgrades: {
+    startKing: 0,     // 0-3: how many pieces start as kings
+    bombCapture: 0,   // 0-3: bomb charges per game
+    teleport: 0,      // 0-3: teleport charges per game
+    freeze: 0,        // 0-3: freeze charges per game
+    coinBonus: 0,     // 0-5: +10% coins per level
+    armor: 0,         // 0-3: pieces can survive one capture
+    extraPiece: 0,    // 0-2: start with extra pieces
+  },
+  achievements: [],
+  bestStreak: 0,
+  currentStreak: 0,
+});
+
+let save = defaultSave();
+
+const loadSave = () => {
+  try {
+    const d = localStorage.getItem(SAVE_KEY);
+    if (d) {
+      const parsed = JSON.parse(d);
+      save = { ...defaultSave(), ...parsed, upgrades: { ...defaultSave().upgrades, ...(parsed.upgrades || {}) } };
+    }
+  } catch(e) { save = defaultSave(); }
+};
+
+const saveSave = () => {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch(e) {}
+};
+
+loadSave();
+
+// ============================================================
+// Upgrade Definitions
+// ============================================================
+const UPGRADES = {
+  startKing: { name: 'Royal Start', desc: 'Start with King pieces', maxLevel: 3, baseCost: 50, costMult: 2.5, icon: '♔' },
+  bombCapture: { name: 'Bomb Capture', desc: 'Bombs remove adjacent enemies', maxLevel: 3, baseCost: 80, costMult: 2.2, icon: '💥' },
+  teleport: { name: 'Teleport', desc: 'Teleport a piece anywhere', maxLevel: 3, baseCost: 100, costMult: 2.5, icon: '⚡' },
+  freeze: { name: 'Freeze Cell', desc: 'Freeze cells to block movement', maxLevel: 3, baseCost: 60, costMult: 2.0, icon: '❄' },
+  coinBonus: { name: 'Coin Magnet', desc: '+15% coins per level', maxLevel: 5, baseCost: 30, costMult: 1.8, icon: '💰' },
+  armor: { name: 'Armor Plating', desc: 'Pieces survive one capture', maxLevel: 3, baseCost: 120, costMult: 2.8, icon: '🛡' },
+  extraPiece: { name: 'Reinforcements', desc: 'Start with extra pieces', maxLevel: 2, baseCost: 150, costMult: 3.0, icon: '➕' },
+};
+
+const getUpgradeCost = (key) => {
+  const u = UPGRADES[key];
+  return Math.floor(u.baseCost * Math.pow(u.costMult, save.upgrades[key]));
+};
+
+// ============================================================
+// League Definitions
+// ============================================================
+const LEAGUES = [
+  { name: 'Bronze', color: '#cd7f32', winsNeeded: 3, aiSkill: 0.3, reward: 15 },
+  { name: 'Silver', color: '#c0c0c0', winsNeeded: 4, aiSkill: 0.45, reward: 25 },
+  { name: 'Gold', color: '#ffd700', winsNeeded: 5, aiSkill: 0.6, reward: 40 },
+  { name: 'Platinum', color: '#88ccee', winsNeeded: 5, aiSkill: 0.75, reward: 60 },
+  { name: 'Diamond', color: '#b9f2ff', winsNeeded: 6, aiSkill: 0.85, reward: 85 },
+  { name: 'Champion', color: '#ff6600', winsNeeded: 7, aiSkill: 0.95, reward: 120 },
+  { name: 'Legend', color: '#ff00ff', winsNeeded: 999, aiSkill: 1.0, reward: 200 },
+];
+
+// ============================================================
+// Achievements
+// ============================================================
+const ACHIEVEMENTS = [
+  { id: 'first_win', name: 'First Victory', desc: 'Win your first game', check: () => save.totalWins >= 1 },
+  { id: 'win_10', name: 'Veteran', desc: 'Win 10 games', check: () => save.totalWins >= 10 },
+  { id: 'win_50', name: 'Commander', desc: 'Win 50 games', check: () => save.totalWins >= 50 },
+  { id: 'streak_3', name: 'Hot Streak', desc: 'Win 3 in a row', check: () => save.bestStreak >= 3 },
+  { id: 'streak_7', name: 'Unstoppable', desc: 'Win 7 in a row', check: () => save.bestStreak >= 7 },
+  { id: 'captures_50', name: 'Tactician', desc: 'Capture 50 pieces total', check: () => save.totalCaptures >= 50 },
+  { id: 'captures_200', name: 'Destroyer', desc: 'Capture 200 pieces total', check: () => save.totalCaptures >= 200 },
+  { id: 'league_gold', name: 'Going for Gold', desc: 'Reach Gold league', check: () => save.league >= 2 },
+  { id: 'league_diamond', name: 'Diamond Hands', desc: 'Reach Diamond league', check: () => save.league >= 4 },
+  { id: 'league_legend', name: 'Legendary', desc: 'Reach Legend league', check: () => save.league >= 6 },
+  { id: 'rich', name: 'Wealthy', desc: 'Have 500 coins at once', check: () => save.coins >= 500 },
+  { id: 'level_10', name: 'Experienced', desc: 'Reach level 10', check: () => save.level >= 10 },
+  { id: 'max_upgrade', name: 'Maxed Out', desc: 'Max any upgrade', check: () => Object.keys(save.upgrades).some(k => save.upgrades[k] >= UPGRADES[k].maxLevel) },
+];
+
+let newAchievements = [];
+
+const checkAchievements = () => {
+  for (const a of ACHIEVEMENTS) {
+    if (!save.achievements.includes(a.id) && a.check()) {
+      save.achievements.push(a.id);
+      newAchievements.push(a);
+      save.coins += 25;
+    }
+  }
+};
+
+// ============================================================
+// Hex Grid
+// ============================================================
+// We use axial coordinates (q, r). The board is a hex grid with radius BOARD_RADIUS.
+const BOARD_RADIUS = 4; // cells from center => up to 61 cells
+
+// Hex directions for pointy-top hexagons
+const HEX_DIRS = [
+  { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 },
+  { q: -1, r: 0 }, { q: 0, r: -1 }, { q: 1, r: -1 },
+];
+
+const hexKey = (q, r) => `${q},${r}`;
+const parseKey = (k) => { const [q, r] = k.split(',').map(Number); return { q, r }; };
+
+const hexDistance = (q1, r1, q2, r2) => {
+  return Math.max(Math.abs(q1 - q2), Math.abs(r1 - r2), Math.abs((q1 + r1) - (q2 + r2)));
+};
+
+// Generate all valid hex positions
+const generateBoard = () => {
+  const cells = {};
+  for (let q = -BOARD_RADIUS; q <= BOARD_RADIUS; q++) {
+    for (let r = -BOARD_RADIUS; r <= BOARD_RADIUS; r++) {
+      if (Math.abs(q + r) <= BOARD_RADIUS) {
+        cells[hexKey(q, r)] = { q, r, piece: null, frozen: 0 };
+      }
+    }
+  }
+  return cells;
+};
+
+// Pixel coordinates for pointy-top hexagons
+const hexToPixel = (q, r, size, cx, cy) => {
+  const x = size * (Math.sqrt(3) * q + Math.sqrt(3) / 2 * r) + cx;
+  const y = size * (3 / 2 * r) + cy;
+  return { x, y };
+};
+
+const pixelToHex = (px, py, size, cx, cy) => {
+  const x = px - cx;
+  const y = py - cy;
+  const q = (Math.sqrt(3) / 3 * x - 1 / 3 * y) / size;
+  const r = (2 / 3 * y) / size;
+  // Round to nearest hex
+  let rq = Math.round(q);
+  let rr = Math.round(r);
+  const rs = Math.round(-q - r);
+  const dq = Math.abs(rq - q);
+  const dr = Math.abs(rr - r);
+  const ds = Math.abs(rs - (-q - r));
+  if (dq > dr && dq > ds) rq = -rr - rs;
+  else if (dr > ds) rr = -rq - rs;
+  return { q: rq, r: rr };
+};
+
+// ============================================================
+// Particles
+// ============================================================
+let particles = [];
+
+const spawnParticles = (x, y, color, count = 10, speed = 3) => {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = (Math.random() * 0.7 + 0.3) * speed;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd,
+      life: 1,
+      decay: 0.015 + Math.random() * 0.025,
+      size: 2 + Math.random() * 4,
+      color,
+    });
+  }
+};
+
+const updateParticles = (dt) => {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx * dt * 60;
+    p.y += p.vy * dt * 60;
+    p.life -= p.decay * dt * 60;
+    p.vx *= 0.98;
+    p.vy *= 0.98;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+};
+
+const drawParticles = () => {
+  for (const p of particles) {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+};
+
+// ============================================================
+// Screen Shake
+// ============================================================
+let shakeAmount = 0;
+let shakeDecay = 0.9;
+
+const addShake = (amount) => { shakeAmount = Math.max(shakeAmount, amount); };
+
+// ============================================================
+// Floating Text
+// ============================================================
+let floatingTexts = [];
+
+const addFloatingText = (x, y, text, color = C.gold, size = 18) => {
+  floatingTexts.push({ x, y, text, color, size, life: 1, vy: -1.5 });
+};
+
+const updateFloatingTexts = (dt) => {
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    const ft = floatingTexts[i];
+    ft.y += ft.vy * dt * 60;
+    ft.life -= 0.02 * dt * 60;
+    if (ft.life <= 0) floatingTexts.splice(i, 1);
+  }
+};
+
+const drawFloatingTexts = () => {
+  for (const ft of floatingTexts) {
+    ctx.globalAlpha = ft.life;
+    ctx.fillStyle = ft.color;
+    ctx.font = `bold ${ft.size}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(ft.text, ft.x, ft.y);
+  }
+  ctx.globalAlpha = 1;
+};
+
+// ============================================================
+// Game State
+// ============================================================
+const STATE = {
+  TITLE: 'title',
+  SHOP: 'shop',
+  GAME: 'game',
+  POWER_SELECT: 'power_select',
+  GAME_OVER: 'game_over',
+  ACHIEVEMENTS: 'achievements',
+};
+
+let state = STATE.TITLE;
+let board = {};
+let selectedCell = null;
+let validMoves = [];
+let validCaptures = [];
+let turn = 'player'; // 'player' or 'ai'
+let gameResult = null; // 'win', 'lose', 'draw'
+let aiThinking = false;
+let aiThinkTimer = 0;
+let turnCount = 0;
+let capturesThisGame = 0;
+
+// Power-up charges for current game
+let powers = { bomb: 0, teleport: 0, freeze: 0 };
+let activePower = null; // 'bomb', 'teleport', 'freeze' or null
+let teleportSource = null;
+
+// Animation
+let animTime = 0;
+let titlePulse = 0;
+let transitionAlpha = 0;
+let transitionTarget = null;
+let shopScroll = 0;
+
+// UI buttons (populated per frame)
+let buttons = [];
+
+// Canvas sizing
+let W = 800, H = 600;
+let hexSize = 30;
+let boardCX = 400, boardCY = 300;
+
+const resize = () => {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W;
+  canvas.height = H;
+  hexSize = Math.min(W, H) * 0.042;
+  boardCX = W / 2;
+  boardCY = H * 0.45;
+};
+
+window.addEventListener('resize', resize);
+resize();
+
+// ============================================================
+// Board Setup
+// ============================================================
+const setupBoard = () => {
+  board = generateBoard();
+  selectedCell = null;
+  validMoves = [];
+  validCaptures = [];
+  turn = 'player';
+  gameResult = null;
+  aiThinking = false;
+  turnCount = 0;
+  capturesThisGame = 0;
+  activePower = null;
+  teleportSource = null;
+
+  // Set power charges from upgrades
+  powers = {
+    bomb: save.upgrades.bombCapture,
+    teleport: save.upgrades.teleport,
+    freeze: save.upgrades.freeze,
+  };
+
+  // Place pieces
+  // Player pieces on bottom rows (positive r)
+  // AI pieces on top rows (negative r)
+  const allCells = Object.values(board);
+
+  // Player starting rows: r >= BOARD_RADIUS - 1
+  const playerCells = allCells
+    .filter(c => c.r >= BOARD_RADIUS - 1)
+    .sort((a, b) => b.r - a.r || a.q - b.q);
+
+  // AI starting rows: r <= -(BOARD_RADIUS - 1)
+  const aiCells = allCells
+    .filter(c => c.r <= -(BOARD_RADIUS - 1))
+    .sort((a, b) => a.r - b.r || a.q - b.q);
+
+  const basePieces = 7 + save.upgrades.extraPiece;
+
+  for (let i = 0; i < Math.min(basePieces, playerCells.length); i++) {
+    const c = playerCells[i];
+    board[hexKey(c.q, c.r)].piece = {
+      owner: 'player',
+      king: i < save.upgrades.startKing,
+      armor: save.upgrades.armor > 0 ? 1 : 0,
+      animX: 0, animY: 0, animScale: 1,
+    };
+  }
+
+  for (let i = 0; i < Math.min(basePieces, aiCells.length); i++) {
+    const c = aiCells[i];
+    board[hexKey(c.q, c.r)].piece = {
+      owner: 'ai',
+      king: false,
+      armor: 0,
+      animX: 0, animY: 0, animScale: 1,
+    };
+  }
+};
+
+// ============================================================
+// Move Logic
+// ============================================================
+const getNeighbors = (q, r) => {
+  return HEX_DIRS.map(d => ({ q: q + d.q, r: r + d.r }))
+    .filter(n => board[hexKey(n.q, n.r)] !== undefined);
+};
+
+const getMoves = (q, r, owner) => {
+  const cell = board[hexKey(q, r)];
+  if (!cell || !cell.piece || cell.piece.owner !== owner) return { moves: [], captures: [] };
+
+  const piece = cell.piece;
+  const moves = [];
+  const captures = [];
+  const neighbors = getNeighbors(q, r);
+
+  for (const n of neighbors) {
+    const nCell = board[hexKey(n.q, n.r)];
+    if (!nCell || nCell.frozen > 0) continue;
+
+    if (!nCell.piece) {
+      // Check direction for non-kings
+      if (!piece.king) {
+        if (owner === 'player' && n.r >= r) continue; // player moves up (negative r)
+        if (owner === 'ai' && n.r <= r) continue;     // ai moves down (positive r)
+      }
+      moves.push({ q: n.q, r: n.r });
+    } else if (nCell.piece.owner !== owner) {
+      // Can capture by jumping over
+      const jumpQ = n.q + (n.q - q);
+      const jumpR = n.r + (n.r - r);
+      const jumpKey = hexKey(jumpQ, jumpR);
+      if (board[jumpKey] && !board[jumpKey].piece && (!board[jumpKey].frozen || board[jumpKey].frozen <= 0)) {
+        captures.push({ q: jumpQ, r: jumpR, capturedQ: n.q, capturedR: n.r });
+      }
+    }
+  }
+
+  return { moves, captures };
+};
+
+const getAllMoves = (owner) => {
+  const allMoves = [];
+  for (const key of Object.keys(board)) {
+    const cell = board[key];
+    if (cell.piece && cell.piece.owner === owner) {
+      const { moves, captures } = getMoves(cell.q, cell.r, owner);
+      for (const m of moves) allMoves.push({ from: { q: cell.q, r: cell.r }, to: m, capture: null });
+      for (const c of captures) allMoves.push({ from: { q: cell.q, r: cell.r }, to: { q: c.q, r: c.r }, capture: { q: c.capturedQ, r: c.capturedR } });
+    }
+  }
+  // Force captures if available (checkers rule)
+  const captureMoves = allMoves.filter(m => m.capture);
+  if (captureMoves.length > 0) return captureMoves;
+  return allMoves;
+};
+
+const getMultiCaptures = (q, r, owner) => {
+  const { captures } = getMoves(q, r, owner);
+  return captures;
+};
+
+const executeMove = (from, to, capture) => {
+  const fromKey = hexKey(from.q, from.r);
+  const toKey = hexKey(to.q, to.r);
+  const piece = board[fromKey].piece;
+
+  board[toKey].piece = piece;
+  board[fromKey].piece = null;
+
+  const toPixel = hexToPixel(to.q, to.r, hexSize, boardCX, boardCY);
+
+  if (capture) {
+    const capKey = hexKey(capture.q, capture.r);
+    const capPiece = board[capKey].piece;
+    if (capPiece) {
+      if (capPiece.armor > 0) {
+        capPiece.armor--;
+        addFloatingText(toPixel.x, toPixel.y - 20, 'ARMOR!', C.blue);
+      } else {
+        board[capKey].piece = null;
+        capturesThisGame++;
+        save.totalCaptures++;
+        const capPixel = hexToPixel(capture.q, capture.r, hexSize, boardCX, boardCY);
+        spawnParticles(capPixel.x, capPixel.y, piece.owner === 'player' ? C.red : C.green, 15, 4);
+        addShake(6);
+        playSound('capture');
+      }
+    }
+  } else {
+    playSound('move');
+  }
+
+  // King promotion
+  if (!piece.king) {
+    if (piece.owner === 'player' && to.r <= -BOARD_RADIUS + 1) {
+      piece.king = true;
+      spawnParticles(toPixel.x, toPixel.y, C.gold, 20, 3);
+      addFloatingText(toPixel.x, toPixel.y - 20, 'KING!', C.gold, 22);
+      playSound('king');
+    }
+    if (piece.owner === 'ai' && to.r >= BOARD_RADIUS - 1) {
+      piece.king = true;
+    }
+  }
+
+  // Decrement frozen counters
+  for (const key of Object.keys(board)) {
+    if (board[key].frozen > 0) board[key].frozen--;
+  }
+};
+
+// ============================================================
+// AI with difficulty scaling
+// ============================================================
+const evaluateBoard = (forOwner) => {
+  let score = 0;
+  for (const key of Object.keys(board)) {
+    const cell = board[key];
+    if (cell.piece) {
+      const val = cell.piece.king ? 3 : 1;
+      const posBonus = cell.piece.owner === 'ai' ? cell.r * 0.1 : -cell.r * 0.1;
+      const centerBonus = (BOARD_RADIUS - hexDistance(cell.q, cell.r, 0, 0)) * 0.05;
+      if (cell.piece.owner === forOwner) {
+        score += val + posBonus + centerBonus;
+      } else {
+        score -= val + posBonus + centerBonus;
+      }
+    }
+  }
+  return score;
+};
+
+const aiMove = () => {
+  const league = LEAGUES[Math.min(save.league, LEAGUES.length - 1)];
+  const skill = league.aiSkill;
+
+  const moves = getAllMoves('ai');
+  if (moves.length === 0) return null;
+
+  // Evaluate each move
+  const scored = moves.map(m => {
+    // Temporarily execute
+    const fromKey = hexKey(m.from.q, m.from.r);
+    const toKey = hexKey(m.to.q, m.to.r);
+    const savedFrom = board[fromKey].piece;
+    let savedCap = null;
+
+    board[toKey].piece = { ...savedFrom };
+    board[fromKey].piece = null;
+
+    if (m.capture) {
+      const capKey = hexKey(m.capture.q, m.capture.r);
+      savedCap = board[capKey].piece;
+      board[capKey].piece = null;
+    }
+
+    const score = evaluateBoard('ai');
+
+    // Undo
+    board[fromKey].piece = savedFrom;
+    board[toKey].piece = null;
+    if (m.capture && savedCap) {
+      board[hexKey(m.capture.q, m.capture.r)].piece = savedCap;
+    }
+
+    return { move: m, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+
+  // Skill determines how often AI picks optimal move
+  if (Math.random() < skill) {
+    // Pick from top 2
+    const topN = Math.min(2, scored.length);
+    return scored[Math.floor(Math.random() * topN)].move;
+  } else {
+    // Random move
+    return scored[Math.floor(Math.random() * scored.length)].move;
+  }
+};
+
+// ============================================================
+// Power-Up Execution
+// ============================================================
+const executeBomb = (q, r) => {
+  if (powers.bomb <= 0) return false;
+  const cell = board[hexKey(q, r)];
+  if (!cell) return false;
+
+  // Bomb removes all adjacent enemy pieces
+  let hit = false;
+  const neighbors = getNeighbors(q, r);
+  const pixel = hexToPixel(q, r, hexSize, boardCX, boardCY);
+
+  for (const n of neighbors) {
+    const nCell = board[hexKey(n.q, n.r)];
+    if (nCell && nCell.piece && nCell.piece.owner === 'ai') {
+      if (nCell.piece.armor > 0) {
+        nCell.piece.armor--;
+      } else {
+        const np = hexToPixel(n.q, n.r, hexSize, boardCX, boardCY);
+        spawnParticles(np.x, np.y, C.red, 20, 5);
+        nCell.piece = null;
+        capturesThisGame++;
+        save.totalCaptures++;
+        hit = true;
+      }
+    }
+  }
+
+  if (hit) {
+    powers.bomb--;
+    addShake(12);
+    playSound('bomb');
+    spawnParticles(pixel.x, pixel.y, C.gold, 30, 6);
+    addFloatingText(pixel.x, pixel.y - 30, 'BOOM!', C.gold, 24);
+    return true;
+  }
+  playSound('error');
+  return false;
+};
+
+const executeTeleport = (fromQ, fromR, toQ, toR) => {
+  if (powers.teleport <= 0) return false;
+  const fromKey = hexKey(fromQ, fromR);
+  const toKey = hexKey(toQ, toR);
+  if (!board[fromKey] || !board[toKey]) return false;
+  if (!board[fromKey].piece || board[fromKey].piece.owner !== 'player') return false;
+  if (board[toKey].piece || (board[toKey].frozen && board[toKey].frozen > 0)) return false;
+
+  board[toKey].piece = board[fromKey].piece;
+  board[fromKey].piece = null;
+  powers.teleport--;
+
+  const fromPixel = hexToPixel(fromQ, fromR, hexSize, boardCX, boardCY);
+  const toPixel = hexToPixel(toQ, toR, hexSize, boardCX, boardCY);
+  spawnParticles(fromPixel.x, fromPixel.y, C.purple, 15, 3);
+  spawnParticles(toPixel.x, toPixel.y, C.purple, 15, 3);
+  addFloatingText(toPixel.x, toPixel.y - 20, 'WARP!', C.purple, 20);
+  playSound('teleport');
+
+  // Check king promotion
+  if (!board[toKey].piece.king && toR <= -BOARD_RADIUS + 1) {
+    board[toKey].piece.king = true;
+    spawnParticles(toPixel.x, toPixel.y, C.gold, 20, 3);
+    addFloatingText(toPixel.x, toPixel.y - 40, 'KING!', C.gold, 22);
+    playSound('king');
+  }
+
+  return true;
+};
+
+const executeFreeze = (q, r) => {
+  if (powers.freeze <= 0) return false;
+  const key = hexKey(q, r);
+  if (!board[key]) return false;
+
+  board[key].frozen = 3; // Frozen for 3 turns
+  powers.freeze--;
+  const pixel = hexToPixel(q, r, hexSize, boardCX, boardCY);
+  spawnParticles(pixel.x, pixel.y, C.frozen, 15, 3);
+  addFloatingText(pixel.x, pixel.y - 20, 'FROZEN!', C.frozen, 20);
+  playSound('freeze');
+  return true;
+};
+
+// ============================================================
+// Win/Lose Check
+// ============================================================
+const checkGameEnd = () => {
+  const playerPieces = Object.values(board).filter(c => c.piece && c.piece.owner === 'player');
+  const aiPieces = Object.values(board).filter(c => c.piece && c.piece.owner === 'ai');
+
+  if (aiPieces.length === 0) return 'win';
+  if (playerPieces.length === 0) return 'lose';
+
+  const playerMoves = getAllMoves('player');
+  const aiMoves = getAllMoves('ai');
+
+  if (playerMoves.length === 0 && aiMoves.length === 0) return 'draw';
+  if (playerMoves.length === 0 && turn === 'player') return 'lose';
+  if (aiMoves.length === 0 && turn === 'ai') return 'win';
+
+  if (turnCount > 150) return 'draw';
+
+  return null;
+};
+
+// ============================================================
+// Handle Game End
+// ============================================================
+const endGame = (result) => {
+  gameResult = result;
+  save.totalGames++;
+
+  const league = LEAGUES[Math.min(save.league, LEAGUES.length - 1)];
+  let coinReward = league.reward;
+
+  // Coin bonus from upgrade
+  coinReward = Math.floor(coinReward * (1 + save.upgrades.coinBonus * 0.15));
+
+  // Bonus for captures
+  coinReward += capturesThisGame * 3;
+
+  if (result === 'win') {
+    save.totalWins++;
+    save.currentStreak++;
+    save.bestStreak = Math.max(save.bestStreak, save.currentStreak);
+    save.leagueWins++;
+
+    // Streak bonus
+    coinReward += save.currentStreak * 5;
+
+    // Check league promotion
+    if (save.leagueWins >= league.winsNeeded && save.league < LEAGUES.length - 1) {
+      save.league++;
+      save.leagueWins = 0;
+    }
+
+    playSound('win');
+  } else if (result === 'lose') {
+    save.currentStreak = 0;
+    coinReward = Math.floor(coinReward * 0.3);
+    playSound('lose');
+  } else {
+    coinReward = Math.floor(coinReward * 0.5);
+  }
+
+  // XP
+  const xpGain = 10 + capturesThisGame * 2 + (result === 'win' ? 20 : 5);
+  save.xp += xpGain;
+  const xpNeeded = save.level * 50 + save.level * save.level * 10;
+  if (save.xp >= xpNeeded) {
+    save.xp -= xpNeeded;
+    save.level++;
+    playSound('levelup');
+  }
+
+  save.coins += coinReward;
+  checkAchievements();
+  saveSave();
+
+  state = STATE.GAME_OVER;
+};
+
+// ============================================================
+// Drawing Helpers
+// ============================================================
+const drawHex = (x, y, size, fill, stroke, lineWidth = 2) => {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const angle = Math.PI / 180 * (60 * i - 30);
+    const px = x + size * Math.cos(angle);
+    const py = y + size * Math.sin(angle);
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth; ctx.stroke(); }
+};
+
+const drawPiece = (x, y, piece, size) => {
+  const r = size * 0.6;
+  const baseColor = piece.owner === 'player' ? C.playerPiece : C.aiPiece;
+  const kingColor = piece.owner === 'player' ? C.playerKing : C.aiKing;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.beginPath();
+  ctx.ellipse(x + 2, y + 3, r, r * 0.7, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Main circle
+  const grad = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r);
+  grad.addColorStop(0, piece.king ? kingColor : baseColor);
+  grad.addColorStop(1, piece.owner === 'player' ? C.greenDark : C.redDark);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Border
+  ctx.strokeStyle = piece.king ? C.gold : (piece.owner === 'player' ? C.green : C.red);
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // King crown
+  if (piece.king) {
+    ctx.fillStyle = C.gold;
+    ctx.font = `bold ${r * 1.1}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('♔', x, y - 1);
+  }
+
+  // Armor indicator
+  if (piece.armor > 0) {
+    ctx.strokeStyle = C.blue;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x, y, r + 3, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+};
+
+const drawButton = (x, y, w, h, text, color = C.gold, enabled = true, fontSize = 16) => {
+  const btn = { x: x - w/2, y: y - h/2, w, h, text, enabled };
+  buttons.push(btn);
+
+  const alpha = enabled ? 1 : 0.4;
+  ctx.globalAlpha = alpha;
+
+  // Background
+  ctx.fillStyle = C.darkGray;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  roundRect(x - w/2, y - h/2, w, h, 8);
+  ctx.fill();
+  ctx.stroke();
+
+  // Text
+  ctx.fillStyle = color;
+  ctx.font = `bold ${fontSize}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+
+  ctx.globalAlpha = 1;
+  return btn;
+};
+
+const roundRect = (x, y, w, h, r) => {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+};
+
+// ============================================================
+// Screens
+// ============================================================
+const drawTitle = () => {
+  // Background gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0a0a1f');
+  grad.addColorStop(1, '#0a0a0f');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Animated hex pattern background
+  const t = animTime * 0.5;
+  ctx.globalAlpha = 0.06;
+  for (let i = 0; i < 30; i++) {
+    const bx = (W * 0.5 + Math.cos(t + i * 0.7) * W * 0.4) % W;
+    const by = (H * 0.3 + Math.sin(t + i * 0.5) * H * 0.35 + i * 20) % H;
+    drawHex(bx, by, 20 + Math.sin(t + i) * 5, null, C.gold, 1);
+  }
+  ctx.globalAlpha = 1;
+
+  // Title
+  const titleY = H * 0.2;
+  const pulse = Math.sin(titlePulse * 3) * 0.05 + 1;
+
+  ctx.save();
+  ctx.translate(W / 2, titleY);
+  ctx.scale(pulse, pulse);
+
+  // Title glow
+  ctx.shadowColor = C.gold;
+  ctx.shadowBlur = 30;
+  ctx.fillStyle = C.gold;
+  ctx.font = `bold ${Math.min(W * 0.09, 64)}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('HEX CHECKERS', 0, 0);
+  ctx.shadowBlur = 0;
+
+  ctx.restore();
+
+  // Subtitle
+  ctx.fillStyle = C.green;
+  ctx.font = `${Math.min(W * 0.03, 18)}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('Strategize · Upgrade · Dominate', W / 2, titleY + 45);
+
+  // Stats
+  const statsY = H * 0.4;
+  ctx.fillStyle = C.gray;
+  ctx.font = `${Math.min(W * 0.025, 14)}px monospace`;
+  const league = LEAGUES[Math.min(save.league, LEAGUES.length - 1)];
+  ctx.fillText(`Level ${save.level} | ${league.name} League | ${save.totalWins}W/${save.totalGames}G`, W / 2, statsY);
+
+  ctx.fillStyle = C.gold;
+  ctx.font = `bold ${Math.min(W * 0.03, 16)}px monospace`;
+  ctx.fillText(`💰 ${save.coins} Coins`, W / 2, statsY + 25);
+
+  // Buttons
+  buttons = [];
+  const btnW = Math.min(W * 0.5, 220);
+  const btnH = 48;
+  const startY = H * 0.55;
+
+  drawButton(W / 2, startY, btnW, btnH, '⚔  PLAY  ⚔', C.green, true, 20);
+  drawButton(W / 2, startY + 65, btnW, btnH, '🛒  SHOP', C.gold, true, 18);
+  drawButton(W / 2, startY + 130, btnW, btnH, '🏆  ACHIEVEMENTS', C.purple, true, 16);
+
+  // League progress bar
+  const barY = H * 0.88;
+  const barW = Math.min(W * 0.6, 300);
+  const progress = save.leagueWins / league.winsNeeded;
+
+  ctx.fillStyle = C.darkGray;
+  roundRect(W / 2 - barW / 2, barY, barW, 20, 10);
+  ctx.fill();
+
+  ctx.fillStyle = league.color;
+  roundRect(W / 2 - barW / 2, barY, barW * Math.min(progress, 1), 20, 10);
+  ctx.fill();
+
+  ctx.fillStyle = C.white;
+  ctx.font = `bold 12px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText(`${league.name}: ${save.leagueWins}/${league.winsNeeded} wins to promote`, W / 2, barY + 14);
+};
+
+const drawShop = () => {
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Header
+  ctx.fillStyle = C.gold;
+  ctx.font = `bold ${Math.min(W * 0.06, 36)}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('UPGRADE SHOP', W / 2, 50);
+
+  ctx.fillStyle = C.gold;
+  ctx.font = `bold 18px monospace`;
+  ctx.fillText(`💰 ${save.coins} Coins`, W / 2, 80);
+
+  buttons = [];
+
+  const keys = Object.keys(UPGRADES);
+  const itemH = 70;
+  const itemW = Math.min(W * 0.85, 420);
+  const startY = 110;
+
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const u = UPGRADES[key];
+    const lvl = save.upgrades[key];
+    const cost = getUpgradeCost(key);
+    const maxed = lvl >= u.maxLevel;
+    const canBuy = !maxed && save.coins >= cost;
+    const y = startY + i * itemH - shopScroll;
+
+    if (y < 90 || y > H - 60) continue;
+
+    // Background
+    ctx.fillStyle = canBuy ? '#1a1a3e' : '#111122';
+    roundRect(W / 2 - itemW / 2, y, itemW, itemH - 8, 8);
+    ctx.fill();
+    ctx.strokeStyle = canBuy ? C.gold : C.gray;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Icon & Name
+    ctx.fillStyle = C.white;
+    ctx.font = `bold 16px monospace`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`${u.icon} ${u.name}`, W / 2 - itemW / 2 + 12, y + 22);
+
+    // Description
+    ctx.fillStyle = C.gray;
+    ctx.font = `12px monospace`;
+    ctx.fillText(u.desc, W / 2 - itemW / 2 + 12, y + 40);
+
+    // Level pips
+    for (let l = 0; l < u.maxLevel; l++) {
+      ctx.fillStyle = l < lvl ? C.green : C.darkGray;
+      ctx.fillRect(W / 2 - itemW / 2 + 12 + l * 18, y + 48, 12, 6);
+    }
+
+    // Buy button
+    if (!maxed) {
+      drawButton(W / 2 + itemW / 2 - 55, y + 30, 80, 32, `${cost}💰`, canBuy ? C.gold : C.gray, canBuy, 13);
+    } else {
+      ctx.fillStyle = C.green;
+      ctx.font = `bold 14px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText('MAX', W / 2 + itemW / 2 - 55, y + 34);
+    }
+  }
+
+  // Back button
+  drawButton(W / 2, H - 40, 160, 40, '← BACK', C.white, true, 16);
+};
+
+const drawAchievements = () => {
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = C.purple;
+  ctx.font = `bold ${Math.min(W * 0.06, 36)}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('ACHIEVEMENTS', W / 2, 50);
+
+  ctx.fillStyle = C.gray;
+  ctx.font = `14px monospace`;
+  ctx.fillText(`${save.achievements.length}/${ACHIEVEMENTS.length} Unlocked`, W / 2, 75);
+
+  buttons = [];
+
+  const itemH = 55;
+  const itemW = Math.min(W * 0.85, 400);
+  const startY = 95;
+
+  for (let i = 0; i < ACHIEVEMENTS.length; i++) {
+    const a = ACHIEVEMENTS[i];
+    const unlocked = save.achievements.includes(a.id);
+    const y = startY + i * itemH - shopScroll;
+
+    if (y < 80 || y > H - 60) continue;
+
+    ctx.fillStyle = unlocked ? '#1a2a1a' : '#111122';
+    roundRect(W / 2 - itemW / 2, y, itemW, itemH - 6, 6);
+    ctx.fill();
+    ctx.strokeStyle = unlocked ? C.green : C.darkGray;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = unlocked ? C.gold : C.gray;
+    ctx.font = `bold 14px monospace`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`${unlocked ? '✓' : '○'} ${a.name}`, W / 2 - itemW / 2 + 12, y + 22);
+
+    ctx.fillStyle = unlocked ? C.white : C.gray;
+    ctx.font = `12px monospace`;
+    ctx.fillText(a.desc, W / 2 - itemW / 2 + 12, y + 40);
+  }
+
+  drawButton(W / 2, H - 40, 160, 40, '← BACK', C.white, true, 16);
+};
+
+const drawGame = () => {
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  buttons = [];
+
+  // Draw board
+  for (const key of Object.keys(board)) {
+    const cell = board[key];
+    const { x, y } = hexToPixel(cell.q, cell.r, hexSize, boardCX, boardCY);
+
+    // Cell coloring based on row ring
+    const dist = hexDistance(cell.q, cell.r, 0, 0);
+    let fillColor;
+    if (dist % 3 === 0) fillColor = C.cellLight;
+    else if (dist % 3 === 1) fillColor = C.cellMid;
+    else fillColor = C.cellDark;
+
+    // Frozen overlay
+    if (cell.frozen > 0) {
+      fillColor = `rgba(100,200,255,${0.2 + cell.frozen * 0.1})`;
+    }
+
+    // Highlight selected
+    if (selectedCell && selectedCell.q === cell.q && selectedCell.r === cell.r) {
+      fillColor = 'rgba(240,184,0,0.4)';
+    }
+
+    drawHex(x, y, hexSize - 1, fillColor, C.darkGray, 1);
+
+    // Frozen indicator
+    if (cell.frozen > 0) {
+      ctx.fillStyle = C.frozen;
+      ctx.font = `bold ${hexSize * 0.5}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.globalAlpha = 0.6;
+      ctx.fillText('❄', x, y);
+      ctx.globalAlpha = 1;
+    }
+
+    // Valid move indicators
+    const isValidMove = validMoves.some(m => m.q === cell.q && m.r === cell.r);
+    const isValidCapture = validCaptures.some(c => c.q === cell.q && c.r === cell.r);
+
+    if (isValidMove) {
+      ctx.fillStyle = 'rgba(0,255,136, 0.65)';
+      ctx.beginPath();
+      ctx.arc(x, y, hexSize * 0.25, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (isValidCapture) {
+      drawHex(x, y, hexSize - 2, 'rgba(255,51,85, 0.65)', C.red, 2);
+    }
+
+    // Draw piece
+    if (cell.piece) {
+      drawPiece(x, y, cell.piece, hexSize);
+    }
+  }
+
+  // Teleport mode: highlight source
+  if (activePower === 'teleport' && teleportSource) {
+    const sp = hexToPixel(teleportSource.q, teleportSource.r, hexSize, boardCX, boardCY);
+    ctx.strokeStyle = C.purple;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.arc(sp.x, sp.y, hexSize * 0.8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // HUD - Top bar
+  const league = LEAGUES[Math.min(save.league, LEAGUES.length - 1)];
+
+  // Turn indicator
+  ctx.fillStyle = turn === 'player' ? C.green : C.red;
+  ctx.font = `bold 16px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText(aiThinking ? 'AI Thinking...' : (turn === 'player' ? 'YOUR TURN' : 'AI TURN'), W / 2, 22);
+
+  // League & coins
+  ctx.fillStyle = league.color;
+  ctx.font = `bold 13px monospace`;
+  ctx.textAlign = 'left';
+  ctx.fillText(`${league.name}`, 10, 20);
+
+  ctx.fillStyle = C.gold;
+  ctx.textAlign = 'right';
+  ctx.fillText(`💰 ${save.coins}`, W - 10, 20);
+
+  // Piece counts
+  const playerCount = Object.values(board).filter(c => c.piece && c.piece.owner === 'player').length;
+  const aiCount = Object.values(board).filter(c => c.piece && c.piece.owner === 'ai').length;
+
+  ctx.fillStyle = C.green;
+  ctx.textAlign = 'left';
+  ctx.font = `bold 13px monospace`;
+  ctx.fillText(`You: ${playerCount}`, 10, 40);
+
+  ctx.fillStyle = C.red;
+  ctx.textAlign = 'right';
+  ctx.fillText(`AI: ${aiCount}`, W - 10, 40);
+
+  // Active power indicator
+  if (activePower) {
+    ctx.fillStyle = C.purple;
+    ctx.font = `bold 14px monospace`;
+    ctx.textAlign = 'center';
+    let powerText = '';
+    if (activePower === 'bomb') powerText = '💥 BOMB MODE — Click near enemies';
+    else if (activePower === 'teleport') {
+      if (!teleportSource) powerText = '⚡ TELEPORT — Select your piece';
+      else powerText = '⚡ TELEPORT — Select destination';
+    }
+    else if (activePower === 'freeze') powerText = '❄ FREEZE — Click a cell';
+    ctx.fillText(powerText, W / 2, H - 85);
+  }
+
+  // Power-up buttons at bottom
+  const btnSize = Math.min(W * 0.12, 55);
+  const btnY = H - 40;
+  const btnSpacing = btnSize + 12;
+  const totalBtnsW = 4 * btnSpacing;
+  const btnStartX = W / 2 - totalBtnsW / 2 + btnSize / 2;
+
+  if (turn === 'player' && !aiThinking) {
+    if (powers.bomb > 0) {
+      drawButton(btnStartX, btnY, btnSize, 36, `💥${powers.bomb}`, activePower === 'bomb' ? C.red : C.gold, true, 14);
+    }
+    if (powers.teleport > 0) {
+      drawButton(btnStartX + btnSpacing, btnY, btnSize, 36, `⚡${powers.teleport}`, activePower === 'teleport' ? C.purple : C.gold, true, 14);
+    }
+    if (powers.freeze > 0) {
+      drawButton(btnStartX + btnSpacing * 2, btnY, btnSize, 36, `❄${powers.freeze}`, activePower === 'freeze' ? C.frozen : C.gold, true, 14);
+    }
+    // Cancel power
+    if (activePower) {
+      drawButton(btnStartX + btnSpacing * 3, btnY, btnSize, 36, '✕', C.red, true, 16);
+    }
+  }
+};
+
+const drawGameOver = () => {
+  ctx.fillStyle = 'rgba(10,10,15,0.85)';
+  ctx.fillRect(0, 0, W, H);
+
+  buttons = [];
+
+  const centerY = H * 0.35;
+
+  // Result text
+  let resultText, resultColor;
+  if (gameResult === 'win') { resultText = 'VICTORY!'; resultColor = C.green; }
+  else if (gameResult === 'lose') { resultText = 'DEFEAT'; resultColor = C.red; }
+  else { resultText = 'DRAW'; resultColor = C.gold; }
+
+  ctx.shadowColor = resultColor;
+  ctx.shadowBlur = 25;
+  ctx.fillStyle = resultColor;
+  ctx.font = `bold ${Math.min(W * 0.1, 52)}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText(resultText, W / 2, centerY);
+  ctx.shadowBlur = 0;
+
+  // Stats
+  const league = LEAGUES[Math.min(save.league, LEAGUES.length - 1)];
+  ctx.fillStyle = C.white;
+  ctx.font = `16px monospace`;
+  ctx.fillText(`Captures: ${capturesThisGame}`, W / 2, centerY + 45);
+  ctx.fillText(`Streak: ${save.currentStreak}`, W / 2, centerY + 70);
+  ctx.fillText(`League: ${league.name}`, W / 2, centerY + 95);
+
+  ctx.fillStyle = C.gold;
+  ctx.font = `bold 18px monospace`;
+  ctx.fillText(`Level ${save.level} | XP: ${save.xp}/${save.level * 50 + save.level * save.level * 10}`, W / 2, centerY + 130);
+
+  // New achievements
+  if (newAchievements.length > 0) {
+    ctx.fillStyle = C.purple;
+    ctx.font = `bold 14px monospace`;
+    ctx.fillText('NEW ACHIEVEMENTS:', W / 2, centerY + 165);
+    for (let i = 0; i < newAchievements.length; i++) {
+      ctx.fillStyle = C.gold;
+      ctx.font = `13px monospace`;
+      ctx.fillText(`✓ ${newAchievements[i].name} (+25💰)`, W / 2, centerY + 185 + i * 20);
+    }
+  }
+
+  const btnY = H * 0.78;
+  drawButton(W / 2, btnY, 200, 48, '⚔ PLAY AGAIN', C.green, true, 18);
+  drawButton(W / 2, btnY + 60, 200, 42, '🛒 SHOP', C.gold, true, 16);
+  drawButton(W / 2, btnY + 110, 200, 42, '🏠 MENU', C.white, true, 16);
+};
+
+// ============================================================
+// Input Handling
+// ============================================================
+const getClickPos = (e) => {
+  const rect = canvas.getBoundingClientRect();
+  if (e.touches) {
+    return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+  }
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+};
+
+const hitButton = (x, y) => {
+  for (const btn of buttons) {
+    if (btn.enabled && x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
+      return btn;
+    }
+  }
+  return null;
+};
+
+const handleClick = (x, y) => {
+  ensureAudio();
+  const btn = hitButton(x, y);
+
+  switch (state) {
+    case STATE.TITLE:
+      if (btn) {
+        playSound('click');
+        if (btn.text.includes('PLAY')) {
+          setupBoard();
+          newAchievements = [];
+          state = STATE.GAME;
+        } else if (btn.text.includes('SHOP')) {
+          shopScroll = 0;
+          state = STATE.SHOP;
+        } else if (btn.text.includes('ACHIEVEMENT')) {
+          shopScroll = 0;
+          state = STATE.ACHIEVEMENTS;
+        }
+      }
+      break;
+
+    case STATE.SHOP: {
+      if (btn) {
+        if (btn.text.includes('BACK')) {
+          playSound('click');
+          state = STATE.TITLE;
+        } else if (btn.text.includes('💰')) {
+          // Find which upgrade this is
+          const keys = Object.keys(UPGRADES);
+          for (const key of keys) {
+            const cost = getUpgradeCost(key);
+            if (btn.text.includes(String(cost)) && save.upgrades[key] < UPGRADES[key].maxLevel && save.coins >= cost) {
+              save.coins -= cost;
+              save.upgrades[key]++;
+              playSound('buy');
+              saveSave();
+              break;
+            }
+          }
+        }
+      }
+      break;
+    }
+
+    case STATE.ACHIEVEMENTS:
+      if (btn && btn.text.includes('BACK')) {
+        playSound('click');
+        state = STATE.TITLE;
+      }
+      break;
+
+    case STATE.GAME:
+      if (turn !== 'player' || aiThinking) break;
+
+      // Check power-up button clicks
+      if (btn) {
+        playSound('click');
+        if (btn.text.includes('💥') && powers.bomb > 0) {
+          activePower = activePower === 'bomb' ? null : 'bomb';
+          selectedCell = null;
+          validMoves = [];
+          validCaptures = [];
+          teleportSource = null;
+          break;
+        } else if (btn.text.includes('⚡') && powers.teleport > 0) {
+          activePower = activePower === 'teleport' ? null : 'teleport';
+          selectedCell = null;
+          validMoves = [];
+          validCaptures = [];
+          teleportSource = null;
+          break;
+        } else if (btn.text.includes('❄') && powers.freeze > 0) {
+          activePower = activePower === 'freeze' ? null : 'freeze';
+          selectedCell = null;
+          validMoves = [];
+          validCaptures = [];
+          teleportSource = null;
+          break;
+        } else if (btn.text === '✕') {
+          activePower = null;
+          teleportSource = null;
+          break;
+        }
+      }
+
+      // Board click
+      const hex = pixelToHex(x, y, hexSize, boardCX, boardCY);
+      const key = hexKey(hex.q, hex.r);
+
+      if (!board[key]) break;
+
+      // Handle power modes
+      if (activePower === 'bomb') {
+        if (executeBomb(hex.q, hex.r)) {
+          activePower = null;
+          turnCount++;
+          turn = 'ai';
+          aiThinking = true;
+          aiThinkTimer = 0.5;
+          const result = checkGameEnd();
+          if (result) endGame(result);
+        }
+        break;
+      }
+
+      if (activePower === 'freeze') {
+        if (executeFreeze(hex.q, hex.r)) {
+          activePower = null;
+          turnCount++;
+          turn = 'ai';
+          aiThinking = true;
+          aiThinkTimer = 0.5;
+        }
+        break;
+      }
+
+      if (activePower === 'teleport') {
+        if (!teleportSource) {
+          // Select source piece
+          if (board[key].piece && board[key].piece.owner === 'player') {
+            teleportSource = { q: hex.q, r: hex.r };
+          }
+        } else {
+          // Select destination
+          if (!board[key].piece && (!board[key].frozen || board[key].frozen <= 0)) {
+            if (executeTeleport(teleportSource.q, teleportSource.r, hex.q, hex.r)) {
+              activePower = null;
+              teleportSource = null;
+              turnCount++;
+              turn = 'ai';
+              aiThinking = true;
+              aiThinkTimer = 0.5;
+              const result = checkGameEnd();
+              if (result) endGame(result);
+            }
+          } else if (board[key].piece && board[key].piece.owner === 'player') {
+            teleportSource = { q: hex.q, r: hex.r };
+          }
+        }
+        break;
+      }
+
+      // Normal checkers logic
+      const allMoves = getAllMoves('player');
+      const hasCaptures = allMoves.some(m => m.capture);
+
+      const cell = board[key];
+
+      if (cell.piece && cell.piece.owner === 'player') {
+        // Select piece
+        selectedCell = { q: hex.q, r: hex.r };
+        const { moves, captures } = getMoves(hex.q, hex.r, 'player');
+
+        if (hasCaptures) {
+          // Must capture
+          validMoves = [];
+          validCaptures = captures;
+        } else {
+          validMoves = moves;
+          validCaptures = captures;
+        }
+        playSound('click');
+      } else if (selectedCell) {
+        // Try to move/capture
+        const captureMove = validCaptures.find(c => c.q === hex.q && c.r === hex.r);
+        const normalMove = validMoves.find(m => m.q === hex.q && m.r === hex.r);
+
+        if (captureMove) {
+          executeMove(selectedCell, { q: hex.q, r: hex.r }, { q: captureMove.capturedQ, r: captureMove.capturedR });
+
+          // Check multi-capture
+          const moreCaps = getMultiCaptures(hex.q, hex.r, 'player');
+          if (moreCaps.length > 0) {
+            selectedCell = { q: hex.q, r: hex.r };
+            validMoves = [];
+            validCaptures = moreCaps;
+          } else {
+            selectedCell = null;
+            validMoves = [];
+            validCaptures = [];
+            turnCount++;
+            turn = 'ai';
+            aiThinking = true;
+            aiThinkTimer = 0.6 + Math.random() * 0.4;
+          }
+
+          const result = checkGameEnd();
+          if (result) endGame(result);
+        } else if (normalMove && !hasCaptures) {
+          executeMove(selectedCell, { q: hex.q, r: hex.r }, null);
+          selectedCell = null;
+          validMoves = [];
+          validCaptures = [];
+          turnCount++;
+          turn = 'ai';
+          aiThinking = true;
+          aiThinkTimer = 0.6 + Math.random() * 0.4;
+
+          const result = checkGameEnd();
+          if (result) endGame(result);
+        } else {
+          selectedCell = null;
+          validMoves = [];
+          validCaptures = [];
+        }
+      }
+      break;
+
+    case STATE.GAME_OVER:
+      if (btn) {
+        playSound('click');
+        if (btn.text.includes('PLAY AGAIN')) {
+          setupBoard();
+          newAchievements = [];
+          state = STATE.GAME;
+        } else if (btn.text.includes('SHOP')) {
+          shopScroll = 0;
+          state = STATE.SHOP;
+        } else if (btn.text.includes('MENU')) {
+          state = STATE.TITLE;
+        }
+      }
+      break;
+  }
+};
+
+// Mouse
+canvas.addEventListener('mousedown', (e) => {
+  e.preventDefault();
+  const pos = getClickPos(e);
+  handleClick(pos.x, pos.y);
+});
+
+// Touch
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const pos = getClickPos(e);
+  handleClick(pos.x, pos.y);
+});
+
+// Scroll for shop
+canvas.addEventListener('wheel', (e) => {
+  if (state === STATE.SHOP || state === STATE.ACHIEVEMENTS) {
+    shopScroll += e.deltaY * 0.5;
+    shopScroll = Math.max(0, shopScroll);
+  }
+});
+
+let touchStartY = 0;
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (state === STATE.SHOP || state === STATE.ACHIEVEMENTS) {
+    const y = e.touches[0].clientY;
+    shopScroll += (touchStartY - y) * 0.8;
+    shopScroll = Math.max(0, shopScroll);
+    touchStartY = y;
+  }
+});
+
+canvas.addEventListener('touchstart', (e) => {
+  if (state === STATE.SHOP || state === STATE.ACHIEVEMENTS) {
+    touchStartY = e.touches[0].clientY;
+  }
+}, { passive: true });
+
+// Keyboard shortcut: 1,2,3 for power-ups, Escape to cancel
+document.addEventListener('keydown', (e) => {
+  if (state === STATE.GAME && turn === 'player' && !aiThinking) {
+    if (e.key === '1' && powers.bomb > 0) { activePower = activePower === 'bomb' ? null : 'bomb'; teleportSource = null; }
+    if (e.key === '2' && powers.teleport > 0) { activePower = activePower === 'teleport' ? null : 'teleport'; teleportSource = null; }
+    if (e.key === '3' && powers.freeze > 0) { activePower = activePower === 'freeze' ? null : 'freeze'; teleportSource = null; }
+    if (e.key === 'Escape') { activePower = null; teleportSource = null; selectedCell = null; validMoves = []; validCaptures = []; }
+  }
+  if (e.key === 'Escape') {
+    if (state === STATE.SHOP || state === STATE.ACHIEVEMENTS) state = STATE.TITLE;
+  }
+});
+
+// ============================================================
+// Game Loop
+// ============================================================
+let lastTime = 0;
+
+const gameLoop = (timestamp) => {
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+  animTime += dt;
+  titlePulse += dt;
+
+  // AI thinking
+  if (state === STATE.GAME && aiThinking && turn === 'ai') {
+    aiThinkTimer -= dt;
+    if (aiThinkTimer <= 0) {
+      const move = aiMove();
+      if (move) {
+        executeMove(move.from, move.to, move.capture);
+
+        // Check multi-capture for AI
+        if (move.capture) {
+          let currentPos = move.to;
+          let moreCaps = getMultiCaptures(currentPos.q, currentPos.r, 'ai');
+          while (moreCaps.length > 0) {
+            // AI picks best capture
+            const cap = moreCaps[0];
+            executeMove(currentPos, { q: cap.q, r: cap.r }, { q: cap.capturedQ, r: cap.capturedR });
+            currentPos = { q: cap.q, r: cap.r };
+            moreCaps = getMultiCaptures(currentPos.q, currentPos.r, 'ai');
+          }
+        }
+      }
+
+      aiThinking = false;
+      turn = 'player';
+      turnCount++;
+
+      const result = checkGameEnd();
+      if (result) endGame(result);
+    }
+  }
+
+  // Update particles & floating text
+  updateParticles(dt);
+  updateFloatingTexts(dt);
+
+  // Shake decay
+  shakeAmount *= Math.pow(shakeDecay, dt * 60);
+  if (shakeAmount < 0.5) shakeAmount = 0;
+
+  // Draw
+  ctx.save();
+  if (shakeAmount > 0) {
+    ctx.translate(
+      (Math.random() - 0.5) * shakeAmount * 2,
+      (Math.random() - 0.5) * shakeAmount * 2
+    );
+  }
+
+  switch (state) {
+    case STATE.TITLE: drawTitle(); break;
+    case STATE.SHOP: drawShop(); break;
+    case STATE.ACHIEVEMENTS: drawAchievements(); break;
+    case STATE.GAME: drawGame(); break;
+    case STATE.GAME_OVER: drawGame(); drawGameOver(); break;
+  }
+
+  drawParticles();
+  drawFloatingTexts();
+
+  ctx.restore();
+
+  requestAnimationFrame(gameLoop);
+};
+
+requestAnimationFrame(gameLoop);
+
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

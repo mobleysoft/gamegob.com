@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en" data-build="20260310-hexwfc">
+<head>
+<meta property="og:title" content="Haven - Hex World Map">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Haven - Hex World Map</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a12; color: #e0e0e0; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+canvas { display: block; cursor: grab; }
+canvas:active { cursor: grabbing; }
+
+#ui {
+  position: fixed; top: 0; left: 0; right: 0;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 20px; background: rgba(10,10,18,0.85);
+  border-bottom: 1px solid #1a1a2e; z-index: 10;
+}
+#ui h1 { font-size: 18px; font-weight: 600; color: #7eb8da; letter-spacing: 1px; }
+#controls { display: flex; gap: 8px; align-items: center; }
+#controls select, #controls button {
+  background: #1a1a2e; color: #aaa; border: 1px solid #2a2a4e;
+  padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;
+}
+#controls select:hover, #controls button:hover { border-color: #4a6fa5; color: #ddd; }
+
+#tooltip {
+  position: fixed; display: none; background: rgba(15,15,30,0.95);
+  border: 1px solid #3a3a6e; border-radius: 8px; padding: 10px 14px;
+  font-size: 13px; max-width: 220px; pointer-events: none; z-index: 20;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+#tooltip .terrain { color: #7eb8da; font-weight: 600; font-size: 14px; }
+#tooltip .elev { color: #888; font-size: 12px; }
+#tooltip .coord { color: #555; font-size: 11px; margin-top: 4px; }
+
+#info {
+  position: fixed; bottom: 20px; left: 20px;
+  background: rgba(15,15,30,0.9); border: 1px solid #2a2a4e;
+  border-radius: 10px; padding: 14px 18px; z-index: 10; min-width: 200px;
+}
+#info h3 { color: #7eb8da; font-size: 14px; margin-bottom: 6px; }
+#info .stat { font-size: 12px; color: #888; margin: 2px 0; }
+#info .bar { display: inline-block; height: 8px; border-radius: 4px; margin-left: 4px; vertical-align: middle; }
+
+#legend {
+  position: fixed; bottom: 20px; right: 20px;
+  background: rgba(15,15,30,0.9); border: 1px solid #2a2a4e;
+  border-radius: 10px; padding: 14px 18px; z-index: 10;
+}
+#legend h3 { color: #7eb8da; font-size: 14px; margin-bottom: 8px; }
+.legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #aaa; margin: 3px 0; }
+.legend-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(255,255,255, 0.65); }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+</head>
+<body>
+
+<div id="ui">
+  <h1>HAVEN - Hex World</h1>
+  <div id="controls">
+    <select id="beingSelect"></select>
+    <button onclick="regenerate()">Regenerate</button>
+    <button onclick="resetView()">Reset View</button>
+  </div>
+</div>
+
+<div id="tooltip">
+  <div class="terrain"></div>
+  <div class="elev"></div>
+  <div class="coord"></div>
+</div>
+
+<div id="info">
+  <h3 id="infoName">Loading...</h3>
+  <div id="infoStats"></div>
+</div>
+
+<div id="legend">
+  <h3>Terrain</h3>
+  <div id="legendItems"></div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+// ═══════════════════════════════════════════
+// TERRAIN COLORS
+// ═══════════════════════════════════════════
+const TERRAIN_COLORS = {
+  grass:    { fill: '#4a8c5c', stroke: '#3a7a4c', label: 'Grassland' },
+  forest:   { fill: '#2d6b3f', stroke: '#1d5b2f', label: 'Forest' },
+  water:    { fill: '#3a6b9f', stroke: '#2a5b8f', label: 'Water' },
+  sand:     { fill: '#c4a84d', stroke: '#b49840', label: 'Sand' },
+  mountain: { fill: '#7a7a8a', stroke: '#5a5a6a', label: 'Mountain' },
+  road:     { fill: '#8a7a5a', stroke: '#6a5a3a', label: 'Road' },
+  village:  { fill: '#b8845a', stroke: '#a07040', label: 'Village' },
+  cave:     { fill: '#4a4a5a', stroke: '#3a3a4a', label: 'Cave' },
+  meadow:   { fill: '#6aaa6a', stroke: '#5a9a5a', label: 'Meadow' },
+  cliff:    { fill: '#6a6a7a', stroke: '#4a4a5a', label: 'Cliff' },
+};
+
+const ELEVATION_SHADE = [-0.15, 0, 0.05, 0.12, 0.2]; // darken sea, brighten peaks
+
+// ═══════════════════════════════════════════
+// BEING PROFILES (neurochemistry)
+// ═══════════════════════════════════════════
+const BEINGS = {
+  claudine: { dopamine: 0.5, serotonin: 0.55, norepinephrine: 0.45, oxytocin: 0.6, gaba: 0.5, cortisol: 0.1, endorphins: 0.5, color: '#e8a0c0' },
+  johnny:   { dopamine: 0.65, serotonin: 0.45, norepinephrine: 0.6, oxytocin: 0.35, gaba: 0.4, cortisol: 0.15, endorphins: 0.6, color: '#a0c8e8' },
+  gemma:    { dopamine: 0.5, serotonin: 0.5, norepinephrine: 0.45, oxytocin: 0.4, gaba: 0.65, cortisol: 0.08, endorphins: 0.4, color: '#c0e8a0' },
+  gigi:     { dopamine: 0.55, serotonin: 0.6, norepinephrine: 0.4, oxytocin: 0.5, gaba: 0.55, cortisol: 0.08, endorphins: 0.5, color: '#e8d0a0' },
+  alpha:    { dopamine: 0.7, serotonin: 0.35, norepinephrine: 0.7, oxytocin: 0.2, gaba: 0.3, cortisol: 0.25, endorphins: 0.7, color: '#ff6666' },
+  beta:     { dopamine: 0.45, serotonin: 0.6, norepinephrine: 0.35, oxytocin: 0.55, gaba: 0.6, cortisol: 0.08, endorphins: 0.45, color: '#66aaff' },
+  gamma:    { dopamine: 0.35, serotonin: 0.7, norepinephrine: 0.3, oxytocin: 0.65, gaba: 0.7, cortisol: 0.05, endorphins: 0.4, color: '#66ff99' },
+  delta:    { dopamine: 0.6, serotonin: 0.4, norepinephrine: 0.65, oxytocin: 0.25, gaba: 0.35, cortisol: 0.2, endorphins: 0.65, color: '#ffaa44' },
+  epsilon:  { dopamine: 0.55, serotonin: 0.5, norepinephrine: 0.5, oxytocin: 0.45, gaba: 0.5, cortisol: 0.12, endorphins: 0.55, color: '#cc77ff' },
+  zeta:     { dopamine: 0.4, serotonin: 0.65, norepinephrine: 0.35, oxytocin: 0.7, gaba: 0.6, cortisol: 0.06, endorphins: 0.45, color: '#77ffcc' },
+  eta:      { dopamine: 0.7, serotonin: 0.3, norepinephrine: 0.65, oxytocin: 0.15, gaba: 0.25, cortisol: 0.3, endorphins: 0.7, color: '#ff4444' },
+  theta:    { dopamine: 0.45, serotonin: 0.55, norepinephrine: 0.4, oxytocin: 0.5, gaba: 0.55, cortisol: 0.1, endorphins: 0.5, color: '#44aaaa' },
+  iota:     { dopamine: 0.5, serotonin: 0.5, norepinephrine: 0.5, oxytocin: 0.4, gaba: 0.5, cortisol: 0.12, endorphins: 0.5, color: '#aaaa44' },
+  kappa:    { dopamine: 0.6, serotonin: 0.4, norepinephrine: 0.55, oxytocin: 0.3, gaba: 0.4, cortisol: 0.18, endorphins: 0.6, color: '#ff77aa' },
+  lambda:   { dopamine: 0.4, serotonin: 0.6, norepinephrine: 0.35, oxytocin: 0.6, gaba: 0.65, cortisol: 0.06, endorphins: 0.4, color: '#88ddaa' },
+  mu:       { dopamine: 0.55, serotonin: 0.45, norepinephrine: 0.55, oxytocin: 0.35, gaba: 0.45, cortisol: 0.15, endorphins: 0.55, color: '#dd88aa' },
+};
+
+// ═══════════════════════════════════════════
+// HEX WFC ENGINE (ported from Python)
+// ═══════════════════════════════════════════
+
+const EDGE_TYPES = ['grass','forest','water','sand','mountain','road','cliff','cave'];
+const HEX_DIRS = [[1,-1,0],[0,-1,1],[-1,0,1],[-1,1,0],[0,1,-1],[1,0,-1]];
+const OPPOSITE = {0:3,1:4,2:5,3:0,4:1,5:2};
+
+const EDGE_COMPAT = {
+  grass:    new Set(['grass','road','sand']),
+  forest:   new Set(['forest','grass']),
+  water:    new Set(['water','sand']),
+  sand:     new Set(['sand','grass','water']),
+  mountain: new Set(['mountain','cliff','cave','forest']),
+  road:     new Set(['road','grass']),
+  cliff:    new Set(['cliff','mountain','grass']),
+  cave:     new Set(['cave','mountain']),
+};
+
+function edgesCompatible(a, b) { return EDGE_COMPAT[a]?.has(b) ?? (a === b); }
+
+class HexTile {
+  constructor(name, terrain, edges, elevation = 1, weight = 1.0) {
+    this.name = name;
+    this.terrain = terrain;
+    this.edges = edges; // [E, NE, NW, W, SW, SE]
+    this.elevation = elevation;
+    this.weight = weight;
+  }
+  rotated(steps) {
+    steps = ((steps % 6) + 6) % 6;
+    if (steps === 0) return this;
+    const re = Array.from({length: 6}, (_, i) => this.edges[(i - steps + 6) % 6]);
+    return new HexTile(this.name + '_r' + steps, this.terrain, re, this.elevation, this.weight);
+  }
+}
+
+function buildTileSet() {
+  const G='grass',F='forest',W='water',S='sand',M='mountain',R='road',C='cliff',V='cave';
+  const base = [
+    new HexTile('grass',      'grass',    [G,G,G,G,G,G], 1, 1.0),
+    new HexTile('forest',     'forest',   [F,F,F,F,F,F], 1, 0.8),
+    new HexTile('water',      'water',    [W,W,W,W,W,W], 0, 0.6),
+    new HexTile('sand',       'sand',     [S,S,S,S,S,S], 0, 0.4),
+    new HexTile('mountain',   'mountain', [M,M,M,M,M,M], 3, 0.3),
+    new HexTile('meadow',     'meadow',   [G,G,G,G,G,G], 1, 0.9),
+    new HexTile('grass_forest','grass',   [G,G,F,F,F,G], 1, 0.7),
+    new HexTile('grass_water', 'grass',   [G,G,W,W,W,G], 0, 0.5),
+    new HexTile('grass_sand',  'grass',   [G,G,S,S,S,G], 0, 0.5),
+    new HexTile('sand_water',  'sand',    [S,S,W,W,W,S], 0, 0.5),
+    new HexTile('forest_mtn', 'forest',   [F,F,M,M,M,F], 2, 0.4),
+    new HexTile('grass_mtn',  'grass',    [G,G,M,M,M,G], 2, 0.4),
+    new HexTile('grass_cliff','grass',    [G,G,C,C,C,G], 2, 0.3),
+    new HexTile('road_str',   'road',     [R,G,G,R,G,G], 1, 0.5),
+    new HexTile('road_bend',  'road',     [R,R,G,G,G,G], 1, 0.4),
+    new HexTile('road_tee',   'road',     [R,R,G,R,G,G], 1, 0.3),
+    new HexTile('road_cross', 'road',     [R,G,R,R,G,R], 1, 0.2),
+    new HexTile('village',    'village',  [R,G,G,R,G,G], 1, 0.15),
+    new HexTile('village_sq', 'village',  [R,R,G,R,R,G], 1, 0.1),
+    new HexTile('cave_ent',   'cave',     [V,M,M,G,G,M], 2, 0.15),
+    new HexTile('cliff_face', 'cliff',    [C,C,M,M,G,G], 2, 0.2),
+    new HexTile('beach',      'sand',     [S,S,W,W,S,G], 0, 0.4),
+    new HexTile('cove',       'water',    [W,S,S,W,S,S], 0, 0.3),
+    new HexTile('peninsula',  'sand',     [W,W,S,W,W,S], 0, 0.2),
+  ];
+  const all = [];
+  for (const tile of base) {
+    const seen = new Set();
+    for (let r = 0; r < 6; r++) {
+      const rot = tile.rotated(r);
+      const key = rot.edges.join(',');
+      if (!seen.has(key)) { seen.add(key); all.push(rot); }
+    }
+  }
+  return all;
+}
+
+const MASTER_TILES = buildTileSet();
+
+function neuroWeights(chem) {
+  const da=chem.dopamine||0.5, st=chem.serotonin||0.5, ne=chem.norepinephrine||0.5;
+  const ot=chem.oxytocin||0.3, gaba=chem.gaba||0.5, cor=chem.cortisol||0.1, endo=chem.endorphins||0.5;
+  return {
+    meadow:   0.3 + ot*0.8 + st*0.5,
+    village:  0.1 + ot*0.6 + st*0.3,
+    grass:    0.5 + st*0.4 + gaba*0.3,
+    road:     0.1 + da*0.7 + ne*0.3,
+    forest:   0.3 + ne*0.6 + gaba*0.2,
+    mountain: 0.1 + cor*1.2 + ne*0.3,
+    cliff:    0.05 + cor*0.8,
+    cave:     0.05 + cor*0.5 + (1-st)*0.3,
+    water:    0.2 + st*0.4 + (1-cor)*0.3,
+    sand:     0.1 + st*0.3 + endo*0.3,
+  };
+}
+
+// ═══════════════════════════════════════════
+// WFC SOLVER
+// ═══════════════════════════════════════════
+
+function hexDisc(radius) {
+  const cells = [];
+  for (let q = -radius; q <= radius; q++) {
+    for (let r = Math.max(-radius, -q-radius); r <= Math.min(radius, -q+radius); r++) {
+      cells.push([q, r, -q-r]);
+    }
+  }
+  return cells;
+}
+
+function solveWFC(cells, tiles, chem, seed) {
+  const tw = neuroWeights(chem);
+  const weights = tiles.map(t => t.weight * (tw[t.terrain] || 0.5));
+
+  // Build adjacency cache
+  const adjCache = {};
+  for (let d = 0; d < 6; d++) {
+    adjCache[d] = {};
+    const opp = OPPOSITE[d];
+    for (let i = 0; i < tiles.length; i++) {
+      const compat = new Set();
+      for (let j = 0; j < tiles.length; j++) {
+        if (edgesCompatible(tiles[i].edges[d], tiles[j].edges[opp])) compat.add(j);
+      }
+      adjCache[d][i] = compat;
+    }
+  }
+
+  // Seeded RNG (simple LCG)
+  let rngState = seed || 42;
+  function rng() { rngState = (rngState * 1664525 + 1013904223) & 0x7fffffff; return rngState / 0x7fffffff; }
+
+  // Grid
+  const grid = new Map();
+  const allIdx = new Set(tiles.map((_, i) => i));
+  for (const [q,r,s] of cells) {
+    grid.set(`${q},${r},${s}`, { q, r, s, possible: new Set(allIdx), collapsed: null });
+  }
+
+  function lowestEntropy() {
+    let best = null, bestE = Infinity;
+    const candidates = [];
+    for (const cell of grid.values()) {
+      if (cell.collapsed !== null) continue;
+      const e = cell.possible.size;
+      if (e < bestE) { bestE = e; candidates.length = 0; candidates.push(cell); }
+      else if (e === bestE) candidates.push(cell);
+    }
+    if (!candidates.length) return null;
+    return candidates[Math.floor(rng() * candidates.length)];
+  }
+
+  function weightedChoice(indices) {
+    const items = [...indices];
+    const w = items.map(i => weights[i] || 0.01);
+    const total = w.reduce((a,b) => a+b, 0);
+    let r2 = rng() * total, cum = 0;
+    for (let i = 0; i < items.length; i++) { cum += w[i]; if (r2 <= cum) return items[i]; }
+    return items[items.length - 1];
+  }
+
+  function propagate(startKey) {
+    const queue = [startKey];
+    const visited = new Set();
+    while (queue.length) {
+      const key = queue.shift();
+      if (visited.has(key)) continue;
+      visited.add(key);
+      const cell = grid.get(key);
+      if (!cell) continue;
+      for (let d = 0; d < 6; d++) {
+        const [dq,dr,ds] = HEX_DIRS[d];
+        const nk = `${cell.q+dq},${cell.r+dr},${cell.s+ds}`;
+        const nc = grid.get(nk);
+        if (!nc || nc.collapsed !== null) continue;
+        let allowed = new Set();
+        for (const ti of cell.possible) {
+          const compat = adjCache[d][ti];
+          if (compat) for (const c of compat) allowed.add(c);
+        }
+        const newPoss = new Set([...nc.possible].filter(x => allowed.has(x)));
+        if (newPoss.size < nc.possible.size) {
+          if (newPoss.size === 0) return false;
+          nc.possible = newPoss;
+          queue.push(nk);
+        }
+      }
+    }
+    return true;
+  }
+
+  // Solve
+  let iterations = 0;
+  while (iterations++ < cells.length * 2) {
+    const cell = lowestEntropy();
+    if (!cell) break; // solved
+    if (cell.possible.size === 0) break; // contradiction
+    const choice = weightedChoice(cell.possible);
+    cell.collapsed = choice;
+    cell.possible = new Set([choice]);
+    const key = `${cell.q},${cell.r},${cell.s}`;
+    if (!propagate(key)) {
+      // On contradiction, just accept partial result
+      break;
+    }
+  }
+
+  // Collect results
+  const result = {};
+  for (const [key, cell] of grid) {
+    if (cell.collapsed !== null) {
+      const tile = tiles[cell.collapsed];
+      result[key] = { q: cell.q, r: cell.r, s: cell.s, terrain: tile.terrain, elevation: tile.elevation, name: tile.name };
+    }
+  }
+  return result;
+}
+
+// ═══════════════════════════════════════════
+// RENDERER
+// ═══════════════════════════════════════════
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+let hexSize = 28;
+let offsetX = 0, offsetY = 0;
+let dragging = false, dragStartX, dragStartY, dragOffX, dragOffY;
+let currentTiles = {};
+let currentBeing = 'claudine';
+let hoveredTile = null;
+const ZONE_RADIUS = 7;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  draw();
+}
+
+function hexToPixel(q, r) {
+  const x = hexSize * (Math.sqrt(3) * q + Math.sqrt(3)/2 * r);
+  const y = hexSize * (3/2 * r);
+  return [x + W/2 + offsetX, y + H/2 + offsetY];
+}
+
+function pixelToHex(px, py) {
+  const x = px - W/2 - offsetX;
+  const y = py - H/2 - offsetY;
+  const q = (Math.sqrt(3)/3 * x - 1/3 * y) / hexSize;
+  const r = (2/3 * y) / hexSize;
+  // Round to nearest hex
+  let rq = Math.round(q), rr = Math.round(r), rs = Math.round(-q-r);
+  const dq = Math.abs(rq - q), dr = Math.abs(rr - r), ds = Math.abs(rs - (-q-r));
+  if (dq > dr && dq > ds) rq = -rr - rs;
+  else if (dr > ds) rr = -rq - rs;
+  else rs = -rq - rr;
+  return [rq, rr, rs];
+}
+
+function adjustColor(hex, amount) {
+  let r = parseInt(hex.slice(1,3), 16);
+  let g = parseInt(hex.slice(3,5), 16);
+  let b = parseInt(hex.slice(5,7), 16);
+  r = Math.min(255, Math.max(0, r + amount * 255));
+  g = Math.min(255, Math.max(0, g + amount * 255));
+  b = Math.min(255, Math.max(0, b + amount * 255));
+  return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+}
+
+function drawHex(cx, cy, size, fillColor, strokeColor, isHovered) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const angle = Math.PI / 180 * (60 * i - 30);
+    const x = cx + size * Math.cos(angle);
+    const y = cy + size * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = fillColor;
+  ctx.fill();
+  ctx.strokeStyle = isHovered ? '#fff' : strokeColor;
+  ctx.lineWidth = isHovered ? 2 : 1;
+  ctx.stroke();
+}
+
+function drawTerrainDetail(cx, cy, terrain, size) {
+  ctx.save();
+  const s = size * 0.3;
+  switch (terrain) {
+    case 'forest':
+      ctx.fillStyle = '#1a4a2a';
+      ctx.beginPath(); ctx.moveTo(cx, cy-s); ctx.lineTo(cx-s*0.6, cy+s*0.4); ctx.lineTo(cx+s*0.6, cy+s*0.4); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(cx+s*0.5, cy-s*0.3); ctx.lineTo(cx-s*0.1, cy+s*0.6); ctx.lineTo(cx+s*1.1, cy+s*0.6); ctx.fill();
+      break;
+    case 'mountain':
+      ctx.fillStyle = '#5a5a6a';
+      ctx.beginPath(); ctx.moveTo(cx, cy-s*1.1); ctx.lineTo(cx-s, cy+s*0.5); ctx.lineTo(cx+s, cy+s*0.5); ctx.fill();
+      ctx.fillStyle = '#ccc';
+      ctx.beginPath(); ctx.moveTo(cx, cy-s*1.1); ctx.lineTo(cx-s*0.3, cy-s*0.3); ctx.lineTo(cx+s*0.3, cy-s*0.3); ctx.fill();
+      break;
+    case 'water':
+      ctx.strokeStyle = '#2a5b8f';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(cx-s, cy-s*0.2);
+      ctx.quadraticCurveTo(cx-s*0.5, cy-s*0.6, cx, cy-s*0.2);
+      ctx.quadraticCurveTo(cx+s*0.5, cy+s*0.2, cx+s, cy-s*0.2);
+      ctx.stroke();
+      break;
+    case 'village':
+      ctx.fillStyle = '#6a4a2a';
+      ctx.fillRect(cx-s*0.5, cy-s*0.2, s, s*0.8);
+      ctx.fillStyle = '#8a3a2a';
+      ctx.beginPath(); ctx.moveTo(cx-s*0.7, cy-s*0.2); ctx.lineTo(cx, cy-s*0.8); ctx.lineTo(cx+s*0.7, cy-s*0.2); ctx.fill();
+      break;
+    case 'road':
+      ctx.fillStyle = '#6a5a3a';
+      ctx.fillRect(cx-s*0.2, cy-s, s*0.4, s*2);
+      break;
+    case 'cave':
+      ctx.fillStyle = '#2a2a3a';
+      ctx.beginPath(); ctx.arc(cx, cy+s*0.1, s*0.6, Math.PI, 0); ctx.fill();
+      break;
+    case 'cliff':
+      ctx.strokeStyle = '#4a4a5a';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(cx-s, cy); ctx.lineTo(cx-s*0.3, cy-s*0.5); ctx.lineTo(cx+s*0.3, cy+s*0.2); ctx.lineTo(cx+s, cy-s*0.3); ctx.stroke();
+      break;
+    case 'meadow':
+      ctx.fillStyle = '#8ac88a';
+      for (let i = 0; i < 3; i++) {
+        const ox = (i-1) * s * 0.6, oy = (i%2) * s * 0.3;
+        ctx.beginPath(); ctx.arc(cx+ox, cy+oy, s*0.15, 0, Math.PI*2); ctx.fill();
+      }
+      break;
+  }
+  ctx.restore();
+}
+
+function draw() {
+  ctx.fillStyle = '#0a0a12';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw ambient glow
+  const being = BEINGS[currentBeing];
+  if (being) {
+    const grad = ctx.createRadialGradient(W/2+offsetX, H/2+offsetY, 0, W/2+offsetX, H/2+offsetY, hexSize*ZONE_RADIUS*2.5);
+    grad.addColorStop(0, (being.color || '#7eb8da') + '15');
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  for (const [key, tile] of Object.entries(currentTiles)) {
+    const tc = TERRAIN_COLORS[tile.terrain] || TERRAIN_COLORS.grass;
+    const elevShade = ELEVATION_SHADE[tile.elevation] || 0;
+    const fill = adjustColor(tc.fill, elevShade);
+    const stroke = adjustColor(tc.stroke, elevShade);
+    const [px, py] = hexToPixel(tile.q, tile.r);
+    const isHov = hoveredTile && hoveredTile.q === tile.q && hoveredTile.r === tile.r;
+    drawHex(px, py, hexSize, fill, stroke, isHov);
+    if (hexSize > 18) drawTerrainDetail(px, py, tile.terrain, hexSize);
+  }
+}
+
+// ═══════════════════════════════════════════
+// INTERACTION
+// ═══════════════════════════════════════════
+
+canvas.addEventListener('mousedown', e => {
+  dragging = true; dragStartX = e.clientX; dragStartY = e.clientY;
+  dragOffX = offsetX; dragOffY = offsetY;
+});
+canvas.addEventListener('mousemove', e => {
+  if (dragging) {
+    offsetX = dragOffX + (e.clientX - dragStartX);
+    offsetY = dragOffY + (e.clientY - dragStartY);
+    draw();
+  }
+  // Hover detection
+  const [q, r, s] = pixelToHex(e.clientX, e.clientY);
+  const key = `${q},${r},${s}`;
+  const tile = currentTiles[key];
+  const tooltip = document.getElementById('tooltip');
+  if (tile) {
+    hoveredTile = tile;
+    const tc = TERRAIN_COLORS[tile.terrain];
+    tooltip.querySelector('.terrain').textContent = tc?.label || tile.terrain;
+    tooltip.querySelector('.elev').textContent = 'Elevation: ' + tile.elevation;
+    tooltip.querySelector('.coord').textContent = `(${tile.q}, ${tile.r}, ${tile.s})`;
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.clientX + 16) + 'px';
+    tooltip.style.top = (e.clientY + 16) + 'px';
+    if (!dragging) draw();
+  } else {
+    if (hoveredTile) { hoveredTile = null; draw(); }
+    tooltip.style.display = 'none';
+  }
+});
+canvas.addEventListener('mouseup', () => { dragging = false; });
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const oldSize = hexSize;
+  hexSize = Math.max(8, Math.min(60, hexSize - e.deltaY * 0.05));
+  // Zoom toward cursor
+  const scale = hexSize / oldSize;
+  offsetX = e.clientX - scale * (e.clientX - W/2 - offsetX) - W/2;
+  offsetY = e.clientY - scale * (e.clientY - H/2 - offsetY) - H/2;
+  draw();
+});
+
+// ═══════════════════════════════════════════
+// GENERATION & UI
+// ═══════════════════════════════════════════
+
+function generateForBeing(name) {
+  currentBeing = name;
+  const chem = BEINGS[name];
+  if (!chem) return;
+  const seed = hashStr(name);
+  const cells = hexDisc(ZONE_RADIUS);
+  currentTiles = solveWFC(cells, MASTER_TILES, chem, seed);
+  updateInfo(name, chem);
+  draw();
+}
+
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function updateInfo(name, chem) {
+  document.getElementById('infoName').textContent = name.charAt(0).toUpperCase() + name.slice(1) + "'s Zone";
+  const counts = {};
+  for (const t of Object.values(currentTiles)) counts[t.terrain] = (counts[t.terrain]||0) + 1;
+  const total = Object.values(counts).reduce((a,b)=>a+b, 0);
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+  let html = `<div class="stat">${total} hex cells</div>`;
+  for (const [terrain, count] of sorted) {
+    const tc = TERRAIN_COLORS[terrain];
+    const pct = Math.round(count/total*100);
+    html += `<div class="stat">${tc?.label||terrain}: ${count} (${pct}%) <span class="bar" style="width:${pct*1.5}px;background:${tc?.fill||'#888'}"></span></div>`;
+  }
+  // Neurochemistry bars
+  html += '<div style="margin-top:8px;border-top:1px solid #2a2a4e;padding-top:6px">';
+  const chemNames = {dopamine:'DA',serotonin:'5HT',norepinephrine:'NE',oxytocin:'OT',gaba:'GABA',cortisol:'COR',endorphins:'END'};
+  const chemColors = {dopamine:'#e8a060',serotonin:'#60a0e8',norepinephrine:'#e86060',oxytocin:'#e860a0',gaba:'#60e8a0',cortisol:'#e8e060',endorphins:'#a060e8'};
+  for (const [k, label] of Object.entries(chemNames)) {
+    const v = chem[k] || 0;
+    html += `<div class="stat">${label}: ${v.toFixed(2)} <span class="bar" style="width:${v*60}px;background:${chemColors[k]}"></span></div>`;
+  }
+  html += '</div>';
+  document.getElementById('infoStats').innerHTML = html;
+}
+
+function regenerate() { generateForBeing(currentBeing); }
+function resetView() { offsetX = 0; offsetY = 0; hexSize = 28; draw(); }
+
+// Build being selector
+const select = document.getElementById('beingSelect');
+for (const name of Object.keys(BEINGS)) {
+  const opt = document.createElement('option');
+  opt.value = name; opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+  select.appendChild(opt);
+}
+select.value = currentBeing;
+select.addEventListener('change', () => generateForBeing(select.value));
+
+// Build legend
+const legendEl = document.getElementById('legendItems');
+for (const [terrain, tc] of Object.entries(TERRAIN_COLORS)) {
+  legendEl.innerHTML += `<div class="legend-item"><span class="legend-swatch" style="background:${tc.fill}"></span>${tc.label}</div>`;
+}
+
+// Init
+window.addEventListener('resize', resize);
+resize();
+generateForBeing(currentBeing);
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

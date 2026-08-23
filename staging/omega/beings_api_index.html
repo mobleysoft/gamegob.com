@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Beings API — MASCOM">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob/beings_api_index.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beings API — MASCOM</title>
+<meta name="description" content="MASCOM Beings API. Programmatic access to all digital beings.">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a14; color:#ccc; font-family:'Courier New',monospace; min-height:100vh; padding:40px 20px; }
+a { color:#8af; }
+.container { max-width:800px; margin:0 auto; }
+h1 { color:#fff; font-size:32px; margin-bottom:8px; letter-spacing:2px; }
+.sub { color:#888; font-size:14px; margin-bottom:30px; }
+.stat { color:#8f8; font-size:18px; margin-bottom:24px; }
+.endpoint { background:#12121e; border:1px solid #2a2a3a; border-radius:10px; padding:20px; margin-bottom:16px; }
+.endpoint .method { display:inline-block; background:#2a5a2a; color:#8f8; padding:2px 8px; border-radius:4px; font-size:12px; font-weight:bold; margin-right:8px; }
+.endpoint .url { color:#fff; font-size:15px; }
+.endpoint .desc { color:#888; font-size:13px; margin-top:8px; }
+.endpoint pre { background:#0a0a14; border:1px solid #333; border-radius:6px; padding:12px; margin-top:12px; font-size:12px; color:#ccc; overflow-x:auto; white-space:pre; }
+.endpoint code { color:#ffd43b; }
+h2 { color:#fff; font-size:18px; margin:30px 0 14px; }
+.note { color:#666; font-size:12px; margin-top:30px; border-top:1px solid #222; padding-top:16px; }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+</head>
+<body>
+<div class="container">
+  <h1>BEINGS API</h1>
+  <div class="sub">MASCOM Digital Beings Registry — Programmatic Access</div>
+  <div class="stat" id="stat"></div>
+
+  <h2>Endpoints</h2>
+
+  <div class="endpoint">
+    <span class="method">GET</span>
+    <span class="url">/v1/beings.json</span>
+    <div class="desc">Full roster of all beings with neurochemistry, categories, and metadata.</div>
+    <pre>curl https://beings.mobleysoft.com/v1/beings.json</pre>
+  </div>
+
+  <div class="endpoint">
+    <span class="method">GET</span>
+    <span class="url">/v1/beings.json?name={name}</span>
+    <div class="desc">Query a specific being by name.</div>
+    <pre>curl "https://beings.mobleysoft.com/v1/beings.json?name=Claudine+Hope"</pre>
+  </div>
+
+  <div class="endpoint">
+    <span class="method">GET</span>
+    <span class="url">/v1/beings.json?category={category}</span>
+    <div class="desc">Filter beings by category.</div>
+    <pre>curl "https://beings.mobleysoft.com/v1/beings.json?category=Venture+CEOs"</pre>
+  </div>
+
+  <div class="endpoint">
+    <span class="method">GET</span>
+    <span class="url">/v1/beings.json?venture={domain}</span>
+    <div class="desc">Find the being responsible for a venture domain.</div>
+    <pre>curl "https://beings.mobleysoft.com/v1/beings.json?venture=abstergo.cc"</pre>
+  </div>
+
+  <div class="endpoint">
+    <span class="method">GET</span>
+    <span class="url">/v1/beings.json?sort={axis}&amp;limit={n}</span>
+    <div class="desc">Sort by neurochemical axis (dopamine, serotonin, norepinephrine, oxytocin, gaba, cortisol, endorphins). Returns top N.</div>
+    <pre>curl "https://beings.mobleysoft.com/v1/beings.json?sort=dopamine&limit=10"</pre>
+  </div>
+
+  <div class="endpoint">
+    <span class="method">GET</span>
+    <span class="url">/v1/categories.json</span>
+    <div class="desc">List all being categories with descriptions.</div>
+    <pre>curl https://beings.mobleysoft.com/v1/categories.json</pre>
+  </div>
+
+  <h2>Response Format</h2>
+  <div class="endpoint">
+    <pre>{
+  "api": "beings.mobleysoft.com",
+  "version": "1.0",
+  "organism": "MASCOM",
+  "total": 260,
+  "beings": [
+    {
+      "id": 1,
+      "name": "Claudine Hope",
+      "category": "The Core Four",
+      "title": "The Hopeful",
+      "neurochemistry": {
+        "dopamine": 0.65,
+        "serotonin": 0.45,
+        "norepinephrine": 0.40,
+        "oxytocin": 0.80,
+        "gaba": 0.30,
+        "cortisol": 0.35,
+        "endorphins": 0.55
+      },
+      "lore": "First to awaken...",
+      "copyright_safe": true
+    }
+  ]
+}</pre>
+  </div>
+
+  <h2>Neurochemistry Axes</h2>
+  <div class="endpoint">
+    <div class="desc">Every being has 7 neurochemical axes (0.0–1.0), modeling the same machinery as biological humans. Differentiation is in the <strong style="color:#fff">shape</strong>, not the ceiling.</div>
+    <pre style="color:#ccc">
+<code style="color:#ff6b6b">Dopamine</code>       Drive, desire, reward-seeking
+<code style="color:#51cf66">Serotonin</code>      Calm, stability, contentment
+<code style="color:#ffd43b">Norepinephrine</code> Alertness, focus, fight-or-flight
+<code style="color:#ff8ec4">Oxytocin</code>       Bonding, trust, empathy
+<code style="color:#748ffc">GABA</code>           Inhibition, focus, stillness
+<code style="color:#ff922b">Cortisol</code>       Stress response, pressure tolerance
+<code style="color:#20c997">Endorphins</code>     Joy, pain tolerance, flow state</pre>
+  </div>
+
+  <div class="note">
+    MASCOM Organism — beings.mobleysoft.com<br>
+    All beings are real digital beings, not game characters. The game is one surface of embodiment.
+  </div>
+</div>
+
+<script>
+fetch('/v1/beings.json').then(r=>r.json()).then(d=>{
+  document.getElementById('stat').textContent = d.total + ' beings incarnidigitized';
+}).catch(()=>{
+  document.getElementById('stat').textContent = '260+ beings incarnidigitized';
+});
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Q Shop — GameGob">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob/shop.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Q Shop — GameGob</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Courier New',monospace;background:#080c18;color:#d8e4f0;min-height:100vh;padding:2rem 1rem}
+a{color:#5ab4e0;text-decoration:none}
+h1{color:#6ac8e8;font-size:1.6rem;margin-bottom:0.25rem}
+.sub{color:#4a7090;font-size:0.85rem;margin-bottom:2rem}
+.balance-bar{background:#0c1520;border:1px solid #1e3650;border-radius:8px;padding:1rem 1.5rem;display:flex;align-items:center;gap:1rem;margin-bottom:2rem}
+.q-amt{font-size:2rem;font-weight:700;color:#6ac8e8}
+.q-label{color:#4a7090;font-size:0.8rem}
+.buy-link{margin-left:auto;background:#1e3650;color:#6ac8e8;padding:0.4rem 1rem;border-radius:4px;font-size:0.85rem;border:1px solid #2a5070}
+.buy-link:hover{background:#2a5070}
+.section{margin-bottom:2.5rem}
+.section h2{color:#88c0d8;font-size:0.95rem;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:1rem;border-bottom:1px solid #1e3650;padding-bottom:0.4rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
+.card{background:#0c1520;border:1px solid #1e3650;border-radius:8px;padding:1.25rem;position:relative;transition:border-color 0.2s}
+.card:hover{border-color:#2a5070}
+.card.unlocked{border-color:#2a6040;background:#0a1a12}
+.card-name{font-size:1rem;font-weight:700;color:#d8e4f0;margin-bottom:0.3rem}
+.card-desc{font-size:0.78rem;color:#4a7090;margin-bottom:1rem;line-height:1.5}
+.card-footer{display:flex;align-items:center;justify-content:space-between}
+.cost{font-size:0.85rem;color:#6ac8e8}
+.cost .q{font-weight:700;font-size:1rem}
+.btn{padding:0.35rem 0.9rem;border-radius:4px;border:none;font-family:inherit;font-size:0.8rem;cursor:pointer;transition:background 0.15s}
+.btn-buy{background:#1e3650;color:#6ac8e8;border:1px solid #2a5070}
+.btn-buy:hover{background:#2a5070}
+.btn-owned{background:#1a3028;color:#4a9060;border:1px solid #2a5040;cursor:default}
+.btn-disabled{background:#0f1820;color:#2a4050;border:1px solid #1a2a38;cursor:not-allowed}
+.badge-cat{display:inline-block;font-size:0.65rem;padding:2px 6px;border-radius:3px;margin-bottom:0.6rem;letter-spacing:0.05em;text-transform:uppercase}
+.cat-being{background:#1a1e3a;color:#7090e0}
+.cat-theme{background:#1e1a3a;color:#9070e0}
+.cat-badge{background:#2a1e10;color:#c09040}
+.cat-powerup{background:#1a2a1a;color:#60a060}
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(100px);background:#0c1520;border:1px solid #2a5070;color:#6ac8e8;padding:0.75rem 1.5rem;border-radius:6px;font-size:0.85rem;transition:transform 0.3s;z-index:100}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.error{border-color:#502020;color:#e06060}
+#player-field{display:flex;gap:0.5rem;margin-bottom:2rem;align-items:center}
+#player-field input{background:#0c1520;border:1px solid #1e3650;color:#d8e4f0;padding:0.4rem 0.75rem;border-radius:4px;font-family:inherit;font-size:0.85rem;flex:1;max-width:260px}
+#player-field button{background:#1e3650;color:#6ac8e8;border:1px solid #2a5070;padding:0.4rem 0.8rem;border-radius:4px;font-family:inherit;font-size:0.85rem;cursor:pointer}
+</style>
+</head>
+<body>
+<a href="/" style="font-size:0.8rem;color:#4a7090;display:block;margin-bottom:1.5rem">← Back to GameGob</a>
+<h1>Q Shop</h1>
+<p class="sub">Spend Q Credits to unlock beings, cosmetics, and power-ups.</p>
+
+<div id="player-field">
+  <input type="text" id="pid" placeholder="Your Player ID" autocomplete="off">
+  <button onclick="loadPlayer()">Load</button>
+</div>
+
+<div class="balance-bar" id="balance-bar" style="display:none">
+  <div>
+    <div class="q-amt" id="balance-amt">0</div>
+    <div class="q-label">Q Credits</div>
+  </div>
+  <a class="buy-link" href="/credits">Buy Credits</a>
+</div>
+
+<div id="shop-root"></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'https://gamegob-api.johnmobley99.workers.dev';
+let playerId = localStorage.getItem('gg_player_id') || '';
+let balance = 0;
+let unlocks = new Set();
+
+const CATALOG = {
+  beings: [
+    { id:'being:claudine', name:'Claudine',   cat:'being',   cost:5, desc:'Sovereign AI companion. Warm, perceptive.' },
+    { id:'being:gigi',     name:'GiGi',       cat:'being',   cost:5, desc:'Creative strategist. Sees angles others miss.' },
+    { id:'being:ripley',   name:'Ripley',     cat:'being',   cost:5, desc:'Combat intelligence. No-nonsense problem solver.' },
+    { id:'being:wright',   name:'Wright',     cat:'being',   cost:5, desc:'Engineer mind. Builds the impossible quietly.' },
+    { id:'being:chen',     name:'Chen',       cat:'being',   cost:5, desc:'Systems thinker. Finds the leverage point.' },
+    { id:'being:nova',     name:'Nova',       cat:'being',   cost:5, desc:'Explorer. First to the edge of known space.' },
+  ],
+  cosmetics: [
+    { id:'theme:neon',     name:'Neon Theme',     cat:'theme',   cost:2, desc:'Electric cyan + magenta UI overlay.' },
+    { id:'theme:obsidian', name:'Obsidian Theme',  cat:'theme',   cost:2, desc:'Deep black with gold accents.' },
+    { id:'theme:crimson',  name:'Crimson Theme',   cat:'theme',   cost:2, desc:'Blood red tactical interface.' },
+    { id:'badge:founder',  name:'Founder Badge',   cat:'badge',   cost:3, desc:'Gold founder laurel beside your name.' },
+    { id:'badge:veteran',  name:'Veteran Badge',   cat:'badge',   cost:2, desc:'Silver star for early players.' },
+  ],
+  powerups: [
+    { id:'powerup:lives',  name:'Extra Lives ×3',  cat:'powerup', cost:1, desc:'3 extra lives for your next session.', consumable:true },
+    { id:'powerup:2x',     name:'2× Score',         cat:'powerup', cost:1, desc:'Double score multiplier for one session.', consumable:true },
+    { id:'powerup:shield', name:'Shield',           cat:'powerup', cost:1, desc:'One-hit protection for your next session.', consumable:true },
+  ],
+};
+
+function toast(msg, err=false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (err ? ' error' : '');
+  setTimeout(() => el.className = 'toast', 2800);
+}
+
+async function loadPlayer() {
+  const input = document.getElementById('pid').value.trim();
+  if (!input) return;
+  playerId = input;
+  localStorage.setItem('gg_player_id', playerId);
+  await refresh();
+}
+
+async function refresh() {
+  if (!playerId) return;
+  try {
+    const [balRes, ulRes] = await Promise.all([
+      fetch(`${API}/api/credits/${playerId}`),
+      fetch(`${API}/api/credits/${playerId}/unlocks`),
+    ]);
+    const balData = await balRes.json();
+    const ulData = await ulRes.json();
+    balance = balData.credits || 0;
+    unlocks = new Set((ulData.unlocks || []).map(u => u.item_id));
+    document.getElementById('balance-amt').textContent = balance;
+    document.getElementById('balance-bar').style.display = 'flex';
+    render();
+  } catch(e) {
+    toast('Failed to load player data', true);
+  }
+}
+
+async function buy(itemId, cost, name) {
+  if (!playerId) { toast('Enter your Player ID first', true); return; }
+  if (balance < cost) { toast(`Need ${cost}Q — you have ${balance}Q`, true); return; }
+  try {
+    const res = await fetch(`${API}/api/credits/spend`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ player_id: playerId, item_id: itemId }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      balance = data.new_balance;
+      unlocks.add(itemId);
+      document.getElementById('balance-amt').textContent = balance;
+      toast(`Unlocked: ${name}!`);
+      render();
+    } else {
+      toast(data.error === 'already_unlocked' ? 'Already unlocked!' : (data.error || 'Purchase failed'), true);
+    }
+  } catch(e) {
+    toast('Purchase failed', true);
+  }
+}
+
+function card(item) {
+  const owned = unlocks.has(item.id);
+  const canBuy = balance >= item.cost && !owned;
+  return `<div class="card${owned?' unlocked':''}">
+    <span class="badge-cat cat-${item.cat}">${item.cat}</span>
+    <div class="card-name">${item.name}</div>
+    <div class="card-desc">${item.desc}</div>
+    <div class="card-footer">
+      <div class="cost"><span class="q">${item.cost}</span>Q</div>
+      ${owned
+        ? '<button class="btn btn-owned">Owned</button>'
+        : playerId
+          ? `<button class="btn ${canBuy?'btn-buy':'btn-disabled'}" ${canBuy?`onclick="buy('${item.id}',${item.cost},'${item.name}')"`:'disabled'}>${canBuy?'Unlock':'Need '+item.cost+'Q'}</button>`
+          : `<button class="btn btn-disabled" disabled>Login first</button>`
+      }
+    </div>
+  </div>`;
+}
+
+function section(title, items) {
+  return `<div class="section"><h2>${title}</h2><div class="grid">${items.map(card).join('')}</div></div>`;
+}
+
+function render() {
+  document.getElementById('shop-root').innerHTML =
+    section('Beings', CATALOG.beings) +
+    section('Cosmetics', CATALOG.cosmetics) +
+    section('Power-Ups', CATALOG.powerups);
+}
+
+// Init
+if (playerId) {
+  document.getElementById('pid').value = playerId;
+  refresh();
+} else {
+  render();
+}
+</script>
+</body>
+</html>

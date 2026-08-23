@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Breakout">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Breakout</title>
+<style>
+  body { margin: 0; overflow: hidden; background-color: #0a0a0f; color: #f0b800; font-family: monospace; }
+  canvas { display: block; }
+  .menu, .game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div class="menu">
+  <h1>Breakout</h1>
+  <button onclick="startGame()">Play</button>
+</div>
+<div class="game-over" style="display:none;">
+  <h1>Game Over</h1>
+  <p>Your Score: <span id="score"></span></p>
+  <button onclick="restartGame()">Restart</button>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let keys = {};
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
+
+function gameLoop(timestamp) {
+  const deltaTime = timestamp - lastTime;
+  update(deltaTime / 1000);
+  draw();
+  lastTime = timestamp;
+  requestAnimationFrame(gameLoop);
+}
+
+function startGame() {
+  document.querySelector('.menu').style.display = 'none';
+  document.querySelector('.game-over').style.display = 'none';
+  init();
+  requestAnimationFrame(gameLoop);
+}
+
+function restartGame() {
+  document.querySelector('.game-over').style.display = 'none';
+  init();
+  requestAnimationFrame(gameLoop);
+}
+
+let lastTime = performance.now();
+let paddle = { x: canvas.width / 2, y: canvas.height - 30, width: 100, height: 10 };
+let ball = { x: canvas.width / 2, y: canvas.height - 50, radius: 10, speedX: 2, speedY: -2 };
+let bricks = [];
+let brickRowCount = 9;
+let brickColumnCount = 5;
+let brickWidth = 75;
+let brickHeight = 20;
+let brickPadding = 10;
+let brickOffsetTop = 30;
+let brickOffsetLeft = 30;
+
+function init() {
+  bricks = [];
+  for (let c = 0; c < brickColumnCount; c++) {
+    bricks[c] = [];
+    for (let r = 0; r < brickRowCount; r++) {
+      bricks[c][r] = { x: 0, y: 0, status: 1 };
+    }
+  }
+}
+
+function drawPaddle() {
+  ctx.beginPath();
+  ctx.rect(paddle.x, paddle.y, paddle.width, paddle.height);
+  ctx.fillStyle = '#f0b800';
+  ctx.fill();
+  ctx.closePath();
+}
+
+function drawBall() {
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+  ctx.fillStyle = '#f0b800';
+  ctx.fill();
+  ctx.closePath();
+}
+
+function drawBricks() {
+  for (let c = 0; c < brickColumnCount; c++) {
+    for (let r = 0; r < brickRowCount; r++) {
+      if (bricks[c][r].status == 1) {
+        let brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
+        let brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
+        bricks[c][r].x = brickX;
+        bricks[c][r].y = brickY;
+        ctx.beginPath();
+        ctx.rect(brickX, brickY, brickWidth, brickHeight);
+        ctx.fillStyle = '#00ff88';
+        ctx.fill();
+        ctx.closePath();
+      }
+    }
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawBricks();
+  drawBall();
+  drawPaddle();
+  collisionDetection();
+  if (ball.y + ball.speedY < 0) {
+    ball.speedY = -ball.speedY;
+  } else if (ball.y + ball.speedY > canvas.height - ball.radius) {
+    if (ball.x > paddle.x && ball.x < paddle.x + paddle.width) {
+      ball.speedY = -ball.speedY;
+    } else {
+      document.querySelector('.game-over').style.display = 'block';
+      document.querySelector('#score').innerText = score;
+      return;
+    }
+  }
+
+  if (ball.x + ball.speedX < 0 || ball.x + ball.speedX > canvas.width) {
+    ball.speedX = -ball.speedX;
+  }
+
+  if (keys['ArrowLeft'] && paddle.x > 0) {
+    paddle.x -= 5;
+  } else if (keys['ArrowRight'] && paddle.x < canvas.width - paddle.width) {
+    paddle.x += 5;
+  }
+
+  ball.x += ball.speedX;
+  ball.y += ball.speedY;
+}
+
+function collisionDetection() {
+  for (let c = 0; c < brickColumnCount; c++) {
+    for (let r = 0; r < brickRowCount; r++) {
+      let b = bricks[c][r];
+      if (b.status == 1) {
+        if (
+          ball.x > b.x &&
+          ball.x < b.x + brickWidth &&
+          ball.y > b.y &&
+          ball.y < b.y + brickHeight
+        ) {
+          ball.speedY = -ball.speedY;
+          b.status = 0;
+          score++;
+          document.getElementById('score').innerText = score;
+        }
+      }
+    }
+  }
+}
+
+let score = 0;
+
+startGame();
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

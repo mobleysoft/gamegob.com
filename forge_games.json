@@ -1,0 +1,206 @@
+[
+  {
+    "name": "Breakout",
+    "file": "forge_breakout.html",
+    "type": "archetype",
+    "tier": 1
+  },
+  {
+    "name": "Snake",
+    "file": "forge_snake.html",
+    "type": "archetype",
+    "tier": 1
+  },
+  {
+    "name": "Tic-Tac-Toe",
+    "file": "forge_tic_tac_toe.html",
+    "type": "archetype",
+    "tier": 1
+  },
+  {
+    "name": "Tetris",
+    "file": "forge_tetris.html",
+    "type": "archetype",
+    "tier": 2
+  },
+  {
+    "name": "Pac-Man",
+    "file": "forge_pac_man.html",
+    "type": "archetype",
+    "tier": 2
+  },
+  {
+    "name": "Idle / Clicker",
+    "file": "forge_idle.html",
+    "type": "archetype",
+    "tier": 2
+  },
+  {
+    "name": "Space Invaders",
+    "file": "forge_space_invaders.html",
+    "type": "archetype",
+    "tier": 2
+  },
+  {
+    "name": "Match-3 Puzzle",
+    "file": "forge_match_three.html",
+    "type": "archetype",
+    "tier": 3
+  },
+  {
+    "name": "Tower Defense",
+    "file": "forge_tower_defense.html",
+    "type": "archetype",
+    "tier": 3
+  },
+  {
+    "name": "Platformer",
+    "file": "forge_platformer.html",
+    "type": "archetype",
+    "tier": 3
+  },
+  {
+    "name": "Fighting Game",
+    "file": "forge_fighting.html",
+    "type": "archetype",
+    "tier": 3
+  },
+  {
+    "name": "Bullet Hell / Shmup",
+    "file": "forge_bullet_hell.html",
+    "type": "archetype",
+    "tier": 4
+  },
+  {
+    "name": "Auto-Battler",
+    "file": "forge_auto_battler.html",
+    "type": "archetype",
+    "tier": 4
+  },
+  {
+    "name": "Racing Game",
+    "file": "forge_racing.html",
+    "type": "archetype",
+    "tier": 4
+  },
+  {
+    "name": "Survival / Vampire Survivors",
+    "file": "forge_survival.html",
+    "type": "archetype",
+    "tier": 4
+  },
+  {
+    "name": "Card Game / Deckbuilder",
+    "file": "forge_card_game.html",
+    "type": "archetype",
+    "tier": 4
+  },
+  {
+    "name": "First-Person Shooter",
+    "file": "forge_fps.html",
+    "type": "archetype",
+    "tier": 5
+  },
+  {
+    "name": "Roguelike",
+    "file": "forge_roguelike.html",
+    "type": "archetype",
+    "tier": 5
+  },
+  {
+    "name": "MOBA / Arena",
+    "file": "forge_moba.html",
+    "type": "archetype",
+    "tier": 5
+  },
+  {
+    "name": "RPG",
+    "file": "forge_rpg.html",
+    "type": "archetype",
+    "tier": 5
+  },
+  {
+    "name": "BreakShaper",
+    "file": "forge_break_shaper.html",
+    "type": "remix",
+    "slogan": "Shape, Break, Conquer."
+  },
+  {
+    "name": "DominoChampions",
+    "file": "forge_domino_champions.html",
+    "type": "remix",
+    "slogan": "Chain, React, Dominate."
+  },
+  {
+    "name": "EndBird",
+    "file": "forge_end_bird.html",
+    "type": "remix",
+    "slogan": "Eat, Grow, Explode."
+  },
+  {
+    "name": "Ghost Eater",
+    "file": "forge_ghost_eater.html",
+    "type": "remix",
+    "slogan": "Capture, Upgrade, Conquer."
+  },
+  {
+    "name": "Hangman Heroes",
+    "file": "forge_hangman_heroes.html",
+    "type": "remix",
+    "slogan": "Guess, Craft, Conquer."
+  },
+  {
+    "name": "Hero's Journey",
+    "file": "forge_heros_journey.html",
+    "type": "remix",
+    "slogan": "Explore, Upgrade, Conquer."
+  },
+  {
+    "name": "HexCheckers",
+    "file": "forge_hex_checkers.html",
+    "type": "remix",
+    "slogan": "Strategize, Upgrade, Dominate."
+  },
+  {
+    "name": "Mineshafted",
+    "file": "forge_mineshafted.html",
+    "type": "remix",
+    "slogan": "Dig, Disarm, Discover."
+  },
+  {
+    "name": "PowerJumpRun",
+    "file": "forge_power_jump_run.html",
+    "type": "remix",
+    "slogan": "Run, Jump, Upgrade."
+  },
+  {
+    "name": "Rocket Apprentice",
+    "file": "forge_rocket_apprentice.html",
+    "type": "remix",
+    "slogan": "Navigate, Upgrade, Master."
+  },
+  {
+    "name": "RPS Wands",
+    "file": "forge_rps_wands.html",
+    "type": "remix",
+    "slogan": "Unleash Your Inner Magician."
+  },
+  {
+    "name": "Serpent's Coil",
+    "file": "forge_serpents_coil.html",
+    "type": "remix",
+    "slogan": "Slither, Grow, Evolve."
+  },
+  {
+    "name": "StarShield",
+    "file": "forge_star_shield.html",
+    "type": "remix",
+    "slogan": "Defend, Upgrade, Prevail."
+  },
+  {
+    "name": "Tic Tac Titans",
+    "file": "forge_tic_tac_titans.html",
+    "type": "remix",
+    "slogan": "Outsmart. Outplay. Outlast."
+  }
+]

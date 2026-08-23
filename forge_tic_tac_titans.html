@@ -1,0 +1,1726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Tic Tac Titans">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tic Tac Titans</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0f; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas { display: block; margin: 0 auto; }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+'use strict';
+
+// ============================================================
+// TIC TAC TITANS — Outsmart. Outplay. Outlast.
+// ============================================================
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// --- Audio Engine ---
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+const ensureAudio = () => { if (!audioCtx) audioCtx = new AudioCtx(); };
+
+const playSound = (freq, dur, type = 'square', vol = 0.15) => {
+  ensureAudio();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + dur);
+};
+
+const sfx = {
+  place: () => playSound(440, 0.1, 'square', 0.1),
+  steal: () => { playSound(220, 0.15, 'sawtooth', 0.12); playSound(330, 0.2, 'square', 0.08); },
+  block: () => playSound(150, 0.2, 'triangle', 0.1),
+  doublePlace: () => { playSound(523, 0.08, 'square', 0.1); setTimeout(() => playSound(659, 0.08, 'square', 0.1), 80); },
+  win: () => { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playSound(f, 0.3, 'square', 0.12), i * 120)); },
+  lose: () => { [400, 350, 300, 200].forEach((f, i) => setTimeout(() => playSound(f, 0.3, 'sawtooth', 0.1), i * 150)); },
+  draw: () => playSound(300, 0.4, 'triangle', 0.08),
+  cardDraw: () => playSound(800, 0.06, 'square', 0.08),
+  cardPlay: () => { playSound(600, 0.1, 'square', 0.1); playSound(900, 0.15, 'triangle', 0.06); },
+  levelUp: () => { [440, 554, 659, 880].forEach((f, i) => setTimeout(() => playSound(f, 0.2, 'square', 0.1), i * 100)); },
+  select: () => playSound(660, 0.05, 'square', 0.06),
+  titanPower: () => { playSound(200, 0.3, 'sawtooth', 0.08); playSound(400, 0.2, 'square', 0.06); },
+  menuClick: () => playSound(500, 0.05, 'square', 0.08),
+  unlock: () => { [600, 800, 1000, 1200].forEach((f, i) => setTimeout(() => playSound(f, 0.15, 'sine', 0.1), i * 80)); },
+};
+
+// --- Colors ---
+const C = {
+  bg: '#0a0a0f',
+  bg2: '#12121a',
+  bg3: '#1a1a2e',
+  gold: '#f0b800',
+  goldDim: '#a07800',
+  green: '#00ff88',
+  greenDim: '#008844',
+  red: '#ff4466',
+  redDim: '#882233',
+  blue: '#4488ff',
+  blueDim: '#2244aa',
+  purple: '#aa44ff',
+  purpleDim: '#6622aa',
+  cyan: '#00ddff',
+  white: '#eeeeff',
+  gray: '#666677',
+  darkGray: '#333344',
+};
+
+// --- Responsive Canvas ---
+let W, H, S;
+const resize = () => {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  S = Math.min(W, H);
+  canvas.width = W;
+  canvas.height = H;
+};
+window.addEventListener('resize', resize);
+resize();
+
+// --- Persistence ---
+const SAVE_KEY = 'tic_tac_titans_save_v2';
+const loadSave = () => {
+  try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || null; } catch { return null; }
+};
+const writeSave = (data) => {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch {}
+};
+
+// --- Default Save State ---
+const defaultSave = () => ({
+  titanXP: 0,
+  titanLevel: 1,
+  totalWins: 0,
+  totalGames: 0,
+  streak: 0,
+  bestStreak: 0,
+  gold: 0,
+  unlockedCards: ['strike', 'guard', 'swap'],
+  deck: ['strike', 'guard', 'swap'],
+  achievements: [],
+  cardLevels: {},
+  runsCompleted: 0,
+});
+
+let save = loadSave() || defaultSave();
+
+// --- Screen Shake ---
+let shakeX = 0, shakeY = 0, shakeMag = 0, shakeTimer = 0;
+const triggerShake = (mag, dur) => { shakeMag = mag; shakeTimer = dur; };
+const updateShake = (dt) => {
+  if (shakeTimer > 0) {
+    shakeTimer -= dt;
+    shakeX = (Math.random() - 0.5) * shakeMag * 2;
+    shakeY = (Math.random() - 0.5) * shakeMag * 2;
+    shakeMag *= 0.92;
+  } else { shakeX = 0; shakeY = 0; }
+};
+
+// --- Particles ---
+const particles = [];
+const spawnParticles = (x, y, color, count = 12, speed = 200) => {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = speed * (0.3 + Math.random() * 0.7);
+    particles.push({
+      x, y, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd,
+      life: 0.4 + Math.random() * 0.4, maxLife: 0.6,
+      size: 2 + Math.random() * 4, color, alpha: 1
+    });
+  }
+};
+const updateParticles = (dt) => {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vx *= 0.96; p.vy *= 0.96;
+    p.life -= dt;
+    p.alpha = Math.max(0, p.life / p.maxLife);
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+};
+const drawParticles = () => {
+  for (const p of particles) {
+    ctx.globalAlpha = p.alpha;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
+};
+
+// --- Flash Effect ---
+let flashAlpha = 0, flashColor = '#fff';
+const triggerFlash = (color = '#fff', a = 0.3) => { flashColor = color; flashAlpha = a; };
+const drawFlash = () => {
+  if (flashAlpha > 0) {
+    ctx.globalAlpha = flashAlpha;
+    ctx.fillStyle = flashColor;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+    flashAlpha *= 0.9;
+    if (flashAlpha < 0.01) flashAlpha = 0;
+  }
+};
+
+// --- Card Definitions ---
+const CARD_DEFS = {
+  strike: {
+    name: 'Titan Strike',
+    desc: 'Place your mark AND block one enemy cell',
+    color: C.red,
+    icon: '⚔️',
+    rarity: 'common',
+    effect: 'block_one',
+    cost: 0,
+  },
+  guard: {
+    name: 'Titan Guard',
+    desc: 'Place your mark. That cell cannot be stolen.',
+    color: C.blue,
+    icon: '🛡️',
+    rarity: 'common',
+    effect: 'protect',
+    cost: 0,
+  },
+  swap: {
+    name: 'Cell Swap',
+    desc: 'Steal an enemy cell and replace with yours',
+    color: C.purple,
+    icon: '🔄',
+    rarity: 'uncommon',
+    effect: 'steal',
+    cost: 0,
+  },
+  double: {
+    name: 'Twin Strike',
+    desc: 'Place TWO marks at once',
+    color: C.gold,
+    icon: '⚡',
+    rarity: 'rare',
+    effect: 'double_place',
+    cost: 0,
+  },
+  nuke: {
+    name: 'Titan Nuke',
+    desc: 'Clear ALL enemy marks from the board',
+    color: C.red,
+    icon: '💥',
+    rarity: 'legendary',
+    effect: 'nuke',
+    cost: 0,
+  },
+  expand: {
+    name: 'Grid Expand',
+    desc: 'Expand the board to 4x4 for this round',
+    color: C.cyan,
+    icon: '📐',
+    rarity: 'rare',
+    effect: 'expand',
+    cost: 0,
+  },
+  mirror: {
+    name: 'Mirror',
+    desc: 'Copy your last placed mark to the mirror cell',
+    color: C.green,
+    icon: '🪞',
+    rarity: 'uncommon',
+    effect: 'mirror',
+    cost: 0,
+  },
+  freeze: {
+    name: 'Frost Lock',
+    desc: 'Freeze a cell — nobody can place there for 2 turns',
+    color: C.cyan,
+    icon: '❄️',
+    rarity: 'uncommon',
+    effect: 'freeze',
+    cost: 0,
+  },
+  wildcard: {
+    name: 'Wild Card',
+    desc: 'Place a WILD mark that counts for both players',
+    color: C.gold,
+    icon: '🃏',
+    rarity: 'rare',
+    effect: 'wild',
+    cost: 0,
+  },
+  timewarp: {
+    name: 'Time Warp',
+    desc: 'Undo the AI\'s last move',
+    color: C.purple,
+    icon: '⏳',
+    rarity: 'rare',
+    effect: 'undo_ai',
+    cost: 0,
+  },
+};
+
+const ALL_CARDS = Object.keys(CARD_DEFS);
+const SHOP_POOL = ['swap', 'double', 'mirror', 'freeze', 'wildcard', 'timewarp', 'nuke', 'expand'];
+
+// --- Achievements ---
+const ACHIEVEMENTS = {
+  first_win: { name: 'First Blood', desc: 'Win your first game', icon: '🏆' },
+  streak_3: { name: 'On Fire', desc: 'Win 3 games in a row', icon: '🔥' },
+  streak_5: { name: 'Unstoppable', desc: 'Win 5 games in a row', icon: '💎' },
+  use_steal: { name: 'Thief', desc: 'Steal a cell from the AI', icon: '🦝' },
+  use_nuke: { name: 'Destroyer', desc: 'Nuke all enemy cells', icon: '☢️' },
+  win_10: { name: 'Veteran', desc: 'Win 10 games', icon: '⭐' },
+  level_5: { name: 'Ascended', desc: 'Reach Titan Level 5', icon: '👑' },
+  level_10: { name: 'Godlike', desc: 'Reach Titan Level 10', icon: '🌟' },
+  full_deck: { name: 'Collector', desc: 'Unlock all cards', icon: '📚' },
+  perfect_win: { name: 'Flawless', desc: 'Win without AI placing 3 marks', icon: '💫' },
+};
+
+const checkAchievement = (id) => {
+  if (!save.achievements.includes(id) && ACHIEVEMENTS[id]) {
+    save.achievements.push(id);
+    pendingAchievement = { ...ACHIEVEMENTS[id], timer: 3 };
+    sfx.unlock();
+    writeSave(save);
+  }
+};
+let pendingAchievement = null;
+
+// --- Game State ---
+const STATE = {
+  TITLE: 'title',
+  DECK_BUILD: 'deck_build',
+  SHOP: 'shop',
+  BATTLE: 'battle',
+  CARD_SELECT: 'card_select',
+  CELL_TARGET: 'cell_target',
+  AI_TURN: 'ai_turn',
+  ROUND_END: 'round_end',
+  GAME_OVER: 'game_over',
+  ACHIEVEMENTS: 'achievements',
+};
+
+let state = STATE.TITLE;
+let prevState = null;
+
+// Board
+let gridSize = 3;
+let board = []; // 0=empty, 1=player, 2=ai, 3=wild
+let blocked = []; // true=blocked cell
+let protected_ = []; // true=protected cell
+let frozen = []; // turns remaining frozen
+let lastAiMove = -1;
+let lastPlayerMove = -1;
+let playerTurn = true;
+let roundNum = 0;
+let runWins = 0;
+let runGold = 0;
+
+// Hand / Deck
+let drawPile = [];
+let discardPile = [];
+let hand = [];
+const HAND_SIZE = 3;
+let selectedCard = -1;
+let activeEffect = null;
+let secondPlacement = false; // for double place
+
+// AI difficulty scales with titan level
+const aiDifficulty = () => Math.min(0.95, 0.4 + save.titanLevel * 0.05);
+
+// Animation
+let animTimer = 0;
+let boardFlash = [];
+let winLine = null;
+let winLineAlpha = 0;
+
+// Hover / Touch
+let mouseX = 0, mouseY = 0;
+let hoverCell = -1;
+let hoveredCard = -1;
+let hoveredButton = -1;
+
+// Title anim
+let titleTimer = 0;
+let titleGlowPhase = 0;
+
+// Shop
+let shopCards = [];
+let shopPrices = [];
+
+// --- Utility ---
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+const resetBoard = () => {
+  gridSize = 3;
+  board = new Array(gridSize * gridSize).fill(0);
+  blocked = new Array(gridSize * gridSize).fill(false);
+  protected_ = new Array(gridSize * gridSize).fill(false);
+  frozen = new Array(gridSize * gridSize).fill(0);
+  boardFlash = new Array(gridSize * gridSize).fill(0);
+  lastAiMove = -1;
+  lastPlayerMove = -1;
+  winLine = null;
+  winLineAlpha = 0;
+  selectedCard = -1;
+  activeEffect = null;
+  secondPlacement = false;
+  playerTurn = true;
+};
+
+const expandBoard = () => {
+  const oldSize = gridSize;
+  const oldBoard = [...board];
+  gridSize = 4;
+  board = new Array(16).fill(0);
+  blocked = new Array(16).fill(false);
+  protected_ = new Array(16).fill(false);
+  frozen = new Array(16).fill(0);
+  boardFlash = new Array(16).fill(0);
+  // Copy old 3x3 into center-ish of 4x4
+  for (let r = 0; r < oldSize; r++) {
+    for (let c = 0; c < oldSize; c++) {
+      board[r * 4 + c] = oldBoard[r * 3 + c];
+    }
+  }
+};
+
+const buildDeck = () => {
+  drawPile = [...save.deck];
+  // Shuffle
+  for (let i = drawPile.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [drawPile[i], drawPile[j]] = [drawPile[j], drawPile[i]];
+  }
+  discardPile = [];
+  hand = [];
+};
+
+const drawCards = (n) => {
+  for (let i = 0; i < n; i++) {
+    if (drawPile.length === 0) {
+      if (discardPile.length === 0) break;
+      drawPile = [...discardPile];
+      discardPile = [];
+      for (let j = drawPile.length - 1; j > 0; j--) {
+        const k = Math.floor(Math.random() * (j + 1));
+        [drawPile[j], drawPile[k]] = [drawPile[k], drawPile[j]];
+      }
+    }
+    if (drawPile.length > 0) {
+      hand.push(drawPile.pop());
+      sfx.cardDraw();
+    }
+  }
+};
+
+const refillHand = () => {
+  const needed = HAND_SIZE - hand.length;
+  if (needed > 0) drawCards(needed);
+};
+
+// --- Win Check ---
+const checkWin = (b, size) => {
+  const lines = [];
+  // Rows
+  for (let r = 0; r < size; r++) {
+    const line = [];
+    for (let c = 0; c < size; c++) line.push(r * size + c);
+    lines.push(line);
+  }
+  // Cols
+  for (let c = 0; c < size; c++) {
+    const line = [];
+    for (let r = 0; r < size; r++) line.push(r * size + c);
+    lines.push(line);
+  }
+  // Diags
+  const d1 = [], d2 = [];
+  for (let i = 0; i < size; i++) { d1.push(i * size + i); d2.push(i * size + (size - 1 - i)); }
+  lines.push(d1, d2);
+
+  // For 4x4 also check 3-in-a-row windows
+  const checkSize = size >= 4 ? 3 : size;
+
+  for (const line of lines) {
+    if (line.length >= checkSize) {
+      for (let start = 0; start <= line.length - checkSize; start++) {
+        const window = line.slice(start, start + checkSize);
+        const vals = window.map(i => b[i]);
+        // Check player (1) — wilds (3) count for both
+        if (vals.every(v => v === 1 || v === 3)) return { winner: 1, cells: window };
+        if (vals.every(v => v === 2 || v === 3)) return { winner: 2, cells: window };
+      }
+    }
+  }
+
+  // Draw
+  if (b.every((v, i) => v !== 0 || blocked[i] || frozen[i] > 0)) return { winner: 0, cells: [] };
+
+  return null;
+};
+
+const countMarks = (player) => board.filter(v => v === player).length;
+
+// --- AI (Minimax with alpha-beta) ---
+const aiMove = () => {
+  const diff = aiDifficulty();
+  const empty = [];
+  for (let i = 0; i < board.length; i++) {
+    if (board[i] === 0 && !blocked[i] && frozen[i] <= 0) empty.push(i);
+  }
+  if (empty.length === 0) return -1;
+
+  // Random move chance based on difficulty
+  if (Math.random() > diff) {
+    return empty[Math.floor(Math.random() * empty.length)];
+  }
+
+  // Minimax
+  let bestScore = -Infinity;
+  let bestMove = empty[0];
+
+  const minimax = (b, depth, isMax, alpha, beta) => {
+    const result = checkWin(b, gridSize);
+    if (result) {
+      if (result.winner === 2) return 10 - depth;
+      if (result.winner === 1) return depth - 10;
+      return 0;
+    }
+    if (depth > 6) return 0;
+
+    const available = [];
+    for (let i = 0; i < b.length; i++) {
+      if (b[i] === 0 && !blocked[i] && frozen[i] <= 0) available.push(i);
+    }
+    if (available.length === 0) return 0;
+
+    if (isMax) {
+      let best = -Infinity;
+      for (const i of available) {
+        b[i] = 2;
+        const score = minimax(b, depth + 1, false, alpha, beta);
+        b[i] = 0;
+        best = Math.max(best, score);
+        alpha = Math.max(alpha, best);
+        if (beta <= alpha) break;
+      }
+      return best;
+    } else {
+      let best = Infinity;
+      for (const i of available) {
+        b[i] = 1;
+        const score = minimax(b, depth + 1, true, alpha, beta);
+        b[i] = 0;
+        best = Math.min(best, score);
+        beta = Math.min(beta, best);
+        if (beta <= alpha) break;
+      }
+      return best;
+    }
+  };
+
+  for (const i of empty) {
+    board[i] = 2;
+    const score = minimax(board, 0, false, -Infinity, Infinity);
+    board[i] = 0;
+    if (score > bestScore) { bestScore = score; bestMove = i; }
+  }
+
+  return bestMove;
+};
+
+// --- Board Layout ---
+const getBoardLayout = () => {
+  const bSize = S * 0.55;
+  const cellSize = bSize / gridSize;
+  const bx = W / 2 - bSize / 2;
+  const by = H * 0.22;
+  return { bx, by, bSize, cellSize };
+};
+
+const getCellAt = (mx, my) => {
+  const { bx, by, bSize, cellSize } = getBoardLayout();
+  const col = Math.floor((mx - bx) / cellSize);
+  const row = Math.floor((my - by) / cellSize);
+  if (col < 0 || col >= gridSize || row < 0 || row >= gridSize) return -1;
+  return row * gridSize + col;
+};
+
+// --- Card Layout ---
+const getCardLayout = () => {
+  const cardW = Math.min(S * 0.22, 130);
+  const cardH = cardW * 1.4;
+  const gap = cardW * 0.15;
+  const totalW = hand.length * cardW + (hand.length - 1) * gap;
+  const startX = W / 2 - totalW / 2;
+  const cardY = H - cardH - S * 0.06;
+  return { cardW, cardH, gap, startX, cardY };
+};
+
+const getCardAt = (mx, my) => {
+  if (hand.length === 0) return -1;
+  const { cardW, cardH, gap, startX, cardY } = getCardLayout();
+  for (let i = hand.length - 1; i >= 0; i--) {
+    const cx = startX + i * (cardW + gap);
+    const cy = selectedCard === i ? cardY - 20 : cardY;
+    if (mx >= cx && mx <= cx + cardW && my >= cy && my <= cy + cardH) return i;
+  }
+  return -1;
+};
+
+// --- Button Helpers ---
+let buttons = [];
+const addButton = (x, y, w, h, label, action, color = C.gold) => {
+  buttons.push({ x, y, w, h, label, action, color });
+};
+const getButtonAt = (mx, my) => {
+  for (let i = 0; i < buttons.length; i++) {
+    const b = buttons[i];
+    if (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h) return i;
+  }
+  return -1;
+};
+
+// --- Start New Run ---
+const startRun = () => {
+  roundNum = 0;
+  runWins = 0;
+  runGold = 0;
+  buildDeck();
+  startRound();
+};
+
+const startRound = () => {
+  roundNum++;
+  resetBoard();
+  refillHand();
+  state = STATE.BATTLE;
+  animTimer = 0;
+};
+
+// --- Apply Card Effect ---
+const applyCard = (cardId, cellIdx) => {
+  const def = CARD_DEFS[cardId];
+  if (!def) return false;
+
+  switch (def.effect) {
+    case 'block_one': {
+      // Place mark, then player picks a cell to block
+      if (board[cellIdx] !== 0 || blocked[cellIdx] || frozen[cellIdx] > 0) return false;
+      board[cellIdx] = 1;
+      lastPlayerMove = cellIdx;
+      boardFlash[cellIdx] = 1;
+      spawnParticles(0, 0, C.red, 8); // positioned later
+      sfx.place();
+      // Enter targeting mode for block
+      activeEffect = 'block_one';
+      state = STATE.CELL_TARGET;
+      return true;
+    }
+    case 'protect': {
+      if (board[cellIdx] !== 0 || blocked[cellIdx] || frozen[cellIdx] > 0) return false;
+      board[cellIdx] = 1;
+      protected_[cellIdx] = true;
+      lastPlayerMove = cellIdx;
+      boardFlash[cellIdx] = 1;
+      sfx.place();
+      sfx.block();
+      endPlayerTurn();
+      return true;
+    }
+    case 'steal': {
+      // Must target an AI cell
+      activeEffect = 'steal';
+      state = STATE.CELL_TARGET;
+      return true;
+    }
+    case 'double_place': {
+      if (board[cellIdx] !== 0 || blocked[cellIdx] || frozen[cellIdx] > 0) return false;
+      board[cellIdx] = 1;
+      lastPlayerMove = cellIdx;
+      boardFlash[cellIdx] = 1;
+      sfx.doublePlace();
+      activeEffect = 'double_second';
+      state = STATE.CELL_TARGET;
+      return true;
+    }
+    case 'nuke': {
+      let nuked = 0;
+      for (let i = 0; i < board.length; i++) {
+        if (board[i] === 2 && !protected_[i]) { board[i] = 0; boardFlash[i] = 1; nuked++; }
+      }
+      if (nuked > 0) {
+        triggerShake(8, 0.4);
+        triggerFlash(C.red, 0.4);
+        sfx.titanPower();
+        checkAchievement('use_nuke');
+      }
+      // Still need to place
+      activeEffect = 'place_after_nuke';
+      state = STATE.CELL_TARGET;
+      return true;
+    }
+    case 'expand': {
+      expandBoard();
+      triggerFlash(C.cyan, 0.3);
+      sfx.titanPower();
+      // Place mark
+      activeEffect = 'place_after_expand';
+      state = STATE.CELL_TARGET;
+      return true;
+    }
+    case 'mirror': {
+      if (board[cellIdx] !== 0 || blocked[cellIdx] || frozen[cellIdx] > 0) return false;
+      board[cellIdx] = 1;
+      lastPlayerMove = cellIdx;
+      boardFlash[cellIdx] = 1;
+      // Mirror: place at opposite cell
+      const row = Math.floor(cellIdx / gridSize);
+      const col = cellIdx % gridSize;
+      const mirrorIdx = (gridSize - 1 - row) * gridSize + (gridSize - 1 - col);
+      if (mirrorIdx !== cellIdx && board[mirrorIdx] === 0 && !blocked[mirrorIdx] && frozen[mirrorIdx] <= 0) {
+        board[mirrorIdx] = 1;
+        boardFlash[mirrorIdx] = 1;
+        sfx.doublePlace();
+      } else {
+        sfx.place();
+      }
+      endPlayerTurn();
+      return true;
+    }
+    case 'freeze': {
+      // Target any empty cell to freeze
+      activeEffect = 'freeze';
+      state = STATE.CELL_TARGET;
+      return true;
+    }
+    case 'wild': {
+      if (board[cellIdx] !== 0 || blocked[cellIdx] || frozen[cellIdx] > 0) return false;
+      board[cellIdx] = 3; // wild
+      lastPlayerMove = cellIdx;
+      boardFlash[cellIdx] = 1;
+      sfx.cardPlay();
+      endPlayerTurn();
+      return true;
+    }
+    case 'undo_ai': {
+      if (lastAiMove >= 0 && board[lastAiMove] === 2 && !protected_[lastAiMove]) {
+        board[lastAiMove] = 0;
+        boardFlash[lastAiMove] = 1;
+        sfx.titanPower();
+        triggerFlash(C.purple, 0.3);
+        lastAiMove = -1;
+      }
+      // Still need to place
+      activeEffect = 'place_normal';
+      state = STATE.CELL_TARGET;
+      return true;
+    }
+  }
+  return false;
+};
+
+// --- Handle Cell Target ---
+const handleCellTarget = (cellIdx) => {
+  if (cellIdx < 0) return;
+
+  switch (activeEffect) {
+    case 'block_one': {
+      if (board[cellIdx] === 0 && !blocked[cellIdx]) {
+        blocked[cellIdx] = true;
+        boardFlash[cellIdx] = 1;
+        sfx.block();
+        activeEffect = null;
+        endPlayerTurn();
+      }
+      break;
+    }
+    case 'steal': {
+      if (board[cellIdx] === 2 && !protected_[cellIdx]) {
+        board[cellIdx] = 1;
+        boardFlash[cellIdx] = 1;
+        triggerShake(5, 0.3);
+        sfx.steal();
+        checkAchievement('use_steal');
+        activeEffect = null;
+        endPlayerTurn();
+      }
+      break;
+    }
+    case 'double_second': {
+      if (board[cellIdx] === 0 && !blocked[cellIdx] && frozen[cellIdx] <= 0) {
+        board[cellIdx] = 1;
+        boardFlash[cellIdx] = 1;
+        sfx.place();
+        activeEffect = null;
+        endPlayerTurn();
+      }
+      break;
+    }
+    case 'place_after_nuke':
+    case 'place_after_expand':
+    case 'place_normal': {
+      if (board[cellIdx] === 0 && !blocked[cellIdx] && frozen[cellIdx] <= 0) {
+        board[cellIdx] = 1;
+        lastPlayerMove = cellIdx;
+        boardFlash[cellIdx] = 1;
+        sfx.place();
+        activeEffect = null;
+        endPlayerTurn();
+      }
+      break;
+    }
+    case 'freeze': {
+      if (!blocked[cellIdx] && frozen[cellIdx] <= 0 && board[cellIdx] === 0) {
+        frozen[cellIdx] = 3;
+        boardFlash[cellIdx] = 1;
+        sfx.block();
+        // Still need to place
+        activeEffect = 'place_normal';
+      }
+      break;
+    }
+  }
+};
+
+// --- End Player Turn ---
+const endPlayerTurn = () => {
+  // Decrement freeze counters
+  for (let i = 0; i < frozen.length; i++) {
+    if (frozen[i] > 0) frozen[i]--;
+  }
+
+  const result = checkWin(board, gridSize);
+  if (result) {
+    endRound(result);
+    return;
+  }
+
+  playerTurn = false;
+  state = STATE.AI_TURN;
+  animTimer = 0.6; // delay before AI moves
+};
+
+// --- AI Turn ---
+const doAiTurn = () => {
+  const move = aiMove();
+  if (move >= 0) {
+    board[move] = 2;
+    lastAiMove = move;
+    boardFlash[move] = 1;
+    sfx.place();
+    triggerShake(3, 0.2);
+  }
+
+  const result = checkWin(board, gridSize);
+  if (result) {
+    endRound(result);
+    return;
+  }
+
+  playerTurn = true;
+  refillHand();
+  state = STATE.BATTLE;
+};
+
+// --- End Round ---
+const endRound = (result) => {
+  winLine = result.cells.length > 0 ? result.cells : null;
+  winLineAlpha = 1;
+
+  if (result.winner === 1) {
+    // Player wins
+    runWins++;
+    save.totalWins++;
+    save.streak++;
+    if (save.streak > save.bestStreak) save.bestStreak = save.streak;
+    const xpGain = 20 + roundNum * 5;
+    save.titanXP += xpGain;
+    const goldGain = 10 + roundNum * 3 + (save.streak * 2);
+    save.gold += goldGain;
+    runGold += goldGain;
+
+    // Level up check
+    const xpNeeded = save.titanLevel * 50;
+    if (save.titanXP >= xpNeeded) {
+      save.titanXP -= xpNeeded;
+      save.titanLevel++;
+      sfx.levelUp();
+      triggerFlash(C.gold, 0.5);
+      if (save.titanLevel >= 5) checkAchievement('level_5');
+      if (save.titanLevel >= 10) checkAchievement('level_10');
+    }
+
+    checkAchievement('first_win');
+    if (save.streak >= 3) checkAchievement('streak_3');
+    if (save.streak >= 5) checkAchievement('streak_5');
+    if (save.totalWins >= 10) checkAchievement('win_10');
+    if (countMarks(2) < 3) checkAchievement('perfect_win');
+
+    sfx.win();
+    triggerShake(6, 0.4);
+    if (winLine) {
+      const { bx, by, cellSize } = getBoardLayout();
+      for (const ci of winLine) {
+        const row = Math.floor(ci / gridSize);
+        const col = ci % gridSize;
+        spawnParticles(bx + col * cellSize + cellSize / 2, by + row * cellSize + cellSize / 2, C.gold, 15, 250);
+      }
+    }
+  } else if (result.winner === 2) {
+    save.streak = 0;
+    sfx.lose();
+    triggerShake(10, 0.5);
+    triggerFlash(C.red, 0.4);
+  } else {
+    sfx.draw();
+  }
+
+  save.totalGames++;
+  writeSave(save);
+  state = STATE.ROUND_END;
+  animTimer = 0;
+};
+
+// --- Generate Shop ---
+const generateShop = () => {
+  const pool = SHOP_POOL.filter(c => !save.unlockedCards.includes(c));
+  shopCards = [];
+  shopPrices = [];
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  for (let i = 0; i < Math.min(3, shuffled.length); i++) {
+    shopCards.push(shuffled[i]);
+    const def = CARD_DEFS[shuffled[i]];
+    let price = 30;
+    if (def.rarity === 'uncommon') price = 50;
+    if (def.rarity === 'rare') price = 80;
+    if (def.rarity === 'legendary') price = 120;
+    shopPrices.push(price);
+  }
+  // Also offer upgrades for owned cards
+};
+
+// --- Drawing Helpers ---
+const drawText = (text, x, y, size, color = C.white, align = 'center', baseline = 'middle') => {
+  ctx.font = `bold ${size}px monospace`;
+  ctx.textAlign = align;
+  ctx.textBaseline = baseline;
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+};
+
+const drawTextWithShadow = (text, x, y, size, color = C.white, shadow = '#000') => {
+  ctx.font = `bold ${size}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = shadow;
+  ctx.fillText(text, x + 2, y + 2);
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+};
+
+const drawButton = (x, y, w, h, label, color = C.gold, hovered = false) => {
+  ctx.fillStyle = hovered ? color : (color === C.gold ? C.goldDim : C.darkGray);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  const r = 6;
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
+  ctx.fill();
+  ctx.stroke();
+  drawText(label, x + w / 2, y + h / 2, Math.min(h * 0.4, 18), hovered ? '#000' : C.white);
+};
+
+const drawX = (cx, cy, size, color = C.red, lw = 3) => {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.lineCap = 'round';
+  const s = size * 0.35;
+  ctx.beginPath();
+  ctx.moveTo(cx - s, cy - s); ctx.lineTo(cx + s, cy + s);
+  ctx.moveTo(cx + s, cy - s); ctx.lineTo(cx - s, cy + s);
+  ctx.stroke();
+};
+
+const drawO = (cx, cy, size, color = C.blue, lw = 3) => {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.beginPath();
+  ctx.arc(cx, cy, size * 0.3, 0, Math.PI * 2);
+  ctx.stroke();
+};
+
+const drawWild = (cx, cy, size) => {
+  const s = size * 0.3;
+  const t = Date.now() / 500;
+  ctx.strokeStyle = `hsl(${(t * 60) % 360}, 80%, 60%)`;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + t;
+    const px = cx + Math.cos(a) * s;
+    const py = cy + Math.sin(a) * s;
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.stroke();
+};
+
+// --- Draw Board ---
+const drawBoard = () => {
+  const { bx, by, bSize, cellSize } = getBoardLayout();
+
+  // Board background
+  ctx.fillStyle = C.bg2;
+  ctx.strokeStyle = C.darkGray;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(bx - 8, by - 8, bSize + 16, bSize + 16, 8);
+  ctx.fill();
+  ctx.stroke();
+
+  // Grid lines
+  ctx.strokeStyle = C.gray;
+  ctx.lineWidth = 2;
+  for (let i = 1; i < gridSize; i++) {
+    ctx.beginPath();
+    ctx.moveTo(bx + i * cellSize, by);
+    ctx.lineTo(bx + i * cellSize, by + bSize);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(bx, by + i * cellSize);
+    ctx.lineTo(bx + bSize, by + i * cellSize);
+    ctx.stroke();
+  }
+
+  // Cells
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
+      const idx = r * gridSize + c;
+      const cx = bx + c * cellSize + cellSize / 2;
+      const cy = by + r * cellSize + cellSize / 2;
+
+      // Cell flash
+      if (boardFlash[idx] > 0) {
+        ctx.globalAlpha = boardFlash[idx] * 0.4;
+        ctx.fillStyle = board[idx] === 1 ? C.green : board[idx] === 2 ? C.red : C.gold;
+        ctx.fillRect(bx + c * cellSize + 2, by + r * cellSize + 2, cellSize - 4, cellSize - 4);
+        ctx.globalAlpha = 1;
+      }
+
+      // Blocked
+      if (blocked[idx]) {
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = C.red;
+        ctx.fillRect(bx + c * cellSize + 2, by + r * cellSize + 2, cellSize - 4, cellSize - 4);
+        ctx.globalAlpha = 1;
+        drawText('✕', cx, cy, cellSize * 0.4, C.redDim);
+      }
+
+      // Frozen
+      if (frozen[idx] > 0) {
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = C.cyan;
+        ctx.fillRect(bx + c * cellSize + 2, by + r * cellSize + 2, cellSize - 4, cellSize - 4);
+        ctx.globalAlpha = 1;
+        drawText('❄', cx, cy - cellSize * 0.2, cellSize * 0.2, C.cyan);
+        drawText(String(frozen[idx]), cx, cy + cellSize * 0.2, cellSize * 0.15, C.cyan);
+      }
+
+      // Protected
+      if (protected_[idx] && board[idx] === 1) {
+        ctx.strokeStyle = C.blue;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(bx + c * cellSize + 4, by + r * cellSize + 4, cellSize - 8, cellSize - 8);
+        ctx.setLineDash([]);
+      }
+
+      // Hover highlight
+      if (hoverCell === idx && state === STATE.BATTLE && board[idx] === 0 && !blocked[idx] && frozen[idx] <= 0) {
+        ctx.globalAlpha = 0.15;
+        ctx.fillStyle = C.green;
+        ctx.fillRect(bx + c * cellSize + 2, by + r * cellSize + 2, cellSize - 4, cellSize - 4);
+        ctx.globalAlpha = 1;
+      }
+      if (hoverCell === idx && state === STATE.CELL_TARGET) {
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = C.gold;
+        ctx.fillRect(bx + c * cellSize + 2, by + r * cellSize + 2, cellSize - 4, cellSize - 4);
+        ctx.globalAlpha = 1;
+      }
+
+      // Marks
+      if (board[idx] === 1) drawX(cx, cy, cellSize, C.green, 4);
+      else if (board[idx] === 2) drawO(cx, cy, cellSize, C.red, 4);
+      else if (board[idx] === 3) drawWild(cx, cy, cellSize);
+    }
+  }
+
+  // Win line
+  if (winLine && winLine.length >= 2) {
+    const first = winLine[0];
+    const last = winLine[winLine.length - 1];
+    const r1 = Math.floor(first / gridSize), c1 = first % gridSize;
+    const r2 = Math.floor(last / gridSize), c2 = last % gridSize;
+    const x1 = bx + c1 * cellSize + cellSize / 2;
+    const y1 = by + r1 * cellSize + cellSize / 2;
+    const x2 = bx + c2 * cellSize + cellSize / 2;
+    const y2 = by + r2 * cellSize + cellSize / 2;
+    ctx.globalAlpha = winLineAlpha;
+    ctx.strokeStyle = C.gold;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+};
+
+// --- Draw Hand ---
+const drawHand = () => {
+  if (hand.length === 0) return;
+  const { cardW, cardH, gap, startX, cardY } = getCardLayout();
+
+  for (let i = 0; i < hand.length; i++) {
+    const def = CARD_DEFS[hand[i]];
+    if (!def) continue;
+    const cx = startX + i * (cardW + gap);
+    const cy = selectedCard === i ? cardY - 20 : (hoveredCard === i ? cardY - 10 : cardY);
+    const isSelected = selectedCard === i;
+
+    // Card shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.roundRect(cx + 3, cy + 3, cardW, cardH, 8);
+    ctx.fill();
+
+    // Card bg
+    ctx.fillStyle = isSelected ? def.color : C.bg3;
+    ctx.strokeStyle = isSelected ? C.white : def.color;
+    ctx.lineWidth = isSelected ? 3 : 2;
+    ctx.beginPath();
+    ctx.roundRect(cx, cy, cardW, cardH, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    // Rarity bar
+    const rarityColors = { common: C.gray, uncommon: C.green, rare: C.blue, legendary: C.gold };
+    ctx.fillStyle = rarityColors[def.rarity] || C.gray;
+    ctx.fillRect(cx + 8, cy + 6, cardW - 16, 3);
+
+    // Icon
+    drawText(def.icon, cx + cardW / 2, cy + cardH * 0.28, cardW * 0.35, C.white);
+
+    // Name
+    const nameSize = Math.min(cardW * 0.13, 12);
+    drawText(def.name, cx + cardW / 2, cy + cardH * 0.52, nameSize, C.white);
+
+    // Desc (wrapped)
+    const descSize = Math.min(cardW * 0.1, 9);
+    ctx.font = `${descSize}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = C.gray;
+    const words = def.desc.split(' ');
+    let lines = [''];
+    const maxW = cardW - 12;
+    for (const w of words) {
+      const test = lines[lines.length - 1] + (lines[lines.length - 1] ? ' ' : '') + w;
+      if (ctx.measureText(test).width > maxW) lines.push(w);
+      else lines[lines.length - 1] = test;
+    }
+    for (let l = 0; l < Math.min(lines.length, 3); l++) {
+      ctx.fillText(lines[l], cx + cardW / 2, cy + cardH * 0.65 + l * (descSize + 2));
+    }
+  }
+};
+
+// --- Draw HUD ---
+const drawHUD = () => {
+  const hudY = 10;
+  const hudH = S * 0.06;
+
+  // Titan Level
+  drawText(`⚔ LV.${save.titanLevel}`, S * 0.15, hudY + hudH / 2, Math.min(S * 0.035, 18), C.gold, 'center');
+
+  // XP bar
+  const xpNeeded = save.titanLevel * 50;
+  const xpFrac = save.titanXP / xpNeeded;
+  const barW = S * 0.25;
+  const barH = 8;
+  const barX = W / 2 - barW / 2;
+  const barY = hudY + 4;
+  ctx.fillStyle = C.darkGray;
+  ctx.fillRect(barX, barY, barW, barH);
+  ctx.fillStyle = C.gold;
+  ctx.fillRect(barX, barY, barW * xpFrac, barH);
+  ctx.strokeStyle = C.goldDim;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(barX, barY, barW, barH);
+  drawText(`${save.titanXP}/${xpNeeded} XP`, W / 2, barY + barH + 12, 10, C.gray);
+
+  // Gold
+  drawText(`💰 ${save.gold}`, W - S * 0.15, hudY + hudH / 2, Math.min(S * 0.03, 16), C.gold, 'center');
+
+  // Round / Streak
+  drawText(`Round ${roundNum}`, W / 2, hudY + hudH - 2, 12, C.gray);
+  if (save.streak > 0) {
+    drawText(`🔥 ${save.streak}`, W / 2 + S * 0.12, hudY + hudH - 2, 12, C.red);
+  }
+
+  // Turn indicator
+  const turnY = H * 0.18;
+  if (state === STATE.BATTLE) {
+    drawText('YOUR TURN — Pick a card, then a cell', W / 2, turnY, Math.min(S * 0.025, 14), C.green);
+  } else if (state === STATE.CELL_TARGET) {
+    let hint = 'Select a target cell';
+    if (activeEffect === 'block_one') hint = 'Pick an empty cell to BLOCK';
+    if (activeEffect === 'steal') hint = 'Pick an ENEMY cell to STEAL';
+    if (activeEffect === 'double_second') hint = 'Place your SECOND mark';
+    if (activeEffect === 'freeze') hint = 'Pick an empty cell to FREEZE';
+    if (activeEffect === 'place_normal' || activeEffect === 'place_after_nuke' || activeEffect === 'place_after_expand') hint = 'Place your mark';
+    drawText(hint, W / 2, turnY, Math.min(S * 0.025, 14), C.gold);
+  } else if (state === STATE.AI_TURN) {
+    drawText('AI is thinking...', W / 2, turnY, Math.min(S * 0.025, 14), C.red);
+  }
+
+  // Deck info
+  const deckY = H - S * 0.03;
+  drawText(`Draw: ${drawPile.length} | Discard: ${discardPile.length}`, W / 2, deckY, 10, C.gray);
+};
+
+// --- Draw Title Screen ---
+const drawTitle = () => {
+  titleGlowPhase += 0.02;
+
+  // Background glow
+  const grd = ctx.createRadialGradient(W / 2, H * 0.35, 0, W / 2, H * 0.35, S * 0.6);
+  grd.addColorStop(0, 'rgba(240,184,0, 0.65)');
+  grd.addColorStop(1, 'rgba(10,10,15,0)');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, W, H);
+
+  // Title
+  const titleSize = Math.min(S * 0.1, 60);
+  const glowStr = 0.5 + Math.sin(titleGlowPhase) * 0.5;
+  ctx.shadowColor = C.gold;
+  ctx.shadowBlur = 15 * glowStr;
+  drawTextWithShadow('TIC TAC', W / 2, H * 0.22, titleSize, C.gold);
+  drawTextWithShadow('TITANS', W / 2, H * 0.22 + titleSize * 1.1, titleSize * 1.2, C.gold);
+  ctx.shadowBlur = 0;
+
+  // Subtitle
+  drawText('Outsmart. Outplay. Outlast.', W / 2, H * 0.22 + titleSize * 2.5, Math.min(S * 0.03, 16), C.gray);
+
+  // Stats
+  const statY = H * 0.5;
+  const statSize = Math.min(S * 0.025, 14);
+  drawText(`⚔ Titan Level: ${save.titanLevel}`, W / 2, statY, statSize, C.gold);
+  drawText(`🏆 Wins: ${save.totalWins} | 🎮 Games: ${save.totalGames}`, W / 2, statY + statSize * 2, statSize, C.gray);
+  drawText(`🔥 Best Streak: ${save.bestStreak}`, W / 2, statY + statSize * 4, statSize, C.red);
+  drawText(`📦 Cards: ${save.unlockedCards.length}/${ALL_CARDS.length}`, W / 2, statY + statSize * 6, statSize, C.cyan);
+
+  if (save.unlockedCards.length >= ALL_CARDS.length) checkAchievement('full_deck');
+
+  // Buttons
+  buttons = [];
+  const btnW = Math.min(S * 0.5, 260);
+  const btnH = Math.min(S * 0.08, 50);
+  const btnX = W / 2 - btnW / 2;
+
+  addButton(btnX, H * 0.68, btnW, btnH, '⚔️ BATTLE', () => { startRun(); sfx.menuClick(); }, C.gold);
+  addButton(btnX, H * 0.68 + btnH + 12, btnW, btnH, '🃏 DECK', () => { state = STATE.DECK_BUILD; sfx.menuClick(); }, C.blue);
+  addButton(btnX, H * 0.68 + (btnH + 12) * 2, btnW, btnH, '🏆 ACHIEVEMENTS', () => { state = STATE.ACHIEVEMENTS; sfx.menuClick(); }, C.green);
+
+  for (let i = 0; i < buttons.length; i++) {
+    const b = buttons[i];
+    drawButton(b.x, b.y, b.w, b.h, b.label, b.color, hoveredButton === i);
+  }
+
+  // Tap hint
+  const hintAlpha = 0.4 + Math.sin(Date.now() / 400) * 0.3;
+  ctx.globalAlpha = hintAlpha;
+  drawText('Tap or Click to interact', W / 2, H * 0.95, 12, C.gray);
+  ctx.globalAlpha = 1;
+};
+
+// --- Draw Deck Builder ---
+const drawDeckBuilder = () => {
+  drawText('🃏 DECK BUILDER', W / 2, H * 0.06, Math.min(S * 0.05, 28), C.gold);
+  drawText(`Deck: ${save.deck.length} cards | Gold: ${save.gold}`, W / 2, H * 0.11, 13, C.gray);
+
+  const cardW = Math.min(S * 0.2, 110);
+  const cardH = cardW * 1.3;
+  const cols = Math.min(Math.floor((W - 40) / (cardW + 10)), 5);
+  const totalCards = save.unlockedCards;
+
+  for (let i = 0; i < totalCards.length; i++) {
+    const def = CARD_DEFS[totalCards[i]];
+    if (!def) continue;
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const cx = W / 2 - (cols * (cardW + 10)) / 2 + col * (cardW + 10) + 5;
+    const cy = H * 0.15 + row * (cardH + 10);
+    const inDeck = save.deck.includes(totalCards[i]);
+
+    ctx.fillStyle = inDeck ? C.bg3 : '#0a0a12';
+    ctx.strokeStyle = inDeck ? C.green : C.darkGray;
+    ctx.lineWidth = inDeck ? 3 : 1;
+    ctx.beginPath();
+    ctx.roundRect(cx, cy, cardW, cardH, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    drawText(def.icon, cx + cardW / 2, cy + cardH * 0.25, cardW * 0.3, C.white);
+    drawText(def.name, cx + cardW / 2, cy + cardH * 0.5, Math.min(cardW * 0.12, 11), C.white);
+
+    const rarityColors = { common: C.gray, uncommon: C.green, rare: C.blue, legendary: C.gold };
+    drawText(def.rarity.toUpperCase(), cx + cardW / 2, cy + cardH * 0.62, 8, rarityColors[def.rarity]);
+
+    if (inDeck) {
+      drawText('IN DECK ✓', cx + cardW / 2, cy + cardH * 0.78, 10, C.green);
+    } else {
+      drawText('TAP TO ADD', cx + cardW / 2, cy + cardH * 0.78, 9, C.gray);
+    }
+
+    // Store button region
+    addButton(cx, cy, cardW, cardH, '', () => {
+      const id = totalCards[i];
+      if (save.deck.includes(id)) {
+        if (save.deck.length > 3) {
+          save.deck = save.deck.filter(c => c !== id);
+          sfx.select();
+        }
+      } else {
+        save.deck.push(id);
+        sfx.cardPlay();
+      }
+      writeSave(save);
+    }, C.green);
+  }
+
+  // Back button
+  const backW = Math.min(S * 0.3, 160);
+  const backH = 40;
+  addButton(W / 2 - backW / 2, H - backH - 20, backW, backH, '← BACK', () => { state = STATE.TITLE; sfx.menuClick(); }, C.gray);
+
+  for (let i = 0; i < buttons.length; i++) {
+    const b = buttons[i];
+    if (b.label) drawButton(b.x, b.y, b.w, b.h, b.label, b.color, hoveredButton === i);
+  }
+};
+
+// --- Draw Achievements ---
+const drawAchievementsScreen = () => {
+  drawText('🏆 ACHIEVEMENTS', W / 2, H * 0.06, Math.min(S * 0.05, 28), C.gold);
+
+  const ids = Object.keys(ACHIEVEMENTS);
+  const rowH = Math.min(S * 0.08, 50);
+  const listW = Math.min(W * 0.8, 400);
+  const startY = H * 0.14;
+
+  for (let i = 0; i < ids.length; i++) {
+    const a = ACHIEVEMENTS[ids[i]];
+    const unlocked = save.achievements.includes(ids[i]);
+    const y = startY + i * (rowH + 6);
+
+    ctx.fillStyle = unlocked ? 'rgba(0,255,136, 0.65)' : 'rgba(50,50,70, 0.65)';
+    ctx.strokeStyle = unlocked ? C.green : C.darkGray;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(W / 2 - listW / 2, y, listW, rowH, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    const iconX = W / 2 - listW / 2 + 30;
+    drawText(unlocked ? a.icon : '🔒', iconX, y + rowH / 2, rowH * 0.4, unlocked ? C.white : C.gray);
+    drawText(a.name, iconX + 50, y + rowH * 0.35, 13, unlocked ? C.gold : C.gray, 'left');
+    drawText(a.desc, iconX + 50, y + rowH * 0.7, 10, unlocked ? C.green : C.darkGray, 'left');
+  }
+
+  buttons = [];
+  const backW = Math.min(S * 0.3, 160);
+  const backH = 40;
+  addButton(W / 2 - backW / 2, H - backH - 20, backW, backH, '← BACK', () => { state = STATE.TITLE; sfx.menuClick(); }, C.gray);
+
+  for (let i = 0; i < buttons.length; i++) {
+    const b = buttons[i];
+    drawButton(b.x, b.y, b.w, b.h, b.label, b.color, hoveredButton === i);
+  }
+};
+
+// --- Draw Round End ---
+const drawRoundEnd = () => {
+  drawBoard();
+
+  // Overlay
+  ctx.fillStyle = 'rgba(10,10,15,0.7)';
+  ctx.fillRect(0, 0, W, H);
+
+  const result = checkWin(board, gridSize);
+  const isWin = result && result.winner === 1;
+  const isDraw = result && result.winner === 0;
+
+  const titleY = H * 0.3;
+  if (isWin) {
+    drawTextWithShadow('VICTORY!', W / 2, titleY, Math.min(S * 0.08, 48), C.gold);
+    drawText(`+${20 + roundNum * 5} XP | +${10 + roundNum * 3 + save.streak * 2} Gold`, W / 2, titleY + 50, 16, C.green);
+    drawText(`🔥 Streak: ${save.streak}`, W / 2, titleY + 75, 14, C.red);
+  } else if (isDraw) {
+    drawTextWithShadow('DRAW', W / 2, titleY, Math.min(S * 0.08, 48), C.gray);
+    drawText('No XP gained', W / 2, titleY + 50, 16, C.gray);
+  } else {
+    drawTextWithShadow('DEFEATED', W / 2, titleY, Math.min(S * 0.08, 48), C.red);
+    drawText('Streak lost!', W / 2, titleY + 50, 16, C.red);
+  }
+
+  buttons = [];
+  const btnW = Math.min(S * 0.45, 220);
+  const btnH = 44;
+  const btnX = W / 2 - btnW / 2;
+
+  if (isWin) {
+    addButton(btnX, H * 0.58, btnW, btnH, '⚔️ NEXT ROUND', () => { startRound(); sfx.menuClick(); }, C.gold);
+    addButton(btnX, H * 0.58 + btnH + 12, btnW, btnH, '🛒 SHOP', () => { generateShop(); state = STATE.SHOP; sfx.menuClick(); }, C.green);
+  }
+  addButton(btnX, H * 0.82, btnW, btnH, '🏠 MENU', () => { save.runsCompleted++; writeSave(save); state = STATE.TITLE; sfx.menuClick(); }, C.gray);
+
+  for (let i = 0; i < buttons.length; i++) {
+    const b = buttons[i];
+    drawButton(b.x, b.y, b.w, b.h, b.label, b.color, hoveredButton === i);
+  }
+};
+
+// --- Draw Shop ---
+const drawShop = () => {
+  drawText('🛒 TITAN SHOP', W / 2, H * 0.06, Math.min(S * 0.05, 28), C.gold);
+  drawText(`💰 Gold: ${save.gold}`, W / 2, H * 0.12, 16, C.gold);
+
+  if (shopCards.length === 0) {
+    drawText('All cards unlocked!', W / 2, H * 0.4, 18, C.green);
+  }
+
+  const cardW = Math.min(S * 0.25, 140);
+  const cardH = cardW * 1.5;
+  const gap = cardW * 0.2;
+  const totalW = shopCards.length * cardW + (shopCards.length - 1) * gap;
+  const startX = W / 2 - totalW / 2;
+
+  buttons = [];
+
+  for (let i = 0; i < shopCards.length; i++) {
+    const def = CARD_DEFS[shopCards[i]];
+    if (!def) continue;
+    const cx = startX + i * (cardW + gap);
+    const cy = H * 0.2;
+    const price = shopPrices[i];
+    const canBuy = save.gold >= price;
+
+    ctx.fillStyle = C.bg3;
+    ctx.strokeStyle = canBuy ? def.color : C.darkGray;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(cx, cy, cardW, cardH, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    drawText(def.icon, cx + cardW / 2, cy + cardH * 0.2, cardW * 0.3, C.white);
+    drawText(def.name, cx + cardW / 2, cy + cardH * 0.4, 12, C.white);
+
+    const rarityColors = { common: C.gray, uncommon: C.green, rare: C.blue, legendary: C.gold };
+    drawText(def.rarity.toUpperCase(), cx + cardW / 2, cy + cardH * 0.5, 9, rarityColors[def.rarity]);
+
+    // Desc
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = C.gray;
+    const words = def.desc.split(' ');
+    let lines = [''];
+    for (const w of words) {
+      const test = lines[lines.length - 1] + (lines[lines.length - 1] ? ' ' : '') + w;
+      if (ctx.measureText(test).width > cardW - 12) lines.push(w);
+      else lines[lines.length - 1] = test;
+    }
+    for (let l = 0; l < Math.min(lines.length, 3); l++) {
+      ctx.fillText(lines[l], cx + cardW / 2, cy + cardH * 0.6 + l * 12);
+    }
+
+    // Price
+    drawText(`💰 ${price}`, cx + cardW / 2, cy + cardH * 0.85, 14, canBuy ? C.gold : C.redDim);
+
+    addButton(cx, cy, cardW, cardH, '', () => {
+      if (save.gold >= price && !save.unlockedCards.includes(shopCards[i])) {
+        save.gold -= price;
+        save.unlockedCards.push(shopCards[i]);
+        save.deck.push(shopCards[i]);
+        writeSave(save);
+        sfx.unlock();
+        triggerFlash(C.gold, 0.3);
+        shopCards.splice(i, 1);
+        shopPrices.splice(i, 1);
+      }
+    }, C.gold);
+  }
+
+  const backW = Math.min(S * 0.3, 160);
+  const backH = 40;
+  addButton(W / 2 - backW / 2, H - backH - 30, backW, backH, '← CONTINUE', () => { startRound(); sfx.menuClick(); }, C.gold);
+
+  for (let i = 0; i < buttons.length; i++) {
+    const b = buttons[i];
+    if (b.label) drawButton(b.x, b.y, b.w, b.h, b.label, b.color, hoveredButton === i);
+  }
+};
+
+// --- Draw Achievement Popup ---
+const drawAchievementPopup = () => {
+  if (!pendingAchievement) return;
+  const a = pendingAchievement;
+  const popW = Math.min(S * 0.6, 300);
+  const popH = 60;
+  const popX = W / 2 - popW / 2;
+  const popY = H * 0.08;
+  const alpha = Math.min(a.timer, 1);
+
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = 'rgba(0,255,136, 0.65)';
+  ctx.strokeStyle = C.green;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(popX, popY, popW, popH, 8);
+  ctx.fill();
+  ctx.stroke();
+
+  drawText(`${a.icon} ${a.name}`, W / 2, popY + 22, 16, C.gold);
+  drawText(a.desc, W / 2, popY + 42, 11, C.green);
+  ctx.globalAlpha = 1;
+};
+
+// --- Input Handling ---
+const handleClick = (mx, my) => {
+  ensureAudio();
+
+  if (state === STATE.TITLE || state === STATE.DECK_BUILD || state === STATE.ROUND_END || state === STATE.SHOP || state === STATE.ACHIEVEMENTS) {
+    const bi = getButtonAt(mx, my);
+    if (bi >= 0 && buttons[bi].action) {
+      buttons[bi].action();
+      return;
+    }
+  }
+
+  if (state === STATE.BATTLE && playerTurn) {
+    // First check card selection
+    const ci = getCardAt(mx, my);
+    if (ci >= 0) {
+      if (selectedCard === ci) {
+        selectedCard = -1; // deselect
+      } else {
+        selectedCard = ci;
+        sfx.select();
+      }
+      return;
+    }
+
+    // Then check cell click
+    const cell = getCellAt(mx, my);
+    if (cell >= 0 && selectedCard >= 0) {
+      const cardId = hand[selectedCard];
+      const def = CARD_DEFS[cardId];
+
+      // Some cards need a cell click, others activate immediately
+      if (def.effect === 'steal' || def.effect === 'nuke' || def.effect === 'expand' || def.effect === 'undo_ai' || def.effect === 'freeze') {
+        // These effects don't require clicking a cell first (or handle their own)
+        const played = applyCard(cardId, cell);
+        if (played) {
+          const removedCard = hand.splice(selectedCard, 1)[0];
+          discardPile.push(removedCard);
+          selectedCard = -1;
+        }
+      } else {
+        // Normal cell placement cards
+        if (board[cell] === 0 && !blocked[cell] && frozen[cell] <= 0) {
+          const played = applyCard(cardId, cell);
+          if (played) {
+            const removedCard = hand.splice(selectedCard, 1)[0];
+            discardPile.push(removedCard);
+            selectedCard = -1;
+          }
+        }
+      }
+      return;
+    }
+  }
+
+  if (state === STATE.CELL_TARGET) {
+    const cell = getCellAt(mx, my);
+    handleCellTarget(cell);
+  }
+};
+
+const handleMove = (mx, my) => {
+  mouseX = mx;
+  mouseY = my;
+  hoverCell = getCellAt(mx, my);
+  hoveredCard = getCardAt(mx, my);
+  hoveredButton = getButtonAt(mx, my);
+};
+
+// Mouse events
+canvas.addEventListener('mousedown', (e) => { handleClick(e.clientX, e.clientY); });
+canvas.addEventListener('mousemove', (e) => { handleMove(e.clientX, e.clientY); });
+
+// Touch events
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  handleMove(t.clientX, t.clientY);
+  handleClick(t.clientX, t.clientY);
+}, { passive: false });
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  handleMove(t.clientX, t.clientY);
+}, { passive: false });
+
+// Keyboard
+document.addEventListener('keydown', (e) => {
+  if (state === STATE.TITLE) {
+    if (e.key === 'Enter' || e.key === ' ') { startRun(); ensureAudio(); sfx.menuClick(); }
+  }
+  if (state === STATE.BATTLE) {
+    if (e.key >= '1' && e.key <= '9' && hand.length > 0) {
+      const idx = parseInt(e.key) - 1;
+      if (idx < hand.length) {
+        selectedCard = selectedCard === idx ? -1 : idx;
+        sfx.select();
+      }
+    }
+  }
+});
+
+// --- Main Game Loop ---
+let lastTime = 0;
+
+const gameLoop = (time) => {
+  const dt = Math.min((time - lastTime) / 1000, 0.05);
+  lastTime = time;
+
+  // Update
+  titleTimer += dt;
+  updateShake(dt);
+  updateParticles(dt);
+
+  // Board flash decay
+  for (let i = 0; i < boardFlash.length; i++) {
+    if (boardFlash[i] > 0) boardFlash[i] = Math.max(0, boardFlash[i] - dt * 3);
+  }
+
+  // Win line pulse
+  if (winLine) winLineAlpha = 0.5 + Math.sin(Date.now() / 200) * 0.5;
+
+  // AI turn delay
+  if (state === STATE.AI_TURN) {
+    animTimer -= dt;
+    if (animTimer <= 0) doAiTurn();
+  }
+
+  // Achievement popup timer
+  if (pendingAchievement) {
+    pendingAchievement.timer -= dt;
+    if (pendingAchievement.timer <= 0) pendingAchievement = null;
+  }
+
+  // --- Draw ---
+  ctx.save();
+  ctx.translate(shakeX, shakeY);
+
+  ctx.fillStyle = C.bg;
+  ctx.fillRect(-10, -10, W + 20, H + 20);
+
+  // Subtle grid bg
+  ctx.strokeStyle = 'rgba(255,255,255, 0.65)';
+  ctx.lineWidth = 1;
+  const gridSpacing = 40;
+  for (let x = 0; x < W; x += gridSpacing) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += gridSpacing) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  buttons = [];
+
+  switch (state) {
+    case STATE.TITLE:
+      drawTitle();
+      break;
+    case STATE.DECK_BUILD:
+      drawDeckBuilder();
+      break;
+    case STATE.ACHIEVEMENTS:
+      drawAchievementsScreen();
+      break;
+    case STATE.BATTLE:
+    case STATE.CELL_TARGET:
+    case STATE.AI_TURN:
+      drawBoard();
+      drawHand();
+      drawHUD();
+      break;
+    case STATE.ROUND_END:
+      drawRoundEnd();
+      break;
+    case STATE.SHOP:
+      drawShop();
+      break;
+  }
+
+  drawParticles();
+  drawFlash();
+  drawAchievementPopup();
+
+  ctx.restore();
+
+  requestAnimationFrame(gameLoop);
+};
+
+requestAnimationFrame(gameLoop);
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

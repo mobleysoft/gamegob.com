@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Tic-Tac-Toe — GameGob">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob/forge_tic_tac_toe.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tic-Tac-Toe — GameGob</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas { display: block; margin: 0 auto; }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+'use strict';
+
+// ─── Canvas Setup ───
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+
+const resize = () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+};
+window.addEventListener('resize', resize);
+resize();
+
+// ─── Colors ───
+const COL = {
+  bg: '#0a0a0f',
+  gold: '#f0b800',
+  green: '#00ff88',
+  red: '#ff4466',
+  white: '#e0e0e8',
+  dim: '#333344',
+  gridLine: '#1a1a2e',
+  cellHover: 'rgba(240,184,0, 0.65)',
+  xColor: '#f0b800',
+  oColor: '#00ff88',
+  winLine: '#ff4466',
+  drawColor: '#8888aa',
+};
+
+// ─── Audio ───
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+const ensureAudio = () => {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+};
+
+const playTone = (freq, dur, type = 'square', vol = 0.12) => {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + dur);
+};
+
+const sfx = {
+  place: () => { playTone(520, 0.08, 'square', 0.1); playTone(780, 0.06, 'sine', 0.08); },
+  aiPlace: () => { playTone(330, 0.1, 'triangle', 0.08); playTone(440, 0.07, 'sine', 0.06); },
+  win: () => {
+    [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.2, 'sine', 0.12), i * 100));
+  },
+  lose: () => {
+    [400, 350, 300, 200].forEach((f, i) => setTimeout(() => playTone(f, 0.25, 'sawtooth', 0.08), i * 120));
+  },
+  draw: () => {
+    playTone(400, 0.15, 'triangle', 0.08);
+    setTimeout(() => playTone(400, 0.15, 'triangle', 0.08), 150);
+  },
+  hover: () => playTone(900, 0.03, 'sine', 0.04),
+  menuSelect: () => { playTone(600, 0.06, 'square', 0.08); playTone(900, 0.08, 'sine', 0.06); },
+  invalid: () => playTone(200, 0.12, 'sawtooth', 0.06),
+};
+
+// ─── Particles ───
+class Particle {
+  constructor(x, y, color, vx, vy, life, size) {
+    this.x = x; this.y = y; this.color = color;
+    this.vx = vx; this.vy = vy;
+    this.life = life; this.maxLife = life;
+    this.size = size;
+  }
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.life -= dt;
+    this.vx *= 0.97;
+    this.vy *= 0.97;
+  }
+  draw(ctx) {
+    const alpha = Math.max(0, this.life / this.maxLife);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x - this.size / 2, this.y - this.size / 2, this.size * alpha + 1, this.size * alpha + 1);
+    ctx.globalAlpha = 1;
+  }
+  get dead() { return this.life <= 0; }
+}
+
+let particles = [];
+
+const spawnParticles = (x, y, color, count = 12, speed = 150, life = 0.6, size = 4) => {
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
+    const spd = speed * (0.5 + Math.random() * 0.8);
+    particles.push(new Particle(x, y, color, Math.cos(angle) * spd, Math.sin(angle) * spd, life * (0.5 + Math.random()), size * (0.5 + Math.random())));
+  }
+};
+
+const spawnLineParticles = (x1, y1, x2, y2, color, count = 20) => {
+  for (let i = 0; i < count; i++) {
+    const t = Math.random();
+    const x = x1 + (x2 - x1) * t;
+    const y = y1 + (y2 - y1) * t;
+    const angle = Math.random() * Math.PI * 2;
+    const spd = 40 + Math.random() * 80;
+    particles.push(new Particle(x, y, color, Math.cos(angle) * spd, Math.sin(angle) * spd, 0.8 + Math.random() * 0.5, 2 + Math.random() * 3));
+  }
+};
+
+// ─── Screen Shake ───
+let shakeAmount = 0;
+let shakeDecay = 0;
+const triggerShake = (amount = 6, decay = 8) => { shakeAmount = amount; shakeDecay = decay; };
+
+// ─── Game State ───
+const STATE = { TITLE: 0, DIFFICULTY: 1, PLAYING: 2, AI_THINKING: 3, GAME_OVER: 4 };
+const CELL = { EMPTY: 0, X: 1, O: 2 };
+const DIFFICULTY = { EASY: 0, MEDIUM: 1, IMPOSSIBLE: 2 };
+const RESULT = { NONE: 0, X_WIN: 1, O_WIN: 2, DRAW: 3 };
+
+let state = STATE.TITLE;
+let board = Array(9).fill(CELL.EMPTY);
+let currentPlayer = CELL.X; // Player is X
+let difficulty = DIFFICULTY.IMPOSSIBLE;
+let result = RESULT.NONE;
+let winLine = null; // {cells: [i,j,k]}
+let aiThinkTimer = 0;
+let hoverCell = -1;
+let scores = { wins: 0, losses: 0, draws: 0 };
+let animTimer = 0;
+let moveHistory = []; // for undo visual
+let lastMoveCell = -1;
+let cellAnimations = {}; // cellIndex -> {timer, type}
+let winLineAnim = 0;
+let gameOverTimer = 0;
+let titlePulse = 0;
+let difficultyLabels = ['Easy', 'Medium', 'Impossible'];
+let selectedDifficulty = 1;
+
+// High scores
+const loadScores = () => {
+  try {
+    const s = localStorage.getItem('gamegob_ttt_scores');
+    if (s) scores = JSON.parse(s);
+  } catch(e) {}
+};
+const saveScores = () => {
+  try { localStorage.setItem('gamegob_ttt_scores', JSON.stringify(scores)); } catch(e) {}
+};
+loadScores();
+
+// ─── Win Detection ───
+const WIN_LINES = [
+  [0,1,2],[3,4,5],[6,7,8], // rows
+  [0,3,6],[1,4,7],[2,5,8], // cols
+  [0,4,8],[2,4,6]          // diags
+];
+
+const checkWin = (b, player) => {
+  for (const line of WIN_LINES) {
+    if (line.every(i => b[i] === player)) return line;
+  }
+  return null;
+};
+
+const checkDraw = (b) => b.every(c => c !== CELL.EMPTY);
+
+const getResult = (b) => {
+  if (checkWin(b, CELL.X)) return RESULT.X_WIN;
+  if (checkWin(b, CELL.O)) return RESULT.O_WIN;
+  if (checkDraw(b)) return RESULT.DRAW;
+  return RESULT.NONE;
+};
+
+// ─── AI (Minimax) ───
+const minimax = (b, isMaximizing, depth, alpha, beta) => {
+  const xWin = checkWin(b, CELL.X);
+  const oWin = checkWin(b, CELL.O);
+  if (xWin) return -10 + depth; // X wins is bad for O (AI)
+  if (oWin) return 10 - depth;  // O wins is good for AI
+  if (checkDraw(b)) return 0;
+
+  if (isMaximizing) {
+    let best = -Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (b[i] === CELL.EMPTY) {
+        b[i] = CELL.O;
+        const score = minimax(b, false, depth + 1, alpha, beta);
+        b[i] = CELL.EMPTY;
+        best = Math.max(best, score);
+        alpha = Math.max(alpha, score);
+        if (beta <= alpha) break;
+      }
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (b[i] === CELL.EMPTY) {
+        b[i] = CELL.X;
+        const score = minimax(b, true, depth + 1, alpha, beta);
+        b[i] = CELL.EMPTY;
+        best = Math.min(best, score);
+        beta = Math.min(beta, score);
+        if (beta <= alpha) break;
+      }
+    }
+    return best;
+  }
+};
+
+const getBestMove = (b) => {
+  let bestScore = -Infinity;
+  let bestMoves = [];
+  for (let i = 0; i < 9; i++) {
+    if (b[i] === CELL.EMPTY) {
+      b[i] = CELL.O;
+      const score = minimax(b, false, 0, -Infinity, Infinity);
+      b[i] = CELL.EMPTY;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMoves = [i];
+      } else if (score === bestScore) {
+        bestMoves.push(i);
+      }
+    }
+  }
+  return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+};
+
+const getRandomMove = (b) => {
+  const empty = [];
+  for (let i = 0; i < 9; i++) if (b[i] === CELL.EMPTY) empty.push(i);
+  return empty[Math.floor(Math.random() * empty.length)];
+};
+
+const getAIMove = (b, diff) => {
+  if (diff === DIFFICULTY.IMPOSSIBLE) return getBestMove(b);
+  if (diff === DIFFICULTY.EASY) {
+    // 30% chance of best move, 70% random
+    return Math.random() < 0.3 ? getBestMove(b) : getRandomMove(b);
+  }
+  // MEDIUM: 70% best, 30% random
+  return Math.random() < 0.7 ? getBestMove(b) : getRandomMove(b);
+};
+
+// ─── Grid Layout ───
+const getGridLayout = () => {
+  const w = canvas.width;
+  const h = canvas.height;
+  const gridSize = Math.min(w, h) * 0.65;
+  const cellSize = gridSize / 3;
+  const offsetX = (w - gridSize) / 2;
+  const offsetY = (h - gridSize) / 2 + 20;
+  return { gridSize, cellSize, offsetX, offsetY };
+};
+
+const getCellFromPos = (px, py) => {
+  const { cellSize, offsetX, offsetY, gridSize } = getGridLayout();
+  const lx = px - offsetX;
+  const ly = py - offsetY;
+  if (lx < 0 || ly < 0 || lx >= gridSize || ly >= gridSize) return -1;
+  const col = Math.floor(lx / cellSize);
+  const row = Math.floor(ly / cellSize);
+  if (col < 0 || col > 2 || row < 0 || row > 2) return -1;
+  return row * 3 + col;
+};
+
+const getCellCenter = (cellIndex) => {
+  const { cellSize, offsetX, offsetY } = getGridLayout();
+  const col = cellIndex % 3;
+  const row = Math.floor(cellIndex / 3);
+  return {
+    x: offsetX + col * cellSize + cellSize / 2,
+    y: offsetY + row * cellSize + cellSize / 2
+  };
+};
+
+// ─── Game Logic ───
+const resetBoard = () => {
+  board = Array(9).fill(CELL.EMPTY);
+  currentPlayer = CELL.X;
+  result = RESULT.NONE;
+  winLine = null;
+  moveHistory = [];
+  lastMoveCell = -1;
+  cellAnimations = {};
+  winLineAnim = 0;
+  gameOverTimer = 0;
+  hoverCell = -1;
+};
+
+const makeMove = (cellIndex, player) => {
+  if (board[cellIndex] !== CELL.EMPTY) return false;
+  board[cellIndex] = player;
+  moveHistory.push(cellIndex);
+  lastMoveCell = cellIndex;
+  cellAnimations[cellIndex] = { timer: 0, type: player === CELL.X ? 'x' : 'o' };
+
+  const center = getCellCenter(cellIndex);
+  spawnParticles(center.x, center.y, player === CELL.X ? COL.xColor : COL.oColor, 8, 100, 0.4, 3);
+
+  if (player === CELL.X) sfx.place();
+  else sfx.aiPlace();
+
+  // Check result
+  const wl = checkWin(board, player);
+  if (wl) {
+    winLine = wl;
+    result = player === CELL.X ? RESULT.X_WIN : RESULT.O_WIN;
+    triggerShake(8, 6);
+
+    // Spawn win line particles
+    const c0 = getCellCenter(wl[0]);
+    const c2 = getCellCenter(wl[2]);
+    spawnLineParticles(c0.x, c0.y, c2.x, c2.y, COL.winLine, 30);
+
+    if (result === RESULT.X_WIN) { scores.wins++; sfx.win(); }
+    else { scores.losses++; sfx.lose(); }
+    saveScores();
+    state = STATE.GAME_OVER;
+    gameOverTimer = 0;
+    return true;
+  }
+
+  if (checkDraw(board)) {
+    result = RESULT.DRAW;
+    scores.draws++;
+    saveScores();
+    sfx.draw();
+    state = STATE.GAME_OVER;
+    gameOverTimer = 0;
+    return true;
+  }
+
+  currentPlayer = player === CELL.X ? CELL.O : CELL.X;
+  return true;
+};
+
+const startAITurn = () => {
+  state = STATE.AI_THINKING;
+  aiThinkTimer = 0.3 + Math.random() * 0.4; // Simulate thinking
+};
+
+// ─── Drawing Helpers ───
+const drawRoundedRect = (x, y, w, h, r) => {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+};
+
+const drawX = (cx, cy, size, progress = 1, lineWidth = 4, color = COL.xColor) => {
+  const s = size * 0.35;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+
+  if (progress <= 0.5) {
+    const p = progress * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - s, cy - s);
+    ctx.lineTo(cx - s + s * 2 * p, cy - s + s * 2 * p);
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(cx - s, cy - s);
+    ctx.lineTo(cx + s, cy + s);
+    ctx.stroke();
+
+    const p = (progress - 0.5) * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + s, cy - s);
+    ctx.lineTo(cx + s - s * 2 * p, cy - s + s * 2 * p);
+    ctx.stroke();
+  }
+};
+
+const drawO = (cx, cy, size, progress = 1, lineWidth = 4, color = COL.oColor) => {
+  const r = size * 0.32;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+  ctx.stroke();
+};
+
+// ─── Button System ───
+let buttons = [];
+
+const addButton = (id, x, y, w, h, label, color = COL.gold) => {
+  buttons.push({ id, x, y, w, h, label, color, hover: false });
+};
+
+const drawButton = (btn, fontSize = 20) => {
+  const glow = btn.hover ? 0.15 : 0;
+  ctx.save();
+
+  // Shadow / glow
+  if (btn.hover) {
+    ctx.shadowColor = btn.color;
+    ctx.shadowBlur = 15;
+  }
+
+  drawRoundedRect(btn.x, btn.y, btn.w, btn.h, 8);
+  ctx.fillStyle = btn.hover ? btn.color + '33' : '#111122';
+  ctx.fill();
+  ctx.strokeStyle = btn.color;
+  ctx.lineWidth = btn.hover ? 2.5 : 1.5;
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = btn.color;
+  ctx.font = `bold ${fontSize}px 'Courier New', monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(btn.label, btn.x + btn.w / 2, btn.y + btn.h / 2);
+
+  ctx.restore();
+};
+
+const hitTestButton = (px, py) => {
+  for (const btn of buttons) {
+    if (px >= btn.x && px <= btn.x + btn.w && py >= btn.y && py <= btn.y + btn.h) return btn;
+  }
+  return null;
+};
+
+// ─── Screens ───
+const drawTitle = (dt) => {
+  titlePulse += dt * 2;
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // Background grid decoration
+  const { cellSize, offsetX, offsetY, gridSize } = getGridLayout();
+  ctx.strokeStyle = COL.gridLine;
+  ctx.lineWidth = 2;
+  for (let i = 1; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(offsetX + i * cellSize, offsetY);
+    ctx.lineTo(offsetX + i * cellSize, offsetY + gridSize);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(offsetX, offsetY + i * cellSize);
+    ctx.lineTo(offsetX + gridSize, offsetY + i * cellSize);
+    ctx.stroke();
+  }
+
+  // Decorative X and O on grid
+  const decorPieces = [
+    { cell: 0, type: 'x' }, { cell: 4, type: 'o' }, { cell: 8, type: 'x' },
+    { cell: 2, type: 'o' }, { cell: 6, type: 'x' },
+  ];
+  for (const dp of decorPieces) {
+    const c = getCellCenter(dp.cell);
+    const alpha = 0.15 + 0.05 * Math.sin(titlePulse + dp.cell);
+    ctx.globalAlpha = alpha;
+    if (dp.type === 'x') drawX(c.x, c.y, cellSize, 1, 3, COL.xColor);
+    else drawO(c.x, c.y, cellSize, 1, 3, COL.oColor);
+  }
+  ctx.globalAlpha = 1;
+
+  // Title
+  const titleY = h * 0.22;
+  ctx.fillStyle = COL.gold;
+  ctx.font = `bold ${Math.min(w * 0.1, 56)}px 'Courier New', monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('TIC-TAC-TOE', w / 2, titleY);
+
+  // Subtitle
+  ctx.fillStyle = COL.dim;
+  ctx.font = `${Math.min(w * 0.035, 16)}px 'Courier New', monospace`;
+  ctx.fillText('GameGob Forge Edition', w / 2, titleY + 36);
+
+  // Scores
+  const scoreY = h * 0.42;
+  ctx.fillStyle = COL.white;
+  ctx.font = `bold ${Math.min(w * 0.04, 18)}px 'Courier New', monospace`;
+  ctx.fillText(`W: ${scores.wins}  D: ${scores.draws}  L: ${scores.losses}`, w / 2, scoreY);
+
+  // Play button
+  buttons = [];
+  const btnW = Math.min(w * 0.5, 240);
+  const btnH = 50;
+  const btnX = w / 2 - btnW / 2;
+  const btnY = h * 0.55;
+
+  addButton('play', btnX, btnY, btnW, btnH, 'PLAY', COL.gold);
+  drawButton(buttons[0], Math.min(w * 0.05, 22));
+
+  // Difficulty selector
+  const diffY = btnY + 75;
+  ctx.fillStyle = COL.dim;
+  ctx.font = `${Math.min(w * 0.035, 14)}px 'Courier New', monospace`;
+  ctx.fillText('DIFFICULTY', w / 2, diffY - 12);
+
+  const diffBtnW = Math.min(w * 0.25, 110);
+  const diffBtnH = 38;
+  const totalW = diffBtnW * 3 + 16;
+  const diffStartX = w / 2 - totalW / 2;
+
+  for (let i = 0; i < 3; i++) {
+    const bx = diffStartX + i * (diffBtnW + 8);
+    const isSelected = selectedDifficulty === i;
+    const color = i === 0 ? COL.green : i === 1 ? COL.gold : COL.red;
+    addButton(`diff_${i}`, bx, diffY, diffBtnW, diffBtnH, difficultyLabels[i], isSelected ? color : COL.dim);
+    drawButton(buttons[buttons.length - 1], Math.min(w * 0.035, 14));
+  }
+
+  // Tap prompt
+  const pulseAlpha = 0.4 + 0.3 * Math.sin(titlePulse * 1.5);
+  ctx.globalAlpha = pulseAlpha;
+  ctx.fillStyle = COL.dim;
+  ctx.font = `${Math.min(w * 0.03, 13)}px 'Courier New', monospace`;
+  ctx.fillText('— or tap anywhere to start —', w / 2, h * 0.85);
+  ctx.globalAlpha = 1;
+};
+
+const drawGameplay = (dt) => {
+  const w = canvas.width;
+  const h = canvas.height;
+  const { cellSize, offsetX, offsetY, gridSize } = getGridLayout();
+
+  // Status bar
+  const statusY = offsetY - 40;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  if (state === STATE.PLAYING) {
+    ctx.fillStyle = COL.xColor;
+    ctx.font = `bold ${Math.min(w * 0.045, 20)}px 'Courier New', monospace`;
+    ctx.fillText('YOUR TURN (X)', w / 2, statusY);
+  } else if (state === STATE.AI_THINKING) {
+    const dots = '.'.repeat(1 + Math.floor(animTimer * 3) % 3);
+    ctx.fillStyle = COL.oColor;
+    ctx.font = `bold ${Math.min(w * 0.045, 20)}px 'Courier New', monospace`;
+    ctx.fillText(`AI THINKING${dots}`, w / 2, statusY);
+  }
+
+  // Score line
+  const scoreY = statusY - 24;
+  ctx.fillStyle = COL.dim;
+  ctx.font = `${Math.min(w * 0.03, 13)}px 'Courier New', monospace`;
+  ctx.fillText(`W:${scores.wins}  D:${scores.draws}  L:${scores.losses}  |  ${difficultyLabels[difficulty]}`, w / 2, scoreY);
+
+  // Draw grid lines with glow
+  ctx.strokeStyle = COL.gridLine;
+  ctx.lineWidth = 3;
+  ctx.shadowColor = COL.gold;
+  ctx.shadowBlur = 4;
+  for (let i = 1; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(offsetX + i * cellSize, offsetY + 4);
+    ctx.lineTo(offsetX + i * cellSize, offsetY + gridSize - 4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(offsetX + 4, offsetY + i * cellSize);
+    ctx.lineTo(offsetX + gridSize - 4, offsetY + i * cellSize);
+    ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+
+  // Draw cells
+  for (let i = 0; i < 9; i++) {
+    const col = i % 3;
+    const row = Math.floor(i / 3);
+    const cx = offsetX + col * cellSize + cellSize / 2;
+    const cy = offsetY + row * cellSize + cellSize / 2;
+
+    // Hover highlight
+    if (i === hoverCell && board[i] === CELL.EMPTY && state === STATE.PLAYING) {
+      drawRoundedRect(offsetX + col * cellSize + 4, offsetY + row * cellSize + 4, cellSize - 8, cellSize - 8, 4);
+      ctx.fillStyle = COL.cellHover;
+      ctx.fill();
+
+      // Ghost X
+      ctx.globalAlpha = 0.2;
+      drawX(cx, cy, cellSize, 1, 3, COL.xColor);
+      ctx.globalAlpha = 1;
+    }
+
+    // Last move indicator
+    if (i === lastMoveCell) {
+      ctx.strokeStyle = board[i] === CELL.X ? COL.xColor + '33' : COL.oColor + '33';
+      ctx.lineWidth = 2;
+      drawRoundedRect(offsetX + col * cellSize + 6, offsetY + row * cellSize + 6, cellSize - 12, cellSize - 12, 4);
+      ctx.stroke();
+    }
+
+    // Draw piece
+    const anim = cellAnimations[i];
+    if (board[i] === CELL.X) {
+      const progress = anim ? Math.min(1, anim.timer / 0.3) : 1;
+      const lw = Math.min(cellSize * 0.05, 5);
+      drawX(cx, cy, cellSize, progress, lw, COL.xColor);
+    } else if (board[i] === CELL.O) {
+      const progress = anim ? Math.min(1, anim.timer / 0.3) : 1;
+      const lw = Math.min(cellSize * 0.05, 5);
+      drawO(cx, cy, cellSize, progress, lw, COL.oColor);
+    }
+  }
+
+  // Win line
+  if (winLine && result !== RESULT.NONE && result !== RESULT.DRAW) {
+    winLineAnim = Math.min(1, winLineAnim + dt * 3);
+    const c0 = getCellCenter(winLine[0]);
+    const c2 = getCellCenter(winLine[2]);
+    const px = c0.x + (c2.x - c0.x) * winLineAnim;
+    const py = c0.y + (c2.y - c0.y) * winLineAnim;
+
+    ctx.strokeStyle = COL.winLine;
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.shadowColor = COL.winLine;
+    ctx.shadowBlur = 15;
+    ctx.beginPath();
+    ctx.moveTo(c0.x, c0.y);
+    ctx.lineTo(px, py);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+};
+
+const drawGameOver = (dt) => {
+  gameOverTimer += dt;
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // Draw board behind
+  drawGameplay(dt);
+
+  // Overlay
+  const overlayAlpha = Math.min(0.75, gameOverTimer * 1.5);
+  ctx.fillStyle = `rgba(10,10,15,${overlayAlpha})`;
+  ctx.fillRect(0, 0, w, h);
+
+  if (gameOverTimer < 0.3) return;
+
+  const panelAlpha = Math.min(1, (gameOverTimer - 0.3) * 3);
+  ctx.globalAlpha = panelAlpha;
+
+  const resultY = h * 0.35;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  let msg, color;
+  if (result === RESULT.X_WIN) {
+    msg = 'YOU WIN!';
+    color = COL.xColor;
+  } else if (result === RESULT.O_WIN) {
+    msg = 'AI WINS';
+    color = COL.oColor;
+  } else {
+    msg = 'DRAW';
+    color = COL.drawColor;
+  }
+
+  ctx.fillStyle = color;
+  ctx.font = `bold ${Math.min(w * 0.12, 52)}px 'Courier New', monospace`;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 20;
+  ctx.fillText(msg, w / 2, resultY);
+  ctx.shadowBlur = 0;
+
+  // Score summary
+  ctx.fillStyle = COL.white;
+  ctx.font = `${Math.min(w * 0.04, 18)}px 'Courier New', monospace`;
+  ctx.fillText(`W: ${scores.wins}  D: ${scores.draws}  L: ${scores.losses}`, w / 2, resultY + 50);
+
+  // Buttons
+  buttons = [];
+  const btnW = Math.min(w * 0.45, 200);
+  const btnH = 48;
+  const btnX = w / 2 - btnW / 2;
+
+  addButton('again', btnX, h * 0.55, btnW, btnH, 'PLAY AGAIN', COL.gold);
+  addButton('menu', btnX, h * 0.55 + 65, btnW, btnH, 'MENU', COL.dim);
+
+  for (const btn of buttons) drawButton(btn, Math.min(w * 0.045, 18));
+
+  ctx.globalAlpha = 1;
+};
+
+// ─── Main Update ───
+let lastTime = 0;
+
+const update = (timestamp) => {
+  const dt = Math.min(0.1, (timestamp - lastTime) / 1000);
+  lastTime = timestamp;
+  animTimer += dt;
+
+  // Update particles
+  particles.forEach(p => p.update(dt));
+  particles = particles.filter(p => !p.dead);
+
+  // Update cell animations
+  for (const key in cellAnimations) {
+    cellAnimations[key].timer += dt;
+  }
+
+  // Screen shake
+  if (shakeAmount > 0) {
+    shakeAmount -= shakeDecay * dt;
+    if (shakeAmount < 0) shakeAmount = 0;
+  }
+
+  // AI thinking
+  if (state === STATE.AI_THINKING) {
+    aiThinkTimer -= dt;
+    if (aiThinkTimer <= 0) {
+      const move = getAIMove(board, difficulty);
+      if (move !== undefined && move !== null) {
+        makeMove(move, CELL.O);
+        if (state !== STATE.GAME_OVER) {
+          state = STATE.PLAYING;
+        }
+      }
+    }
+  }
+
+  // ─── Render ───
+  ctx.save();
+
+  // Apply shake
+  if (shakeAmount > 0) {
+    const sx = (Math.random() - 0.5) * shakeAmount * 2;
+    const sy = (Math.random() - 0.5) * shakeAmount * 2;
+    ctx.translate(sx, sy);
+  }
+
+  // Clear
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(-10, -10, canvas.width + 20, canvas.height + 20);
+
+  // Draw based on state
+  buttons = [];
+  switch (state) {
+    case STATE.TITLE:
+    case STATE.DIFFICULTY:
+      drawTitle(dt);
+      break;
+    case STATE.PLAYING:
+    case STATE.AI_THINKING:
+      drawGameplay(dt);
+      break;
+    case STATE.GAME_OVER:
+      drawGameOver(dt);
+      break;
+  }
+
+  // Draw particles on top
+  particles.forEach(p => p.draw(ctx));
+
+  ctx.restore();
+
+  requestAnimationFrame(update);
+};
+
+// ─── Input Handling ───
+const handleClick = (px, py) => {
+  ensureAudio();
+
+  switch (state) {
+    case STATE.TITLE:
+    case STATE.DIFFICULTY: {
+      const btn = hitTestButton(px, py);
+      if (btn) {
+        sfx.menuSelect();
+        if (btn.id === 'play') {
+          difficulty = selectedDifficulty;
+          resetBoard();
+          state = STATE.PLAYING;
+        } else if (btn.id.startsWith('diff_')) {
+          selectedDifficulty = parseInt(btn.id.split('_')[1]);
+        }
+      } else {
+        // Tap anywhere to start
+        sfx.menuSelect();
+        difficulty = selectedDifficulty;
+        resetBoard();
+        state = STATE.PLAYING;
+      }
+      break;
+    }
+    case STATE.PLAYING: {
+      const cell = getCellFromPos(px, py);
+      if (cell >= 0 && board[cell] === CELL.EMPTY) {
+        makeMove(cell, CELL.X);
+        if (state !== STATE.GAME_OVER && currentPlayer === CELL.O) {
+          startAITurn();
+        }
+      } else if (cell >= 0) {
+        sfx.invalid();
+        const center = getCellCenter(cell);
+        spawnParticles(center.x, center.y, COL.red, 5, 50, 0.3, 2);
+        triggerShake(3, 12);
+      }
+      break;
+    }
+    case STATE.GAME_OVER: {
+      if (gameOverTimer < 0.5) break;
+      const btn = hitTestButton(px, py);
+      if (btn) {
+        sfx.menuSelect();
+        if (btn.id === 'again') {
+          resetBoard();
+          state = STATE.PLAYING;
+        } else if (btn.id === 'menu') {
+          state = STATE.TITLE;
+        }
+      }
+      break;
+    }
+  }
+};
+
+const handleMove = (px, py) => {
+  if (state === STATE.PLAYING) {
+    const cell = getCellFromPos(px, py);
+    if (cell !== hoverCell) {
+      hoverCell = cell;
+      if (cell >= 0 && board[cell] === CELL.EMPTY) sfx.hover();
+    }
+  }
+
+  // Button hover
+  for (const btn of buttons) {
+    const wasHover = btn.hover;
+    btn.hover = px >= btn.x && px <= btn.x + btn.w && py >= btn.y && py <= btn.y + btn.h;
+    if (btn.hover && !wasHover) sfx.hover();
+  }
+};
+
+// Mouse events
+canvas.addEventListener('mousedown', e => {
+  e.preventDefault();
+  handleClick(e.clientX, e.clientY);
+});
+canvas.addEventListener('mousemove', e => {
+  handleMove(e.clientX, e.clientY);
+});
+
+// Touch events
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  handleClick(touch.clientX, touch.clientY);
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  handleMove(touch.clientX, touch.clientY);
+}, { passive: false });
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  ensureAudio();
+
+  if (state === STATE.TITLE || state === STATE.DIFFICULTY) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      sfx.menuSelect();
+      difficulty = selectedDifficulty;
+      resetBoard();
+      state = STATE.PLAYING;
+    }
+    if (e.key === 'ArrowLeft') {
+      selectedDifficulty = Math.max(0, selectedDifficulty - 1);
+      sfx.hover();
+    }
+    if (e.key === 'ArrowRight') {
+      selectedDifficulty = Math.min(2, selectedDifficulty + 1);
+      sfx.hover();
+    }
+  }
+
+  if (state === STATE.PLAYING) {
+    // Numpad / number keys 1-9 map to grid
+    // 7 8 9
+    // 4 5 6
+    // 1 2 3
+    const keyMap = {
+      '7': 0, '8': 1, '9': 2,
+      '4': 3, '5': 4, '6': 5,
+      '1': 6, '2': 7, '3': 8,
+      'Numpad7': 0, 'Numpad8': 1, 'Numpad9': 2,
+      'Numpad4': 3, 'Numpad5': 4, 'Numpad6': 5,
+      'Numpad1': 6, 'Numpad2': 7, 'Numpad3': 8,
+    };
+
+    // Also QWEASDZXC for keyboard layout
+    const qweMap = {
+      'q': 0, 'w': 1, 'e': 2,
+      'a': 3, 's': 4, 'd': 5,
+      'z': 6, 'x': 7, 'c': 8,
+    };
+
+    let cell = keyMap[e.key] ?? keyMap[e.code] ?? qweMap[e.key.toLowerCase()] ?? -1;
+    if (cell >= 0 && board[cell] === CELL.EMPTY) {
+      makeMove(cell, CELL.X);
+      if (state !== STATE.GAME_OVER && currentPlayer === CELL.O) {
+        startAITurn();
+      }
+    } else if (cell >= 0) {
+      sfx.invalid();
+    }
+  }
+
+  if (state === STATE.GAME_OVER && gameOverTimer > 0.5) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      sfx.menuSelect();
+      resetBoard();
+      state = STATE.PLAYING;
+    }
+    if (e.key === 'Escape') {
+      sfx.menuSelect();
+      state = STATE.TITLE;
+    }
+  }
+});
+
+// ─── Start ───
+requestAnimationFrame(update);
+
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Realms of Auravia - RPG">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob/forge_rpg.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>Realms of Auravia - RPG</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0f;font-family:'Courier New',monospace;touch-action:none;user-select:none;-webkit-user-select:none;}
+canvas{display:block;margin:0 auto;image-rendering:pixelated;}
+#ui-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;}
+#touch-controls{position:absolute;bottom:10px;left:0;width:100%;display:none;pointer-events:auto;z-index:20;}
+.dpad{position:absolute;bottom:20px;left:20px;width:140px;height:140px;}
+.dpad-btn{position:absolute;width:46px;height:46px;background:rgba(240,184,0, 0.65);border:2px solid rgba(240,184,0,0.5);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#f0b800;font-size:20px;}
+.dpad-btn:active{background:rgba(240,184,0,0.6);}
+.dpad-up{top:0;left:47px;}
+.dpad-down{bottom:0;left:47px;}
+.dpad-left{top:47px;left:0;}
+.dpad-right{top:47px;right:0;}
+.action-btns{position:absolute;bottom:20px;right:20px;}
+.act-btn{width:56px;height:56px;border-radius:50%;border:2px solid;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;margin:4px;font-family:'Courier New',monospace;}
+.btn-a{background:rgba(0,255,136, 0.65);border-color:rgba(0,255,136,0.6);color:#00ff88;}
+.btn-b{background:rgba(240,184,0, 0.65);border-color:rgba(240,184,0,0.6);color:#f0b800;}
+.btn-menu{background:rgba(255,80,80, 0.65);border-color:rgba(255,80,80,0.6);color:#ff5050;position:absolute;top:10px;right:10px;width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;font-family:'Courier New',monospace;pointer-events:auto;z-index:20;}
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<div id="touch-controls">
+<div class="dpad">
+<div class="dpad-btn dpad-up" data-dir="up">▲</div>
+<div class="dpad-btn dpad-down" data-dir="down">▼</div>
+<div class="dpad-btn dpad-left" data-dir="left">◄</div>
+<div class="dpad-btn dpad-right" data-dir="right">►</div>
+</div>
+<div class="action-btns">
+<div class="act-btn btn-a" data-act="a">ACT</div>
+<div class="act-btn btn-b" data-act="b">BACK</div>
+</div>
+<div class="btn-menu" data-act="menu">MENU</div>
+</div>
+<script>
+'use strict';
+// ═══════════════════════════════════════════
+// CANVAS & CORE SETUP
+// ═══════════════════════════════════════════
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+const TILE = 32;
+const COLS = 20, ROWS = 15;
+let W, H, scale = 1;
+function resize() {
+  const aspect = COLS / ROWS;
+  const ww = window.innerWidth, wh = window.innerHeight;
+  if (ww / wh > aspect) { H = wh; W = H * aspect; } else { W = ww; H = W / aspect; }
+  W = Math.floor(W); H = Math.floor(H);
+  canvas.width = COLS * TILE; canvas.height = ROWS * TILE;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  canvas.style.position = 'absolute';
+  canvas.style.left = ((ww - W) / 2) + 'px';
+  canvas.style.top = ((wh - H) / 2) + 'px';
+  scale = W / (COLS * TILE);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Touch detection
+const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+if (isMobile) document.getElementById('touch-controls').style.display = 'block';
+
+// ═══════════════════════════════════════════
+// AUDIO SYSTEM
+// ═══════════════════════════════════════════
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playTone(freq, dur, type = 'square', vol = 0.15) {
+  try {
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + dur);
+  } catch(e) {}
+}
+const SFX = {
+  step: () => playTone(200, 0.05, 'sine', 0.05),
+  select: () => playTone(600, 0.1, 'square', 0.1),
+  confirm: () => { playTone(500, 0.1); setTimeout(() => playTone(700, 0.15), 80); },
+  cancel: () => playTone(250, 0.15, 'triangle', 0.1),
+  hit: () => playTone(120, 0.2, 'sawtooth', 0.15),
+  playerHit: () => playTone(180, 0.3, 'sawtooth', 0.2),
+  heal: () => { playTone(400, 0.15, 'sine', 0.1); setTimeout(() => playTone(600, 0.15, 'sine', 0.1), 100); setTimeout(() => playTone(800, 0.2, 'sine', 0.12), 200); },
+  levelUp: () => { [400,500,600,700,800].forEach((f,i) => setTimeout(() => playTone(f, 0.15, 'square', 0.1), i*80)); },
+  buy: () => playTone(800, 0.1, 'sine', 0.12),
+  equip: () => { playTone(300, 0.1, 'square', 0.08); setTimeout(() => playTone(500, 0.15, 'square', 0.1), 70); },
+  chest: () => { [300,400,500,600,700,800].forEach((f,i) => setTimeout(() => playTone(f, 0.12, 'sine', 0.1), i*60)); },
+  death: () => { [400,350,300,250,200].forEach((f,i) => setTimeout(() => playTone(f, 0.3, 'sawtooth', 0.12), i*150)); },
+  victory: () => { [523,659,784,1047].forEach((f,i) => setTimeout(() => playTone(f, 0.2, 'square', 0.1), i*120)); },
+  spell: () => { playTone(800, 0.1, 'sine', 0.1); setTimeout(() => playTone(1200, 0.2, 'sine', 0.12), 80); },
+  door: () => playTone(150, 0.3, 'triangle', 0.1),
+  inn: () => { [262,330,392,523].forEach((f,i) => setTimeout(() => playTone(f, 0.3, 'sine', 0.08), i*200)); },
+};
+
+// ═══════════════════════════════════════════
+// PARTICLES & EFFECTS
+// ═══════════════════════════════════════════
+let particles = [];
+let screenShake = 0;
+let flashTimer = 0, flashColor = '#fff';
+
+class Particle {
+  constructor(x, y, color, vx, vy, life = 0.5, size = 3) {
+    this.x = x; this.y = y; this.color = color;
+    this.vx = vx; this.vy = vy; this.life = life; this.maxLife = life; this.size = size;
+  }
+  update(dt) { this.x += this.vx * dt; this.y += this.vy * dt; this.life -= dt; }
+  draw() {
+    const a = this.life / this.maxLife;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size * a, this.size * a);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function spawnParticles(x, y, color, count = 10) {
+  for (let i = 0; i < count; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const spd = 30 + Math.random() * 80;
+    particles.push(new Particle(x, y, color, Math.cos(ang)*spd, Math.sin(ang)*spd, 0.4 + Math.random()*0.4, 2 + Math.random()*3));
+  }
+}
+
+// ═══════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════
+const STATE = { TITLE: 0, OVERWORLD: 1, COMBAT: 2, MENU: 3, SHOP: 4, DIALOGUE: 5, INN: 6, GAMEOVER: 7, TRANSITION: 8 };
+let gameState = STATE.TITLE;
+let prevState = STATE.TITLE;
+let titleBlink = 0;
+let transTimer = 0, transCallback = null, transType = 'fade';
+let gold = 150;
+let playTime = 0;
+let stepsCount = 0;
+let combatsWon = 0;
+
+// ═══════════════════════════════════════════
+// SPELL DEFINITIONS
+// ═══════════════════════════════════════════
+const SPELLS = {
+  fire: { name: 'Fire', mp: 5, power: 25, type: 'attack', element: 'fire', target: 'enemy', desc: 'Fire damage to one enemy', anim: '#ff4400' },
+  ice: { name: 'Ice', mp: 6, power: 22, type: 'attack', element: 'ice', target: 'enemy', desc: 'Ice damage to one enemy', anim: '#44ccff' },
+  thunder: { name: 'Thunder', mp: 8, power: 35, type: 'attack', element: 'thunder', target: 'all', desc: 'Lightning to all enemies', anim: '#ffff00' },
+  heal: { name: 'Heal', mp: 4, power: 30, type: 'heal', target: 'ally', desc: 'Restore HP to one ally', anim: '#00ff88' },
+  healAll: { name: 'Heal All', mp: 10, power: 20, type: 'heal', target: 'party', desc: 'Heal entire party', anim: '#00ff88' },
+  firaga: { name: 'Firaga', mp: 15, power: 55, type: 'attack', element: 'fire', target: 'all', desc: 'Major fire to all', anim: '#ff2200' },
+  protect: { name: 'Protect', mp: 6, power: 0, type: 'buff', stat: 'def', amount: 10, target: 'ally', desc: 'Boost DEF', anim: '#f0b800' },
+  haste: { name: 'Haste', mp: 8, power: 0, type: 'buff', stat: 'spd', amount: 8, target: 'ally', desc: 'Boost SPD', anim: '#00ffcc' },
+  revive: { name: 'Revive', mp: 20, power: 50, type: 'revive', target: 'ally', desc: 'Revive fallen ally', anim: '#ffffff' },
+  poison: { name: 'Poison', mp: 5, power: 10, type: 'status', status: 'poison', target: 'enemy', desc: 'Poison an enemy', anim: '#88ff00' },
+  drain: { name: 'Drain', mp: 7, power: 20, type: 'drain', target: 'enemy', desc: 'Steal HP from enemy', anim: '#cc00ff' },
+  smite: { name: 'Smite', mp: 12, power: 45, type: 'attack', element: 'holy', target: 'enemy', desc: 'Holy damage', anim: '#ffffcc' },
+};
+// ═══════════════════════════════════════════
+// ITEM DEFINITIONS
+// ═══════════════════════════════════════════
+const ITEMS = {
+  // Consumables
+  potion: { name: 'Potion', type: 'consumable', subtype: 'heal', power: 40, price: 30, desc: 'Restore 40 HP' },
+  hiPotion: { name: 'Hi-Potion', type: 'consumable', subtype: 'heal', power: 100, price: 80, desc: 'Restore 100 HP' },
+  ether: { name: 'Ether', type: 'consumable', subtype: 'mp', power: 20, price: 50, desc: 'Restore 20 MP' },
+  antidote: { name: 'Antidote', type: 'consumable', subtype: 'cure', status: 'poison', price: 25, desc: 'Cure poison' },
+  phoenix: { name: 'Phoenix Down', type: 'consumable', subtype: 'revive', power: 50, price: 200, desc: 'Revive ally' },
+  bomb: { name: 'Bomb', type: 'consumable', subtype: 'damage', power: 60, price: 100, desc: '60 damage to enemy' },
+  // Weapons
+  woodSword: { name: 'Wood Sword', type: 'weapon', slot: 'weapon', atk: 5, price: 50, desc: 'ATK +5', classes: ['warrior','thief'] },
+  ironSword: { name: 'Iron Sword', type: 'weapon', slot: 'weapon', atk: 12, price: 200, desc: 'ATK +12', classes: ['warrior'] },
+  steelSword: { name: 'Steel Sword', type: 'weapon', slot: 'weapon', atk: 22, price: 500, desc: 'ATK +22', classes: ['warrior'] },
+  flameBlade: { name: 'Flame Blade', type: 'weapon', slot: 'weapon', atk: 30, mag: 8, price: 900, desc: 'ATK+30 MAG+8', classes: ['warrior'] },
+  woodStaff: { name: 'Wood Staff', type: 'weapon', slot: 'weapon', atk: 3, mag: 8, price: 60, desc: 'ATK+3 MAG+8', classes: ['mage','healer'] },
+  runeStaff: { name: 'Rune Staff', type: 'weapon', slot: 'weapon', atk: 5, mag: 18, price: 350, desc: 'ATK+5 MAG+18', classes: ['mage'] },
+  holyStaff: { name: 'Holy Staff', type: 'weapon', slot: 'weapon', atk: 4, mag: 15, price: 300, desc: 'ATK+4 MAG+15', classes: ['healer'] },
+  arcaneStaff: { name: 'Arcane Staff', type: 'weapon', slot: 'weapon', atk: 8, mag: 28, price: 800, desc: 'ATK+8 MAG+28', classes: ['mage'] },
+  dagger: { name: 'Dagger', type: 'weapon', slot: 'weapon', atk: 8, spd: 5, price: 120, desc: 'ATK+8 SPD+5', classes: ['thief'] },
+  assassinBlade: { name: 'Assassin Blade', type: 'weapon', slot: 'weapon', atk: 18, spd: 10, price: 600, desc: 'ATK+18 SPD+10', classes: ['thief'] },
+  // Armor
+  clothArmor: { name: 'Cloth Armor', type: 'armor', slot: 'armor', def: 3, price: 40, desc: 'DEF +3' },
+  leatherArmor: { name: 'Leather Armor', type: 'armor', slot: 'armor', def: 8, price: 150, desc: 'DEF +8' },
+  chainMail: { name: 'Chain Mail', type: 'armor', slot: 'armor', def: 15, price: 400, desc: 'DEF +15' },
+  plateMail: { name: 'Plate Mail', type: 'armor', slot: 'armor', def: 25, price: 800, desc: 'DEF +25', classes: ['warrior'] },
+  mageRobe: { name: 'Mage Robe', type: 'armor', slot: 'armor', def: 6, mag: 10, price: 250, desc: 'DEF+6 MAG+10', classes: ['mage','healer'] },
+  // Accessories
+  powerRing: { name: 'Power Ring', type: 'accessory', slot: 'accessory', atk: 8, price: 350, desc: 'ATK +8' },
+  guardRing: { name: 'Guard Ring', type: 'accessory', slot: 'accessory', def: 8, price: 350, desc: 'DEF +8' },
+  speedBoots: { name: 'Speed Boots', type: 'accessory', slot: 'accessory', spd: 10, price: 400, desc: 'SPD +10' },
+  magicAmulet: { name: 'Magic Amulet', type: 'accessory', slot: 'accessory', mag: 10, price: 400, desc: 'MAG +10' },
+};
+
+// ═══════════════════════════════════════════
+// ENEMY DEFINITIONS
+// ═══════════════════════════════════════════
+const ENEMY_DEFS = {
+  slime: { name: 'Slime', hp: 25, atk: 6, def: 2, spd: 3, mag: 0, exp: 8, gold: 5, color: '#44cc44', skills: [], tier: 1 },
+  bat: { name: 'Bat', hp: 18, atk: 8, def: 1, spd: 8, mag: 0, exp: 7, gold: 4, color: '#8844aa', skills: [], tier: 1 },
+  goblin: { name: 'Goblin', hp: 35, atk: 10, def: 4, spd: 5, mag: 0, exp: 12, gold: 10, color: '#448844', skills: [], tier: 1 },
+  wolf: { name: 'Wolf', hp: 40, atk: 14, def: 5, spd: 9, mag: 0, exp: 15, gold: 8, color: '#888888', skills: [], tier: 2 },
+  skeleton: { name: 'Skeleton', hp: 50, atk: 16, def: 8, spd: 4, mag: 5, exp: 20, gold: 15, color: '#ccccaa', skills: ['fire'], tier: 2 },
+  spider: { name: 'Giant Spider', hp: 45, atk: 13, def: 6, spd: 7, mag: 0, exp: 18, gold: 12, color: '#664422', skills: ['poison'], tier: 2 },
+  orc: { name: 'Orc', hp: 70, atk: 20, def: 12, spd: 4, mag: 0, exp: 30, gold: 25, color: '#446622', skills: [], tier: 3 },
+  darkMage: { name: 'Dark Mage', hp: 55, atk: 8, def: 7, spd: 6, mag: 22, exp: 35, gold: 30, color: '#6622aa', skills: ['fire','ice','drain'], tier: 3 },
+  golem: { name: 'Golem', hp: 120, atk: 25, def: 22, spd: 2, mag: 0, exp: 45, gold: 40, color: '#886644', skills: [], tier: 3 },
+  wyvern: { name: 'Wyvern', hp: 90, atk: 22, def: 14, spd: 10, mag: 12, exp: 40, gold: 35, color: '#2266aa', skills: ['ice','thunder'], tier: 4 },
+  vampire: { name: 'Vampire', hp: 100, atk: 24, def: 15, spd: 11, mag: 18, exp: 50, gold: 45, color: '#aa2244', skills: ['drain','fire'], tier: 4 },
+  dragon: { name: 'Fire Dragon', hp: 200, atk: 35, def: 25, spd: 8, mag: 30, exp: 100, gold: 120, color: '#cc2200', skills: ['firaga','fire'], tier: 5 },
+  lich: { name: 'Lich King', hp: 250, atk: 20, def: 20, spd: 7, mag: 40, exp: 120, gold: 150, color: '#442266', skills: ['firaga','drain','thunder','ice'], tier: 5 },
+  demonLord: { name: 'Demon Lord', hp: 400, atk: 40, def: 30, spd: 10, mag: 35, exp: 200, gold: 300, color: '#880000', skills: ['firaga','thunder','drain'], tier: 5 },
+};
+
+// ═══════════════════════════════════════════
+// PARTY MEMBER CLASS
+// ═══════════════════════════════════════════
+class PartyMember {
+  constructor(name, cls, stats, spells, color) {
+    this.name = name; this.class = cls; this.color = color;
+    this.level = 1; this.exp = 0;
+    this.baseHp = stats.hp; this.baseMp = stats.mp;
+    this.baseAtk = stats.atk; this.baseDef = stats.def;
+    this.baseSpd = stats.spd; this.baseMag = stats.mag;
+    this.hp = stats.hp; this.maxHp = stats.hp;
+    this.mp = stats.mp; this.maxMp = stats.mp;
+    this.atk = stats.atk; this.def = stats.def;
+    this.spd = stats.spd; this.mag = stats.mag;
+    this.spells = spells.slice();
+    this.equipment = { weapon: null, armor: null, accessory: null };
+    this.alive = true;
+    this.status = []; // poison, etc
+    this.buffs = {}; // temp combat buffs
+    this.expToLevel = 50;
+    this.combatAnim = 0;
+  }
+  get totalAtk() { let v = this.atk; const w = this.equipment.weapon; if(w && ITEMS[w]) v += (ITEMS[w].atk||0); const a = this.equipment.accessory; if(a && ITEMS[a]) v += (ITEMS[a].atk||0); return v + (this.buffs.atk||0); }
+  get totalDef() { let v = this.def; const ar = this.equipment.armor; if(ar && ITEMS[ar]) v += (ITEMS[ar].def||0); const a = this.equipment.accessory; if(a && ITEMS[a]) v += (ITEMS[a].def||0); return v + (this.buffs.def||0); }
+  get totalSpd() { let v = this.spd; const w = this.equipment.weapon; if(w && ITEMS[w]) v += (ITEMS[w].spd||0); const a = this.equipment.accessory; if(a && ITEMS[a]) v += (ITEMS[a].spd||0); return v + (this.buffs.spd||0); }
+  get totalMag() { let v = this.mag; const w = this.equipment.weapon; if(w && ITEMS[w]) v += (ITEMS[w].mag||0); const ar = this.equipment.armor; if(ar && ITEMS[ar]) v += (ITEMS[ar].mag||0); const a = this.equipment.accessory; if(a && ITEMS[a]) v += (ITEMS[a].mag||0); return v + (this.buffs.mag||0); }
+  expNeeded() { return this.level * 50 + this.level * this.level * 10; }
+  addExp(amt) {
+    if (!this.alive) return false;
+    this.exp += amt;
+    if (this.exp >= this.expNeeded()) {
+      this.exp -= this.expNeeded();
+      this.level++;
+      const hpGain = 8 + Math.floor(Math.random() * 5) + (this.class === 'warrior' ? 4 : 0);
+      const mpGain = 3 + Math.floor(Math.random() * 3) + (this.class === 'mage' || this.class === 'healer' ? 4 : 0);
+      this.baseHp += hpGain; this.baseMp += mpGain;
+      this.maxHp = this.baseHp; this.maxMp = this.baseMp;
+      this.hp = this.maxHp; this.mp = this.maxMp;
+      this.baseAtk += 1 + (this.class === 'warrior' || this.class === 'thief' ? 1 : 0);
+      this.baseDef += 1 + (this.class === 'warrior' ? 1 : 0);
+      this.baseSpd += 1 + (this.class === 'thief' ? 1 : 0);
+      this.baseMag += 1 + (this.class === 'mage' || this.class === 'healer' ? 2 : 0);
+      this.atk = this.baseAtk; this.def = this.baseDef;
+      this.spd = this.baseSpd; this.mag = this.baseMag;
+      // Learn spells at certain levels
+      const learnTable = {
+        warrior: { 5: 'protect', 10: 'smite' },
+        mage: { 3: 'ice', 6: 'thunder', 10: 'firaga' },
+        healer: { 3: 'healAll', 6: 'protect', 9: 'revive', 12: 'haste' },
+        thief: { 4: 'poison', 8: 'haste', 12: 'drain' }
+      };
+      const lt = learnTable[this.class];
+      if (lt && lt[this.level] && !this.spells.includes(lt[this.level])) {
+        this.spells.push(lt[this.level]);
+      }
+      return true;
+    }
+    return false;
+  }
+  fullRestore() { this.hp = this.maxHp; this.mp = this.maxMp; this.alive = true; this.status = []; this.buffs = {}; }
+}
+// ═══════════════════════════════════════════
+// PARTY INITIALIZATION
+// ═══════════════════════════════════════════
+const party = [
+  new PartyMember('Aldric', 'warrior', {hp:120,mp:15,atk:14,def:12,spd:6,mag:3}, ['fire'], '#cc4444'),
+  new PartyMember('Lyria', 'mage', {hp:70,mp:40,atk:4,def:5,spd:7,mag:16}, ['fire','ice'], '#6644cc'),
+  new PartyMember('Finn', 'thief', {hp:85,mp:20,atk:11,def:7,spd:12,mag:5}, [], '#44aa44'),
+  new PartyMember('Sera', 'healer', {hp:80,mp:35,atk:5,def:8,spd:6,mag:12}, ['heal'], '#f0b800'),
+];
+// Starting equipment
+party[0].equipment.weapon = 'woodSword';
+party[0].equipment.armor = 'clothArmor';
+party[1].equipment.weapon = 'woodStaff';
+party[2].equipment.weapon = 'dagger';
+party[3].equipment.weapon = 'woodStaff';
+party[3].equipment.armor = 'clothArmor';
+
+// Inventory: { itemKey: count }
+let inventory = { potion: 5, ether: 2 };
+
+function addItem(key, count = 1) {
+  inventory[key] = (inventory[key] || 0) + count;
+}
+function removeItem(key, count = 1) {
+  if (!inventory[key]) return false;
+  inventory[key] -= count;
+  if (inventory[key] <= 0) delete inventory[key];
+  return true;
+}
+function hasItem(key) { return (inventory[key] || 0) > 0; }
+
+// ═══════════════════════════════════════════
+// MAP DATA
+// ═══════════════════════════════════════════
+// Tile types: 0=grass, 1=wall, 2=water, 3=tree, 4=path, 5=floor, 6=door,
+// 7=chest, 8=npc, 9=stairs_down, 10=stairs_up, 11=shop, 12=inn, 13=save,
+// 14=boss, 15=sand, 16=bridge, 17=dark_floor, 18=lava
+const TILE_COLORS = {
+  0: '#1a6622', 1: '#444455', 2: '#224488', 3: '#0d4410', 4: '#887755',
+  5: '#665544', 6: '#8B4513', 7: '#f0b800', 8: '#ff8844', 9: '#666688',
+  10: '#8888aa', 11: '#f0b800', 12: '#ff6688', 13: '#44aaff', 14: '#cc0000',
+  15: '#c2b280', 16: '#8B6914', 17: '#332244', 18: '#cc3300'
+};
+
+// Map structure: { tiles[][], width, height, encounters[], encounterRate, name, npcs[], chests[], connections:{} }
+const maps = {};
+
+function createMap(name, w, h, fillTile = 0) {
+  const tiles = [];
+  for (let y = 0; y < h; y++) {
+    tiles[y] = [];
+    for (let x = 0; x < w; x++) tiles[y][x] = fillTile;
+  }
+  return { name, tiles, width: w, height: h, encounters: [], encounterRate: 0, npcs: [], chests: [], connections: {} };
+}
+
+// ═══ OVERWORLD MAP ═══
+(function buildOverworld() {
+  const m = createMap('Auravia', 40, 40, 0);
+  const t = m.tiles;
+  // Water borders
+  for (let x = 0; x < 40; x++) { t[0][x]=2; t[1][x]=2; t[38][x]=2; t[39][x]=2; }
+  for (let y = 0; y < 40; y++) { t[y][0]=2; t[y][1]=2; t[y][38]=2; t[y][39]=2; }
+  // Mountains / walls (borders inner)
+  for (let x = 2; x < 38; x++) { t[2][x]=1; t[37][x]=1; }
+  for (let y = 2; y < 38; y++) { t[y][2]=1; t[y][37]=1; }
+  // Openings in walls
+  t[2][10]=4; t[2][11]=4; t[37][28]=4; t[37][29]=4;
+  t[20][2]=4; t[21][2]=4; t[15][37]=4; t[16][37]=4;
+  // Trees scattered
+  for (let i = 0; i < 80; i++) {
+    const x = 3+Math.floor(Math.random()*34), y = 3+Math.floor(Math.random()*34);
+    if (t[y][x] === 0) t[y][x] = 3;
+  }
+  // Town area (clear)
+  for (let y = 8; y < 14; y++) for (let x = 8; x < 16; x++) t[y][x] = 4;
+  // Town buildings (walls with doors)
+  // Shop
+  for (let y = 8; y < 11; y++) for (let x = 8; x < 12; x++) t[y][x] = 1;
+  t[10][10] = 11; // shop door
+  // Inn
+  for (let y = 8; y < 11; y++) for (let x = 13; x < 16; x++) t[y][x] = 1;
+  t[10][14] = 12; // inn door
+  // NPC area
+  t[12][11] = 8; t[12][14] = 8; t[11][9] = 8;
+  // Path from town south
+  for (let y = 14; y < 22; y++) { t[y][12] = 4; t[y][13] = 4; }
+  // Bridge over river
+  for (let x = 5; x < 35; x++) t[22][x] = 2;
+  for (let x = 5; x < 35; x++) t[23][x] = 2;
+  t[22][12]=16; t[22][13]=16; t[23][12]=16; t[23][13]=16;
+  // Path continues south
+  for (let y = 24; y < 30; y++) { t[y][12] = 4; t[y][13] = 4; }
+  // Dungeon 1 entrance (cave)
+  for (let y = 28; y < 32; y++) for (let x = 20; x < 26; x++) t[y][x] = 1;
+  t[28][22] = 9; // stairs down
+  t[28][23] = 4;
+  // Dungeon 2 entrance (dark castle)
+  for (let y = 30; y < 35; y++) for (let x = 30; x < 36; x++) t[y][x] = 1;
+  t[30][33] = 9;
+  t[30][32] = 4; t[31][32] = 4; t[31][33] = 4;
+  // Sand area (desert)
+  for (let y = 25; y < 35; y++) for (let x = 3; x < 12; x++) if (t[y][x] === 0) t[y][x] = 15;
+  // Chest in overworld
+  t[18][25] = 7; t[30][6] = 7; t[7][30] = 7;
+
+  m.encounters = ['slime','bat','goblin','wolf'];
+  m.encounterRate = 0.06;
+  m.npcs = [
+    { x: 11, y: 12, name: 'Elder Maro', dialogue: ['Welcome to Haven, brave adventurers!','The Lich King has awakened in the Dark Sanctum to the southeast.','First, explore the Crystal Caves to the south — you will need the strength.','May the light guide you.'] },
+    { x: 14, y: 12, name: 'Guard Bren', dialogue: ['Monsters grow stronger beyond the river.','Make sure you are well equipped before crossing.','The shop has fine weapons and armor.'] },
+    { x: 9, y: 11, name: 'Sara the Healer', dialogue: ['I sense a dark power stirring...','Take this potion, you may need it.'], gift: { item: 'potion', count: 2, given: false } },
+  ];
+  m.chests = [
+    { x: 25, y: 18, item: 'ironSword', opened: false },
+    { x: 6, y: 30, item: 'leatherArmor', opened: false },
+    { x: 30, y: 7, item: 'ether', count: 3, opened: false },
+  ];
+  m.connections = { '22_22': { map: 'dungeon1', x: 5, y: 14 }, '33_30': { map: 'dungeon2', x: 7, y: 18 } };
+  maps.overworld = m;
+})();
+
+// ═══ DUNGEON 1: Crystal Caves ═══
+(function buildDungeon1() {
+  const m = createMap('Crystal Caves', 20, 20, 1);
+  const t = m.tiles;
+  // Carve rooms and corridors
+  // Room 1 (entrance)
+  for (let y = 12; y < 16; y++) for (let x = 3; x < 8; x++) t[y][x] = 5;
+  t[14][5] = 10; // stairs up (exit)
+  // Corridor
+  for (let y = 8; y < 12; y++) t[y][5] = 5;
+  // Room 2
+  for (let y = 5; y < 9; y++) for (let x = 3; x < 10; x++) t[y][x] = 5;
+  t[6][7] = 7; // chest
+  // Corridor right
+  for (let x = 10; x < 15; x++) t[7][x] = 5;
+  // Room 3
+  for (let y = 4; y < 10; y++) for (let x = 14; x < 19; x++) t[y][x] = 5;
+  t[5][16] = 7; // chest
+  t[8][16] = 8; // NPC
+  // Corridor down
+  for (let y = 10; y < 15; y++) t[16][y] = 5;
+  for (let y = 10; y < 16; y++) t[y][16] = 5;
+  // Boss room
+  for (let y = 14; y < 18; y++) for (let x = 12; x < 19; x++) t[y][x] = 5;
+  t[16][15] = 14; // boss
+  // Corridor from room 1 to boss area
+  for (let x = 8; x < 13; x++) t[14][x] = 5;
+
+  m.encounters = ['bat','spider','skeleton','goblin'];
+  m.encounterRate = 0.1;
+  m.npcs = [
+    { x: 16, y: 8, name: 'Lost Miner', dialogue: ['I got lost down here... the crystals play tricks on your eyes.','Beware the Golem deeper in — it guards something powerful.'] },
+  ];
+  m.chests = [
+    { x: 7, y: 6, item: 'chainMail', opened: false },
+    { x: 16, y: 5, item: 'runeStaff', opened: false },
+  ];
+  m.connections = { '5_14': { map: 'overworld', x: 22, y: 29 } };
+  m.boss = { x: 15, y: 16, enemy: 'golem', defeated: false, reward: { item: 'steelSword', gold: 200 } };
+  maps.dungeon1 = m;
+})();
+
+// ═══ DUNGEON 2: Dark Sanctum ═══
+(function buildDungeon2() {
+  const m = createMap('Dark Sanctum', 22, 22, 1);
+  const t = m.tiles;
+  // Entrance hall
+  for (let y = 16; y < 20; y++) for (let x = 5; x < 10; x++) t[y][x] = 17;
+  t[18][7] = 10; // exit
+  // Corridor up
+  for (let y = 10; y < 16; y++) t[y][7] = 17;
+  // Left wing
+  for (let y = 8; y < 12; y++) for (let x = 2; x < 8; x++) t[y][x] = 17;
+  t[9][3] = 7; // chest
+  t[10][5] = 8; // npc
+  // Corridor right from left wing
+  for (let x = 8; x < 15; x++) t[10][x] = 17;
+  // Central room
+  for (let y = 7; y < 13; y++) for (let x = 10; x < 16; x++) t[y][x] = 17;
+  t[8][12] = 7;
+  // Lava border
+  for (let x = 10; x < 16; x++) { t[7][x] = 18; t[12][x] = 18; }
+  t[8][12] = 7;
+  for (let y = 7; y < 13; y++) { t[y][10] = 18; t[y][15] = 18; }
+  // Safe path through lava
+  t[7][12] = 17; t[12][12] = 17; t[10][10] = 17; t[10][15] = 17;
+  // Upper corridor
+  for (let y = 3; y < 7; y++) t[y][12] = 17;
+  // Boss room
+  for (let y = 1; y < 5; y++) for (let x = 8; x < 17; x++) t[y][x] = 17;
+  t[2][12] = 14; // boss
+  // Right wing
+  for (let y = 14; y < 18; y++) for (let x = 12; x < 19; x++) t[y][x] = 17;
+  t[15][17] = 7;
+  // Connect right wing
+  for (let y = 12; y < 14; y++) t[y][14] = 17;
+  for (let x = 10; x < 15; x++) t[14][x] = 17;
+
+  m.encounters = ['darkMage','orc','vampire','wyvern','skeleton'];
+  m.encounterRate = 0.12;
+  m.npcs = [
+    { x: 5, y: 10, name: 'Fallen Knight', dialogue: ['The Lich King\'s power grows... I could not defeat him alone.','You need all four warriors fighting as one.','His weakness is holy magic — the healer holds the key.'] },
+  ];
+  m.chests = [
+    { x: 3, y: 9, item: 'plateMail', opened: false },
+    { x: 12, y: 8, item: 'flameBlade', opened: false },
+    { x: 17, y: 15, item: 'phoenix', count: 2, opened: false },
+  ];
+  m.connections = { '7_18': { map: 'overworld', x: 33, y: 31 } };
+  m.boss = { x: 12, y: 2, enemy: 'lich', defeated: false, reward: { item: 'arcaneStaff', gold: 500 } };
+  maps.dungeon2 = m;
+})();
+// ═══════════════════════════════════════════
+// SHOP DATA
+// ═══════════════════════════════════════════
+const SHOP_INVENTORY = {
+  haven: {
+    name: 'Haven General Store',
+    items: ['potion','hiPotion','ether','antidote','phoenix','bomb',
+            'ironSword','dagger','leatherArmor','mageRobe','chainMail',
+            'holyStaff','powerRing','guardRing','speedBoots','magicAmulet',
+            'assassinBlade','steelSword','plateMail','arcaneStaff','flameBlade']
+  }
+};
+
+// ═══════════════════════════════════════════
+// PLAYER & CAMERA
+// ═══════════════════════════════════════════
+let currentMap = 'overworld';
+let playerX = 12, playerY = 13;
+let camX = 0, camY = 0;
+let moveTimer = 0;
+const MOVE_DELAY = 0.15;
+let lastDir = 'down';
+let stepsSinceEncounter = 0;
+
+function updateCamera() {
+  const map = maps[currentMap];
+  camX = Math.max(0, Math.min(map.width - COLS, playerX - Math.floor(COLS/2)));
+  camY = Math.max(0, Math.min(map.height - ROWS, playerY - Math.floor(ROWS/2)));
+}
+
+function isWalkable(x, y) {
+  const map = maps[currentMap];
+  if (x < 0 || y < 0 || x >= map.width || y >= map.height) return false;
+  const tile = map.tiles[y][x];
+  return tile !== 1 && tile !== 2 && tile !== 3 && tile !== 18;
+}
+
+function checkEncounter() {
+  const map = maps[currentMap];
+  if (map.encounterRate <= 0 || map.encounters.length === 0) return;
+  stepsSinceEncounter++;
+  const rate = map.encounterRate * Math.min(stepsSinceEncounter / 8, 1.5);
+  if (Math.random() < rate) {
+    stepsSinceEncounter = 0;
+    startRandomBattle();
+  }
+}
+
+function startRandomBattle() {
+  const map = maps[currentMap];
+  const available = map.encounters;
+  const count = 1 + Math.floor(Math.random() * 3);
+  const enemies = [];
+  for (let i = 0; i < count; i++) {
+    const key = available[Math.floor(Math.random() * available.length)];
+    const def = ENEMY_DEFS[key];
+    const scaleFactor = 1 + (combatsWon * 0.02);
+    enemies.push({
+      ...def,
+      key,
+      hp: Math.floor(def.hp * scaleFactor),
+      maxHp: Math.floor(def.hp * scaleFactor),
+      atk: Math.floor(def.atk * scaleFactor),
+      def: Math.floor(def.def * scaleFactor),
+      alive: true,
+      status: [],
+      anim: 0
+    });
+  }
+  initCombat(enemies);
+}
+
+// ═══════════════════════════════════════════
+// COMBAT SYSTEM
+// ═══════════════════════════════════════════
+let combat = {
+  enemies: [],
+  turnOrder: [],
+  currentTurn: 0,
+  phase: 'select_action', // select_action, select_target, select_spell, select_item, animating, enemy_turn, victory, defeat
+  selectedAction: 0,
+  selectedTarget: 0,
+  selectedSpell: 0,
+  selectedItem: 0,
+  menuOptions: ['Attack','Magic','Item','Defend'],
+  log: [],
+  animTimer: 0,
+  animType: '',
+  animData: {},
+  currentMember: 0,
+  membersDone: [],
+  defending: [],
+  victoryProcessed: false,
+  expGained: 0,
+  goldGained: 0,
+  isBoss: false,
+  bossKey: '',
+};
+
+function initCombat(enemies, isBoss = false, bossKey = '') {
+  combat.enemies = enemies;
+  combat.phase = 'select_action';
+  combat.selectedAction = 0;
+  combat.selectedTarget = 0;
+  combat.selectedSpell = 0;
+  combat.selectedItem = 0;
+  combat.log = ['Battle start!'];
+  combat.animTimer = 0;
+  combat.currentMember = -1;
+  combat.membersDone = [];
+  combat.defending = [false, false, false, false];
+  combat.victoryProcessed = false;
+  combat.expGained = 0;
+  combat.goldGained = 0;
+  combat.isBoss = isBoss;
+  combat.bossKey = bossKey;
+  // Clear buffs
+  party.forEach(p => p.buffs = {});
+  // Find first alive member
+  nextPartyMember();
+  prevState = gameState;
+  gameState = STATE.COMBAT;
+}
+
+function nextPartyMember() {
+  for (let i = (combat.currentMember + 1); i < party.length; i++) {
+    if (party[i].alive && !combat.membersDone.includes(i)) {
+      combat.currentMember = i;
+      combat.phase = 'select_action';
+      combat.selectedAction = 0;
+      combat.selectedTarget = 0;
+      return true;
+    }
+  }
+  // All party done, enemy turn
+  combat.phase = 'enemy_turn';
+  combat.currentMember = 0;
+  combat.animTimer = 0.5;
+  return false;
+}
+
+function executeAttack(attacker, target, isEnemy = false) {
+  const atk = isEnemy ? attacker.atk : attacker.totalAtk;
+  const def = isEnemy ? target.totalDef : target.def;
+  const crit = Math.random() < 0.1;
+  let dmg = Math.max(1, Math.floor(atk * (1.8 + Math.random() * 0.4) - def * 0.8));
+  if (crit) dmg = Math.floor(dmg * 1.8);
+  if (!isEnemy && combat.defending[party.indexOf(target)]) dmg = Math.floor(dmg * 0.4);
+  if (isEnemy && combat.defending[combat.enemies.indexOf(target)]) dmg = Math.floor(dmg * 0.5);
+  target.hp = Math.max(0, target.hp - dmg);
+  const critText = crit ? ' CRITICAL!' : '';
+  combat.log.push(`${attacker.name} attacks ${target.name} for ${dmg}!${critText}`);
+  if (target.hp <= 0) {
+    target.alive = false;
+    combat.log.push(`${target.name} is defeated!`);
+    if (!isEnemy) spawnParticles(250, 200, target.color || '#ff4444', 20);
+    else spawnParticles(450, 120, target.color || '#ff4444', 20);
+  }
+  if (isEnemy) { SFX.playerHit(); screenShake = 0.2; flashTimer = 0.1; flashColor = '#ff0000'; }
+  else { SFX.hit(); spawnParticles(450, 120, '#ffaa00', 8); }
+}
+
+function executeSpell(caster, spellKey, targets) {
+  const spell = SPELLS[spellKey];
+  if (!spell) return;
+  caster.mp = Math.max(0, caster.mp - spell.mp);
+  SFX.spell();
+
+  if (spell.type === 'attack') {
+    targets.forEach(t => {
+      const mag = caster.totalMag || caster.mag || 10;
+      let dmg = Math.max(1, Math.floor(spell.power * (1 + mag * 0.05) - (t.def || t.totalDef || 0) * 0.3));
+      t.hp = Math.max(0, t.hp - dmg);
+      combat.log.push(`${spell.name} hits ${t.name} for ${dmg}!`);
+      spawnParticles(450, 120, spell.anim, 15);
+      if (t.hp <= 0) { t.alive = false; combat.log.push(`${t.name} is defeated!`); }
+    });
+  } else if (spell.type === 'heal') {
+    targets.forEach(t => {
+      if (!t.alive) return;
+      const mag = caster.totalMag || caster.mag || 10;
+      const heal = Math.floor(spell.power * (1 + mag * 0.04));
+      t.hp = Math.min(t.maxHp, t.hp + heal);
+      combat.log.push(`${t.name} healed for ${heal} HP!`);
+      spawnParticles(250, 200, '#00ff88', 10);
+    });
+    SFX.heal();
+  } else if (spell.type === 'buff') {
+    targets.forEach(t => {
+      if (!t.alive) return;
+      t.buffs = t.buffs || {};
+      t.buffs[spell.stat] = (t.buffs[spell.stat] || 0) + spell.amount;
+      combat.log.push(`${t.name}'s ${spell.stat.toUpperCase()} boosted!`);
+    });
+  } else if (spell.type === 'drain') {
+    targets.forEach(t => {
+      const mag = caster.totalMag || caster.mag || 10;
+      let dmg = Math.max(1, Math.floor(spell.power * (1 + mag * 0.04)));
+      t.hp = Math.max(0, t.hp - dmg);
+      caster.hp = Math.min(caster.maxHp, caster.hp + Math.floor(dmg * 0.5));
+      combat.log.push(`${caster.name} drains ${dmg} HP from ${t.name}!`);
+      if (t.hp <= 0) { t.alive = false; combat.log.push(`${t.name} is defeated!`); }
+    });
+  } else if (spell.type === 'revive') {
+    targets.forEach(t => {
+      if (t.alive) return;
+      t.alive = true;
+      t.hp = Math.floor(t.maxHp * 0.3);
+      combat.log.push(`${t.name} has been revived!`);
+    });
+    SFX.heal();
+  } else if (spell.type === 'status') {
+    targets.forEach(t => {
+      if (!t.status) t.status = [];
+      t.status.push(spell.status);
+      combat.log.push(`${t.name} is ${spell.status}ed!`);
+    });
+  }
+}
+
+function enemyTurn() {
+  const alive = combat.enemies.filter(e => e.alive);
+  if (alive.length === 0) return;
+  const aliveParty = party.filter(p => p.alive);
+  if (aliveParty.length === 0) return;
+
+  alive.forEach(enemy => {
+    // Poison damage
+    if (enemy.status && enemy.status.includes('poison')) {
+      const pdmg = Math.max(1, Math.floor(enemy.maxHp * 0.05));
+      enemy.hp = Math.max(0, enemy.hp - pdmg);
+      combat.log.push(`${enemy.name} takes ${pdmg} poison damage!`);
+      if (enemy.hp <= 0) { enemy.alive = false; combat.log.push(`${enemy.name} is defeated!`); return; }
+    }
+
+    const target = aliveParty[Math.floor(Math.random() * aliveParty.length)];
+    // Decide: use skill or attack
+    if (enemy.skills && enemy.skills.length > 0 && Math.random() < 0.35) {
+      const sk = enemy.skills[Math.floor(Math.random() * enemy.skills.length)];
+      const spell = SPELLS[sk];
+      if (spell) {
+        if (spell.target === 'all') executeSpell(enemy, sk, aliveParty);
+        else executeSpell(enemy, sk, [target]);
+        return;
+      }
+    }
+    executeAttack(enemy, target, true);
+  });
+
+  // Apply poison to party
+  party.forEach(p => {
+    if (p.alive && p.status && p.status.includes('poison')) {
+      const pdmg = Math.max(1, Math.floor(p.maxHp * 0.05));
+      p.hp = Math.max(0, p.hp - pdmg);
+      combat.log.push(`${p.name} takes ${pdmg} poison damage!`);
+      if (p.hp <= 0) { p.alive = false; combat.log.push(`${p.name} falls!`); }
+    }
+  });
+}
+
+function checkCombatEnd() {
+  const aliveEnemies = combat.enemies.filter(e => e.alive);
+  const aliveParty = party.filter(p => p.alive);
+  if (aliveEnemies.length === 0 && !combat.victoryProcessed) {
+    combat.phase = 'victory';
+    combat.victoryProcessed = true;
+    combat.expGained = combat.enemies.reduce((s,e) => s + e.exp, 0);
+    combat.goldGained = combat.enemies.reduce((s,e) => s + e.gold, 0);
+    gold += combat.goldGained;
+    combatsWon++;
+    const levelUps = [];
+    party.forEach(p => { if (p.alive && p.addExp(combat.expGained)) levelUps.push(p.name); });
+    combat.log.push(`Victory! +${combat.expGained} EXP, +${combat.goldGained} Gold`);
+    if (levelUps.length > 0) { combat.log.push(`${levelUps.join(', ')} leveled up!`); SFX.levelUp(); }
+    else SFX.victory();
+    // Boss reward
+    if (combat.isBoss && combat.bossKey) {
+      const map = maps[currentMap];
+      if (map.boss && !map.boss.defeated) {
+        map.boss.defeated = true;
+        if (map.boss.reward.item) { addItem(map.boss.reward.item); combat.log.push(`Found ${ITEMS[map.boss.reward.item].name}!`); }
+        if (map.boss.reward.gold) { gold += map.boss.reward.gold; combat.log.push(`Found ${map.boss.reward.gold} gold!`); }
+        // Remove boss tile
+        map.tiles[map.boss.y][map.boss.x] = currentMap === 'dungeon1' ? 5 : 17;
+      }
+    }
+    combat.animTimer = 2.5;
+    saveGame();
+    return true;
+  }
+  if (aliveParty.length === 0) {
+    combat.phase = 'defeat';
+    combat.log.push('The party has fallen...');
+    SFX.death();
+    combat.animTimer = 2;
+    return true;
+  }
+  return false;
+}
+// ═══════════════════════════════════════════
+// DIALOGUE SYSTEM
+// ═══════════════════════════════════════════
+let dialogue = {
+  lines: [],
+  current: 0,
+  name: '',
+  active: false,
+  choices: null,
+  selectedChoice: 0,
+  callback: null,
+};
+
+function startDialogue(name, lines, callback = null) {
+  dialogue.lines = lines;
+  dialogue.current = 0;
+  dialogue.name = name;
+  dialogue.active = true;
+  dialogue.choices = null;
+  dialogue.callback = callback;
+  gameState = STATE.DIALOGUE;
+}
+
+function advanceDialogue() {
+  dialogue.current++;
+  if (dialogue.current >= dialogue.lines.length) {
+    dialogue.active = false;
+    if (dialogue.callback) dialogue.callback();
+    else gameState = STATE.OVERWORLD;
+  }
+  SFX.select();
+}
+
+// ═══════════════════════════════════════════
+// SHOP SYSTEM
+// ═══════════════════════════════════════════
+let shop = {
+  items: [],
+  selected: 0,
+  mode: 'buy', // buy, sell
+  scrollOffset: 0,
+  name: '',
+};
+
+function openShop(shopKey) {
+  const s = SHOP_INVENTORY[shopKey];
+  if (!s) return;
+  shop.items = s.items;
+  shop.selected = 0;
+  shop.mode = 'buy';
+  shop.scrollOffset = 0;
+  shop.name = s.name;
+  gameState = STATE.SHOP;
+}
+
+function buyItem(itemKey) {
+  const item = ITEMS[itemKey];
+  if (!item || gold < item.price) return false;
+  gold -= item.price;
+  addItem(itemKey);
+  SFX.buy();
+  return true;
+}
+
+function sellItem(itemKey) {
+  if (!hasItem(itemKey)) return false;
+  const item = ITEMS[itemKey];
+  const sellPrice = Math.floor(item.price * 0.5);
+  removeItem(itemKey);
+  gold += sellPrice;
+  SFX.buy();
+  return true;
+}
+
+// ═══════════════════════════════════════════
+// MENU SYSTEM
+// ═══════════════════════════════════════════
+let menu = {
+  tab: 0, // 0=status, 1=items, 2=equip, 3=spells
+  tabs: ['Status','Items','Equip','Spells'],
+  selected: 0,
+  subSelected: 0,
+  selectedMember: 0,
+  equipSlot: 0,
+  mode: 'main', // main, item_use, equip_select, equip_choose
+  itemList: [],
+  scrollOffset: 0,
+};
+
+function openMenu() {
+  menu.tab = 0;
+  menu.selected = 0;
+  menu.subSelected = 0;
+  menu.selectedMember = 0;
+  menu.mode = 'main';
+  menu.scrollOffset = 0;
+  refreshItemList();
+  prevState = gameState;
+  gameState = STATE.MENU;
+}
+
+function refreshItemList() {
+  menu.itemList = Object.entries(inventory).map(([k,v]) => ({key: k, ...ITEMS[k], count: v})).filter(i => i.name);
+}
+
+// ═══════════════════════════════════════════
+// INN SYSTEM
+// ═══════════════════════════════════════════
+const INN_COST = 50;
+let innState = 0; // 0: ask, 1: resting, 2: done
+
+function openInn() {
+  innState = 0;
+  gameState = STATE.INN;
+}
+
+function restAtInn() {
+  if (gold < INN_COST) return false;
+  gold -= INN_COST;
+  party.forEach(p => p.fullRestore());
+  SFX.inn();
+  return true;
+}
+
+// ═══════════════════════════════════════════
+// SAVE / LOAD
+// ═══════════════════════════════════════════
+function saveGame() {
+  try {
+    const data = {
+      party: party.map(p => ({
+        name: p.name, level: p.level, exp: p.exp,
+        hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp,
+        baseAtk: p.baseAtk, baseDef: p.baseDef, baseSpd: p.baseSpd, baseMag: p.baseMag,
+        atk: p.atk, def: p.def, spd: p.spd, mag: p.mag,
+        equipment: {...p.equipment}, spells: [...p.spells], alive: p.alive, status: [...p.status]
+      })),
+      inventory: {...inventory},
+      gold, currentMap, playerX, playerY,
+      playTime, combatsWon, stepsCount,
+      chests: {},
+      bosses: {},
+    };
+    // Save chest/boss states
+    for (const mk in maps) {
+      data.chests[mk] = maps[mk].chests.map(c => c.opened);
+      if (maps[mk].boss) data.bosses[mk] = maps[mk].boss.defeated;
+      if (maps[mk].npcs) data.chests[mk + '_gifts'] = maps[mk].npcs.filter(n => n.gift).map(n => n.gift.given);
+    }
+    localStorage.setItem('auravia_save', JSON.stringify(data));
+  } catch(e) {}
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem('auravia_save');
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    data.party.forEach((pd, i) => {
+      if (!party[i]) return;
+      Object.assign(party[i], pd);
+      party[i].buffs = {};
+    });
+    inventory = data.inventory || {};
+    gold = data.gold || 0;
+    currentMap = data.currentMap || 'overworld';
+    playerX = data.playerX || 12; playerY = data.playerY || 13;
+    playTime = data.playTime || 0;
+    combatsWon = data.combatsWon || 0;
+    stepsCount = data.stepsCount || 0;
+    // Restore chest/boss states
+    for (const mk in maps) {
+      if (data.chests[mk]) data.chests[mk].forEach((o,i) => { if(maps[mk].chests[i]) maps[mk].chests[i].opened = o; });
+      if (data.bosses && data.bosses[mk] && maps[mk].boss) maps[mk].boss.defeated = data.bosses[mk];
+      if (data.chests[mk + '_gifts']) {
+        const gifts = maps[mk].npcs.filter(n => n.gift);
+        data.chests[mk + '_gifts'].forEach((g,i) => { if(gifts[i]) gifts[i].gift.given = g; });
+      }
+    }
+    return true;
+  } catch(e) { return false; }
+}
+
+let highScore = parseInt(localStorage.getItem('auravia_highscore') || '0');
+function saveHighScore() {
+  const score = combatsWon * 100 + party.reduce((s,p) => s + p.level, 0) * 50 + gold;
+  if (score > highScore) { highScore = score; localStorage.setItem('auravia_highscore', score.toString()); }
+}
+// ═══════════════════════════════════════════
+// INPUT HANDLING
+// ═══════════════════════════════════════════
+const keys = {};
+let inputQueue = [];
+let inputCooldown = 0;
+
+window.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Enter','Escape','e','i','w','a','s','d'].includes(e.key)) e.preventDefault();
+  // Resume audio context
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  queueInput(e.key);
+});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+function queueInput(key) {
+  inputQueue.push(key);
+  if (inputQueue.length > 5) inputQueue.shift();
+}
+
+function consumeInput() {
+  if (inputQueue.length > 0) return inputQueue.shift();
+  return null;
+}
+
+// Touch controls
+document.querySelectorAll('.dpad-btn').forEach(btn => {
+  const dir = btn.dataset.dir;
+  btn.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (dir === 'up') queueInput('ArrowUp');
+    else if (dir === 'down') queueInput('ArrowDown');
+    else if (dir === 'left') queueInput('ArrowLeft');
+    else if (dir === 'right') queueInput('ArrowRight');
+    keys['Arrow' + dir.charAt(0).toUpperCase() + dir.slice(1)] = true;
+  });
+  btn.addEventListener('touchend', e => {
+    keys['Arrow' + dir.charAt(0).toUpperCase() + dir.slice(1)] = false;
+  });
+});
+
+document.querySelectorAll('.act-btn, .btn-menu').forEach(btn => {
+  const act = btn.dataset.act;
+  btn.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (act === 'a') { queueInput('Enter'); queueInput(' '); }
+    else if (act === 'b') queueInput('Escape');
+    else if (act === 'menu') queueInput('e');
+  });
+});
+
+// Canvas touch for title/gameover
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (gameState === STATE.TITLE || gameState === STATE.GAMEOVER) {
+    queueInput('Enter');
+  }
+});
+
+function isUp() { return keys['ArrowUp'] || keys['w']; }
+function isDown() { return keys['ArrowDown'] || keys['s']; }
+function isLeft() { return keys['ArrowLeft'] || keys['a']; }
+function isRight() { return keys['ArrowRight'] || keys['d']; }
+
+// ═══════════════════════════════════════════
+// DRAWING HELPERS
+// ═══════════════════════════════════════════
+function drawText(text, x, y, color = '#ffffff', size = 10, align = 'left') {
+  ctx.fillStyle = color;
+  ctx.font = `bold ${size}px 'Courier New', monospace`;
+  ctx.textAlign = align;
+  ctx.textBaseline = 'top';
+  ctx.fillText(text, x, y);
+}
+
+function drawBox(x, y, w, h, bg = '#0a0a1a', border = '#f0b800') {
+  ctx.fillStyle = bg;
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = border;
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+}
+
+function drawBar(x, y, w, h, current, max, color, bgColor = '#1a1a2a') {
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(x, y, w, h);
+  const pct = Math.max(0, current / max);
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w * pct, h);
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(x, y, w, h);
+}
+
+function drawSprite(x, y, color, type = 'hero', size = TILE) {
+  const cx = x + size/2, cy = y + size/2;
+  const s = size * 0.4;
+  ctx.fillStyle = color;
+  if (type === 'hero') {
+    // Head
+    ctx.beginPath(); ctx.arc(cx, cy - s*0.3, s*0.35, 0, Math.PI*2); ctx.fill();
+    // Body
+    ctx.fillRect(cx - s*0.25, cy - s*0.05, s*0.5, s*0.5);
+    // Legs
+    ctx.fillRect(cx - s*0.25, cy + s*0.45, s*0.2, s*0.3);
+    ctx.fillRect(cx + s*0.05, cy + s*0.45, s*0.2, s*0.3);
+  } else if (type === 'enemy') {
+    // Monster shape
+    ctx.beginPath(); ctx.arc(cx, cy - s*0.1, s*0.5, Math.PI, 0); ctx.fill();
+    ctx.fillRect(cx - s*0.5, cy - s*0.1, s, s*0.6);
+    // Eyes
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(cx - s*0.25, cy - s*0.2, s*0.15, s*0.15);
+    ctx.fillRect(cx + s*0.1, cy - s*0.2, s*0.15, s*0.15);
+  } else if (type === 'npc') {
+    ctx.beginPath(); ctx.arc(cx, cy - s*0.2, s*0.35, 0, Math.PI*2); ctx.fill();
+    ctx.fillRect(cx - s*0.3, cy + s*0.05, s*0.6, s*0.55);
+    ctx.fillStyle = '#f0b800';
+    drawText('!', cx - 2, cy - s - 6, '#f0b800', 10, 'left');
+  } else if (type === 'chest') {
+    ctx.fillStyle = '#8B6914';
+    ctx.fillRect(cx - s*0.4, cy - s*0.1, s*0.8, s*0.5);
+    ctx.fillStyle = color;
+    ctx.fillRect(cx - s*0.35, cy - s*0.05, s*0.7, s*0.15);
+    ctx.fillStyle = '#f0b800';
+    ctx.fillRect(cx - s*0.08, cy + s*0.05, s*0.16, s*0.2);
+  } else if (type === 'boss') {
+    // Bigger, meaner
+    ctx.beginPath(); ctx.arc(cx, cy - s*0.2, s*0.55, Math.PI, 0); ctx.fill();
+    ctx.fillRect(cx - s*0.55, cy - s*0.2, s*1.1, s*0.7);
+    // Horns
+    ctx.fillRect(cx - s*0.5, cy - s*0.7, s*0.15, s*0.5);
+    ctx.fillRect(cx + s*0.35, cy - s*0.7, s*0.15, s*0.5);
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(cx - s*0.3, cy - s*0.25, s*0.18, s*0.12);
+    ctx.fillRect(cx + s*0.12, cy - s*0.25, s*0.18, s*0.12);
+  }
+}
+
+function drawTile(tile, x, y) {
+  const color = TILE_COLORS[tile] || '#000';
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, TILE, TILE);
+  // Details
+  if (tile === 3) { // tree
+    ctx.fillStyle = '#0d5510';
+    ctx.beginPath(); ctx.arc(x+16, y+8, 10, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#5a3a1a';
+    ctx.fillRect(x+14, y+16, 4, 14);
+  } else if (tile === 2) { // water
+    ctx.fillStyle = 'rgba(100,180,255, 0.65)';
+    ctx.fillRect(x + ((Date.now()/500)%TILE), y + 10, 12, 2);
+    ctx.fillRect(x + ((Date.now()/700+10)%TILE), y + 20, 10, 2);
+  } else if (tile === 18) { // lava
+    ctx.fillStyle = `rgba(255,${100+Math.sin(Date.now()/200+x)*50},0,0.5)`;
+    ctx.fillRect(x, y, TILE, TILE);
+  } else if (tile === 16) { // bridge
+    ctx.fillStyle = '#6a5010';
+    ctx.fillRect(x+2, y, TILE-4, TILE);
+    ctx.fillStyle = '#4a3a0a';
+    ctx.fillRect(x+4, y+8, TILE-8, 2);
+    ctx.fillRect(x+4, y+22, TILE-8, 2);
+  } else if (tile === 9 || tile === 10) { // stairs
+    ctx.fillStyle = '#555566';
+    for (let i = 0; i < 4; i++) ctx.fillRect(x+4+i*2, y+6+i*5, TILE-8-i*4, 4);
+  } else if (tile === 11) { // shop
+    ctx.fillStyle = '#f0b800';
+    drawText('$', x+10, y+8, '#f0b800', 14);
+  } else if (tile === 12) { // inn
+    ctx.fillStyle = '#ff6688';
+    drawText('♥', x+10, y+8, '#ff6688', 14);
+  }
+}
+// ═══════════════════════════════════════════
+// RENDER: TITLE SCREEN
+// ═══════════════════════════════════════════
+function drawTitle(dt) {
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, COLS*TILE, ROWS*TILE);
+  // Stars
+  for (let i = 0; i < 50; i++) {
+    const sx = (i * 137 + Date.now()/50) % (COLS*TILE);
+    const sy = (i * 91) % (ROWS*TILE);
+    ctx.fillStyle = `rgba(255,255,200,${0.3 + Math.sin(Date.now()/500+i)*0.3})`;
+    ctx.fillRect(sx, sy, 2, 2);
+  }
+  // Title
+  drawText('REALMS OF', COLS*TILE/2, 80, '#888899', 16, 'center');
+  drawText('AURAVIA', COLS*TILE/2, 105, '#f0b800', 28, 'center');
+  // Subtitle
+  drawText('A Classic RPG Adventure', COLS*TILE/2, 145, '#667788', 9, 'center');
+  // Blink
+  titleBlink += dt;
+  if (titleBlink % 1.2 < 0.8) {
+    drawText('Press ENTER or Tap to Play', COLS*TILE/2, 220, '#00ff88', 10, 'center');
+  }
+  // Continue option
+  if (localStorage.getItem('auravia_save')) {
+    drawText('(Save data found — will continue)', COLS*TILE/2, 250, '#666688', 8, 'center');
+  }
+  // Controls
+  drawText('Arrow Keys / WASD: Move', COLS*TILE/2, 310, '#445566', 8, 'center');
+  drawText('Enter/Space: Confirm  |  Esc: Back  |  E: Menu', COLS*TILE/2, 325, '#445566', 8, 'center');
+  // High score
+  if (highScore > 0) drawText(`Best Score: ${highScore}`, COLS*TILE/2, 360, '#f0b800', 8, 'center');
+  // Credits
+  drawText('GameGob / GameForge', COLS*TILE/2, ROWS*TILE - 25, '#333344', 7, 'center');
+}
+
+// ═══════════════════════════════════════════
+// RENDER: OVERWORLD
+// ═══════════════════════════════════════════
+function drawOverworld(dt) {
+  const map = maps[currentMap];
+  // Draw tiles
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      const mx = x + camX, my = y + camY;
+      if (mx >= 0 && mx < map.width && my >= 0 && my < map.height) {
+        drawTile(map.tiles[my][mx], x*TILE, y*TILE);
+      } else {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(x*TILE, y*TILE, TILE, TILE);
+      }
+    }
+  }
+  // Draw chests
+  map.chests.forEach(c => {
+    if (c.opened) return;
+    const sx = (c.x - camX) * TILE, sy = (c.y - camY) * TILE;
+    if (sx >= -TILE && sx < COLS*TILE+TILE && sy >= -TILE && sy < ROWS*TILE+TILE) {
+      drawSprite(sx, sy, '#f0b800', 'chest');
+    }
+  });
+  // Draw NPCs
+  map.npcs.forEach(n => {
+    const sx = (n.x - camX) * TILE, sy = (n.y - camY) * TILE;
+    if (sx >= -TILE && sx < COLS*TILE+TILE && sy >= -TILE && sy < ROWS*TILE+TILE) {
+      drawSprite(sx, sy, '#ff8844', 'npc');
+    }
+  });
+  // Draw boss
+  if (map.boss && !map.boss.defeated) {
+    const sx = (map.boss.x - camX) * TILE, sy = (map.boss.y - camY) * TILE;
+    if (sx >= -TILE && sx < COLS*TILE+TILE && sy >= -TILE && sy < ROWS*TILE+TILE) {
+      drawSprite(sx, sy, ENEMY_DEFS[map.boss.enemy].color, 'boss');
+    }
+  }
+  // Draw player
+  const px = (playerX - camX) * TILE, py = (playerY - camY) * TILE;
+  drawSprite(px, py, party[0].color, 'hero');
+  // Draw direction indicator
+  ctx.fillStyle = '#ffffff';
+  const indX = px + TILE/2, indY = py + TILE/2;
+  if (lastDir === 'up') ctx.fillRect(indX-2, indY-16, 4, 4);
+  else if (lastDir === 'down') ctx.fillRect(indX-2, indY+12, 4, 4);
+  else if (lastDir === 'left') ctx.fillRect(indX-16, indY-2, 4, 4);
+  else if (lastDir === 'right') ctx.fillRect(indX+12, indY-2, 4, 4);
+
+  // Mini HUD
+  drawBox(0, 0, 160, 32, 'rgba(10,10,20,0.85)', '#334');
+  drawText(`${map.name}`, 6, 3, '#f0b800', 9);
+  drawText(`Lv${party[0].level} HP:${party[0].hp}/${party[0].maxHp} G:${gold}`, 6, 16, '#aabbcc', 7);
+
+  // Mini-map
+  const mmSize = 60;
+  const mmX = COLS*TILE - mmSize - 4, mmY = 4;
+  ctx.fillStyle = 'rgba(10,10,20,0.7)';
+  ctx.fillRect(mmX, mmY, mmSize, mmSize);
+  const mmScale = mmSize / Math.max(map.width, map.height);
+  for (let y = 0; y < map.height; y++) {
+    for (let x = 0; x < map.width; x++) {
+      const tile = map.tiles[y][x];
+      if (tile === 1 || tile === 2 || tile === 3) {
+        ctx.fillStyle = tile === 2 ? '#224488' : '#333';
+        ctx.fillRect(mmX + x*mmScale, mmY + y*mmScale, Math.max(1,mmScale), Math.max(1,mmScale));
+      }
+    }
+  }
+  // Player dot
+  ctx.fillStyle = '#00ff88';
+  ctx.fillRect(mmX + playerX*mmScale - 1, mmY + playerY*mmScale - 1, 3, 3);
+}
+
+// ═══════════════════════════════════════════
+// RENDER: COMBAT
+// ═══════════════════════════════════════════
+function drawCombat(dt) {
+  // Background
+  ctx.fillStyle = currentMap === 'dungeon2' ? '#1a0a1a' : currentMap === 'dungeon1' ? '#0a1a2a' : '#0a1a0a';
+  ctx.fillRect(0, 0, COLS*TILE, ROWS*TILE);
+  // Ground line
+  ctx.fillStyle = '#333344';
+  ctx.fillRect(0, 180, COLS*TILE, 2);
+
+  // Draw enemies
+  const aliveEnemies = combat.enemies.filter(e => e.alive);
+  const totalE = combat.enemies.length;
+  combat.enemies.forEach((e, i) => {
+    if (!e.alive) return;
+    const ex = 350 + (i - totalE/2) * 80;
+    const ey = 80 + (i % 2) * 40;
+    e._drawX = ex; e._drawY = ey;
+    // Shake on recent hit
+    const shx = e.anim > 0 ? (Math.random()-0.5)*6 : 0;
+    const shy = e.anim > 0 ? (Math.random()-0.5)*4 : 0;
+    drawSprite(ex + shx - 20, ey + shy - 20, e.color, 'enemy', 40);
+    // HP bar
+    drawBar(ex - 22, ey + 24, 44, 5, e.hp, e.maxHp, '#ff4444');
+    drawText(e.name, ex, ey - 28, '#cccccc', 7, 'center');
+    // Selection indicator
+    if ((combat.phase === 'select_target' || combat.phase === 'select_spell_target') && combat.selectedTarget === i && e.alive) {
+      ctx.fillStyle = '#f0b800';
+      ctx.beginPath(); ctx.moveTo(ex-3, ey-36); ctx.lineTo(ex+3, ey-36); ctx.lineTo(ex, ey-30); ctx.fill();
+    }
+    e.anim = Math.max(0, e.anim - dt);
+  });
+
+  // Draw party
+  party.forEach((p, i) => {
+    const px = 40 + i * 70;
+    const py = 200;
+    if (!p.alive) {
+      ctx.globalAlpha = 0.3;
+    }
+    drawSprite(px, py, p.color, 'hero', 30);
+    ctx.globalAlpha = 1;
+    drawText(p.name, px + 15, py + 34, p.alive ? '#fff' : '#666', 7, 'center');
+    drawBar(px, py + 44, 30, 4, p.hp, p.maxHp, '#00ff88');
+    drawBar(px, py + 50, 30, 3, p.mp, p.maxMp, '#4488ff');
+    // Current turn indicator
+    if (combat.currentMember === i && p.alive && (combat.phase === 'select_action' || combat.phase === 'select_spell' || combat.phase === 'select_target' || combat.phase === 'select_item' || combat.phase === 'select_spell_target' || combat.phase === 'select_ally')) {
+      ctx.fillStyle = '#f0b800';
+      ctx.beginPath(); ctx.moveTo(px+12, py-10); ctx.lineTo(px+18, py-10); ctx.lineTo(px+15, py-4); ctx.fill();
+    }
+    if (combat.defending[i]) {
+      drawText('DEF', px + 15, py - 8, '#4488ff', 6, 'center');
+    }
+  });
+
+  // Draw action menu
+  if (combat.phase === 'select_action') {
+    const m = combat.currentMember;
+    drawBox(10, 300, 200, 72, 'rgba(10,10,30,0.9)', '#f0b800');
+    drawText(`${party[m].name}'s Turn`, 18, 304, '#f0b800', 8);
+    combat.menuOptions.forEach((opt, i) => {
+      const sel = combat.selectedAction === i;
+      drawText(`${sel?'►':' '} ${opt}`, 18 + (i%2)*95, 318 + Math.floor(i/2)*18, sel ? '#00ff88' : '#aaaacc', 9);
+    });
+  }
+  // Spell list
+  else if (combat.phase === 'select_spell') {
+    const m = combat.currentMember;
+    const spells = party[m].spells;
+    drawBox(10, 280, 220, 100, 'rgba(10,10,30,0.9)', '#6644cc');
+    drawText('Spells (Esc: Back)', 18, 284, '#6644cc', 8);
+    spells.forEach((sk, i) => {
+      const sp = SPELLS[sk];
+      if (!sp) return;
+      const sel = combat.selectedSpell === i;
+      const canCast = party[m].mp >= sp.mp;
+      drawText(`${sel?'►':' '} ${sp.name} (${sp.mp}MP)`, 18, 298 + i*13, sel ? '#00ff88' : (canCast ? '#aabbcc' : '#555'), 8);
+    });
+  }
+  // Item list
+  else if (combat.phase === 'select_item') {
+    refreshItemList();
+    const usable = menu.itemList.filter(it => it.type === 'consumable');
+    drawBox(10, 260, 220, 120, 'rgba(10,10,30,0.9)', '#44aa44');
+    drawText('Items (Esc: Back)', 18, 264, '#44aa44', 8);
+    if (usable.length === 0) drawText('No items!', 18, 280, '#666', 8);
+    usable.forEach((it, i) => {
+      if (i > 6) return;
+      const sel = combat.selectedItem === i;
+      drawText(`${sel?'►':' '} ${it.name} x${it.count}`, 18, 278 + i*13, sel ? '#00ff88' : '#aabbcc', 8);
+    });
+  }
+  // Target selection
+  else if (combat.phase === 'select_target' || combat.phase === 'select_spell_target') {
+    drawBox(10, 360, 200, 20, 'rgba(10,10,30,0.9)', '#ff8844');
+    drawText('Select target (◄►) then Confirm', 18, 364, '#ff8844', 8);
+  }
+  // Ally selection
+  else if (combat.phase === 'select_ally') {
+    drawBox(10, 360, 200, 20, 'rgba(10,10,30,0.9)', '#00ff88');
+    drawText('Select ally (◄►) then Confirm', 18, 364, '#00ff88', 8);
+    // Highlight
+    const px = 40 + combat.selectedTarget * 70;
+    ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 2;
+    ctx.strokeRect(px-2, 198, 34, 36);
+  }
+
+  // Combat log
+  drawBox(230, 300, 400, 80, 'rgba(10,10,30,0.85)', '#555');
+  const logStart = Math.max(0, combat.log.length - 4);
+  for (let i = logStart; i < combat.log.length; i++) {
+    drawText(combat.log[i], 238, 306 + (i-logStart)*14, '#ccddee', 8);
+  }
+
+  // Victory / Defeat overlay
+  if (combat.phase === 'victory') {
+    drawBox(120, 130, 400, 100, 'rgba(0,20,10,0.95)', '#f0b800');
+    drawText('VICTORY!', 320, 140, '#f0b800', 20, 'center');
+    drawText(`EXP: +${combat.expGained}  Gold: +${combat.goldGained}`, 320, 170, '#00ff88', 10, 'center');
+    drawText('Press Enter to continue', 320, 200, '#888', 8, 'center');
+  }
+  if (combat.phase === 'defeat') {
+    drawBox(120, 130, 400, 80, 'rgba(20,0,0,0.95)', '#cc0000');
+    drawText('DEFEAT', 320, 145, '#cc0000', 22, 'center');
+    drawText('Press Enter...', 320, 180, '#888', 8, 'center');
+  }
+}
+// ═══════════════════════════════════════════
+// RENDER: MENU SCREEN
+// ═══════════════════════════════════════════
+function drawMenu(dt) {
+  ctx.fillStyle = 'rgba(10,10,20,0.95)';
+  ctx.fillRect(0, 0, COLS*TILE, ROWS*TILE);
+
+  // Tabs
+  menu.tabs.forEach((tab, i) => {
+    const sel = menu.tab === i;
+    const tx = 10 + i * 80;
+    drawBox(tx, 5, 75, 22, sel ? 'rgba(240,184,0, 0.65)' : 'rgba(30,30,40,0.8)', sel ? '#f0b800' : '#444');
+    drawText(tab, tx + 38, 9, sel ? '#f0b800' : '#667', 9, 'center');
+  });
+
+  if (menu.tab === 0) { // Status
+    party.forEach((p, i) => {
+      const y = 35 + i * 90;
+      const sel = menu.selected === i;
+      drawBox(10, y, 620, 82, sel ? 'rgba(240,184,0, 0.65)' : 'rgba(20,20,30,0.8)', sel ? '#f0b800' : '#333');
+      drawSprite(18, y + 10, p.color, 'hero', 28);
+      drawText(`${p.name} (${p.class})`, 55, y + 5, p.alive ? '#fff' : '#666', 10);
+      drawText(`Lv.${p.level}  EXP: ${p.exp}/${p.expNeeded()}`, 55, y + 20, '#aabbcc', 8);
+      drawBar(55, y + 33, 100, 8, p.hp, p.maxHp, '#00ff88');
+      drawText(`HP ${p.hp}/${p.maxHp}`, 160, y + 33, '#00ff88', 7);
+      drawBar(55, y + 44, 100, 6, p.mp, p.maxMp, '#4488ff');
+      drawText(`MP ${p.mp}/${p.maxMp}`, 160, y + 44, '#4488ff', 7);
+      drawText(`ATK:${p.totalAtk} DEF:${p.totalDef} SPD:${p.totalSpd} MAG:${p.totalMag}`, 55, y + 56, '#999', 7);
+      // Equipment
+      const w = p.equipment.weapon ? ITEMS[p.equipment.weapon]?.name : 'None';
+      const a = p.equipment.armor ? ITEMS[p.equipment.armor]?.name : 'None';
+      const ac = p.equipment.accessory ? ITEMS[p.equipment.accessory]?.name : 'None';
+      drawText(`W:${w} A:${a} Ac:${ac}`, 55, y + 68, '#667788', 7);
+      // Status effects
+      if (p.status.length > 0) drawText(p.status.join(','), 400, y + 5, '#ff4444', 7);
+    });
+    drawText(`Gold: ${gold}  Time: ${Math.floor(playTime/60)}m  Battles: ${combatsWon}`, 10, 400, '#f0b800', 8);
+  }
+
+  else if (menu.tab === 1) { // Items
+    refreshItemList();
+    drawBox(10, 35, 310, 350, 'rgba(20,20,30,0.9)', '#44aa44');
+    drawText('Items', 18, 40, '#44aa44', 10);
+    if (menu.itemList.length === 0) drawText('No items', 18, 60, '#666', 8);
+    const visItems = menu.itemList.slice(menu.scrollOffset, menu.scrollOffset + 18);
+    visItems.forEach((it, i) => {
+      const idx = i + menu.scrollOffset;
+      const sel = menu.selected === idx;
+      const y = 56 + i * 16;
+      drawText(`${sel?'►':' '} ${it.name} x${it.count}`, 18, y, sel ? '#00ff88' : '#aabbcc', 8);
+      if (sel) {
+        drawText(it.desc || '', 18, y + 10, '#888', 7);
+      }
+    });
+    // Use instructions
+    if (menu.mode === 'main') drawText('Enter: Use | Esc: Close', 10, 395, '#667', 7);
+    else if (menu.mode === 'item_use') {
+      drawBox(330, 35, 300, 180, 'rgba(20,20,30,0.9)', '#f0b800');
+      drawText('Use on whom?', 338, 40, '#f0b800', 9);
+      party.forEach((p, i) => {
+        const sel = menu.subSelected === i;
+        drawText(`${sel?'►':' '} ${p.name} HP:${p.hp}/${p.maxHp} MP:${p.mp}/${p.maxMp}`, 338, 58 + i * 18, sel ? '#00ff88' : (p.alive ? '#aabbcc' : '#666'), 8);
+      });
+    }
+  }
+
+  else if (menu.tab === 2) { // Equip
+    drawBox(10, 35, 200, 120, 'rgba(20,20,30,0.9)', '#6644cc');
+    drawText('Party Member:', 18, 40, '#6644cc', 9);
+    party.forEach((p, i) => {
+      const sel = menu.selectedMember === i;
+      drawText(`${sel?'►':' '} ${p.name}`, 18, 56 + i*18, sel ? '#00ff88' : '#aabbcc', 9);
+    });
+
+    const pm = party[menu.selectedMember];
+    if (menu.mode === 'main' || menu.mode === 'equip_select') {
+      drawBox(220, 35, 410, 120, 'rgba(20,20,30,0.9)', '#f0b800');
+      drawText(`${pm.name}'s Equipment:`, 228, 40, '#f0b800', 9);
+      const slots = ['weapon','armor','accessory'];
+      slots.forEach((slot, i) => {
+        const sel = menu.mode === 'equip_select' && menu.equipSlot === i;
+        const equipped = pm.equipment[slot] ? ITEMS[pm.equipment[slot]]?.name : 'Empty';
+        drawText(`${sel?'►':' '} ${slot.toUpperCase()}: ${equipped}`, 228, 58 + i*18, sel ? '#00ff88' : '#aabbcc', 8);
+      });
+      drawText(menu.mode === 'equip_select' ? 'Enter: Change | Esc: Back' : 'Enter: Select slot', 228, 110, '#667', 7);
+    }
+
+    if (menu.mode === 'equip_choose') {
+      const slot = ['weapon','armor','accessory'][menu.equipSlot];
+      drawBox(220, 160, 410, 230, 'rgba(20,20,30,0.9)', '#00ff88');
+      drawText(`Choose ${slot}:`, 228, 164, '#00ff88', 9);
+      const availableItems = Object.entries(inventory)
+        .filter(([k,v]) => v > 0 && ITEMS[k] && ITEMS[k].slot === slot)
+        .filter(([k]) => { const it = ITEMS[k]; return !it.classes || it.classes.includes(pm.class); });
+      const choices = [['_none', 'Unequip'], ...availableItems];
+      choices.forEach(([k, label], i) => {
+        if (i > 12) return;
+        const sel = menu.selected === i;
+        const name = k === '_none' ? '(Unequip)' : `${ITEMS[k].name} x${inventory[k]}`;
+        const desc = k !== '_none' && ITEMS[k] ? ITEMS[k].desc : '';
+        drawText(`${sel?'►':' '} ${name}`, 228, 180 + i*15, sel ? '#00ff88' : '#aabbcc', 8);
+        if (sel && desc) drawText(desc, 400, 180 + i*15, '#888', 7);
+      });
+    }
+  }
+
+  else if (menu.tab === 3) { // Spells
+    drawBox(10, 35, 620, 350, 'rgba(20,20,30,0.9)', '#6644cc');
+    let yy = 40;
+    party.forEach((p, i) => {
+      drawText(`${p.name} (MP: ${p.mp}/${p.maxMp}):`, 18, yy, '#f0b800', 9);
+      yy += 16;
+      if (p.spells.length === 0) { drawText('  No spells', 18, yy, '#666', 8); yy += 14; }
+      p.spells.forEach(sk => {
+        const sp = SPELLS[sk];
+        if (!sp) return;
+        drawText(`  ${sp.name} (${sp.mp}MP) - ${sp.desc}`, 18, yy, p.mp >= sp.mp ? '#aabbcc' : '#555', 7);
+        yy += 13;
+      });
+      yy += 6;
+    });
+  }
+
+  drawText('◄► Tabs | ▲▼ Navigate | Enter Select | Esc Close', COLS*TILE/2, ROWS*TILE - 15, '#445', 7, 'center');
+}
+
+// ═══════════════════════════════════════════
+// RENDER: SHOP
+// ═══════════════════════════════════════════
+function drawShop(dt) {
+  ctx.fillStyle = 'rgba(10,10,20,0.95)';
+  ctx.fillRect(0, 0, COLS*TILE, ROWS*TILE);
+  drawText(shop.name, COLS*TILE/2, 10, '#f0b800', 14, 'center');
+  drawText(`Gold: ${gold}`, COLS*TILE - 10, 10, '#f0b800', 10, 'right');
+  drawText(`Mode: ${shop.mode.toUpperCase()} (Tab to switch)`, 10, 10, '#888', 8);
+
+  const items = shop.mode === 'buy' ? shop.items : Object.keys(inventory).filter(k => inventory[k] > 0 && ITEMS[k]);
+  drawBox(10, 35, 400, 350, 'rgba(20,20,30,0.9)', '#f0b800');
+
+  const visible = items.slice(shop.scrollOffset, shop.scrollOffset + 18);
+  visible.forEach((key, i) => {
+    const idx = i + shop.scrollOffset;
+    const sel = shop.selected === idx;
+    const item = ITEMS[key];
+    if (!item) return;
+    const price = shop.mode === 'buy' ? item.price : Math.floor(item.price * 0.5);
+    const count = inventory[key] || 0;
+    const canAfford = shop.mode === 'buy' ? gold >= item.price : count > 0;
+    const y = 42 + i * 18;
+    drawText(`${sel?'►':' '} ${item.name}`, 18, y, sel ? '#00ff88' : (canAfford ? '#aabbcc' : '#555'), 8);
+    drawText(`${price}G`, 280, y, canAfford ? '#f0b800' : '#555', 8);
+    if (count > 0) drawText(`(${count})`, 330, y, '#888', 7);
+  });
+
+  // Item detail
+  if (items.length > 0 && shop.selected < items.length) {
+    const key = items[shop.selected];
+    const item = ITEMS[key];
+    if (item) {
+      drawBox(420, 35, 210, 120, 'rgba(20,20,30,0.9)', '#444');
+      drawText(item.name, 428, 42, '#fff', 10);
+      drawText(item.desc || '', 428, 58, '#aabbcc', 8);
+      drawText(`Type: ${item.type}`, 428, 76, '#888', 7);
+      if (item.classes) drawText(`Classes: ${item.classes.join(', ')}`, 428, 90, '#888', 7);
+    }
+  }
+  drawText('Enter: Buy/Sell | Tab: Buy/Sell | Esc: Leave', COLS*TILE/2, ROWS*TILE - 15, '#445', 7, 'center');
+}
+
+// ═══════════════════════════════════════════
+// RENDER: DIALOGUE
+// ═══════════════════════════════════════════
+function drawDialogue(dt) {
+  // Draw world behind
+  drawOverworld(dt);
+  // Dialogue box
+  drawBox(20, ROWS*TILE - 110, COLS*TILE - 40, 95, 'rgba(10,10,30,0.95)', '#f0b800');
+  drawText(dialogue.name, 30, ROWS*TILE - 105, '#f0b800', 10);
+  // Word wrap
+  const line = dialogue.lines[dialogue.current] || '';
+  const maxW = 55;
+  const words = line.split(' ');
+  let currentLine = '';
+  let lineY = 0;
+  words.forEach(word => {
+    if ((currentLine + ' ' + word).length > maxW) {
+      drawText(currentLine, 30, ROWS*TILE - 88 + lineY * 14, '#ddeeff', 9);
+      currentLine = word;
+      lineY++;
+    } else {
+      currentLine = currentLine ? currentLine + ' ' + word : word;
+    }
+  });
+  drawText(currentLine, 30, ROWS*TILE - 88 + lineY * 14, '#ddeeff', 9);
+  // Continue indicator
+  if (titleBlink % 0.8 < 0.5) drawText('▼', COLS*TILE - 50, ROWS*TILE - 25, '#f0b800', 10);
+}
+
+// ═══════════════════════════════════════════
+// RENDER: INN
+// ═══════════════════════════════════════════
+function drawInn(dt) {
+  ctx.fillStyle = 'rgba(10,10,20,0.95)';
+  ctx.fillRect(0, 0, COLS*TILE, ROWS*TILE);
+  drawText('♥ Haven Inn ♥', COLS*TILE/2, 60, '#ff6688', 18, 'center');
+
+  if (innState === 0) {
+    drawText(`Rest for the night? (${INN_COST} Gold)`, COLS*TILE/2, 140, '#aabbcc', 10, 'center');
+    drawText(`You have ${gold} Gold`, COLS*TILE/2, 165, '#f0b800', 9, 'center');
+    drawText('Enter: Yes  |  Esc: No', COLS*TILE/2, 220, '#667', 9, 'center');
+    if (gold < INN_COST) drawText('Not enough gold!', COLS*TILE/2, 190, '#ff4444', 9, 'center');
+  } else {
+    drawText('Your party rests peacefully...', COLS*TILE/2, 140, '#00ff88', 10, 'center');
+    drawText('All HP and MP restored!', COLS*TILE/2, 165, '#00ff88', 9, 'center');
+    drawText('Press Enter to continue', COLS*TILE/2, 220, '#667', 9, 'center');
+  }
+}
+
+// ═══════════════════════════════════════════
+// RENDER: GAME OVER
+// ═══════════════════════════════════════════
+function drawGameOver(dt) {
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, COLS*TILE, ROWS*TILE);
+  drawText('GAME OVER', COLS*TILE/2, 100, '#cc0000', 26, 'center');
+  drawText(`Level: ${party[0].level}  Battles Won: ${combatsWon}`, COLS*TILE/2, 170, '#aabbcc', 10, 'center');
+  drawText(`Gold: ${gold}  Time: ${Math.floor(playTime/60)}m`, COLS*TILE/2, 195, '#888', 9, 'center');
+  saveHighScore();
+  drawText(`High Score: ${highScore}`, COLS*TILE/2, 230, '#f0b800', 10, 'center');
+  if (titleBlink % 1.2 < 0.8) drawText('Press Enter to Play Again', COLS*TILE/2, 300, '#00ff88', 10, 'center');
+}

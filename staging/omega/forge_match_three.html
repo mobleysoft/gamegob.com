@@ -1,0 +1,1802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="GemForge — Match-3">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob/forge_match_three.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>GemForge — Match-3</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0f;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Segoe UI',sans-serif;}
+canvas{display:block;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);}
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+'use strict';
+
+// ============================================================
+// GEMFORGE — A Complete Match-3 Puzzle Game
+// ============================================================
+
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+
+// --- Responsive sizing ---
+const resize = () => {
+  const s = Math.min(window.innerWidth, window.innerHeight);
+  canvas.width = s;
+  canvas.height = s;
+};
+window.addEventListener('resize', resize);
+resize();
+
+// --- Constants ---
+const COLS = 8;
+const ROWS = 8;
+const GEM_TYPES = 7;
+const SWAP_SPEED = 0.008;
+const FALL_SPEED = 0.012;
+const MATCH_FLASH_DUR = 300;
+const CASCADE_PAUSE = 180;
+
+// --- Colors ---
+const BG = '#0a0a0f';
+const GOLD = '#f0b800';
+const GREEN = '#00ff88';
+const UI_DIM = '#333340';
+const UI_BRIGHT = '#eeeef4';
+
+const GEM_COLORS = [
+  '#e63946', // Red ruby
+  '#2196f3', // Blue sapphire
+  '#4caf50', // Green emerald
+  '#f0b800', // Gold topaz
+  '#9c27b0', // Purple amethyst
+  '#ff6f00', // Orange citrine
+  '#00bcd4', // Cyan diamond
+];
+
+const GEM_NAMES = ['Ruby','Sapphire','Emerald','Topaz','Amethyst','Citrine','Diamond'];
+
+const GEM_SHAPES = [
+  'diamond', 'circle', 'hexagon', 'star', 'triangle', 'square', 'octagon'
+];
+
+// Special gem types
+const SPECIAL_NONE = 0;
+const SPECIAL_LINE_H = 1; // 4-match horizontal — clears row
+const SPECIAL_LINE_V = 2; // 4-match vertical — clears column
+const SPECIAL_BOMB = 3;   // L/T match — clears 3x3
+const SPECIAL_HYPER = 4;  // 5-match — clears all of one color
+
+// --- Audio ---
+class AudioEngine {
+  constructor() {
+    this.ctx = null;
+    this.initialized = false;
+  }
+  init() {
+    if (this.initialized) return;
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.initialized = true;
+    } catch(e) {}
+  }
+  play(type, freq = 440, dur = 0.1, vol = 0.15) {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+    gain.gain.setValueAtTime(vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + dur);
+  }
+  swap() { this.play('sine', 520, 0.08, 0.12); }
+  badSwap() { this.play('square', 180, 0.15, 0.1); }
+  match(combo = 1) {
+    const base = 400 + combo * 80;
+    this.play('sine', base, 0.15, 0.15);
+    setTimeout(() => this.play('sine', base * 1.25, 0.12, 0.1), 60);
+  }
+  cascade(level) {
+    const f = 500 + level * 120;
+    this.play('sine', f, 0.2, 0.18);
+    setTimeout(() => this.play('triangle', f * 1.5, 0.15, 0.12), 50);
+  }
+  special() {
+    this.play('sine', 800, 0.3, 0.2);
+    setTimeout(() => this.play('sine', 1000, 0.2, 0.15), 80);
+    setTimeout(() => this.play('sine', 1200, 0.15, 0.12), 160);
+  }
+  hyper() {
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => this.play('sine', 600 + i * 200, 0.15, 0.15), i * 60);
+    }
+  }
+  gameOver() {
+    this.play('sawtooth', 400, 0.3, 0.15);
+    setTimeout(() => this.play('sawtooth', 300, 0.3, 0.12), 200);
+    setTimeout(() => this.play('sawtooth', 200, 0.5, 0.1), 400);
+  }
+  levelUp() {
+    for (let i = 0; i < 4; i++) {
+      setTimeout(() => this.play('sine', 500 + i * 150, 0.15, 0.18), i * 80);
+    }
+  }
+  select() { this.play('sine', 660, 0.06, 0.1); }
+  menuSelect() { this.play('triangle', 880, 0.1, 0.12); }
+}
+const audio = new AudioEngine();
+
+// --- Particles ---
+class Particle {
+  constructor(x, y, color, vx, vy, life = 600, size = 3) {
+    this.x = x; this.y = y; this.color = color;
+    this.vx = vx; this.vy = vy;
+    this.life = life; this.maxLife = life;
+    this.size = size;
+    this.dead = false;
+  }
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.vy += 0.0003 * dt;
+    this.life -= dt;
+    if (this.life <= 0) this.dead = true;
+  }
+  draw(ctx) {
+    const alpha = Math.max(0, this.life / this.maxLife);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size * alpha, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+const particles = [];
+const spawnParticles = (x, y, color, count = 8) => {
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+    const speed = 0.08 + Math.random() * 0.15;
+    particles.push(new Particle(
+      x, y, color,
+      Math.cos(angle) * speed,
+      Math.sin(angle) * speed,
+      400 + Math.random() * 300,
+      2 + Math.random() * 3
+    ));
+  }
+};
+
+const spawnBigParticles = (x, y, color, count = 20) => {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.1 + Math.random() * 0.25;
+    particles.push(new Particle(
+      x, y, color,
+      Math.cos(angle) * speed,
+      Math.sin(angle) * speed,
+      500 + Math.random() * 400,
+      3 + Math.random() * 5
+    ));
+  }
+};
+
+// --- Floating Text ---
+class FloatingText {
+  constructor(x, y, text, color = GOLD, size = 20) {
+    this.x = x; this.y = y; this.text = text; this.color = color;
+    this.size = size; this.life = 800; this.maxLife = 800;
+    this.dead = false;
+  }
+  update(dt) {
+    this.y -= 0.04 * dt;
+    this.life -= dt;
+    if (this.life <= 0) this.dead = true;
+  }
+  draw(ctx) {
+    const alpha = Math.max(0, this.life / this.maxLife);
+    const scale = 1 + (1 - alpha) * 0.3;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = this.color;
+    ctx.font = `bold ${Math.floor(this.size * scale)}px 'Segoe UI', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(this.text, this.x, this.y);
+    ctx.globalAlpha = 1;
+  }
+}
+const floatingTexts = [];
+
+// --- Screen Shake ---
+let shakeAmount = 0;
+let shakeDecay = 0.005;
+const shake = (amount) => { shakeAmount = Math.max(shakeAmount, amount); };
+
+// --- Gem Class ---
+class Gem {
+  constructor(type, col, row) {
+    this.type = type;
+    this.col = col;
+    this.row = row;
+    this.x = col; // visual position (animated)
+    this.y = row;
+    this.special = SPECIAL_NONE;
+    this.scale = 1;
+    this.targetScale = 1;
+    this.flash = 0;
+    this.matched = false;
+    this.markedForRemoval = false;
+    this.spawnAnim = 1; // countdown for pop-in
+  }
+  get color() { return GEM_COLORS[this.type]; }
+  get shape() { return GEM_SHAPES[this.type]; }
+}
+
+// --- Adaptive Difficulty ---
+const GobAdapt = (() => {
+  const KEY = 'gg_match3_adapt';
+  const TARGET_SCORE = 5000;
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e) { return {}; } };
+  const save = d => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch(e) {} };
+  const getData = () => { const d = load(); return { games: d.games||0, totalScore: d.totalScore||0, avgLevel: d.avgLevel||1, recentScores: d.recentScores||[] }; };
+  const getMovesMod = () => {
+    const d = getData();
+    if (d.games < 2) return 1.15;
+    const avg = d.totalScore / d.games;
+    const recent = d.recentScores.slice(-5);
+    const recentAvg = recent.length > 0 ? recent.reduce((a,b)=>a+b,0)/recent.length : avg;
+    const blend = recentAvg * 0.7 + avg * 0.3;
+    if (blend < TARGET_SCORE * 0.3) return 1.25;
+    if (blend < TARGET_SCORE) return 1.0 + (TARGET_SCORE - blend) / TARGET_SCORE * 0.2;
+    return 1.0;
+  };
+  const record = (finalScore, finalLevel) => {
+    const d = getData();
+    d.games++; d.totalScore += finalScore;
+    d.avgLevel = ((d.avgLevel * (d.games - 1)) + finalLevel) / d.games;
+    d.recentScores.push(finalScore);
+    if (d.recentScores.length > 10) d.recentScores.shift();
+    save(d);
+  };
+  return { getMovesMod, record };
+})();
+
+// --- Game State ---
+const STATE_TITLE = 'title';
+const STATE_PLAYING = 'playing';
+const STATE_GAME_OVER = 'gameover';
+const STATE_SHOP = 'shop';
+
+let state = STATE_TITLE;
+let grid = [];
+let cellSize = 0;
+let gridOffsetX = 0;
+let gridOffsetY = 0;
+let score = 0;
+let highScore = parseInt(localStorage.getItem('gemforge_highscore') || '0');
+let level = 1;
+let movesLeft = 30;
+let targetScore = 1000;
+let selectedGem = null;
+let swapping = null;  // { gem1, gem2, progress, reverting }
+let cascadeLevel = 0;
+let comboMultiplier = 1;
+let animating = false;
+let matchFlashTimer = 0;
+let cascadePauseTimer = 0;
+let gamePhase = 'idle'; // idle, swapping, matching, cascading, falling, refilling
+let titlePulse = 0;
+let currency = 0;
+let totalCurrency = parseInt(localStorage.getItem('gemforge_currency') || '0');
+
+// Upgrades (economy)
+const upgrades = {
+  extraMoves: { level: 0, maxLevel: 5, baseCost: 100, name: 'Extra Moves', desc: '+3 moves per level' },
+  scoreMulti: { level: 0, maxLevel: 5, baseCost: 150, name: 'Score Boost', desc: '+20% score per level' },
+  startSpecial: { level: 0, maxLevel: 3, baseCost: 300, name: 'Head Start', desc: 'Start with special gems' },
+};
+
+// Load upgrades
+try {
+  const saved = JSON.parse(localStorage.getItem('gemforge_upgrades') || '{}');
+  for (const key in saved) {
+    if (upgrades[key]) upgrades[key].level = saved[key];
+  }
+} catch(e) {}
+
+const saveUpgrades = () => {
+  const data = {};
+  for (const key in upgrades) data[key] = upgrades[key].level;
+  localStorage.setItem('gemforge_upgrades', JSON.stringify(data));
+  localStorage.setItem('gemforge_currency', totalCurrency.toString());
+};
+
+const getUpgradeCost = (upg) => Math.floor(upg.baseCost * Math.pow(1.8, upg.level));
+
+// Hint system
+let hintTimer = 0;
+let hintGems = null;
+const HINT_DELAY = 5000;
+
+// --- Grid Logic ---
+const createGrid = () => {
+  grid = [];
+  for (let c = 0; c < COLS; c++) {
+    grid[c] = [];
+    for (let r = 0; r < ROWS; r++) {
+      let type;
+      do {
+        type = Math.floor(Math.random() * GEM_TYPES);
+      } while (wouldMatch(c, r, type));
+      const gem = new Gem(type, c, r);
+      gem.y = r - ROWS - Math.random() * 4; // start above screen
+      grid[c][r] = gem;
+    }
+  }
+  // Place starting special gems from upgrade
+  const specCount = upgrades.startSpecial.level;
+  for (let i = 0; i < specCount; i++) {
+    const c = Math.floor(Math.random() * COLS);
+    const r = Math.floor(Math.random() * ROWS);
+    const specials = [SPECIAL_LINE_H, SPECIAL_LINE_V, SPECIAL_BOMB];
+    grid[c][r].special = specials[Math.floor(Math.random() * specials.length)];
+  }
+};
+
+const wouldMatch = (col, row, type) => {
+  // Check left
+  if (col >= 2 && grid[col-1][row]?.type === type && grid[col-2][row]?.type === type) return true;
+  // Check up
+  if (row >= 2 && grid[col][row-1]?.type === type && grid[col][row-2]?.type === type) return true;
+  return false;
+};
+
+const calculateLayout = () => {
+  const s = canvas.width;
+  const margin = s * 0.08;
+  const topBar = s * 0.12;
+  const availW = s - margin * 2;
+  const availH = s - margin - topBar;
+  cellSize = Math.floor(Math.min(availW / COLS, availH / ROWS));
+  gridOffsetX = Math.floor((s - cellSize * COLS) / 2);
+  gridOffsetY = topBar + Math.floor((s - topBar - margin - cellSize * ROWS) / 2);
+};
+
+// --- Match Detection ---
+const findMatches = () => {
+  const matches = []; // each match: { gems: [], type: 'h3'|'h4'|'h5'|'v3'|'v4'|'v5'|'L'|'T' }
+  const matched = new Set();
+
+  // Horizontal matches
+  for (let r = 0; r < ROWS; r++) {
+    let run = [grid[0][r]];
+    for (let c = 1; c < COLS; c++) {
+      if (grid[c][r] && run[0] && grid[c][r].type === run[0].type) {
+        run.push(grid[c][r]);
+      } else {
+        if (run.length >= 3) {
+          const type = run.length >= 5 ? 'h5' : run.length === 4 ? 'h4' : 'h3';
+          matches.push({ gems: [...run], type, dir: 'h' });
+        }
+        run = [grid[c][r]];
+      }
+    }
+    if (run.length >= 3) {
+      const type = run.length >= 5 ? 'h5' : run.length === 4 ? 'h4' : 'h3';
+      matches.push({ gems: [...run], type, dir: 'h' });
+    }
+  }
+
+  // Vertical matches
+  for (let c = 0; c < COLS; c++) {
+    let run = [grid[c][0]];
+    for (let r = 1; r < ROWS; r++) {
+      if (grid[c][r] && run[0] && grid[c][r].type === run[0].type) {
+        run.push(grid[c][r]);
+      } else {
+        if (run.length >= 3) {
+          const type = run.length >= 5 ? 'v5' : run.length === 4 ? 'v4' : 'v3';
+          matches.push({ gems: [...run], type, dir: 'v' });
+        }
+        run = [grid[c][r]];
+      }
+    }
+    if (run.length >= 3) {
+      const type = run.length >= 5 ? 'v5' : run.length === 4 ? 'v4' : 'v3';
+      matches.push({ gems: [...run], type, dir: 'v' });
+    }
+  }
+
+  // Detect L/T shapes by finding overlapping H and V matches
+  const hMatches = matches.filter(m => m.dir === 'h');
+  const vMatches = matches.filter(m => m.dir === 'v');
+  const ltMatches = [];
+
+  for (const hm of hMatches) {
+    for (const vm of vMatches) {
+      // Check if they share a gem and are same type
+      const shared = hm.gems.find(g => vm.gems.includes(g));
+      if (shared && hm.gems[0].type === vm.gems[0].type) {
+        const combined = new Set([...hm.gems, ...vm.gems]);
+        ltMatches.push({
+          gems: [...combined],
+          type: 'LT',
+          intersection: shared,
+          dir: 'lt'
+        });
+      }
+    }
+  }
+
+  return { regular: matches, lt: ltMatches };
+};
+
+// Determine what special gem to create from a match
+const getSpecialFromMatch = (match) => {
+  if (match.type === 'LT') return { special: SPECIAL_BOMB, at: match.intersection };
+  if (match.type === 'h5' || match.type === 'v5') return { special: SPECIAL_HYPER, at: match.gems[2] };
+  if (match.type === 'h4') return { special: SPECIAL_LINE_H, at: match.gems[1] };
+  if (match.type === 'v4') return { special: SPECIAL_LINE_V, at: match.gems[1] };
+  return null;
+};
+
+// --- Check if any valid moves exist ---
+const hasValidMoves = () => {
+  for (let c = 0; c < COLS; c++) {
+    for (let r = 0; r < ROWS; r++) {
+      // Try swap right
+      if (c < COLS - 1) {
+        swapInGrid(c, r, c + 1, r);
+        const m = findMatches();
+        swapInGrid(c, r, c + 1, r);
+        if (m.regular.length > 0 || m.lt.length > 0) return true;
+      }
+      // Try swap down
+      if (r < ROWS - 1) {
+        swapInGrid(c, r, c, r + 1);
+        const m = findMatches();
+        swapInGrid(c, r, c, r + 1);
+        if (m.regular.length > 0 || m.lt.length > 0) return true;
+      }
+    }
+  }
+  return false;
+};
+
+const findHintMove = () => {
+  for (let c = 0; c < COLS; c++) {
+    for (let r = 0; r < ROWS; r++) {
+      if (c < COLS - 1) {
+        swapInGrid(c, r, c + 1, r);
+        const m = findMatches();
+        swapInGrid(c, r, c + 1, r);
+        if (m.regular.length > 0 || m.lt.length > 0) return [grid[c][r], grid[c+1][r]];
+      }
+      if (r < ROWS - 1) {
+        swapInGrid(c, r, c, r + 1);
+        const m = findMatches();
+        swapInGrid(c, r, c, r + 1);
+        if (m.regular.length > 0 || m.lt.length > 0) return [grid[c][r], grid[c][r+1]];
+      }
+    }
+  }
+  return null;
+};
+
+const swapInGrid = (c1, r1, c2, r2) => {
+  const temp = grid[c1][r1];
+  grid[c1][r1] = grid[c2][r2];
+  grid[c2][r2] = temp;
+  if (grid[c1][r1]) { grid[c1][r1].col = c1; grid[c1][r1].row = r1; }
+  if (grid[c2][r2]) { grid[c2][r2].col = c2; grid[c2][r2].row = r2; }
+};
+
+// --- Shuffling when no moves available ---
+const shuffleGrid = () => {
+  const gems = [];
+  for (let c = 0; c < COLS; c++)
+    for (let r = 0; r < ROWS; r++)
+      if (grid[c][r]) gems.push(grid[c][r]);
+
+  // Fisher-Yates on types
+  for (let i = gems.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [gems[i].type, gems[j].type] = [gems[j].type, gems[i].type];
+  }
+
+  // Reassign positions
+  let idx = 0;
+  for (let c = 0; c < COLS; c++) {
+    for (let r = 0; r < ROWS; r++) {
+      gems[idx].col = c;
+      gems[idx].row = r;
+      grid[c][r] = gems[idx];
+      idx++;
+    }
+  }
+
+  floatingTexts.push(new FloatingText(
+    canvas.width / 2, canvas.height / 2,
+    'SHUFFLE!', '#ff6f00', 32
+  ));
+};
+
+// --- Special Gem Activation ---
+const activateSpecial = (gem) => {
+  const affected = [];
+  const cx = gridOffsetX + gem.col * cellSize + cellSize / 2;
+  const cy = gridOffsetY + gem.row * cellSize + cellSize / 2;
+
+  if (gem.special === SPECIAL_LINE_H) {
+    for (let c = 0; c < COLS; c++) {
+      if (grid[c][gem.row] && !grid[c][gem.row].markedForRemoval) {
+        affected.push(grid[c][gem.row]);
+      }
+    }
+    audio.special();
+    shake(6);
+    for (let c = 0; c < COLS; c++) {
+      const px = gridOffsetX + c * cellSize + cellSize / 2;
+      const py = gridOffsetY + gem.row * cellSize + cellSize / 2;
+      spawnParticles(px, py, GOLD, 4);
+    }
+  } else if (gem.special === SPECIAL_LINE_V) {
+    for (let r = 0; r < ROWS; r++) {
+      if (grid[gem.col][r] && !grid[gem.col][r].markedForRemoval) {
+        affected.push(grid[gem.col][r]);
+      }
+    }
+    audio.special();
+    shake(6);
+    for (let r = 0; r < ROWS; r++) {
+      const px = gridOffsetX + gem.col * cellSize + cellSize / 2;
+      const py = gridOffsetY + r * cellSize + cellSize / 2;
+      spawnParticles(px, py, GOLD, 4);
+    }
+  } else if (gem.special === SPECIAL_BOMB) {
+    for (let dc = -1; dc <= 1; dc++) {
+      for (let dr = -1; dr <= 1; dr++) {
+        const nc = gem.col + dc;
+        const nr = gem.row + dr;
+        if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
+          if (grid[nc][nr] && !grid[nc][nr].markedForRemoval) {
+            affected.push(grid[nc][nr]);
+          }
+        }
+      }
+    }
+    audio.special();
+    shake(10);
+    spawnBigParticles(cx, cy, '#ff4444', 25);
+  } else if (gem.special === SPECIAL_HYPER) {
+    // Clear all gems of the same type
+    const targetType = gem.type;
+    for (let c = 0; c < COLS; c++) {
+      for (let r = 0; r < ROWS; r++) {
+        if (grid[c][r] && grid[c][r].type === targetType && !grid[c][r].markedForRemoval) {
+          affected.push(grid[c][r]);
+        }
+      }
+    }
+    audio.hyper();
+    shake(12);
+    spawnBigParticles(cx, cy, '#ffffff', 30);
+  }
+  return affected;
+};
+
+// --- Process Matches ---
+const processMatches = () => {
+  const { regular, lt } = findMatches();
+  if (regular.length === 0 && lt.length === 0) return false;
+
+  const allMatched = new Set();
+  const specialsToCreate = [];
+
+  // Process LT matches first (higher priority)
+  for (const match of lt) {
+    for (const gem of match.gems) allMatched.add(gem);
+    const sp = getSpecialFromMatch(match);
+    if (sp) specialsToCreate.push(sp);
+  }
+
+  // Process regular matches
+  for (const match of regular) {
+    // Skip if all gems already matched by LT
+    const newGems = match.gems.filter(g => !allMatched.has(g));
+    if (newGems.length === 0 && match.gems.every(g => allMatched.has(g))) continue;
+
+    for (const gem of match.gems) allMatched.add(gem);
+
+    // Only create special if not part of an LT match
+    if (!lt.some(ltm => match.gems.some(g => ltm.gems.includes(g)))) {
+      const sp = getSpecialFromMatch(match);
+      if (sp) specialsToCreate.push(sp);
+    }
+  }
+
+  // Score calculation
+  const scoreMulti = 1 + upgrades.scoreMulti.level * 0.2;
+  const baseScore = allMatched.size * 10 * cascadeLevel * scoreMulti;
+  const bonusScore = specialsToCreate.length * 50;
+  const totalMatchScore = Math.floor((baseScore + bonusScore) * comboMultiplier);
+  score += totalMatchScore;
+  currency += Math.floor(totalMatchScore / 10);
+
+  // Floating text
+  const centerX = canvas.width / 2;
+  const centerY = gridOffsetY + (ROWS * cellSize) / 2;
+  if (cascadeLevel > 1) {
+    floatingTexts.push(new FloatingText(
+      centerX, centerY - 30,
+      `CASCADE x${cascadeLevel}!`, '#ff6f00', 24
+    ));
+  }
+  floatingTexts.push(new FloatingText(
+    centerX, centerY,
+    `+${totalMatchScore}`, GOLD, 20 + Math.min(cascadeLevel * 2, 10)
+  ));
+
+  audio.match(cascadeLevel);
+  if (cascadeLevel > 1) audio.cascade(cascadeLevel);
+
+  shake(2 + cascadeLevel);
+
+  // Activate specials on matched gems
+  const chainedRemovals = new Set();
+  for (const gem of allMatched) {
+    if (gem.special !== SPECIAL_NONE) {
+      const affected = activateSpecial(gem);
+      for (const a of affected) chainedRemovals.add(a);
+    }
+  }
+
+  // Add chained removals
+  for (const gem of chainedRemovals) {
+    allMatched.add(gem);
+    // Chain specials!
+    if (gem.special !== SPECIAL_NONE) {
+      const affected2 = activateSpecial(gem);
+      for (const a of affected2) allMatched.add(a);
+    }
+  }
+
+  // Mark gems for removal and spawn particles
+  for (const gem of allMatched) {
+    gem.matched = true;
+    gem.markedForRemoval = true;
+    const px = gridOffsetX + gem.col * cellSize + cellSize / 2;
+    const py = gridOffsetY + gem.row * cellSize + cellSize / 2;
+    spawnParticles(px, py, gem.color, 6 + cascadeLevel * 2);
+  }
+
+  // Create special gems (keep them alive, change type)
+  for (const sp of specialsToCreate) {
+    const gem = sp.at;
+    if (gem.markedForRemoval) {
+      // Create a new gem at this position with the special
+      const newGem = new Gem(gem.type, gem.col, gem.row);
+      newGem.special = sp.special;
+      newGem.x = gem.col;
+      newGem.y = gem.row;
+      newGem.scale = 0;
+      newGem.targetScale = 1;
+      newGem.spawnAnim = 0;
+      newGem.markedForRemoval = false;
+      newGem.matched = false;
+      grid[gem.col][gem.row] = newGem;
+    }
+  }
+
+  // Remove matched gems
+  for (const gem of allMatched) {
+    if (!gem.markedForRemoval) continue;
+    // Don't remove if it was replaced by a special
+    if (grid[gem.col][gem.row] !== gem) continue;
+    grid[gem.col][gem.row] = null;
+  }
+
+  return true;
+};
+
+// --- Gravity / Falling ---
+const applyGravity = () => {
+  let fell = false;
+  for (let c = 0; c < COLS; c++) {
+    let writePos = ROWS - 1;
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (grid[c][r]) {
+        if (r !== writePos) {
+          grid[c][writePos] = grid[c][r];
+          grid[c][r] = null;
+          grid[c][writePos].row = writePos;
+          grid[c][writePos].col = c;
+          fell = true;
+        }
+        writePos--;
+      }
+    }
+    // Fill empty spaces at top
+    for (let r = writePos; r >= 0; r--) {
+      let type;
+      do {
+        type = Math.floor(Math.random() * GEM_TYPES);
+      } while (false); // Allow initial matches for cascading fun
+      const gem = new Gem(type, c, r);
+      gem.y = r - (writePos - r + 1) * 1.5 - 1;
+      gem.spawnAnim = 0.5;
+      grid[c][r] = gem;
+      fell = true;
+    }
+  }
+  return fell;
+};
+
+// --- Check if all gems are in place ---
+const allGemsSettled = () => {
+  for (let c = 0; c < COLS; c++) {
+    for (let r = 0; r < ROWS; r++) {
+      if (!grid[c][r]) return false;
+      if (Math.abs(grid[c][r].x - grid[c][r].col) > 0.02) return false;
+      if (Math.abs(grid[c][r].y - grid[c][r].row) > 0.02) return false;
+    }
+  }
+  return true;
+};
+
+// --- Drawing Functions ---
+const drawGemShape = (x, y, size, gem) => {
+  const s = size * 0.4;
+  ctx.fillStyle = gem.color;
+
+  const shape = gem.shape;
+  ctx.beginPath();
+
+  switch(shape) {
+    case 'diamond':
+      ctx.moveTo(x, y - s);
+      ctx.lineTo(x + s, y);
+      ctx.lineTo(x, y + s);
+      ctx.lineTo(x - s, y);
+      break;
+    case 'circle':
+      ctx.arc(x, y, s * 0.85, 0, Math.PI * 2);
+      break;
+    case 'hexagon':
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i - Math.PI / 6;
+        const px = x + s * 0.9 * Math.cos(angle);
+        const py = y + s * 0.9 * Math.sin(angle);
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      break;
+    case 'star': {
+      for (let i = 0; i < 5; i++) {
+        const outerAngle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+        const innerAngle = outerAngle + Math.PI / 5;
+        const ox = x + s * Math.cos(outerAngle);
+        const oy = y + s * Math.sin(outerAngle);
+        const ix = x + s * 0.4 * Math.cos(innerAngle);
+        const iy = y + s * 0.4 * Math.sin(innerAngle);
+        i === 0 ? ctx.moveTo(ox, oy) : ctx.lineTo(ox, oy);
+        ctx.lineTo(ix, iy);
+      }
+      break;
+    }
+    case 'triangle':
+      ctx.moveTo(x, y - s);
+      ctx.lineTo(x + s * 0.9, y + s * 0.7);
+      ctx.lineTo(x - s * 0.9, y + s * 0.7);
+      break;
+    case 'square': {
+      const hs = s * 0.75;
+      ctx.rect(x - hs, y - hs, hs * 2, hs * 2);
+      break;
+    }
+    case 'octagon':
+      for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI / 4) * i - Math.PI / 8;
+        const px = x + s * 0.85 * Math.cos(angle);
+        const py = y + s * 0.85 * Math.sin(angle);
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      break;
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Highlight/shine
+  ctx.fillStyle = 'rgba(255,255,255, 0.65)';
+  ctx.beginPath();
+  ctx.arc(x - s * 0.2, y - s * 0.2, s * 0.25, 0, Math.PI * 2);
+  ctx.fill();
+};
+
+const drawSpecialIndicator = (x, y, size, special, time) => {
+  const s = size * 0.4;
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#ffffff';
+
+  if (special === SPECIAL_LINE_H) {
+    ctx.globalAlpha = 0.5 + 0.3 * Math.sin(time * 0.005);
+    ctx.beginPath();
+    ctx.moveTo(x - s, y);
+    ctx.lineTo(x - s * 0.3, y - s * 0.3);
+    ctx.moveTo(x - s, y);
+    ctx.lineTo(x - s * 0.3, y + s * 0.3);
+    ctx.moveTo(x + s, y);
+    ctx.lineTo(x + s * 0.3, y - s * 0.3);
+    ctx.moveTo(x + s, y);
+    ctx.lineTo(x + s * 0.3, y + s * 0.3);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  } else if (special === SPECIAL_LINE_V) {
+    ctx.globalAlpha = 0.5 + 0.3 * Math.sin(time * 0.005);
+    ctx.beginPath();
+    ctx.moveTo(x, y - s);
+    ctx.lineTo(x - s * 0.3, y - s * 0.3);
+    ctx.moveTo(x, y - s);
+    ctx.lineTo(x + s * 0.3, y - s * 0.3);
+    ctx.moveTo(x, y + s);
+    ctx.lineTo(x - s * 0.3, y + s * 0.3);
+    ctx.moveTo(x, y + s);
+    ctx.lineTo(x + s * 0.3, y + s * 0.3);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  } else if (special === SPECIAL_BOMB) {
+    ctx.globalAlpha = 0.5 + 0.3 * Math.sin(time * 0.006);
+    ctx.beginPath();
+    ctx.arc(x, y, s * 1.1, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, s * 0.5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  } else if (special === SPECIAL_HYPER) {
+    ctx.globalAlpha = 0.6 + 0.4 * Math.sin(time * 0.008);
+    const spokes = 8;
+    for (let i = 0; i < spokes; i++) {
+      const angle = (Math.PI * 2 * i) / spokes + time * 0.002;
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(angle) * s * 0.3, y + Math.sin(angle) * s * 0.3);
+      ctx.lineTo(x + Math.cos(angle) * s * 1.1, y + Math.sin(angle) * s * 1.1);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+};
+
+const drawGrid = (time) => {
+  // Grid background
+  ctx.fillStyle = '#12121a';
+  ctx.strokeStyle = '#1a1a28';
+  ctx.lineWidth = 1;
+
+  const gridW = COLS * cellSize;
+  const gridH = ROWS * cellSize;
+
+  // Draw grid bg with rounded corners
+  const r = 6;
+  ctx.beginPath();
+  ctx.moveTo(gridOffsetX + r, gridOffsetY);
+  ctx.lineTo(gridOffsetX + gridW - r, gridOffsetY);
+  ctx.quadraticCurveTo(gridOffsetX + gridW, gridOffsetY, gridOffsetX + gridW, gridOffsetY + r);
+  ctx.lineTo(gridOffsetX + gridW, gridOffsetY + gridH - r);
+  ctx.quadraticCurveTo(gridOffsetX + gridW, gridOffsetY + gridH, gridOffsetX + gridW - r, gridOffsetY + gridH);
+  ctx.lineTo(gridOffsetX + r, gridOffsetY + gridH);
+  ctx.quadraticCurveTo(gridOffsetX, gridOffsetY + gridH, gridOffsetX, gridOffsetY + gridH - r);
+  ctx.lineTo(gridOffsetX, gridOffsetY + r);
+  ctx.quadraticCurveTo(gridOffsetX, gridOffsetY, gridOffsetX + r, gridOffsetY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Cell grid lines
+  ctx.strokeStyle = '#1e1e2c';
+  for (let c = 0; c <= COLS; c++) {
+    ctx.beginPath();
+    ctx.moveTo(gridOffsetX + c * cellSize, gridOffsetY);
+    ctx.lineTo(gridOffsetX + c * cellSize, gridOffsetY + gridH);
+    ctx.stroke();
+  }
+  for (let rr = 0; rr <= ROWS; rr++) {
+    ctx.beginPath();
+    ctx.moveTo(gridOffsetX, gridOffsetY + rr * cellSize);
+    ctx.lineTo(gridOffsetX + gridW, gridOffsetY + rr * cellSize);
+    ctx.stroke();
+  }
+
+  // Draw gems
+  for (let c = 0; c < COLS; c++) {
+    for (let row = 0; row < ROWS; row++) {
+      const gem = grid[c][row];
+      if (!gem) continue;
+
+      const drawX = gridOffsetX + gem.x * cellSize + cellSize / 2;
+      const drawY = gridOffsetY + gem.y * cellSize + cellSize / 2;
+
+      // Clip to grid area
+      if (drawY < gridOffsetY - cellSize || drawY > gridOffsetY + gridH + cellSize) continue;
+
+      ctx.save();
+      ctx.translate(drawX, drawY);
+
+      let scale = gem.scale;
+      if (gem.spawnAnim > 0) {
+        scale *= (1 - gem.spawnAnim);
+      }
+
+      // Selected highlight
+      if (selectedGem === gem) {
+        const pulse = 0.9 + 0.1 * Math.sin(time * 0.008);
+        scale *= pulse;
+        ctx.shadowColor = gem.color;
+        ctx.shadowBlur = 12;
+      }
+
+      // Hint highlight
+      if (hintGems && (hintGems[0] === gem || hintGems[1] === gem)) {
+        const pulse = 0.85 + 0.15 * Math.sin(time * 0.006);
+        scale *= pulse;
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 8;
+      }
+
+      // Matched flash
+      if (gem.matched) {
+        ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time * 0.015);
+        scale *= 1.2;
+      }
+
+      ctx.scale(scale, scale);
+      drawGemShape(0, 0, cellSize, gem);
+
+      if (gem.special !== SPECIAL_NONE) {
+        drawSpecialIndicator(0, 0, cellSize, gem.special, time);
+      }
+
+      ctx.restore();
+    }
+  }
+};
+
+const drawUI = (time) => {
+  const s = canvas.width;
+
+  // Top bar background
+  ctx.fillStyle = '#0e0e16';
+  ctx.fillRect(0, 0, s, gridOffsetY - 4);
+
+  // Score
+  ctx.fillStyle = UI_BRIGHT;
+  ctx.font = `bold ${Math.floor(s * 0.035)}px 'Segoe UI', sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText('SCORE', s * 0.04, s * 0.035);
+
+  ctx.fillStyle = GOLD;
+  ctx.font = `bold ${Math.floor(s * 0.045)}px 'Segoe UI', sans-serif`;
+  ctx.fillText(score.toLocaleString(), s * 0.04, s * 0.08);
+
+  // Level
+  ctx.fillStyle = UI_BRIGHT;
+  ctx.font = `bold ${Math.floor(s * 0.035)}px 'Segoe UI', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText(`LEVEL ${level}`, s * 0.5, s * 0.035);
+
+  // Target progress bar
+  const barW = s * 0.25;
+  const barH = s * 0.018;
+  const barX = s * 0.5 - barW / 2;
+  const barY = s * 0.05;
+  const progress = Math.min(1, score / targetScore);
+
+  ctx.fillStyle = UI_DIM;
+  ctx.fillRect(barX, barY, barW, barH);
+  ctx.fillStyle = GREEN;
+  ctx.fillRect(barX, barY, barW * progress, barH);
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(barX, barY, barW, barH);
+
+  ctx.fillStyle = UI_DIM;
+  ctx.font = `${Math.floor(s * 0.022)}px 'Segoe UI', sans-serif`;
+  ctx.fillText(`${score}/${targetScore}`, s * 0.5, s * 0.09);
+
+  // Moves
+  ctx.textAlign = 'right';
+  ctx.fillStyle = UI_BRIGHT;
+  ctx.font = `bold ${Math.floor(s * 0.035)}px 'Segoe UI', sans-serif`;
+  ctx.fillText('MOVES', s * 0.96, s * 0.035);
+
+  ctx.fillStyle = movesLeft <= 5 ? '#e63946' : GOLD;
+  ctx.font = `bold ${Math.floor(s * 0.05)}px 'Segoe UI', sans-serif`;
+  if (movesLeft <= 5) {
+    const pulse = 1 + 0.1 * Math.sin(time * 0.008);
+    ctx.save();
+    ctx.translate(s * 0.96, s * 0.08);
+    ctx.scale(pulse, pulse);
+    ctx.fillText(movesLeft.toString(), 0, 0);
+    ctx.restore();
+  } else {
+    ctx.fillText(movesLeft.toString(), s * 0.96, s * 0.08);
+  }
+
+  // Currency (below grid)
+  const bottomY = gridOffsetY + ROWS * cellSize + s * 0.03;
+  ctx.fillStyle = '#888';
+  ctx.font = `${Math.floor(s * 0.025)}px 'Segoe UI', sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.fillText(`Gems: ${currency}`, s * 0.04, bottomY);
+
+  // Cascade indicator
+  if (cascadeLevel > 1) {
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ff6f00';
+    ctx.font = `bold ${Math.floor(s * 0.03)}px 'Segoe UI', sans-serif`;
+    const cascPulse = 1 + 0.15 * Math.sin(time * 0.01);
+    ctx.save();
+    ctx.translate(s * 0.96, bottomY);
+    ctx.scale(cascPulse, cascPulse);
+    ctx.fillText(`CASCADE x${cascadeLevel}`, 0, 0);
+    ctx.restore();
+  }
+
+  // Shop button
+  ctx.textAlign = 'center';
+  const shopBtnY = bottomY + s * 0.01;
+  const shopBtnW = s * 0.2;
+  const shopBtnH = s * 0.04;
+  const shopBtnX = s * 0.5 - shopBtnW / 2;
+  shopButton.x = shopBtnX;
+  shopButton.y = shopBtnY;
+  shopButton.w = shopBtnW;
+  shopButton.h = shopBtnH;
+
+  ctx.fillStyle = '#1a1a2e';
+  ctx.strokeStyle = GOLD;
+  ctx.lineWidth = 1;
+  ctx.fillRect(shopBtnX, shopBtnY, shopBtnW, shopBtnH);
+  ctx.strokeRect(shopBtnX, shopBtnY, shopBtnW, shopBtnH);
+  ctx.fillStyle = GOLD;
+  ctx.font = `bold ${Math.floor(s * 0.022)}px 'Segoe UI', sans-serif`;
+  ctx.fillText('SHOP', s * 0.5, shopBtnY + shopBtnH * 0.7);
+};
+
+const shopButton = { x: 0, y: 0, w: 0, h: 0 };
+
+// --- Title Screen ---
+const drawTitleScreen = (time) => {
+  const s = canvas.width;
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, s, s);
+
+  // Decorative falling gems in background
+  const gemCount = 12;
+  for (let i = 0; i < gemCount; i++) {
+    const gx = (Math.sin(i * 1.7 + time * 0.0003) * 0.4 + 0.5) * s;
+    const gy = ((time * 0.00005 * (i + 1) + i * 0.13) % 1.2 - 0.1) * s;
+    const gType = i % GEM_TYPES;
+    ctx.globalAlpha = 0.15;
+    const tempGem = { color: GEM_COLORS[gType], shape: GEM_SHAPES[gType] };
+    drawGemShape(gx, gy, s * 0.06, tempGem);
+    ctx.globalAlpha = 1;
+  }
+
+  // Title
+  const titleY = s * 0.3;
+  ctx.fillStyle = GOLD;
+  ctx.font = `bold ${Math.floor(s * 0.1)}px 'Segoe UI', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.shadowColor = GOLD;
+  ctx.shadowBlur = 20;
+  ctx.fillText('GEMFORGE', s / 2, titleY);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = UI_DIM;
+  ctx.font = `${Math.floor(s * 0.03)}px 'Segoe UI', sans-serif`;
+  ctx.fillText('Match-3 Puzzle', s / 2, titleY + s * 0.05);
+
+  // Gem showcase
+  const showcaseY = s * 0.48;
+  const gemSize = s * 0.05;
+  for (let i = 0; i < GEM_TYPES; i++) {
+    const gx = s / 2 + (i - (GEM_TYPES - 1) / 2) * gemSize * 1.8;
+    const bob = Math.sin(time * 0.003 + i * 0.8) * 5;
+    const tempGem = { color: GEM_COLORS[i], shape: GEM_SHAPES[i] };
+    drawGemShape(gx, showcaseY + bob, gemSize, tempGem);
+  }
+
+  // High score
+  if (highScore > 0) {
+    ctx.fillStyle = '#888';
+    ctx.font = `${Math.floor(s * 0.028)}px 'Segoe UI', sans-serif`;
+    ctx.fillText(`High Score: ${highScore.toLocaleString()}`, s / 2, s * 0.6);
+  }
+
+  // Currency
+  if (totalCurrency > 0) {
+    ctx.fillStyle = GOLD;
+    ctx.font = `${Math.floor(s * 0.025)}px 'Segoe UI', sans-serif`;
+    ctx.fillText(`Gems: ${totalCurrency}`, s / 2, s * 0.65);
+  }
+
+  // Start prompt
+  const alpha = 0.5 + 0.5 * Math.sin(time * 0.004);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = GREEN;
+  ctx.font = `bold ${Math.floor(s * 0.04)}px 'Segoe UI', sans-serif`;
+  ctx.fillText('TAP TO PLAY', s / 2, s * 0.78);
+  ctx.globalAlpha = 1;
+
+  // Controls info
+  ctx.fillStyle = UI_DIM;
+  ctx.font = `${Math.floor(s * 0.022)}px 'Segoe UI', sans-serif`;
+  ctx.fillText('Tap gem, then tap adjacent gem to swap', s / 2, s * 0.87);
+  ctx.fillText('Match 3 or more to score!', s / 2, s * 0.91);
+};
+
+// --- Game Over Screen ---
+const drawGameOverScreen = (time) => {
+  const s = canvas.width;
+
+  // Dim overlay
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.85)';
+  ctx.fillRect(0, 0, s, s);
+
+  // Game Over text
+  ctx.fillStyle = '#e63946';
+  ctx.font = `bold ${Math.floor(s * 0.08)}px 'Segoe UI', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#e63946';
+  ctx.shadowBlur = 15;
+
+  const isWin = score >= targetScore;
+  ctx.fillStyle = isWin ? GREEN : '#e63946';
+  ctx.shadowColor = isWin ? GREEN : '#e63946';
+  ctx.fillText(isWin ? 'LEVEL UP!' : 'GAME OVER', s / 2, s * 0.3);
+  ctx.shadowBlur = 0;
+
+  // Stats
+  ctx.fillStyle = UI_BRIGHT;
+  ctx.font = `${Math.floor(s * 0.035)}px 'Segoe UI', sans-serif`;
+  ctx.fillText(`Level ${level}`, s / 2, s * 0.4);
+
+  ctx.fillStyle = GOLD;
+  ctx.font = `bold ${Math.floor(s * 0.06)}px 'Segoe UI', sans-serif`;
+  ctx.fillText(score.toLocaleString(), s / 2, s * 0.48);
+
+  ctx.fillStyle = UI_DIM;
+  ctx.font = `${Math.floor(s * 0.028)}px 'Segoe UI', sans-serif`;
+  ctx.fillText(`High Score: ${highScore.toLocaleString()}`, s / 2, s * 0.55);
+
+  ctx.fillStyle = GOLD;
+  ctx.font = `${Math.floor(s * 0.028)}px 'Segoe UI', sans-serif`;
+  ctx.fillText(`+${currency} Gems earned`, s / 2, s * 0.61);
+
+  if (score >= highScore && score > 0) {
+    const pulse = 0.7 + 0.3 * Math.sin(time * 0.006);
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = GOLD;
+    ctx.font = `bold ${Math.floor(s * 0.035)}px 'Segoe UI', sans-serif`;
+    ctx.fillText('NEW HIGH SCORE!', s / 2, s * 0.68);
+    ctx.globalAlpha = 1;
+  }
+
+  // Play again
+  const alpha = 0.5 + 0.5 * Math.sin(time * 0.004);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = GREEN;
+  ctx.font = `bold ${Math.floor(s * 0.04)}px 'Segoe UI', sans-serif`;
+  ctx.fillText(isWin ? 'TAP FOR NEXT LEVEL' : 'TAP TO PLAY AGAIN', s / 2, s * 0.82);
+  ctx.globalAlpha = 1;
+};
+
+// --- Shop Screen ---
+const drawShopScreen = (time) => {
+  const s = canvas.width;
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.92)';
+  ctx.fillRect(0, 0, s, s);
+
+  ctx.fillStyle = GOLD;
+  ctx.font = `bold ${Math.floor(s * 0.06)}px 'Segoe UI', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('SHOP', s / 2, s * 0.12);
+
+  ctx.fillStyle = GOLD;
+  ctx.font = `${Math.floor(s * 0.03)}px 'Segoe UI', sans-serif`;
+  ctx.fillText(`Gems: ${totalCurrency}`, s / 2, s * 0.18);
+
+  const keys = Object.keys(upgrades);
+  shopButtons.length = 0;
+
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const upg = upgrades[key];
+    const cost = getUpgradeCost(upg);
+    const maxed = upg.level >= upg.maxLevel;
+    const canAfford = totalCurrency >= cost && !maxed;
+
+    const btnY = s * 0.25 + i * s * 0.16;
+    const btnW = s * 0.75;
+    const btnH = s * 0.12;
+    const btnX = s * 0.5 - btnW / 2;
+
+    shopButtons.push({ x: btnX, y: btnY, w: btnW, h: btnH, key });
+
+    ctx.fillStyle = canAfford ? '#1a2a1a' : '#1a1a2a';
+    ctx.strokeStyle = canAfford ? GREEN : UI_DIM;
+    ctx.lineWidth = 2;
+    ctx.fillRect(btnX, btnY, btnW, btnH);
+    ctx.strokeRect(btnX, btnY, btnW, btnH);
+
+    // Name
+    ctx.fillStyle = UI_BRIGHT;
+    ctx.font = `bold ${Math.floor(s * 0.03)}px 'Segoe UI', sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText(upg.name, btnX + s * 0.03, btnY + s * 0.035);
+
+    // Description
+    ctx.fillStyle = UI_DIM;
+    ctx.font = `${Math.floor(s * 0.022)}px 'Segoe UI', sans-serif`;
+    ctx.fillText(upg.desc, btnX + s * 0.03, btnY + s * 0.065);
+
+    // Level pips
+    for (let l = 0; l < upg.maxLevel; l++) {
+      ctx.fillStyle = l < upg.level ? GREEN : UI_DIM;
+      ctx.fillRect(btnX + s * 0.03 + l * s * 0.035, btnY + s * 0.08, s * 0.025, s * 0.012);
+    }
+
+    // Cost
+    ctx.textAlign = 'right';
+    if (maxed) {
+      ctx.fillStyle = GREEN;
+      ctx.font = `bold ${Math.floor(s * 0.028)}px 'Segoe UI', sans-serif`;
+      ctx.fillText('MAXED', btnX + btnW - s * 0.03, btnY + s * 0.06);
+    } else {
+      ctx.fillStyle = canAfford ? GOLD : '#666';
+      ctx.font = `bold ${Math.floor(s * 0.028)}px 'Segoe UI', sans-serif`;
+      ctx.fillText(`${cost}`, btnX + btnW - s * 0.03, btnY + s * 0.06);
+    }
+  }
+
+  // Close button
+  const closeBtnY = s * 0.85;
+  const closeBtnW = s * 0.3;
+  const closeBtnH = s * 0.06;
+  const closeBtnX = s / 2 - closeBtnW / 2;
+  shopCloseBtn.x = closeBtnX;
+  shopCloseBtn.y = closeBtnY;
+  shopCloseBtn.w = closeBtnW;
+  shopCloseBtn.h = closeBtnH;
+
+  ctx.fillStyle = '#2a1a1a';
+  ctx.strokeStyle = '#e63946';
+  ctx.lineWidth = 2;
+  ctx.fillRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH);
+  ctx.strokeRect(closeBtnX, closeBtnY, closeBtnW, closeBtnH);
+  ctx.fillStyle = '#e63946';
+  ctx.font = `bold ${Math.floor(s * 0.028)}px 'Segoe UI', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('CLOSE', s / 2, closeBtnY + closeBtnH * 0.7);
+};
+
+const shopButtons = [];
+const shopCloseBtn = { x: 0, y: 0, w: 0, h: 0 };
+
+// --- Game State Management ---
+const startGame = (continueLevel = false) => {
+  if (!continueLevel) {
+    score = 0;
+    level = 1;
+    targetScore = 1000;
+    currency = 0;
+  }
+  movesLeft = Math.floor((30 + upgrades.extraMoves.level * 3) * GobAdapt.getMovesMod());
+  selectedGem = null;
+  swapping = null;
+  cascadeLevel = 0;
+  comboMultiplier = 1;
+  gamePhase = 'idle';
+  hintTimer = 0;
+  hintGems = null;
+  createGrid();
+  calculateLayout();
+  state = STATE_PLAYING;
+};
+
+const nextLevel = () => {
+  level++;
+  targetScore = Math.floor(targetScore * 1.5);
+  movesLeft = Math.floor((30 + upgrades.extraMoves.level * 3) * GobAdapt.getMovesMod());
+  selectedGem = null;
+  swapping = null;
+  cascadeLevel = 0;
+  comboMultiplier = 1;
+  gamePhase = 'idle';
+  hintTimer = 0;
+  hintGems = null;
+  createGrid();
+  audio.levelUp();
+  state = STATE_PLAYING;
+};
+
+const endGame = () => {
+  totalCurrency += currency;
+  if (score > highScore) {
+    highScore = score;
+    localStorage.setItem('gemforge_highscore', highScore.toString());
+  }
+  localStorage.setItem('gemforge_currency', totalCurrency.toString());
+  saveUpgrades();
+  GobAdapt.record(score, level);
+  audio.gameOver();
+  state = STATE_GAME_OVER;
+};
+
+// --- Input Handling ---
+const getGridPos = (px, py) => {
+  const col = Math.floor((px - gridOffsetX) / cellSize);
+  const row = Math.floor((py - gridOffsetY) / cellSize);
+  if (col >= 0 && col < COLS && row >= 0 && row < ROWS) return { col, row };
+  return null;
+};
+
+const isAdjacent = (g1, g2) => {
+  const dc = Math.abs(g1.col - g2.col);
+  const dr = Math.abs(g1.row - g2.row);
+  return (dc + dr === 1);
+};
+
+const trySwap = (gem1, gem2) => {
+  if (gamePhase !== 'idle') return;
+  if (!isAdjacent(gem1, gem2)) {
+    selectedGem = gem2; // Select the new one
+    audio.select();
+    return;
+  }
+
+  hintTimer = 0;
+  hintGems = null;
+  gamePhase = 'swapping';
+  swapping = { gem1, gem2, progress: 0, reverting: false };
+
+  // Actually swap in grid to check for matches
+  swapInGrid(gem1.col, gem1.row, gem2.col, gem2.row);
+  const { regular, lt } = findMatches();
+  swapInGrid(gem1.col, gem1.row, gem2.col, gem2.row); // swap back
+
+  if (regular.length === 0 && lt.length === 0) {
+    // Will revert
+    swapping.reverting = true;
+  }
+
+  audio.swap();
+  selectedGem = null;
+};
+
+let dragStart = null;
+let dragGem = null;
+
+const handlePointerDown = (x, y) => {
+  audio.init();
+
+  if (state === STATE_TITLE) {
+    audio.menuSelect();
+    startGame();
+    return;
+  }
+
+  if (state === STATE_GAME_OVER) {
+    audio.menuSelect();
+    if (score >= targetScore) {
+      nextLevel();
+    } else {
+      startGame();
+    }
+    return;
+  }
+
+  if (state === STATE_SHOP) {
+    // Check shop buttons
+    for (const btn of shopButtons) {
+      if (x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h) {
+        const upg = upgrades[btn.key];
+        const cost = getUpgradeCost(upg);
+        if (upg.level < upg.maxLevel && totalCurrency >= cost) {
+          totalCurrency -= cost;
+          upg.level++;
+          saveUpgrades();
+          audio.special();
+        } else {
+          audio.badSwap();
+        }
+        return;
+      }
+    }
+    // Check close button
+    if (x >= shopCloseBtn.x && x <= shopCloseBtn.x + shopCloseBtn.w &&
+        y >= shopCloseBtn.y && y <= shopCloseBtn.y + shopCloseBtn.h) {
+      state = STATE_PLAYING;
+      audio.menuSelect();
+      return;
+    }
+    return;
+  }
+
+  if (state === STATE_PLAYING) {
+    // Check shop button
+    if (x >= shopButton.x && x <= shopButton.x + shopButton.w &&
+        y >= shopButton.y && y <= shopButton.y + shopButton.h) {
+      state = STATE_SHOP;
+      audio.menuSelect();
+      return;
+    }
+
+    if (gamePhase !== 'idle') return;
+
+    const pos = getGridPos(x, y);
+    if (!pos) {
+      selectedGem = null;
+      return;
+    }
+
+    const clickedGem = grid[pos.col][pos.row];
+    if (!clickedGem) return;
+
+    dragStart = { x, y };
+    dragGem = clickedGem;
+
+    if (selectedGem) {
+      if (selectedGem === clickedGem) {
+        selectedGem = null;
+      } else {
+        trySwap(selectedGem, clickedGem);
+      }
+    } else {
+      selectedGem = clickedGem;
+      audio.select();
+    }
+  }
+};
+
+const handlePointerMove = (x, y) => {
+  if (state !== STATE_PLAYING || !dragGem || !dragStart || gamePhase !== 'idle') return;
+
+  const dx = x - dragStart.x;
+  const dy = y - dragStart.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  if (dist > cellSize * 0.3) {
+    // Determine swipe direction
+    let targetCol = dragGem.col;
+    let targetRow = dragGem.row;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      targetCol += dx > 0 ? 1 : -1;
+    } else {
+      targetRow += dy > 0 ? 1 : -1;
+    }
+
+    if (targetCol >= 0 && targetCol < COLS && targetRow >= 0 && targetRow < ROWS) {
+      const targetGem = grid[targetCol][targetRow];
+      if (targetGem) {
+        selectedGem = dragGem;
+        trySwap(dragGem, targetGem);
+      }
+    }
+
+    dragStart = null;
+    dragGem = null;
+  }
+};
+
+const handlePointerUp = () => {
+  dragStart = null;
+  dragGem = null;
+};
+
+// Touch events
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const touch = e.touches[0];
+  const x = (touch.clientX - rect.left) * scaleX;
+  const y = (touch.clientY - rect.top) * scaleY;
+  handlePointerDown(x, y);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const touch = e.touches[0];
+  const x = (touch.clientX - rect.left) * scaleX;
+  const y = (touch.clientY - rect.top) * scaleY;
+  handlePointerMove(x, y);
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  handlePointerUp();
+}, { passive: false });
+
+// Mouse events
+canvas.addEventListener('mousedown', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+  handlePointerDown(x, y);
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+  handlePointerMove(x, y);
+});
+
+canvas.addEventListener('mouseup', () => handlePointerUp());
+
+// --- Game Loop ---
+let lastTime = 0;
+let totalTime = 0;
+let postMatchTimer = 0;
+
+const update = (dt) => {
+  totalTime += dt;
+
+  // Update particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update(dt);
+    if (particles[i].dead) particles.splice(i, 1);
+  }
+
+  // Update floating texts
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    floatingTexts[i].update(dt);
+    if (floatingTexts[i].dead) floatingTexts.splice(i, 1);
+  }
+
+  // Screen shake decay
+  if (shakeAmount > 0) {
+    shakeAmount -= shakeDecay * dt;
+    if (shakeAmount < 0) shakeAmount = 0;
+  }
+
+  if (state !== STATE_PLAYING) return;
+
+  // Update gem visual positions (smooth movement)
+  for (let c = 0; c < COLS; c++) {
+    for (let r = 0; r < ROWS; r++) {
+      const gem = grid[c][r];
+      if (!gem) continue;
+
+      // Smooth position interpolation
+      const dx = gem.col - gem.x;
+      const dy = gem.row - gem.y;
+      gem.x += dx * Math.min(1, FALL_SPEED * dt);
+      gem.y += dy * Math.min(1, FALL_SPEED * dt);
+
+      // Snap when close
+      if (Math.abs(dx) < 0.01) gem.x = gem.col;
+      if (Math.abs(dy) < 0.01) gem.y = gem.row;
+
+      // Scale animation
+      const ds = gem.targetScale - gem.scale;
+      gem.scale += ds * 0.1;
+
+      // Spawn animation
+      if (gem.spawnAnim > 0) {
+        gem.spawnAnim -= 0.003 * dt;
+        if (gem.spawnAnim < 0) gem.spawnAnim = 0;
+      }
+    }
+  }
+
+  // Swap animation
+  if (gamePhase === 'swapping' && swapping) {
+    swapping.progress += SWAP_SPEED * dt;
+
+    const { gem1, gem2, progress, reverting } = swapping;
+    const t = Math.min(1, progress);
+
+    // Animate visual positions
+    if (!reverting || t < 0.5) {
+      // Forward swap
+      const p = reverting ? t * 2 : t;
+      gem1.x = gem1.col + (gem2.col - gem1.col) * easeInOut(p);
+      gem1.y = gem1.row + (gem2.row - gem1.row) * easeInOut(p);
+      gem2.x = gem2.col + (gem1.col - gem2.col) * easeInOut(p);
+      gem2.y = gem2.row + (gem1.row - gem2.row) * easeInOut(p);
+    }
+
+    if (t >= 1) {
+      if (reverting) {
+        // Snap back
+        gem1.x = gem1.col; gem1.y = gem1.row;
+        gem2.x = gem2.col; gem2.y = gem2.row;
+        audio.badSwap();
+        swapping = null;
+        gamePhase = 'idle';
+      } else {
+        // Commit the swap
+        swapInGrid(gem1.col, gem1.row, gem2.col, gem2.row);
+        gem1.x = gem1.col; gem1.y = gem1.row;
+        gem2.x = gem2.col; gem2.y = gem2.row;
+        movesLeft--;
+        swapping = null;
+        cascadeLevel = 1;
+        comboMultiplier = 1;
+        gamePhase = 'matching';
+        postMatchTimer = 150; // brief pause before matching
+      }
+    }
+  }
+
+  // Matching phase
+  if (gamePhase === 'matching') {
+    postMatchTimer -= dt;
+    if (postMatchTimer <= 0) {
+      const found = processMatches();
+      if (found) {
+        gamePhase = 'cascading';
+        postMatchTimer = CASCADE_PAUSE;
+      } else {
+        // No more matches
+        cascadeLevel = 0;
+        comboMultiplier = 1;
+
+        // Check win/lose
+        if (score >= targetScore) {
+          endGame(); // Shows "Level Up" screen
+          return;
+        }
+        if (movesLeft <= 0) {
+          endGame();
+          return;
+        }
+
+        // Check for valid moves
+        if (!hasValidMoves()) {
+          shuffleGrid();
+          // Keep shuffling until valid moves exist
+          let shuffleCount = 0;
+          while (!hasValidMoves() && shuffleCount < 10) {
+            shuffleGrid();
+            shuffleCount++;
+          }
+        }
+
+        gamePhase = 'idle';
+        hintTimer = 0;
+      }
+    }
+  }
+
+  // Cascade phase (gravity + re-check)
+  if (gamePhase === 'cascading') {
+    postMatchTimer -= dt;
+    if (postMatchTimer <= 0) {
+      applyGravity();
+      gamePhase = 'falling';
+    }
+  }
+
+  // Falling phase — wait for gems to settle
+  if (gamePhase === 'falling') {
+    if (allGemsSettled()) {
+      cascadeLevel++;
+      comboMultiplier = 1 + (cascadeLevel - 1) * 0.5;
+      gamePhase = 'matching';
+      postMatchTimer = 100;
+    }
+  }
+
+  // Hint timer
+  if (gamePhase === 'idle') {
+    hintTimer += dt;
+    if (hintTimer > HINT_DELAY && !hintGems) {
+      hintGems = findHintMove();
+    }
+  } else {
+    hintTimer = 0;
+    hintGems = null;
+  }
+};
+
+const easeInOut = (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+const draw = (time) => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Screen shake
+  if (shakeAmount > 0) {
+    const sx = (Math.random() - 0.5) * shakeAmount * 2;
+    const sy = (Math.random() - 0.5) * shakeAmount * 2;
+    ctx.save();
+    ctx.translate(sx, sy);
+  }
+
+  if (state === STATE_TITLE) {
+    drawTitleScreen(time);
+  } else if (state === STATE_PLAYING || state === STATE_SHOP) {
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    drawGrid(time);
+    drawUI(time);
+
+    // Draw particles on top
+    for (const p of particles) p.draw(ctx);
+    for (const ft of floatingTexts) ft.draw(ctx);
+
+    if (state === STATE_SHOP) {
+      drawShopScreen(time);
+    }
+  } else if (state === STATE_GAME_OVER) {
+    // Draw the grid behind the overlay
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    drawGrid(time);
+    drawUI(time);
+    for (const p of particles) p.draw(ctx);
+    for (const ft of floatingTexts) ft.draw(ctx);
+    drawGameOverScreen(time);
+  }
+
+  if (shakeAmount > 0) {
+    ctx.restore();
+  }
+};
+
+const gameLoop = (timestamp) => {
+  const dt = lastTime ? Math.min(timestamp - lastTime, 50) : 16;
+  lastTime = timestamp;
+
+  update(dt);
+  draw(timestamp);
+
+  requestAnimationFrame(gameLoop);
+};
+
+// --- Initialize ---
+calculateLayout();
+requestAnimationFrame(gameLoop);
+
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

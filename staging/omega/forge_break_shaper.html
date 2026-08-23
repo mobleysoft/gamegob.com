@@ -1,0 +1,1861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="BreakShaper — Shape, Break, Conquer">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob/forge_break_shaper.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>BreakShaper — Shape, Break, Conquer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0f;font-family:'Courier New',monospace;touch-action:none;user-select:none;-webkit-user-select:none;}
+canvas{display:block;margin:0 auto;}
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+'use strict';
+
+// ============================================================
+// BREAKSHAPER — Shape, Break, Conquer
+// A Block-Stacking × Deck-Building × Economy × Multiplayer Sim Remix
+// ============================================================
+
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+
+// --- Audio Engine ---
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playSound(type) {
+  ensureAudio();
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  switch(type) {
+    case 'drop': osc.frequency.value=220; osc.type='triangle'; gain.gain.setValueAtTime(0.15,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.15); osc.start(now); osc.stop(now+0.15); break;
+    case 'clear': osc.frequency.value=440; osc.type='square'; gain.gain.setValueAtTime(0.12,now); osc.frequency.exponentialRampToValueAtTime(880,now+0.2); gain.gain.exponentialRampToValueAtTime(0.001,now+0.3); osc.start(now); osc.stop(now+0.3); break;
+    case 'quad': osc.frequency.value=523; osc.type='sawtooth'; gain.gain.setValueAtTime(0.15,now); osc.frequency.setValueAtTime(659,now+0.1); osc.frequency.setValueAtTime(784,now+0.2); osc.frequency.setValueAtTime(1047,now+0.3); gain.gain.exponentialRampToValueAtTime(0.001,now+0.5); osc.start(now); osc.stop(now+0.5); break;
+    case 'rotate': osc.frequency.value=600; osc.type='sine'; gain.gain.setValueAtTime(0.08,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.06); osc.start(now); osc.stop(now+0.06); break;
+    case 'move': osc.frequency.value=300; osc.type='sine'; gain.gain.setValueAtTime(0.04,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.04); osc.start(now); osc.stop(now+0.04); break;
+    case 'ability': osc.frequency.value=330; osc.type='square'; gain.gain.setValueAtTime(0.12,now); osc.frequency.exponentialRampToValueAtTime(660,now+0.15); gain.gain.exponentialRampToValueAtTime(0.001,now+0.25); osc.start(now); osc.stop(now+0.25); break;
+    case 'buy': osc.frequency.value=500; osc.type='triangle'; gain.gain.setValueAtTime(0.1,now); osc.frequency.setValueAtTime(700,now+0.08); gain.gain.exponentialRampToValueAtTime(0.001,now+0.2); osc.start(now); osc.stop(now+0.2); break;
+    case 'card': osc.frequency.value=800; osc.type='sine'; gain.gain.setValueAtTime(0.08,now); osc.frequency.exponentialRampToValueAtTime(1200,now+0.1); gain.gain.exponentialRampToValueAtTime(0.001,now+0.15); osc.start(now); osc.stop(now+0.15); break;
+    case 'damage': osc.frequency.value=100; osc.type='sawtooth'; gain.gain.setValueAtTime(0.2,now); gain.gain.exponentialRampToValueAtTime(0.001,now+0.3); osc.start(now); osc.stop(now+0.3); break;
+    case 'shield': osc.frequency.value=400; osc.type='sine'; gain.gain.setValueAtTime(0.1,now); osc.frequency.exponentialRampToValueAtTime(800,now+0.3); gain.gain.exponentialRampToValueAtTime(0.001,now+0.4); osc.start(now); osc.stop(now+0.4); break;
+    case 'gameover': osc.frequency.value=440; osc.type='sawtooth'; gain.gain.setValueAtTime(0.15,now); osc.frequency.exponentialRampToValueAtTime(55,now+1.0); gain.gain.exponentialRampToValueAtTime(0.001,now+1.2); osc.start(now); osc.stop(now+1.2); break;
+    case 'levelup': osc.frequency.value=440; osc.type='square'; gain.gain.setValueAtTime(0.12,now); osc.frequency.setValueAtTime(554,now+0.1); osc.frequency.setValueAtTime(659,now+0.2); osc.frequency.setValueAtTime(880,now+0.3); gain.gain.exponentialRampToValueAtTime(0.001,now+0.6); osc.start(now); osc.stop(now+0.6); break;
+    case 'combo': osc.frequency.value=660; osc.type='triangle'; gain.gain.setValueAtTime(0.1,now); osc.frequency.setValueAtTime(880,now+0.05); osc.frequency.setValueAtTime(1100,now+0.1); gain.gain.exponentialRampToValueAtTime(0.001,now+0.2); osc.start(now); osc.stop(now+0.2); break;
+  }
+}
+
+// --- Constants ---
+const COLS = 10, ROWS = 20;
+const COLORS = {
+  bg: '#0a0a0f', panel: '#111118', border: '#222233',
+  gold: '#f0b800', green: '#00ff88', red: '#ff3355', blue: '#3388ff',
+  purple: '#aa55ff', cyan: '#00ddff', orange: '#ff8833', white: '#eeeeff',
+  darkGold: '#886600', darkGreen: '#006633', dimText: '#556677'
+};
+
+const PIECE_SHAPES = {
+  I: [[[0,0],[1,0],[2,0],[3,0]],[[0,0],[0,1],[0,2],[0,3]]],
+  O: [[[0,0],[1,0],[0,1],[1,1]]],
+  T: [[[0,0],[1,0],[2,0],[1,1]],[[0,0],[0,1],[0,2],[1,1]],[[1,0],[0,1],[1,1],[2,1]],[[1,0],[1,1],[1,2],[0,1]]],
+  S: [[[1,0],[2,0],[0,1],[1,1]],[[0,0],[0,1],[1,1],[1,2]]],
+  Z: [[[0,0],[1,0],[1,1],[2,1]],[[1,0],[0,1],[1,1],[0,2]]],
+  L: [[[0,0],[0,1],[0,2],[1,2]],[[0,0],[1,0],[2,0],[0,1]],[[0,0],[1,0],[1,1],[1,2]],[[2,0],[0,1],[1,1],[2,1]]],
+  J: [[[1,0],[1,1],[0,2],[1,2]],[[0,0],[0,1],[1,1],[2,1]],[[0,0],[1,0],[0,1],[0,2]],[[0,0],[1,0],[2,0],[2,1]]]
+};
+const PIECE_COLORS = { I:'#00ddff', O:'#f0b800', T:'#aa55ff', S:'#00ff88', Z:'#ff3355', L:'#ff8833', J:'#3388ff' };
+const PIECE_NAMES = Object.keys(PIECE_SHAPES);
+
+// --- Joker Card Definitions ---
+const JOKER_DEFS = [
+  { id:'multiplier', name:'Score Doubler', desc:'All scores ×2', rarity:'common', cost:80, icon:'×2', color:'#f0b800',
+    effect: s => { s.scoreMultiplier = (s.scoreMultiplier||1)*2; }},
+  { id:'combo_king', name:'Combo King', desc:'+50% combo bonus', rarity:'common', cost:60, icon:'C+', color:'#ff8833',
+    effect: s => { s.comboBonus = (s.comboBonus||1)+0.5; }},
+  { id:'gold_rush', name:'Gold Rush', desc:'+3 gold per clear', rarity:'common', cost:50, icon:'G+', color:'#f0b800',
+    effect: s => { s.goldPerClear = (s.goldPerClear||0)+3; }},
+  { id:'shield_gen', name:'Shield Gen', desc:'Start rounds with 2 shields', rarity:'uncommon', cost:120, icon:'Sh', color:'#3388ff',
+    effect: s => { s.startShields = (s.startShields||0)+2; }},
+  { id:'charge_up', name:'Overcharger', desc:'Abilities charge 30% faster', rarity:'uncommon', cost:100, icon:'⚡', color:'#00ddff',
+    effect: s => { s.chargeRate = (s.chargeRate||1)*1.3; }},
+  { id:'t_spin', name:'T-Spin Master', desc:'T-pieces score ×3', rarity:'uncommon', cost:90, icon:'T!', color:'#aa55ff',
+    effect: s => { s.tSpinMulti = (s.tSpinMulti||1)*3; }},
+  { id:'line_4', name:'Quad Hunter', desc:'4-line clears give +200', rarity:'rare', cost:150, icon:'4!', color:'#00ff88',
+    effect: s => { s.tetrisBonus = (s.tetrisBonus||0)+200; }},
+  { id:'vampire', name:'Vampire', desc:'Steal 1 HP from opponent per clear', rarity:'rare', cost:180, icon:'V', color:'#ff3355',
+    effect: s => { s.vampiric = true; }},
+  { id:'economy', name:'Economist', desc:'Interest: earn 10% of gold each round', rarity:'rare', cost:160, icon:'%', color:'#f0b800',
+    effect: s => { s.interest = true; }},
+  { id:'garbage_king', name:'Garbage King', desc:'Garbage attacks do +2 rows', rarity:'legendary', cost:250, icon:'G!', color:'#ff3355',
+    effect: s => { s.garbageBonus = (s.garbageBonus||0)+2; }},
+  { id:'perfect', name:'Perfectionist', desc:'All-clear board = instant kill', rarity:'legendary', cost:300, icon:'★', color:'#f0b800',
+    effect: s => { s.perfectKill = true; }},
+  { id:'slow_time', name:'Time Warp', desc:'Pieces fall 25% slower', rarity:'common', cost:70, icon:'◷', color:'#00ddff',
+    effect: s => { s.speedMod = (s.speedMod||1)*0.75; }},
+];
+
+// --- Ability Definitions ---
+const ABILITY_DEFS = [
+  { id:'garbage', name:'Garbage Dump', desc:'Send garbage rows to opponent', icon:'▓', color:'#ff3355', charge:4, cooldown:0,
+    execute: (game) => {
+      const rows = 2 + (game.playerStats.garbageBonus||0);
+      game.sendGarbageToOpponent(rows);
+      game.addFloatText(`GARBAGE ×${rows}!`, COLORS.red);
+    }},
+  { id:'freeze', name:'Freeze', desc:'Freeze opponent for 3 seconds', icon:'❄', color:'#00ddff', charge:5, cooldown:0,
+    execute: (game) => {
+      game.freezeOpponent(3000);
+      game.addFloatText('FREEZE!', COLORS.cyan);
+    }},
+  { id:'scramble', name:'Scramble', desc:'Scramble opponent\'s next 3 pieces', icon:'⟳', color:'#aa55ff', charge:6, cooldown:0,
+    execute: (game) => {
+      game.scrambleOpponent();
+      game.addFloatText('SCRAMBLED!', COLORS.purple);
+    }},
+  { id:'shield', name:'Shield', desc:'Block next garbage attack', icon:'◈', color:'#3388ff', charge:3, cooldown:0,
+    execute: (game) => {
+      game.playerStats.shields = (game.playerStats.shields||0)+1;
+      game.addFloatText('SHIELDED!', COLORS.blue);
+    }},
+  { id:'nuke', name:'Nuke', desc:'Clear bottom 3 rows of your board', icon:'☢', color:'#ff8833', charge:8, cooldown:0,
+    execute: (game) => {
+      game.nukeOwnBoard(3);
+      game.addFloatText('NUKE!', COLORS.orange);
+    }},
+  { id:'steal', name:'Steal', desc:'Steal opponent\'s charged ability', icon:'⚔', color:'#f0b800', charge:7, cooldown:0,
+    execute: (game) => {
+      game.stealAbility();
+      game.addFloatText('STOLEN!', COLORS.gold);
+    }},
+];
+
+// --- Particle System ---
+class Particle {
+  constructor(x, y, vx, vy, color, life, size) {
+    this.x=x; this.y=y; this.vx=vx; this.vy=vy;
+    this.color=color; this.life=life; this.maxLife=life; this.size=size||2;
+  }
+  update(dt) {
+    this.x+=this.vx*dt; this.y+=this.vy*dt;
+    this.vy+=200*dt; this.life-=dt;
+  }
+  draw(ctx) {
+    const a = Math.max(0, this.life/this.maxLife);
+    ctx.globalAlpha=a;
+    ctx.fillStyle=this.color;
+    ctx.fillRect(this.x-this.size/2, this.y-this.size/2, this.size, this.size);
+    ctx.globalAlpha=1;
+  }
+}
+
+class ParticleSystem {
+  constructor() { this.particles=[]; }
+  emit(x,y,count,color,spread,life) {
+    for(let i=0;i<count;i++){
+      const angle=Math.random()*Math.PI*2;
+      const speed=Math.random()*spread;
+      this.particles.push(new Particle(x,y,Math.cos(angle)*speed,Math.sin(angle)*speed-50,color,life||0.8,2+Math.random()*3));
+    }
+  }
+  lineClear(y, w, cellSize, offsetX) {
+    for(let x=0; x<w; x+=3) {
+      this.emit(offsetX+x, y, 2, COLORS.gold, 120, 0.6);
+      this.emit(offsetX+x, y, 1, COLORS.green, 80, 0.5);
+    }
+  }
+  update(dt) {
+    for(let i=this.particles.length-1;i>=0;i--){
+      this.particles[i].update(dt);
+      if(this.particles[i].life<=0) this.particles.splice(i,1);
+    }
+  }
+  draw(ctx) { this.particles.forEach(p=>p.draw(ctx)); }
+}
+
+// --- Float Text ---
+class FloatText {
+  constructor(text, x, y, color, size) {
+    this.text=text; this.x=x; this.y=y; this.color=color;
+    this.size=size||18; this.life=1.5; this.maxLife=1.5;
+  }
+  update(dt) { this.y-=40*dt; this.life-=dt; }
+  draw(ctx) {
+    const a=Math.max(0,this.life/this.maxLife);
+    ctx.globalAlpha=a;
+    ctx.fillStyle=this.color;
+    ctx.font=`bold ${this.size}px 'Courier New'`;
+    ctx.textAlign='center';
+    ctx.fillText(this.text, this.x, this.y);
+    ctx.globalAlpha=1;
+  }
+}
+
+// --- Screen Shake ---
+let shakeAmount = 0, shakeDecay = 0;
+function addShake(amount) { shakeAmount=Math.max(shakeAmount,amount); shakeDecay=amount; }
+
+// --- Game States ---
+const STATE = { TITLE:0, DRAFT:1, SHOP:2, PLAYING:3, ROUND_END:4, GAME_OVER:5 };
+
+// --- Main Game ---
+class BreakShaperGame {
+  constructor() {
+    this.resize();
+    window.addEventListener('resize', ()=>this.resize());
+    this.particles = new ParticleSystem();
+    this.floatTexts = [];
+    this.state = STATE.TITLE;
+    this.titlePulse = 0;
+    this.highScore = parseInt(localStorage.getItem('breakshaper_high')||'0');
+    this.metaXP = parseInt(localStorage.getItem('breakshaper_xp')||'0');
+    this.metaLevel = Math.floor(this.metaXP / 500) + 1;
+    this.totalWins = parseInt(localStorage.getItem('breakshaper_wins')||'0');
+
+    // Input
+    this.keys = {};
+    this.touchState = { left:false, right:false, down:false, rotCW:false, rotCCW:false, hardDrop:false, ability1:false, ability2:false, ability3:false };
+    this.setupInput();
+
+    // Title shimmer blocks
+    this.titleBlocks = [];
+    for(let i=0;i<40;i++) {
+      this.titleBlocks.push({
+        x: Math.random()*canvas.width, y: Math.random()*canvas.height,
+        size: 8+Math.random()*16, speed: 10+Math.random()*30,
+        color: [COLORS.gold, COLORS.green, COLORS.cyan, COLORS.purple, COLORS.red][Math.floor(Math.random()*5)],
+        alpha: 0.1+Math.random()*0.2
+      });
+    }
+  }
+
+  resize() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    this.W = canvas.width;
+    this.H = canvas.height;
+    // Calculate cell size to fit board
+    this.cellSize = Math.floor(Math.min((this.W*0.4)/COLS, (this.H*0.85)/ROWS));
+    this.cellSize = Math.max(this.cellSize, 12);
+    this.boardW = this.cellSize * COLS;
+    this.boardH = this.cellSize * ROWS;
+    this.boardX = Math.floor(this.W*0.32 - this.boardW/2);
+    this.boardY = Math.floor((this.H - this.boardH)/2);
+    // Opponent board
+    this.oppCellSize = Math.floor(this.cellSize*0.45);
+    this.oppBoardW = this.oppCellSize * COLS;
+    this.oppBoardH = this.oppCellSize * ROWS;
+    this.oppBoardX = Math.floor(this.W*0.72);
+    this.oppBoardY = Math.floor(this.H*0.08);
+    // Touch zones
+    this.isMobile = ('ontouchstart' in window) || this.W < 800;
+  }
+
+  setupInput() {
+    window.addEventListener('keydown', e => {
+      this.keys[e.code]=true;
+      if(this.state===STATE.TITLE) { this.startNewRun(); e.preventDefault(); return; }
+      if(this.state===STATE.GAME_OVER) { if(e.code==='Enter'||e.code==='Space') this.state=STATE.TITLE; e.preventDefault(); return; }
+      if(this.state===STATE.DRAFT) { this.handleDraftKey(e.code); e.preventDefault(); return; }
+      if(this.state===STATE.SHOP) { this.handleShopKey(e.code); e.preventDefault(); return; }
+      if(this.state===STATE.ROUND_END) { if(e.code==='Enter'||e.code==='Space') this.goToShop(); e.preventDefault(); return; }
+      if(this.state===STATE.PLAYING) {
+        if(e.code==='ArrowLeft') { this.movePiece(-1,0); playSound('move'); }
+        if(e.code==='ArrowRight') { this.movePiece(1,0); playSound('move'); }
+        if(e.code==='ArrowDown') this.softDrop=true;
+        if(e.code==='ArrowUp'||e.code==='KeyX') { this.rotatePiece(1); playSound('rotate'); }
+        if(e.code==='KeyZ') { this.rotatePiece(-1); playSound('rotate'); }
+        if(e.code==='Space') { this.hardDrop(); playSound('drop'); }
+        if(e.code==='KeyC') this.holdPiece();
+        if(e.code==='Digit1'||e.code==='Numpad1') this.useAbility(0);
+        if(e.code==='Digit2'||e.code==='Numpad2') this.useAbility(1);
+        if(e.code==='Digit3'||e.code==='Numpad3') this.useAbility(2);
+        e.preventDefault();
+      }
+    });
+    window.addEventListener('keyup', e => {
+      this.keys[e.code]=false;
+      if(e.code==='ArrowDown') this.softDrop=false;
+    });
+
+    // Touch
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); this.handleTouch(e, true); }, {passive:false});
+    canvas.addEventListener('touchend', e => { e.preventDefault(); this.handleTouch(e, false); }, {passive:false});
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); }, {passive:false});
+
+    // Mouse for shop/draft
+    canvas.addEventListener('click', e => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      if(this.state===STATE.TITLE) { this.startNewRun(); return; }
+      if(this.state===STATE.GAME_OVER) { this.state=STATE.TITLE; return; }
+      if(this.state===STATE.ROUND_END) { this.goToShop(); return; }
+      if(this.state===STATE.DRAFT) this.handleDraftClick(mx, my);
+      if(this.state===STATE.SHOP) this.handleShopClick(mx, my);
+    });
+  }
+
+  handleTouch(e, isDown) {
+    if(this.state===STATE.TITLE && isDown) { this.startNewRun(); return; }
+    if(this.state===STATE.GAME_OVER && isDown) { this.state=STATE.TITLE; return; }
+    if(this.state===STATE.ROUND_END && isDown) { this.goToShop(); return; }
+    if(this.state!==STATE.PLAYING) return;
+
+    // Define touch zones
+    const bw = this.W;
+    const bh = this.H;
+
+    if(!isDown) {
+      this.touchState = { left:false, right:false, down:false, rotCW:false, rotCCW:false, hardDrop:false, ability1:false, ability2:false, ability3:false };
+      this.softDrop=false;
+      return;
+    }
+
+    for(let i=0;i<e.touches.length;i++){
+      const t = e.touches[i];
+      const tx = t.clientX;
+      const ty = t.clientY;
+      const rx = tx/bw;
+      const ry = ty/bh;
+
+      // Left side controls
+      if(rx < 0.15) {
+        if(ry < 0.5) { this.rotatePiece(-1); playSound('rotate'); }
+        else { this.movePiece(-1,0); playSound('move'); }
+      }
+      // Left-center
+      else if(rx < 0.3) {
+        if(ry > 0.7) { this.softDrop=true; }
+        else if(ry < 0.3) { this.holdPiece(); }
+        else { this.movePiece(-1,0); playSound('move'); }
+      }
+      // Center
+      else if(rx < 0.55) {
+        if(ry > 0.85) { this.hardDrop(); playSound('drop'); }
+        else if(ry > 0.65) { this.softDrop=true; }
+      }
+      // Right-center
+      else if(rx < 0.7) {
+        if(ry > 0.7) { this.softDrop=true; }
+        else { this.movePiece(1,0); playSound('move'); }
+      }
+      // Right side
+      else if(rx < 0.85) {
+        if(ry < 0.35) { this.useAbility(0); }
+        else if(ry < 0.55) { this.useAbility(1); }
+        else if(ry < 0.75) { this.useAbility(2); }
+        else { this.movePiece(1,0); playSound('move'); }
+      }
+      else {
+        if(ry < 0.5) { this.rotatePiece(1); playSound('rotate'); }
+        else { this.movePiece(1,0); playSound('move'); }
+      }
+    }
+  }
+
+  // --- Run Initialization ---
+  startNewRun() {
+    ensureAudio();
+    this.round = 0;
+    this.totalScore = 0;
+    this.gold = 30;
+    this.hp = 10;
+    this.maxHP = 10;
+    this.deck = [];
+    this.hand = [];
+    this.discardPile = [];
+    this.jokers = [];
+    this.abilities = [];
+    this.playerStats = {
+      scoreMultiplier: 1, comboBonus: 1, goldPerClear: 1,
+      chargeRate: 1, shields: 0, speedMod: 1, startShields: 0,
+      garbageBonus: 0, tSpinMulti: 1, tetrisBonus: 0,
+      vampiric: false, interest: false, perfectKill: false
+    };
+
+    // Meta-level bonuses
+    if(this.metaLevel >= 2) this.gold += 10;
+    if(this.metaLevel >= 3) this.hp += 1;
+    if(this.metaLevel >= 5) this.playerStats.scoreMultiplier *= 1.1;
+
+    // Starter deck (5 basic buff cards)
+    const starterCards = [
+      { name:'Quick Drop', desc:'+10% speed bonus score', type:'buff', value:0.1, color:COLORS.cyan },
+      { name:'Gold Finder', desc:'+2 gold this round', type:'gold', value:2, color:COLORS.gold },
+      { name:'Tough Skin', desc:'+1 shield', type:'shield', value:1, color:COLORS.blue },
+      { name:'Power Clear', desc:'+25 per line clear', type:'clear_bonus', value:25, color:COLORS.green },
+      { name:'Lucky Break', desc:'10% chance double clear', type:'luck', value:0.1, color:COLORS.purple },
+    ];
+    this.deck = [...starterCards];
+    this.shuffleDeck();
+
+    // Generate opponents for the tournament
+    this.opponents = this.generateOpponents(5);
+    this.currentOpponentIdx = 0;
+
+    this.goToDraft();
+  }
+
+  generateOpponents(count) {
+    const names = ['ByteBot','GridMind','StackMaster','TetriKing','NeonDrop','BlockSmith','ClearWave','ComboKid'];
+    const shuffled = [...names].sort(()=>Math.random()-0.5);
+    return shuffled.slice(0,count).map((name,i) => ({
+      name, difficulty: 1+i*0.3, hp: 8+i*2, maxHP: 8+i*2,
+      board: this.createBoard(), dropTimer: 0,
+      speed: 600-i*60, piece: null, aggression: 0.3+i*0.1,
+      color: [COLORS.red, COLORS.cyan, COLORS.purple, COLORS.orange, COLORS.green][i%5],
+      frozen: 0, scrambled: 0
+    }));
+  }
+
+  createBoard() {
+    return Array.from({length:ROWS}, ()=>Array(COLS).fill(0));
+  }
+
+  shuffleDeck() {
+    for(let i=this.deck.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [this.deck[i],this.deck[j]]=[this.deck[j],this.deck[i]];
+    }
+  }
+
+  drawCards(n) {
+    this.hand = [];
+    for(let i=0;i<n;i++){
+      if(this.deck.length===0) {
+        this.deck = [...this.discardPile];
+        this.discardPile = [];
+        this.shuffleDeck();
+      }
+      if(this.deck.length>0) this.hand.push(this.deck.pop());
+    }
+  }
+
+  // --- Draft Phase ---
+  goToDraft() {
+    this.round++;
+    this.state = STATE.DRAFT;
+    // Offer 3 abilities to choose from
+    const available = ABILITY_DEFS.filter(a => !this.abilities.find(b=>b.id===a.id));
+    this.draftChoices = [];
+    const shuffled = [...available].sort(()=>Math.random()-0.5);
+    for(let i=0;i<Math.min(3,shuffled.length);i++){
+      this.draftChoices.push({...shuffled[i], currentCharge:0});
+    }
+    this.draftSelection = 0;
+    playSound('levelup');
+  }
+
+  handleDraftKey(code) {
+    if(code==='ArrowLeft') { this.draftSelection=Math.max(0,this.draftSelection-1); playSound('move'); }
+    if(code==='ArrowRight') { this.draftSelection=Math.min(this.draftChoices.length-1,this.draftSelection+1); playSound('move'); }
+    if(code==='Enter'||code==='Space') { this.selectDraft(this.draftSelection); }
+    if(code==='Digit1') this.selectDraft(0);
+    if(code==='Digit2') this.selectDraft(1);
+    if(code==='Digit3') this.selectDraft(2);
+  }
+
+  handleDraftClick(mx, my) {
+    const cardW = 160, cardH = 200, gap = 20;
+    const totalW = this.draftChoices.length*(cardW+gap)-gap;
+    const startX = (this.W-totalW)/2;
+    const startY = this.H*0.35;
+    for(let i=0;i<this.draftChoices.length;i++){
+      const cx = startX+i*(cardW+gap);
+      if(mx>=cx && mx<=cx+cardW && my>=startY && my<=startY+cardH){
+        this.selectDraft(i);
+        return;
+      }
+    }
+  }
+
+  selectDraft(idx) {
+    if(idx<0||idx>=this.draftChoices.length) return;
+    if(this.abilities.length < 3) {
+      this.abilities.push({...this.draftChoices[idx]});
+      playSound('card');
+    } else {
+      // Replace if already have 3
+      // Find least charged and replace
+      let minIdx=0, minCharge=Infinity;
+      this.abilities.forEach((a,i)=>{if(a.currentCharge<minCharge){minCharge=a.currentCharge;minIdx=i;}});
+      this.abilities[minIdx] = {...this.draftChoices[idx]};
+      playSound('card');
+    }
+    this.startRound();
+  }
+
+  // --- Shop Phase ---
+  goToShop() {
+    this.state = STATE.SHOP;
+    // Generate shop items
+    this.shopItems = [];
+
+    // Jokers
+    const availableJokers = JOKER_DEFS.filter(j=>!this.jokers.find(k=>k.id===j.id));
+    const shuffledJ = [...availableJokers].sort(()=>Math.random()-0.5);
+    for(let i=0;i<Math.min(3,shuffledJ.length);i++){
+      this.shopItems.push({type:'joker', data:{...shuffledJ[i]}, cost:shuffledJ[i].cost});
+    }
+
+    // Cards for deck
+    const cardPool = [
+      { name:'Mega Clear', desc:'+50 per line', type:'clear_bonus', value:50, color:COLORS.green, cost:40 },
+      { name:'Gold Mine', desc:'+5 gold', type:'gold', value:5, color:COLORS.gold, cost:35 },
+      { name:'Iron Shield', desc:'+2 shields', type:'shield', value:2, color:COLORS.blue, cost:45 },
+      { name:'Speed Demon', desc:'+25% speed bonus', type:'buff', value:0.25, color:COLORS.cyan, cost:50 },
+      { name:'Lucky Star', desc:'20% double clear', type:'luck', value:0.2, color:COLORS.purple, cost:55 },
+      { name:'Heal Potion', desc:'+2 HP', type:'heal', value:2, color:COLORS.green, cost:60 },
+      { name:'Charge Cell', desc:'+2 ability charge', type:'charge', value:2, color:COLORS.cyan, cost:45 },
+    ];
+    const shuffledC = [...cardPool].sort(()=>Math.random()-0.5);
+    for(let i=0;i<Math.min(2,shuffledC.length);i++){
+      this.shopItems.push({type:'card', data:{...shuffledC[i]}, cost:shuffledC[i].cost});
+    }
+
+    // HP restore option
+    if(this.hp < this.maxHP) {
+      this.shopItems.push({type:'heal', data:{name:'Heal +3', desc:'Restore 3 HP', color:COLORS.green}, cost:50});
+    }
+
+    this.shopSelection = 0;
+    // Interest from Economist joker
+    if(this.playerStats.interest) {
+      const bonus = Math.floor(this.gold*0.1);
+      this.gold += bonus;
+      this.addFloatText(`Interest +${bonus}g`, COLORS.gold);
+    }
+  }
+
+  handleShopKey(code) {
+    if(code==='ArrowLeft') { this.shopSelection=Math.max(0,this.shopSelection-1); playSound('move'); }
+    if(code==='ArrowRight') { this.shopSelection=Math.min(this.shopItems.length,this.shopSelection+1); playSound('move'); }
+    if(code==='Enter'||code==='Space') {
+      if(this.shopSelection===this.shopItems.length) { this.startNextOpponent(); }
+      else { this.buyShopItem(this.shopSelection); }
+    }
+    if(code==='Escape'||code==='KeyS') this.startNextOpponent();
+  }
+
+  handleShopClick(mx, my) {
+    const itemW = 130, itemH = 170, gap = 15;
+    const totalW = this.shopItems.length*(itemW+gap)-gap;
+    const startX = (this.W-totalW)/2;
+    const startY = this.H*0.3;
+    for(let i=0;i<this.shopItems.length;i++){
+      const cx = startX+i*(itemW+gap);
+      if(mx>=cx && mx<=cx+itemW && my>=startY && my<=startY+itemH){
+        this.buyShopItem(i);
+        return;
+      }
+    }
+    // Continue button
+    const btnW=180, btnH=45;
+    const btnX=(this.W-btnW)/2, btnY=this.H*0.78;
+    if(mx>=btnX && mx<=btnX+btnW && my>=btnY && my<=btnY+btnH){
+      this.startNextOpponent();
+    }
+  }
+
+  buyShopItem(idx) {
+    if(idx<0||idx>=this.shopItems.length) return;
+    const item = this.shopItems[idx];
+    if(this.gold < item.cost) return;
+    this.gold -= item.cost;
+    playSound('buy');
+
+    if(item.type==='joker'){
+      this.jokers.push(item.data);
+      item.data.effect(this.playerStats);
+    } else if(item.type==='card'){
+      this.deck.push(item.data);
+    } else if(item.type==='heal'){
+      this.hp = Math.min(this.maxHP, this.hp+3);
+    }
+    this.shopItems.splice(idx,1);
+    this.shopSelection = Math.min(this.shopSelection, this.shopItems.length-1);
+  }
+
+  startNextOpponent() {
+    if(this.currentOpponentIdx >= this.opponents.length) {
+      // Won the tournament!
+      this.totalWins++;
+      localStorage.setItem('breakshaper_wins', this.totalWins);
+      this.metaXP += 200;
+      localStorage.setItem('breakshaper_xp', this.metaXP);
+      this.metaLevel = Math.floor(this.metaXP/500)+1;
+      this.endGame(true);
+      return;
+    }
+    this.goToDraft();
+  }
+
+  // --- Round Start ---
+  startRound() {
+    this.state = STATE.PLAYING;
+    this.board = this.createBoard();
+    this.score = 0;
+    this.linesCleared = 0;
+    this.combo = 0;
+    this.level = 1;
+    this.dropInterval = 800;
+    this.dropTimer = 0;
+    this.softDrop = false;
+    this.holdSlot = null;
+    this.canHold = true;
+    this.roundTimer = 0;
+    this.roundDuration = 90; // 90 second rounds
+    this.lineFlash = [];
+    this.lineFlashTimer = 0;
+    this.ghostY = 0;
+
+    // Apply start shields
+    this.playerStats.shields = this.playerStats.startShields || 0;
+
+    // Draw cards for this round
+    this.drawCards(3);
+    this.applyHandCards();
+
+    // Prepare piece bag
+    this.bag = [];
+    this.nextPieces = [];
+    for(let i=0;i<5;i++) this.nextPieces.push(this.getNextPiece());
+    this.spawnPiece();
+
+    // Set up current opponent
+    const opp = this.opponents[this.currentOpponentIdx];
+    opp.board = this.createBoard();
+    opp.dropTimer = 0;
+    opp.piece = null;
+    opp.frozen = 0;
+    opp.scrambled = 0;
+    opp.linesCleared = 0;
+
+    // Round bonuses
+    this.roundGoldBonus = 0;
+    this.roundClearBonus = 0;
+    this.roundLuckBonus = 0;
+    this.roundSpeedBonus = 0;
+    this.roundShieldBonus = 0;
+    this.roundChargeBonus = 0;
+
+    playSound('levelup');
+  }
+
+  applyHandCards() {
+    for(const card of this.hand) {
+      switch(card.type) {
+        case 'gold': this.roundGoldBonus += card.value; break;
+        case 'clear_bonus': this.roundClearBonus += card.value; break;
+        case 'luck': this.roundLuckBonus += card.value; break;
+        case 'buff': this.roundSpeedBonus += card.value; break;
+        case 'shield': this.roundShieldBonus += card.value; this.playerStats.shields += card.value; break;
+        case 'heal': this.hp = Math.min(this.maxHP, this.hp + card.value); break;
+        case 'charge':
+          this.abilities.forEach(a => { a.currentCharge = Math.min(a.charge, a.currentCharge + card.value); });
+          break;
+      }
+    }
+    // Move hand to discard
+    this.discardPile.push(...this.hand);
+    this.hand = [];
+  }
+
+  getNextPiece() {
+    if(this.bag.length===0) {
+      this.bag = [...PIECE_NAMES];
+      for(let i=this.bag.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [this.bag[i],this.bag[j]]=[this.bag[j],this.bag[i]];
+      }
+    }
+    return this.bag.pop();
+  }
+
+  spawnPiece() {
+    this.currentType = this.nextPieces.shift();
+    this.nextPieces.push(this.getNextPiece());
+    this.currentRotation = 0;
+    this.currentX = Math.floor(COLS/2)-1;
+    this.currentY = 0;
+    this.canHold = true;
+    this.updateGhost();
+
+    if(this.checkCollision(this.currentX, this.currentY, this.currentRotation)){
+      // Game over for this round — take damage
+      this.roundLost();
+    }
+  }
+
+  holdPiece() {
+    if(!this.canHold) return;
+    playSound('rotate');
+    this.canHold = false;
+    if(this.holdSlot===null){
+      this.holdSlot = this.currentType;
+      this.spawnPiece();
+    } else {
+      const tmp = this.holdSlot;
+      this.holdSlot = this.currentType;
+      this.currentType = tmp;
+      this.currentRotation = 0;
+      this.currentX = Math.floor(COLS/2)-1;
+      this.currentY = 0;
+      this.updateGhost();
+    }
+  }
+
+  getPieceBlocks(type, rotation) {
+    const shapes = PIECE_SHAPES[type];
+    return shapes[rotation % shapes.length];
+  }
+
+  checkCollision(px, py, rot) {
+    const blocks = this.getPieceBlocks(this.currentType, rot);
+    for(const [bx,by] of blocks){
+      const nx=px+bx, ny=py+by;
+      if(nx<0||nx>=COLS||ny>=ROWS) return true;
+      if(ny>=0 && this.board[ny][nx]) return true;
+    }
+    return false;
+  }
+
+  movePiece(dx, dy) {
+    if(!this.checkCollision(this.currentX+dx, this.currentY+dy, this.currentRotation)){
+      this.currentX+=dx;
+      this.currentY+=dy;
+      this.updateGhost();
+      return true;
+    }
+    return false;
+  }
+
+  rotatePiece(dir) {
+    const shapes = PIECE_SHAPES[this.currentType];
+    let newRot = (this.currentRotation + dir + shapes.length) % shapes.length;
+    // Try basic rotation
+    if(!this.checkCollision(this.currentX, this.currentY, newRot)){
+      this.currentRotation = newRot;
+      this.updateGhost();
+      return;
+    }
+    // Wall kicks
+    const kicks = [[-1,0],[1,0],[0,-1],[-1,-1],[1,-1],[2,0],[-2,0]];
+    for(const [kx,ky] of kicks){
+      if(!this.checkCollision(this.currentX+kx, this.currentY+ky, newRot)){
+        this.currentX+=kx; this.currentY+=ky;
+        this.currentRotation=newRot;
+        this.updateGhost();
+        return;
+      }
+    }
+  }
+
+  updateGhost() {
+    this.ghostY = this.currentY;
+    while(!this.checkCollision(this.currentX, this.ghostY+1, this.currentRotation)){
+      this.ghostY++;
+    }
+  }
+
+  hardDrop() {
+    let dropped = 0;
+    while(!this.checkCollision(this.currentX, this.currentY+1, this.currentRotation)){
+      this.currentY++;
+      dropped++;
+    }
+    this.score += dropped * 2 * this.playerStats.scoreMultiplier;
+    this.lockPiece();
+    addShake(3);
+  }
+
+  lockPiece() {
+    const blocks = this.getPieceBlocks(this.currentType, this.currentRotation);
+    const color = PIECE_COLORS[this.currentType];
+    for(const [bx,by] of blocks){
+      const nx=this.currentX+bx, ny=this.currentY+by;
+      if(ny>=0 && ny<ROWS && nx>=0 && nx<COLS){
+        this.board[ny][nx] = color;
+      }
+    }
+    playSound('drop');
+    this.clearLines();
+    this.spawnPiece();
+  }
+
+  clearLines() {
+    const fullRows = [];
+    for(let y=0;y<ROWS;y++){
+      if(this.board[y].every(c=>c!==0)) fullRows.push(y);
+    }
+    if(fullRows.length===0) {
+      this.combo=0;
+      return;
+    }
+
+    this.combo++;
+    const comboMult = 1 + (this.combo-1)*0.5*this.playerStats.comboBonus;
+
+    // Line clear scoring
+    let baseScore = [0,100,300,500,800][fullRows.length]||800;
+    if(this.currentType==='T') baseScore *= this.playerStats.tSpinMulti;
+    if(fullRows.length===4) baseScore += this.playerStats.tetrisBonus;
+    baseScore += this.roundClearBonus * fullRows.length;
+    baseScore *= comboMult;
+    baseScore *= this.playerStats.scoreMultiplier;
+    baseScore *= (1 + this.roundSpeedBonus);
+
+    // Luck — double clear chance
+    if(Math.random() < this.roundLuckBonus) {
+      baseScore *= 2;
+      this.addFloatText('LUCKY ×2!', COLORS.purple);
+      playSound('combo');
+    }
+
+    this.score += Math.floor(baseScore);
+    this.totalScore += Math.floor(baseScore);
+    this.linesCleared += fullRows.length;
+
+    // Gold
+    this.gold += (this.playerStats.goldPerClear + this.roundGoldBonus) * fullRows.length;
+
+    // Charge abilities
+    const chargeAmt = fullRows.length * this.playerStats.chargeRate;
+    this.abilities.forEach(a => {
+      a.currentCharge = Math.min(a.charge, a.currentCharge + chargeAmt);
+    });
+
+    // Vampire
+    if(this.playerStats.vampiric) {
+      const opp = this.opponents[this.currentOpponentIdx];
+      opp.hp = Math.max(0, opp.hp - fullRows.length);
+    }
+
+    // Effects
+    if(fullRows.length >= 4) { playSound('quad'); addShake(8); }
+    else { playSound('clear'); addShake(3); }
+    if(this.combo > 1) {
+      this.addFloatText(`COMBO ×${this.combo}!`, COLORS.gold);
+      playSound('combo');
+    }
+
+    // Flash and remove
+    this.lineFlash = fullRows.map(y => ({y, timer:0.3}));
+    for(const row of fullRows) {
+      this.particles.lineClear(this.boardY + row*this.cellSize + this.cellSize/2, this.boardW, this.cellSize, this.boardX);
+    }
+
+    // Remove rows
+    for(const row of fullRows.sort((a,b)=>b-a)){
+      this.board.splice(row, 1);
+      this.board.unshift(Array(COLS).fill(0));
+    }
+
+    // Check perfect clear
+    if(this.playerStats.perfectKill && this.board.every(row=>row.every(c=>c===0))){
+      const opp = this.opponents[this.currentOpponentIdx];
+      opp.hp = 0;
+      this.addFloatText('PERFECT CLEAR — INSTANT KILL!', COLORS.gold);
+      addShake(15);
+      playSound('quad');
+    }
+
+    // Level up
+    const newLevel = Math.floor(this.linesCleared/10)+1;
+    if(newLevel > this.level) {
+      this.level = newLevel;
+      this.dropInterval = Math.max(100, 800 - (this.level-1)*50);
+      this.addFloatText(`LEVEL ${this.level}!`, COLORS.green);
+      playSound('levelup');
+    }
+  }
+
+  // --- Abilities ---
+  useAbility(idx) {
+    if(idx<0||idx>=this.abilities.length) return;
+    const ability = this.abilities[idx];
+    if(ability.currentCharge < ability.charge) return;
+    ability.currentCharge = 0;
+    ability.execute(this);
+    playSound('ability');
+    addShake(5);
+  }
+
+  sendGarbageToOpponent(rows) {
+    const opp = this.opponents[this.currentOpponentIdx];
+    const gap = Math.floor(Math.random()*COLS);
+    for(let i=0;i<rows;i++){
+      opp.board.shift();
+      const row = Array(COLS).fill('#666677');
+      row[gap] = 0;
+      opp.board.push(row);
+    }
+    opp.hp = Math.max(0, opp.hp - 1);
+  }
+
+  freezeOpponent(duration) {
+    this.opponents[this.currentOpponentIdx].frozen = duration;
+  }
+
+  scrambleOpponent() {
+    this.opponents[this.currentOpponentIdx].scrambled = 3;
+  }
+
+  nukeOwnBoard(rows) {
+    for(let i=0;i<rows;i++){
+      this.board[ROWS-1-i] = Array(COLS).fill(0);
+    }
+    this.particles.emit(this.boardX+this.boardW/2, this.boardY+this.boardH-rows*this.cellSize, 40, COLORS.orange, 200, 1);
+  }
+
+  stealAbility() {
+    // Recharge a random ability
+    if(this.abilities.length>0){
+      const a = this.abilities[Math.floor(Math.random()*this.abilities.length)];
+      a.currentCharge = a.charge;
+    }
+  }
+
+  addFloatText(text, color) {
+    this.floatTexts.push(new FloatText(text, this.boardX+this.boardW/2, this.boardY+this.boardH/2, color, 22));
+  }
+
+  // --- Opponent AI ---
+  updateOpponent(dt) {
+    const opp = this.opponents[this.currentOpponentIdx];
+    if(!opp || opp.hp<=0) return;
+
+    // Frozen
+    if(opp.frozen > 0) {
+      opp.frozen -= dt*1000;
+      return;
+    }
+
+    // Simple AI: occasionally clear lines and attack
+    opp.dropTimer += dt * 1000;
+    const oppSpeed = opp.speed / (1 + this.round*0.05);
+
+    if(opp.dropTimer >= oppSpeed) {
+      opp.dropTimer = 0;
+
+      // Simulate: randomly fill or clear
+      const action = Math.random();
+      if(action < opp.aggression * 0.3) {
+        // Attack player — send garbage
+        if(this.playerStats.shields > 0) {
+          this.playerStats.shields--;
+          this.addFloatText('SHIELD BLOCKED!', COLORS.blue);
+          playSound('shield');
+        } else {
+          const gap = Math.floor(Math.random()*COLS);
+          this.board.shift();
+          const row = Array(COLS).fill('#444455');
+          row[gap]=0;
+          this.board.push(row);
+          addShake(4);
+          playSound('damage');
+          this.addFloatText('GARBAGE!', COLORS.red);
+        }
+      }
+
+      // Simulate opponent board activity
+      if(action < 0.15) {
+        // Opponent clears a line
+        const rowIdx = ROWS-1-Math.floor(Math.random()*3);
+        if(rowIdx>=0 && rowIdx<ROWS) {
+          opp.board[rowIdx] = Array(COLS).fill(0);
+          opp.linesCleared = (opp.linesCleared||0)+1;
+        }
+      } else if(action < 0.6) {
+        // Opponent places blocks
+        const y = Math.max(0, ROWS-1-Math.floor(Math.random()*8));
+        const x = Math.floor(Math.random()*(COLS-2));
+        for(let dx=0;dx<2+Math.floor(Math.random()*2);dx++){
+          if(x+dx<COLS) opp.board[y][x+dx] = opp.color;
+        }
+      }
+
+      // Opponent HP decreases slowly based on difficulty
+      // (simulates player winning over time with skill)
+    }
+  }
+
+  sendGarbageToPlayer(rows) {
+    if(this.playerStats.shields > 0) {
+      this.playerStats.shields--;
+      this.addFloatText('SHIELD!', COLORS.blue);
+      playSound('shield');
+      return;
+    }
+    const gap = Math.floor(Math.random()*COLS);
+    for(let i=0;i<rows;i++){
+      this.board.shift();
+      const row = Array(COLS).fill('#444455');
+      row[gap]=0;
+      this.board.push(row);
+    }
+    addShake(5);
+    playSound('damage');
+  }
+
+  roundLost() {
+    this.hp -= 2;
+    playSound('damage');
+    addShake(10);
+    if(this.hp <= 0) {
+      this.endGame(false);
+    } else {
+      this.addFloatText('-2 HP!', COLORS.red);
+      this.state = STATE.ROUND_END;
+      this.roundResult = 'lost';
+    }
+  }
+
+  roundWon() {
+    const goldEarned = 15 + this.round * 5 + Math.floor(this.score/100);
+    this.gold += goldEarned;
+    this.metaXP += 50 + this.round * 10;
+    localStorage.setItem('breakshaper_xp', this.metaXP);
+    this.metaLevel = Math.floor(this.metaXP/500)+1;
+
+    this.currentOpponentIdx++;
+    this.state = STATE.ROUND_END;
+    this.roundResult = 'won';
+    this.roundGoldEarned = goldEarned;
+    playSound('quad');
+    addShake(5);
+  }
+
+  endGame(won) {
+    this.state = STATE.GAME_OVER;
+    this.gameWon = won;
+    if(this.totalScore > this.highScore) {
+      this.highScore = this.totalScore;
+      localStorage.setItem('breakshaper_high', this.highScore);
+    }
+    this.metaXP += Math.floor(this.totalScore/10);
+    localStorage.setItem('breakshaper_xp', this.metaXP);
+    this.metaLevel = Math.floor(this.metaXP/500)+1;
+    playSound(won ? 'quad' : 'gameover');
+  }
+
+  // --- Update ---
+  update(dt) {
+    this.particles.update(dt);
+    this.floatTexts = this.floatTexts.filter(f => { f.update(dt); return f.life>0; });
+
+    // Shake decay
+    if(shakeAmount>0) { shakeAmount*=Math.pow(0.1, dt*3); if(shakeAmount<0.5) shakeAmount=0; }
+
+    if(this.state===STATE.TITLE) {
+      this.titlePulse += dt;
+      this.titleBlocks.forEach(b => {
+        b.y += b.speed * dt;
+        if(b.y > this.H+20) { b.y=-20; b.x=Math.random()*this.W; }
+      });
+      return;
+    }
+
+    if(this.state!==STATE.PLAYING) return;
+
+    // Round timer
+    this.roundTimer += dt;
+
+    // Line flash
+    this.lineFlash = this.lineFlash.filter(f => { f.timer-=dt; return f.timer>0; });
+
+    // Drop
+    const speedMod = this.playerStats.speedMod || 1;
+    const interval = (this.softDrop ? this.dropInterval*0.1 : this.dropInterval) * speedMod;
+    this.dropTimer += dt * 1000;
+    if(this.dropTimer >= interval) {
+      this.dropTimer = 0;
+      if(!this.movePiece(0,1)) {
+        this.lockPiece();
+      }
+    }
+
+    // Opponent AI
+    this.updateOpponent(dt);
+
+    // Check opponent HP
+    const opp = this.opponents[this.currentOpponentIdx];
+    if(opp && opp.hp <= 0) {
+      this.roundWon();
+    }
+
+    // Round time pressure: after 90s, auto-garbage every 5s
+    if(this.roundTimer > this.roundDuration) {
+      const extra = this.roundTimer - this.roundDuration;
+      if(Math.floor(extra/5) > Math.floor((extra-dt)/5)) {
+        this.sendGarbageToPlayer(1);
+        // Also damage opponent so rounds end
+        if(opp) opp.hp = Math.max(0, opp.hp-1);
+      }
+    }
+
+    // Check if board topped out
+    if(this.board[0].some(c=>c!==0) && this.board[1].some(c=>c!==0)) {
+      this.roundLost();
+    }
+  }
+
+  // --- Rendering ---
+  draw() {
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0, 0, this.W, this.H);
+
+    // Screen shake offset
+    const sx = shakeAmount>0 ? (Math.random()-0.5)*shakeAmount*2 : 0;
+    const sy = shakeAmount>0 ? (Math.random()-0.5)*shakeAmount*2 : 0;
+    ctx.save();
+    ctx.translate(sx, sy);
+
+    switch(this.state) {
+      case STATE.TITLE: this.drawTitle(); break;
+      case STATE.DRAFT: this.drawDraft(); break;
+      case STATE.SHOP: this.drawShop(); break;
+      case STATE.PLAYING: this.drawPlaying(); break;
+      case STATE.ROUND_END: this.drawRoundEnd(); break;
+      case STATE.GAME_OVER: this.drawGameOver(); break;
+    }
+
+    this.particles.draw(ctx);
+    this.floatTexts.forEach(f=>f.draw(ctx));
+    ctx.restore();
+  }
+
+  drawTitle() {
+    // Background blocks
+    this.titleBlocks.forEach(b => {
+      ctx.globalAlpha = b.alpha;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(b.x, b.y, b.size, b.size);
+    });
+    ctx.globalAlpha = 1;
+
+    // Title
+    const pulse = Math.sin(this.titlePulse*2)*0.1+0.9;
+    ctx.textAlign = 'center';
+
+    // BREAK
+    ctx.fillStyle = COLORS.gold;
+    ctx.font = `bold ${Math.floor(this.W*0.08*pulse)}px 'Courier New'`;
+    ctx.fillText('BREAK', this.W/2, this.H*0.28);
+
+    // SHAPER
+    ctx.fillStyle = COLORS.green;
+    ctx.font = `bold ${Math.floor(this.W*0.1*pulse)}px 'Courier New'`;
+    ctx.fillText('SHAPER', this.W/2, this.H*0.40);
+
+    // Tagline
+    ctx.fillStyle = COLORS.dimText;
+    ctx.font = `${Math.floor(this.W*0.025)}px 'Courier New'`;
+    ctx.fillText('Shape, Break, Conquer.', this.W/2, this.H*0.48);
+
+    // Decorative pieces
+    const t = this.titlePulse;
+    const drawMiniPiece = (type, cx, cy, scale, rot) => {
+      const blocks = this.getPieceBlocks(type, Math.floor(rot)%PIECE_SHAPES[type].length);
+      ctx.fillStyle = PIECE_COLORS[type];
+      ctx.globalAlpha = 0.6;
+      blocks.forEach(([bx,by])=>{
+        ctx.fillRect(cx+bx*scale*12, cy+by*scale*12, scale*10, scale*10);
+      });
+      ctx.globalAlpha = 1;
+    };
+    drawMiniPiece('T', this.W*0.15, this.H*0.3, 1.5, t*0.5);
+    drawMiniPiece('I', this.W*0.8, this.H*0.25, 1.5, t*0.3);
+    drawMiniPiece('S', this.W*0.12, this.H*0.5, 1.2, t*0.7);
+    drawMiniPiece('L', this.W*0.85, this.H*0.45, 1.2, t*0.4);
+
+    // Start prompt
+    const blink = Math.sin(this.titlePulse*3)>0;
+    if(blink) {
+      ctx.fillStyle = COLORS.gold;
+      ctx.font = `bold ${Math.floor(this.W*0.03)}px 'Courier New'`;
+      ctx.fillText(this.isMobile ? '[ TAP TO PLAY ]' : '[ PRESS ANY KEY ]', this.W/2, this.H*0.62);
+    }
+
+    // Meta info
+    ctx.fillStyle = COLORS.dimText;
+    ctx.font = `${Math.floor(this.W*0.018)}px 'Courier New'`;
+    ctx.fillText(`HIGH SCORE: ${this.highScore}`, this.W/2, this.H*0.72);
+    ctx.fillText(`META LEVEL: ${this.metaLevel}  |  TOTAL WINS: ${this.totalWins}`, this.W/2, this.H*0.77);
+    ctx.fillText(`XP: ${this.metaXP} / ${this.metaLevel*500}`, this.W/2, this.H*0.82);
+
+    // Controls
+    ctx.fillStyle = '#334455';
+    ctx.font = `${Math.floor(this.W*0.014)}px 'Courier New'`;
+    ctx.fillText('←→ Move  ↑/X Rotate  Z Rotate CCW  SPACE Hard Drop  C Hold  1-2-3 Abilities', this.W/2, this.H*0.92);
+
+    // XP bar
+    const barW = this.W*0.3, barH = 6;
+    const barX = (this.W-barW)/2, barY = this.H*0.84;
+    ctx.fillStyle = '#222233';
+    ctx.fillRect(barX, barY, barW, barH);
+    const pct = (this.metaXP % 500) / 500;
+    ctx.fillStyle = COLORS.green;
+    ctx.fillRect(barX, barY, barW*pct, barH);
+  }
+
+  drawDraft() {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = COLORS.gold;
+    ctx.font = `bold ${Math.floor(this.W*0.04)}px 'Courier New'`;
+    ctx.fillText('DRAFT PHASE', this.W/2, this.H*0.12);
+
+    ctx.fillStyle = COLORS.dimText;
+    ctx.font = `${Math.floor(this.W*0.02)}px 'Courier New'`;
+    ctx.fillText(`Round ${this.round} — Choose an ability`, this.W/2, this.H*0.19);
+
+    // Next opponent preview
+    if(this.currentOpponentIdx < this.opponents.length) {
+      const opp = this.opponents[this.currentOpponentIdx];
+      ctx.fillStyle = opp.color;
+      ctx.font = `bold ${Math.floor(this.W*0.022)}px 'Courier New'`;
+      ctx.fillText(`VS: ${opp.name}`, this.W/2, this.H*0.25);
+      ctx.fillStyle = COLORS.dimText;
+      ctx.font = `${Math.floor(this.W*0.016)}px 'Courier New'`;
+      ctx.fillText(`HP: ${opp.hp}  |  Difficulty: ${'★'.repeat(Math.ceil(opp.difficulty))}`, this.W/2, this.H*0.29);
+    }
+
+    // Cards
+    const cardW = Math.min(180, this.W*0.22), cardH = cardW*1.3, gap = 20;
+    const totalW = this.draftChoices.length*(cardW+gap)-gap;
+    const startX = (this.W-totalW)/2;
+    const startY = this.H*0.35;
+
+    this.draftChoices.forEach((ability, i) => {
+      const cx = startX + i*(cardW+gap);
+      const selected = i === this.draftSelection;
+
+      // Card bg
+      ctx.fillStyle = selected ? '#1a1a2a' : '#111118';
+      ctx.strokeStyle = selected ? ability.color : COLORS.border;
+      ctx.lineWidth = selected ? 3 : 1;
+      this.drawRoundRect(cx, startY, cardW, cardH, 8);
+
+      // Glow
+      if(selected) {
+        ctx.shadowColor = ability.color;
+        ctx.shadowBlur = 15;
+        ctx.strokeStyle = ability.color;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // Icon
+      ctx.fillStyle = ability.color;
+      ctx.font = `bold ${Math.floor(cardW*0.25)}px 'Courier New'`;
+      ctx.fillText(ability.icon, cx+cardW/2, startY+cardH*0.25);
+
+      // Name
+      ctx.fillStyle = COLORS.white;
+      ctx.font = `bold ${Math.floor(cardW*0.1)}px 'Courier New'`;
+      ctx.fillText(ability.name, cx+cardW/2, startY+cardH*0.45);
+
+      // Desc
+      ctx.fillStyle = COLORS.dimText;
+      ctx.font = `${Math.floor(cardW*0.075)}px 'Courier New'`;
+      this.wrapText(ability.desc, cx+cardW/2, startY+cardH*0.6, cardW-20, Math.floor(cardW*0.08));
+
+      // Charge info
+      ctx.fillStyle = COLORS.cyan;
+      ctx.font = `${Math.floor(cardW*0.07)}px 'Courier New'`;
+      ctx.fillText(`Charge: ${ability.charge} lines`, cx+cardW/2, startY+cardH*0.85);
+
+      // Number key
+      ctx.fillStyle = '#556677';
+      ctx.font = `${Math.floor(cardW*0.08)}px 'Courier New'`;
+      ctx.fillText(`[${i+1}]`, cx+cardW/2, startY+cardH+25);
+    });
+
+    // Current abilities
+    if(this.abilities.length > 0) {
+      ctx.fillStyle = COLORS.dimText;
+      ctx.font = `${Math.floor(this.W*0.016)}px 'Courier New'`;
+      ctx.fillText('Current Abilities: ' + this.abilities.map(a=>a.name).join(', '), this.W/2, this.H*0.9);
+    }
+  }
+
+  drawShop() {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = COLORS.gold;
+    ctx.font = `bold ${Math.floor(this.W*0.04)}px 'Courier New'`;
+    ctx.fillText('SHOP', this.W/2, this.H*0.08);
+
+    // Gold
+    ctx.fillStyle = COLORS.gold;
+    ctx.font = `bold ${Math.floor(this.W*0.025)}px 'Courier New'`;
+    ctx.fillText(`Gold: ${this.gold}`, this.W/2, this.H*0.15);
+
+    // HP
+    ctx.fillStyle = COLORS.red;
+    ctx.font = `${Math.floor(this.W*0.02)}px 'Courier New'`;
+    ctx.fillText(`HP: ${this.hp}/${this.maxHP}`, this.W/2, this.H*0.2);
+
+    // Items
+    const itemW = Math.min(140, this.W*0.16), itemH = itemW*1.3, gap = 15;
+    const totalW = this.shopItems.length*(itemW+gap)-gap;
+    const startX = (this.W-totalW)/2;
+    const startY = this.H*0.28;
+
+    this.shopItems.forEach((item, i) => {
+      const cx = startX + i*(itemW+gap);
+      const selected = i === this.shopSelection;
+      const canAfford = this.gold >= item.cost;
+
+      ctx.fillStyle = selected ? '#1a1a2a' : '#111118';
+      ctx.strokeStyle = selected ? (canAfford ? COLORS.green : COLORS.red) : COLORS.border;
+      ctx.lineWidth = selected ? 2 : 1;
+      this.drawRoundRect(cx, startY, itemW, itemH, 6);
+
+      // Type badge
+      ctx.fillStyle = item.type==='joker' ? COLORS.purple : item.type==='card' ? COLORS.cyan : COLORS.green;
+      ctx.font = `bold ${Math.floor(itemW*0.08)}px 'Courier New'`;
+      ctx.fillText(item.type.toUpperCase(), cx+itemW/2, startY+18);
+
+      // Icon/Name
+      ctx.fillStyle = item.data.color || COLORS.white;
+      ctx.font = `bold ${Math.floor(itemW*0.12)}px 'Courier New'`;
+      if(item.data.icon) ctx.fillText(item.data.icon, cx+itemW/2, startY+itemH*0.3);
+      ctx.fillStyle = COLORS.white;
+      ctx.font = `bold ${Math.floor(itemW*0.085)}px 'Courier New'`;
+      ctx.fillText(item.data.name, cx+itemW/2, startY+itemH*0.48);
+
+      // Desc
+      ctx.fillStyle = COLORS.dimText;
+      ctx.font = `${Math.floor(itemW*0.07)}px 'Courier New'`;
+      this.wrapText(item.data.desc, cx+itemW/2, startY+itemH*0.62, itemW-14, Math.floor(itemW*0.075));
+
+      // Rarity
+      if(item.data.rarity) {
+        const rarityColors = {common:'#888',uncommon:COLORS.green,rare:COLORS.blue,legendary:COLORS.gold};
+        ctx.fillStyle = rarityColors[item.data.rarity]||'#888';
+        ctx.font = `${Math.floor(itemW*0.065)}px 'Courier New'`;
+        ctx.fillText(item.data.rarity.toUpperCase(), cx+itemW/2, startY+itemH*0.82);
+      }
+
+      // Cost
+      ctx.fillStyle = canAfford ? COLORS.gold : COLORS.red;
+      ctx.font = `bold ${Math.floor(itemW*0.1)}px 'Courier New'`;
+      ctx.fillText(`${item.cost}g`, cx+itemW/2, startY+itemH-10);
+    });
+
+    // Current jokers
+    if(this.jokers.length > 0) {
+      ctx.fillStyle = COLORS.dimText;
+      ctx.font = `${Math.floor(this.W*0.015)}px 'Courier New'`;
+      ctx.fillText('Jokers: ' + this.jokers.map(j=>j.name).join(', '), this.W/2, this.H*0.72);
+    }
+
+    // Deck info
+    ctx.fillStyle = COLORS.dimText;
+    ctx.font = `${Math.floor(this.W*0.015)}px 'Courier New'`;
+    ctx.fillText(`Deck: ${this.deck.length+this.discardPile.length} cards`, this.W/2, this.H*0.76);
+
+    // Continue button
+    const btnW=180, btnH=45;
+    const btnX=(this.W-btnW)/2, btnY=this.H*0.8;
+    const btnSel = this.shopSelection === this.shopItems.length;
+    ctx.fillStyle = btnSel ? COLORS.green : '#222233';
+    ctx.strokeStyle = btnSel ? COLORS.green : COLORS.border;
+    ctx.lineWidth = btnSel ? 2 : 1;
+    this.drawRoundRect(btnX, btnY, btnW, btnH, 6);
+    ctx.fillStyle = btnSel ? '#000' : COLORS.white;
+    ctx.font = `bold ${Math.floor(this.W*0.02)}px 'Courier New'`;
+    ctx.fillText('CONTINUE →', this.W/2, btnY+30);
+  }
+
+  drawPlaying() {
+    // --- Left Panel: Stats ---
+    const panelX = 10, panelW = this.boardX - 20;
+    ctx.fillStyle = COLORS.panel;
+    ctx.fillRect(panelX, this.boardY, panelW, this.boardH);
+    ctx.strokeStyle = COLORS.border;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(panelX, this.boardY, panelW, this.boardH);
+
+    ctx.textAlign = 'left';
+    let py = this.boardY + 20;
+    const fs = Math.max(11, Math.floor(panelW*0.11));
+
+    // Round info
+    ctx.fillStyle = COLORS.gold;
+    ctx.font = `bold ${fs+2}px 'Courier New'`;
+    ctx.fillText(`Round ${this.round}`, panelX+8, py); py+=fs+8;
+
+    // HP
+    ctx.fillStyle = COLORS.red;
+    ctx.font = `${fs}px 'Courier New'`;
+    ctx.fillText(`HP: ${this.hp}/${this.maxHP}`, panelX+8, py); py+=fs+4;
+    // HP bar
+    const hpBarW = panelW-20, hpBarH = 8;
+    ctx.fillStyle = '#331111';
+    ctx.fillRect(panelX+8, py-4, hpBarW, hpBarH);
+    ctx.fillStyle = this.hp > 3 ? COLORS.green : COLORS.red;
+    ctx.fillRect(panelX+8, py-4, hpBarW*(this.hp/this.maxHP), hpBarH);
+    py+=hpBarH+10;
+
+    // Score
+    ctx.fillStyle = COLORS.white;
+    ctx.font = `bold ${fs+2}px 'Courier New'`;
+    ctx.fillText(`${this.score}`, panelX+8, py); py+=fs+4;
+    ctx.fillStyle = COLORS.dimText;
+    ctx.font = `${fs-2}px 'Courier New'`;
+    ctx.fillText(`Total: ${this.totalScore}`, panelX+8, py); py+=fs+6;
+
+    // Gold
+    ctx.fillStyle = COLORS.gold;
+    ctx.font = `${fs}px 'Courier New'`;
+    ctx.fillText(`Gold: ${this.gold}`, panelX+8, py); py+=fs+6;
+
+    // Level / Lines
+    ctx.fillStyle = COLORS.green;
+    ctx.font = `${fs}px 'Courier New'`;
+    ctx.fillText(`Lv.${this.level}  L:${this.linesCleared}`, panelX+8, py); py+=fs+6;
+
+    // Combo
+    if(this.combo > 1) {
+      ctx.fillStyle = COLORS.gold;
+      ctx.font = `bold ${fs}px 'Courier New'`;
+      ctx.fillText(`Combo ×${this.combo}`, panelX+8, py);
+    }
+    py+=fs+8;
+
+    // Shields
+    if(this.playerStats.shields > 0) {
+      ctx.fillStyle = COLORS.blue;
+      ctx.font = `${fs}px 'Courier New'`;
+      ctx.fillText(`Shield: ${'◈'.repeat(this.playerStats.shields)}`, panelX+8, py);
+      py+=fs+6;
+    }
+
+    // Hold piece
+    py+=10;
+    ctx.fillStyle = COLORS.dimText;
+    ctx.font = `${fs-2}px 'Courier New'`;
+    ctx.fillText('HOLD [C]', panelX+8, py); py+=fs;
+    if(this.holdSlot) {
+      this.drawMiniPieceAt(this.holdSlot, panelX+12, py, Math.floor(this.cellSize*0.5));
+      py+=this.cellSize*2.5;
+    } else {
+      py+=this.cellSize*2;
+    }
+
+    // Abilities
+    py+=10;
+    ctx.fillStyle = COLORS.dimText;
+    ctx.font = `${fs-2}px 'Courier New'`;
+    ctx.fillText('ABILITIES', panelX+8, py); py+=fs+4;
+
+    this.abilities.forEach((ability, i) => {
+      const charged = ability.currentCharge >= ability.charge;
+      ctx.fillStyle = charged ? ability.color : '#333344';
+      ctx.font = `bold ${fs}px 'Courier New'`;
+      ctx.fillText(`[${i+1}] ${ability.icon} ${ability.name}`, panelX+8, py);
+      py+=fs+2;
+      // Charge bar
+      const cbW = panelW-24, cbH = 5;
+      ctx.fillStyle = '#222233';
+      ctx.fillRect(panelX+8, py-3, cbW, cbH);
+      ctx.fillStyle = charged ? ability.color : '#555566';
+      ctx.fillRect(panelX+8, py-3, cbW*(ability.currentCharge/ability.charge), cbH);
+      py+=cbH+8;
+    });
+
+    // Jokers
+    if(this.jokers.length>0) {
+      py+=6;
+      ctx.fillStyle = COLORS.dimText;
+      ctx.font = `${fs-3}px 'Courier New'`;
+      ctx.fillText('JOKERS:', panelX+8, py); py+=fs-2;
+      this.jokers.forEach(j => {
+        ctx.fillStyle = j.color;
+        ctx.font = `${fs-3}px 'Courier New'`;
+        ctx.fillText(`${j.icon} ${j.name}`, panelX+8, py);
+        py+=fs-1;
+      });
+    }
+
+    // Timer
+    const timeLeft = Math.max(0, this.roundDuration - this.roundTimer);
+    py = this.boardY + this.boardH - 20;
+    ctx.fillStyle = timeLeft < 15 ? COLORS.red : COLORS.dimText;
+    ctx.font = `${fs}px 'Courier New'`;
+    ctx.fillText(`Time: ${Math.ceil(timeLeft)}s`, panelX+8, py);
+
+    // --- Main Board ---
+    // Board bg
+    ctx.fillStyle = '#080810';
+    ctx.fillRect(this.boardX, this.boardY, this.boardW, this.boardH);
+
+    // Grid
+    ctx.strokeStyle = '#151520';
+    ctx.lineWidth = 0.5;
+    for(let x=0;x<=COLS;x++){
+      ctx.beginPath();
+      ctx.moveTo(this.boardX+x*this.cellSize, this.boardY);
+      ctx.lineTo(this.boardX+x*this.cellSize, this.boardY+this.boardH);
+      ctx.stroke();
+    }
+    for(let y=0;y<=ROWS;y++){
+      ctx.beginPath();
+      ctx.moveTo(this.boardX, this.boardY+y*this.cellSize);
+      ctx.lineTo(this.boardX+this.boardW, this.boardY+y*this.cellSize);
+      ctx.stroke();
+    }
+
+    // Placed blocks
+    for(let y=0;y<ROWS;y++){
+      for(let x=0;x<COLS;x++){
+        if(this.board[y][x]){
+          this.drawCell(this.boardX+x*this.cellSize, this.boardY+y*this.cellSize, this.cellSize, this.board[y][x]);
+        }
+      }
+    }
+
+    // Ghost piece
+    if(this.currentType) {
+      const blocks = this.getPieceBlocks(this.currentType, this.currentRotation);
+      ctx.globalAlpha = 0.2;
+      blocks.forEach(([bx,by])=>{
+        const gx=this.currentX+bx, gy=this.ghostY+by;
+        if(gy>=0) this.drawCell(this.boardX+gx*this.cellSize, this.boardY+gy*this.cellSize, this.cellSize, PIECE_COLORS[this.currentType]);
+      });
+      ctx.globalAlpha = 1;
+
+      // Current piece
+      blocks.forEach(([bx,by])=>{
+        const px=this.currentX+bx, py2=this.currentY+by;
+        if(py2>=0) this.drawCell(this.boardX+px*this.cellSize, this.boardY+py2*this.cellSize, this.cellSize, PIECE_COLORS[this.currentType]);
+      });
+    }
+
+    // Line flash
+    this.lineFlash.forEach(f => {
+      ctx.globalAlpha = f.timer/0.3;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(this.boardX, this.boardY+f.y*this.cellSize, this.boardW, this.cellSize);
+      ctx.globalAlpha = 1;
+    });
+
+    // Board border
+    ctx.strokeStyle = COLORS.gold;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(this.boardX, this.boardY, this.boardW, this.boardH);
+
+    // --- Next pieces ---
+    const nextX = this.boardX + this.boardW + 12;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = COLORS.dimText;
+    ctx.font = `${fs-2}px 'Courier New'`;
+    ctx.fillText('NEXT', nextX, this.boardY+12);
+    let ny = this.boardY + 20;
+    const miniSize = Math.floor(this.cellSize*0.55);
+    for(let i=0;i<Math.min(5,this.nextPieces.length);i++){
+      this.drawMiniPieceAt(this.nextPieces[i], nextX, ny, miniSize);
+      ny += miniSize*3.2;
+    }
+
+    // --- Opponent Board (right side) ---
+    if(this.currentOpponentIdx < this.opponents.length) {
+      const opp = this.opponents[this.currentOpponentIdx];
+
+      // Opponent label
+      ctx.textAlign = 'center';
+      ctx.fillStyle = opp.color;
+      ctx.font = `bold ${Math.floor(this.W*0.018)}px 'Courier New'`;
+      ctx.fillText(`VS ${opp.name}`, this.oppBoardX+this.oppBoardW/2, this.oppBoardY-10);
+
+      // Opponent HP bar
+      const ohpW = this.oppBoardW, ohpH = 8;
+      ctx.fillStyle = '#331111';
+      ctx.fillRect(this.oppBoardX, this.oppBoardY-5, ohpW, ohpH);
+      ctx.fillStyle = COLORS.red;
+      ctx.fillRect(this.oppBoardX, this.oppBoardY-5, ohpW*(opp.hp/opp.maxHP), ohpH);
+
+      ctx.fillStyle = COLORS.dimText;
+      ctx.font = `${Math.floor(this.W*0.013)}px 'Courier New'`;
+      ctx.fillText(`HP: ${opp.hp}/${opp.maxHP}`, this.oppBoardX+this.oppBoardW/2, this.oppBoardY-16);
+
+      // Frozen indicator
+      if(opp.frozen > 0) {
+        ctx.fillStyle = COLORS.cyan;
+        ctx.font = `bold ${Math.floor(this.W*0.016)}px 'Courier New'`;
+        ctx.fillText('❄ FROZEN ❄', this.oppBoardX+this.oppBoardW/2, this.oppBoardY+this.oppBoardH/2);
+      }
+
+      // Opponent board bg
+      ctx.fillStyle = '#080810';
+      ctx.fillRect(this.oppBoardX, this.oppBoardY, this.oppBoardW, this.oppBoardH);
+
+      // Opponent blocks
+      for(let y=0;y<ROWS;y++){
+        for(let x=0;x<COLS;x++){
+          if(opp.board[y][x]){
+            this.drawCell(this.oppBoardX+x*this.oppCellSize, this.oppBoardY+y*this.oppCellSize, this.oppCellSize, opp.board[y][x], true);
+          }
+        }
+      }
+
+      // Opponent board border
+      ctx.strokeStyle = opp.color;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(this.oppBoardX, this.oppBoardY, this.oppBoardW, this.oppBoardH);
+
+      // Tournament progress
+      const progY = this.oppBoardY + this.oppBoardH + 20;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = COLORS.dimText;
+      ctx.font = `${Math.floor(this.W*0.013)}px 'Courier New'`;
+      ctx.fillText('TOURNAMENT', this.oppBoardX+this.oppBoardW/2, progY);
+
+      for(let i=0;i<this.opponents.length;i++){
+        const dotX = this.oppBoardX + (i/(this.opponents.length-1))*this.oppBoardW;
+        const dotY = progY + 15;
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 5, 0, Math.PI*2);
+        if(i < this.currentOpponentIdx) ctx.fillStyle = COLORS.green;
+        else if(i === this.currentOpponentIdx) ctx.fillStyle = COLORS.gold;
+        else ctx.fillStyle = '#333344';
+        ctx.fill();
+      }
+    }
+
+    // --- Mobile Touch Hints ---
+    if(this.isMobile) {
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = COLORS.dimText;
+      ctx.font = `${12}px 'Courier New'`;
+      ctx.textAlign = 'center';
+      ctx.fillText('←', this.W*0.08, this.H*0.7);
+      ctx.fillText('→', this.W*0.77, this.H*0.85);
+      ctx.fillText('↓', this.W*0.42, this.H*0.75);
+      ctx.fillText('DROP', this.W*0.42, this.H*0.92);
+      ctx.fillText('ROT', this.W*0.08, this.H*0.4);
+      ctx.fillText('ROT', this.W*0.92, this.H*0.4);
+      ctx.fillText('1', this.W*0.77, this.H*0.3);
+      ctx.fillText('2', this.W*0.77, this.H*0.48);
+      ctx.fillText('3', this.W*0.77, this.H*0.66);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  drawRoundEnd() {
+    ctx.textAlign = 'center';
+
+    if(this.roundResult === 'won') {
+      ctx.fillStyle = COLORS.green;
+      ctx.font = `bold ${Math.floor(this.W*0.05)}px 'Courier New'`;
+      ctx.fillText('VICTORY!', this.W/2, this.H*0.25);
+
+      const opp = this.opponents[this.currentOpponentIdx-1];
+      if(opp) {
+        ctx.fillStyle = COLORS.dimText;
+        ctx.font = `${Math.floor(this.W*0.025)}px 'Courier New'`;
+        ctx.fillText(`Defeated ${opp.name}`, this.W/2, this.H*0.35);
+      }
+
+      ctx.fillStyle = COLORS.gold;
+      ctx.font = `${Math.floor(this.W*0.022)}px 'Courier New'`;
+      ctx.fillText(`Score: ${this.score}`, this.W/2, this.H*0.45);
+      ctx.fillText(`Gold Earned: +${this.roundGoldEarned||0}`, this.W/2, this.H*0.50);
+      ctx.fillText(`Total Gold: ${this.gold}`, this.W/2, this.H*0.55);
+
+      if(this.currentOpponentIdx < this.opponents.length) {
+        ctx.fillStyle = COLORS.dimText;
+        ctx.font = `${Math.floor(this.W*0.02)}px 'Courier New'`;
+        ctx.fillText(`Next: ${this.opponents[this.currentOpponentIdx].name}`, this.W/2, this.H*0.63);
+      } else {
+        ctx.fillStyle = COLORS.gold;
+        ctx.font = `bold ${Math.floor(this.W*0.03)}px 'Courier New'`;
+        ctx.fillText('TOURNAMENT COMPLETE!', this.W/2, this.H*0.63);
+      }
+    } else {
+      ctx.fillStyle = COLORS.red;
+      ctx.font = `bold ${Math.floor(this.W*0.05)}px 'Courier New'`;
+      ctx.fillText('ROUND LOST', this.W/2, this.H*0.3);
+
+      ctx.fillStyle = COLORS.dimText;
+      ctx.font = `${Math.floor(this.W*0.022)}px 'Courier New'`;
+      ctx.fillText(`HP: ${this.hp}/${this.maxHP}`, this.W/2, this.H*0.42);
+      ctx.fillText(`Score: ${this.score}`, this.W/2, this.H*0.48);
+    }
+
+    // Continue prompt
+    const blink = Math.sin(Date.now()/300)>0;
+    if(blink) {
+      ctx.fillStyle = COLORS.gold;
+      ctx.font = `${Math.floor(this.W*0.02)}px 'Courier New'`;
+      ctx.fillText(this.isMobile ? '[ TAP TO CONTINUE ]' : '[ PRESS ENTER ]', this.W/2, this.H*0.78);
+    }
+  }
+
+  drawGameOver() {
+    ctx.textAlign = 'center';
+
+    if(this.gameWon) {
+      ctx.fillStyle = COLORS.gold;
+      ctx.font = `bold ${Math.floor(this.W*0.06)}px 'Courier New'`;
+      ctx.fillText('CHAMPION!', this.W/2, this.H*0.2);
+      ctx.fillStyle = COLORS.green;
+      ctx.font = `${Math.floor(this.W*0.025)}px 'Courier New'`;
+      ctx.fillText('Tournament Conquered!', this.W/2, this.H*0.3);
+    } else {
+      ctx.fillStyle = COLORS.red;
+      ctx.font = `bold ${Math.floor(this.W*0.06)}px 'Courier New'`;
+      ctx.fillText('GAME OVER', this.W/2, this.H*0.2);
+    }
+
+    ctx.fillStyle = COLORS.white;
+    ctx.font = `bold ${Math.floor(this.W*0.035)}px 'Courier New'`;
+    ctx.fillText(`Final Score: ${this.totalScore}`, this.W/2, this.H*0.4);
+
+    ctx.fillStyle = COLORS.gold;
+    ctx.font = `${Math.floor(this.W*0.022)}px 'Courier New'`;
+    ctx.fillText(`High Score: ${this.highScore}`, this.W/2, this.H*0.48);
+
+    ctx.fillStyle = COLORS.dimText;
+    ctx.font = `${Math.floor(this.W*0.02)}px 'Courier New'`;
+    ctx.fillText(`Rounds Survived: ${this.round}`, this.W/2, this.H*0.55);
+    ctx.fillText(`Opponents Defeated: ${this.currentOpponentIdx}`, this.W/2, this.H*0.60);
+
+    // Meta progression
+    ctx.fillStyle = COLORS.green;
+    ctx.font = `${Math.floor(this.W*0.02)}px 'Courier New'`;
+    ctx.fillText(`Meta Level: ${this.metaLevel}  |  Total XP: ${this.metaXP}`, this.W/2, this.H*0.68);
+    ctx.fillText(`Total Wins: ${this.totalWins}`, this.W/2, this.H*0.73);
+
+    // XP bar
+    const barW = this.W*0.3, barH = 8;
+    const barX = (this.W-barW)/2, barY = this.H*0.76;
+    ctx.fillStyle = '#222233';
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = COLORS.green;
+    ctx.fillRect(barX, barY, barW*((this.metaXP%500)/500), barH);
+    ctx.fillStyle = COLORS.dimText;
+    ctx.font = `${Math.floor(this.W*0.013)}px 'Courier New'`;
+    ctx.fillText(`${this.metaXP%500}/500 to next level`, this.W/2, barY+22);
+
+    // Meta level bonuses
+    ctx.fillStyle = '#445566';
+    ctx.font = `${Math.floor(this.W*0.013)}px 'Courier New'`;
+    const bonuses = [];
+    if(this.metaLevel>=2) bonuses.push('Lv2: +10 starting gold');
+    if(this.metaLevel>=3) bonuses.push('Lv3: +1 starting HP');
+    if(this.metaLevel>=5) bonuses.push('Lv5: +10% score');
+    if(bonuses.length) ctx.fillText('Unlocked: ' + bonuses.join(' | '), this.W/2, barY+38);
+
+    // Restart
+    const blink = Math.sin(Date.now()/300)>0;
+    if(blink) {
+      ctx.fillStyle = COLORS.gold;
+      ctx.font = `bold ${Math.floor(this.W*0.025)}px 'Courier New'`;
+      ctx.fillText(this.isMobile ? '[ TAP TO RESTART ]' : '[ PRESS ENTER ]', this.W/2, this.H*0.9);
+    }
+  }
+
+  // --- Helpers ---
+  drawCell(x, y, size, color, mini) {
+    const pad = mini ? 1 : 1;
+    ctx.fillStyle = color;
+    ctx.fillRect(x+pad, y+pad, size-pad*2, size-pad*2);
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255, 0.65)';
+    ctx.fillRect(x+pad, y+pad, size-pad*2, mini?1:2);
+    ctx.fillRect(x+pad, y+pad, mini?1:2, size-pad*2);
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0, 0.65)';
+    ctx.fillRect(x+size-pad-(mini?1:2), y+pad, mini?1:2, size-pad*2);
+    ctx.fillRect(x+pad, y+size-pad-(mini?1:2), size-pad*2, mini?1:2);
+  }
+
+  drawMiniPieceAt(type, x, y, size) {
+    const blocks = this.getPieceBlocks(type, 0);
+    const color = PIECE_COLORS[type];
+    blocks.forEach(([bx,by])=>{
+      this.drawCell(x+bx*size, y+by*size, size, color, true);
+    });
+  }
+
+  drawRoundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.lineTo(x+w-r, y);
+    ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+    ctx.lineTo(x+w, y+h-r);
+    ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+    ctx.lineTo(x+r, y+h);
+    ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+    ctx.lineTo(x, y+r);
+    ctx.quadraticCurveTo(x, y, x+r, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  wrapText(text, x, y, maxW, lineH) {
+    const words = text.split(' ');
+    let line = '';
+    for(const word of words) {
+      const test = line + word + ' ';
+      const m = ctx.measureText(test);
+      if(m.width > maxW && line) {
+        ctx.fillText(line.trim(), x, y);
+        line = word + ' ';
+        y += lineH;
+      } else {
+        line = test;
+      }
+    }
+    ctx.fillText(line.trim(), x, y);
+  }
+}
+
+// --- Boot ---
+const game = new BreakShaperGame();
+let lastTime = performance.now();
+
+function gameLoop(now) {
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+  game.update(dt);
+  game.draw();
+  requestAnimationFrame(gameLoop);
+}
+requestAnimationFrame(gameLoop);
+
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

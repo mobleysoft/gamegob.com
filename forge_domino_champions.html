@@ -1,0 +1,1678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="DominoChampions">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>DominoChampions</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0f; overflow: hidden; touch-action: none; user-select: none; font-family: 'Segoe UI', Arial, sans-serif; }
+canvas { display: block; margin: 0 auto; }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+'use strict';
+
+// ============================================================
+// DOMINO CHAMPIONS — Chain, React, Dominate.
+// A domino-placement chain-reaction puzzle game with
+// meta-progression, economy, and special domino unlocks.
+// ============================================================
+
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+
+// --- Responsive Canvas ---
+let W, H, SCALE;
+const resize = () => {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W;
+    canvas.height = H;
+    SCALE = Math.min(W, H) / 800;
+};
+window.addEventListener('resize', resize);
+resize();
+
+// --- Colors ---
+const COL = {
+    bg: '#0a0a0f',
+    bg2: '#12121f',
+    gold: '#f0b800',
+    green: '#00ff88',
+    red: '#ff3355',
+    blue: '#3388ff',
+    purple: '#aa44ff',
+    cyan: '#00ddff',
+    white: '#ffffff',
+    grey: '#444466',
+    darkgrey: '#222233',
+    orange: '#ff8800',
+    pink: '#ff66aa',
+};
+
+const DOMINO_COLORS = ['#ff3355', '#3388ff', '#00ff88', '#f0b800', '#aa44ff', '#00ddff'];
+
+// --- Audio System ---
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+const ensureAudio = () => { if (!audioCtx) audioCtx = new AudioCtx(); };
+
+const playSound = (type) => {
+    ensureAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    switch (type) {
+        case 'place':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.linearRampToValueAtTime(660, now + 0.08);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.12);
+            osc.start(now); osc.stop(now + 0.12);
+            break;
+        case 'match':
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(523, now);
+            osc.frequency.linearRampToValueAtTime(784, now + 0.1);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.15);
+            osc.start(now); osc.stop(now + 0.15);
+            break;
+        case 'chain':
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.linearRampToValueAtTime(1200, now + 0.2);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.25);
+            osc.start(now); osc.stop(now + 0.25);
+            break;
+        case 'bomb':
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.linearRampToValueAtTime(50, now + 0.3);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.35);
+            osc.start(now); osc.stop(now + 0.35);
+            break;
+        case 'special':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, now);
+            osc.frequency.linearRampToValueAtTime(1320, now + 0.05);
+            osc.frequency.linearRampToValueAtTime(1760, now + 0.15);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+            break;
+        case 'levelup':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.linearRampToValueAtTime(880, now + 0.15);
+            osc.frequency.setValueAtTime(660, now + 0.2);
+            osc.frequency.linearRampToValueAtTime(1320, now + 0.35);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.4);
+            osc.start(now); osc.stop(now + 0.4);
+            break;
+        case 'gameover':
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.linearRampToValueAtTime(220, now + 0.3);
+            osc.frequency.linearRampToValueAtTime(110, now + 0.6);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.7);
+            osc.start(now); osc.stop(now + 0.7);
+            break;
+        case 'buy':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.linearRampToValueAtTime(900, now + 0.05);
+            osc.frequency.setValueAtTime(800, now + 0.1);
+            osc.frequency.linearRampToValueAtTime(1200, now + 0.15);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+            break;
+        case 'click':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, now);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.05);
+            osc.start(now); osc.stop(now + 0.05);
+            break;
+    }
+};
+
+// --- Persistence ---
+const SAVE_KEY = 'dominoChampions_v2';
+let saveData = {
+    totalGold: 0,
+    highScore: 0,
+    bestChain: 0,
+    gamesPlayed: 0,
+    totalMatches: 0,
+    upgrades: {
+        boardSize: 0,       // 0=6x6, 1=7x7, 2=8x8
+        startSpecials: 0,   // 0-3 extra specials at start
+        scoreMulti: 0,      // 0-5 => 1x to 1.5x
+        chainBonus: 0,      // 0-5 => bonus per chain
+        goldMulti: 0,       // 0-3 => more gold earned
+        extraMoves: 0,      // 0-5 => +2 moves each
+    },
+    unlocks: {
+        splitter: false,
+        bomb: false,
+        multiplier: false,
+        wildcard: false,
+    },
+    achievements: [],
+};
+
+const loadSave = () => {
+    try {
+        const s = localStorage.getItem(SAVE_KEY);
+        if (s) {
+            const parsed = JSON.parse(s);
+            // Deep merge
+            for (const k in saveData) {
+                if (parsed[k] !== undefined) {
+                    if (typeof saveData[k] === 'object' && !Array.isArray(saveData[k])) {
+                        for (const k2 in saveData[k]) {
+                            if (parsed[k][k2] !== undefined) saveData[k][k2] = parsed[k][k2];
+                        }
+                    } else {
+                        saveData[k] = parsed[k];
+                    }
+                }
+            }
+        }
+    } catch (e) {}
+};
+
+const savePersist = () => {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); } catch (e) {}
+};
+
+loadSave();
+
+// --- Game State ---
+const STATE = { TITLE: 0, SHOP: 1, PLAY: 2, CHAIN_ANIM: 3, GAMEOVER: 4 };
+let state = STATE.TITLE;
+let stateTime = 0;
+
+// --- Particles ---
+let particles = [];
+class Particle {
+    constructor(x, y, vx, vy, color, life, size) {
+        this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+        this.color = color; this.life = life; this.maxLife = life;
+        this.size = size || 3;
+    }
+    update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.vy += 200 * dt;
+        this.life -= dt;
+    }
+    draw() {
+        const a = Math.max(0, this.life / this.maxLife);
+        ctx.globalAlpha = a;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x - this.size / 2, this.y - this.size / 2, this.size * a + 1, this.size * a + 1);
+        ctx.globalAlpha = 1;
+    }
+}
+
+const spawnParticles = (x, y, color, count = 12, speed = 150) => {
+    for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
+        const spd = speed * (0.5 + Math.random() * 0.5);
+        particles.push(new Particle(x, y, Math.cos(angle) * spd, Math.sin(angle) * spd, color, 0.6 + Math.random() * 0.4, 2 + Math.random() * 4));
+    }
+};
+
+// --- Screen Shake ---
+let shakeX = 0, shakeY = 0, shakeTimer = 0, shakeIntensity = 0;
+const triggerShake = (intensity = 5, duration = 0.2) => {
+    shakeIntensity = intensity;
+    shakeTimer = duration;
+};
+
+// --- Floating Text ---
+let floatingTexts = [];
+class FloatingText {
+    constructor(x, y, text, color, size = 20) {
+        this.x = x; this.y = y; this.text = text; this.color = color;
+        this.size = size; this.life = 1.2; this.maxLife = 1.2;
+    }
+    update(dt) { this.y -= 40 * dt; this.life -= dt; }
+    draw() {
+        const a = Math.max(0, this.life / this.maxLife);
+        ctx.globalAlpha = a;
+        ctx.fillStyle = this.color;
+        ctx.font = `bold ${this.size * SCALE}px 'Segoe UI', Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText(this.text, this.x, this.y);
+        ctx.globalAlpha = 1;
+    }
+}
+
+// --- Board ---
+let GRID_COLS = 6, GRID_ROWS = 6;
+let CELL_SIZE, BOARD_X, BOARD_Y;
+let board = [];
+let selectedCell = null;
+let hoverCell = null;
+
+// Domino hand
+let hand = [];
+let selectedHandIdx = -1;
+const MAX_HAND = 5;
+
+// Game vars
+let score = 0;
+let movesLeft = 30;
+let chainCount = 0;
+let bestChainThisRun = 0;
+let goldEarned = 0;
+let level = 1;
+let matchesThisRun = 0;
+let comboTimer = 0;
+let comboMultiplier = 1;
+
+// Animation state
+let animQueue = [];
+let isAnimating = false;
+let animTimer = 0;
+
+// Special domino inventory (per run)
+let specials = { splitter: 0, bomb: 0, multiplier: 0, wildcard: 0 };
+let activeSpecial = null;
+
+// --- Domino Class ---
+class Domino {
+    constructor(top, bottom, special = null) {
+        this.top = top;     // 1-6
+        this.bottom = bottom; // 1-6
+        this.special = special; // null, 'splitter', 'bomb', 'multiplier', 'wildcard'
+        this.rotation = 0;  // 0=vertical, 1=horizontal
+    }
+    rotate() { this.rotation = (this.rotation + 1) % 2; }
+    clone() { const d = new Domino(this.top, this.bottom, this.special); d.rotation = this.rotation; return d; }
+}
+
+// --- Board Cell ---
+class Cell {
+    constructor() {
+        this.value = 0;     // 0=empty, 1-6=number
+        this.special = null;
+        this.marked = false;
+        this.animScale = 1;
+        this.animColor = null;
+        this.flash = 0;
+    }
+}
+
+// --- Helper Functions ---
+const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const randFloat = (min, max) => Math.random() * (max - min) + min;
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+const getUpgradeValue = (key) => {
+    const u = saveData.upgrades;
+    switch (key) {
+        case 'boardSize': return [6, 7, 8][u.boardSize];
+        case 'startSpecials': return u.startSpecials;
+        case 'scoreMulti': return 1 + u.scoreMulti * 0.1;
+        case 'chainBonus': return u.chainBonus * 50;
+        case 'goldMulti': return 1 + u.goldMulti * 0.25;
+        case 'extraMoves': return u.extraMoves * 2;
+        default: return 0;
+    }
+};
+
+// --- Board Setup ---
+const initBoard = () => {
+    const size = getUpgradeValue('boardSize');
+    GRID_COLS = size;
+    GRID_ROWS = size;
+    CELL_SIZE = Math.floor(Math.min((W * 0.85) / GRID_COLS, (H * 0.55) / GRID_ROWS));
+    BOARD_X = (W - GRID_COLS * CELL_SIZE) / 2;
+    BOARD_Y = H * 0.12;
+
+    board = [];
+    for (let r = 0; r < GRID_ROWS; r++) {
+        board[r] = [];
+        for (let c = 0; c < GRID_COLS; c++) {
+            board[r][c] = new Cell();
+            // Pre-fill some cells for initial interest
+            if (Math.random() < 0.3) {
+                board[r][c].value = rand(1, 6);
+            }
+        }
+    }
+};
+
+// --- Generate Domino Hand ---
+const generateDomino = () => {
+    const maxVal = Math.min(6, 3 + Math.floor(level / 3));
+    const d = new Domino(rand(1, maxVal), rand(1, maxVal));
+    // Small chance of double
+    if (Math.random() < 0.15) d.bottom = d.top;
+    return d;
+};
+
+const fillHand = () => {
+    while (hand.length < MAX_HAND) {
+        hand.push(generateDomino());
+    }
+};
+
+// --- Game Init ---
+const startGame = () => {
+    score = 0;
+    movesLeft = 30 + getUpgradeValue('extraMoves');
+    chainCount = 0;
+    bestChainThisRun = 0;
+    goldEarned = 0;
+    level = 1;
+    matchesThisRun = 0;
+    comboMultiplier = 1;
+    comboTimer = 0;
+    selectedCell = null;
+    selectedHandIdx = -1;
+    activeSpecial = null;
+    hand = [];
+    animQueue = [];
+    isAnimating = false;
+    particles = [];
+    floatingTexts = [];
+    specials = { splitter: 0, bomb: 0, multiplier: 0, wildcard: 0 };
+
+    // Start specials from upgrades
+    const ss = getUpgradeValue('startSpecials');
+    if (ss > 0 && saveData.unlocks.splitter) specials.splitter += Math.ceil(ss / 2);
+    if (ss > 1 && saveData.unlocks.bomb) specials.bomb += Math.ceil(ss / 2);
+    if (ss > 2 && saveData.unlocks.multiplier) specials.multiplier += 1;
+    if (ss > 2 && saveData.unlocks.wildcard) specials.wildcard += 1;
+
+    initBoard();
+    fillHand();
+    state = STATE.PLAY;
+    stateTime = 0;
+};
+
+// --- Placement Logic ---
+const canPlace = (domino, row, col) => {
+    if (domino.rotation === 0) {
+        // Vertical: top at (row, col), bottom at (row+1, col)
+        if (row < 0 || row + 1 >= GRID_ROWS || col < 0 || col >= GRID_COLS) return false;
+        if (board[row][col].value !== 0 || board[row + 1][col].value !== 0) return false;
+    } else {
+        // Horizontal: left at (row, col), right at (row, col+1)
+        if (row < 0 || row >= GRID_ROWS || col < 0 || col + 1 >= GRID_COLS) return false;
+        if (board[row][col].value !== 0 || board[row][col + 1].value !== 0) return false;
+    }
+    // Must be adjacent to at least one existing piece (after first placement)
+    const totalCells = board.flat().filter(c => c.value > 0).length;
+    if (totalCells === 0) return true;
+    const checkAdj = (r, c) => {
+        const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+        for (const [dr, dc] of dirs) {
+            const nr = r + dr, nc = c + dc;
+            if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < GRID_COLS && board[nr][nc].value > 0) return true;
+        }
+        return false;
+    };
+    if (domino.rotation === 0) {
+        return checkAdj(row, col) || checkAdj(row + 1, col);
+    } else {
+        return checkAdj(row, col) || checkAdj(row, col + 1);
+    }
+};
+
+const placeDomino = (domino, row, col) => {
+    if (domino.rotation === 0) {
+        board[row][col].value = domino.top;
+        board[row + 1][col].value = domino.bottom;
+        board[row][col].flash = 0.3;
+        board[row + 1][col].flash = 0.3;
+    } else {
+        board[row][col].value = domino.top;
+        board[row][col + 1].value = domino.bottom;
+        board[row][col].flash = 0.3;
+        board[row][col + 1].flash = 0.3;
+    }
+    playSound('place');
+    movesLeft--;
+    comboTimer = 2;
+    comboMultiplier = 1;
+
+    // Check for matches
+    setTimeout(() => checkMatches(0), 100);
+};
+
+// --- Match Detection ---
+const findMatches = () => {
+    const matched = [];
+
+    // Horizontal
+    for (let r = 0; r < GRID_ROWS; r++) {
+        let run = 1;
+        for (let c = 1; c <= GRID_COLS; c++) {
+            if (c < GRID_COLS && board[r][c].value > 0 && board[r][c].value === board[r][c - 1].value) {
+                run++;
+            } else {
+                if (run >= 3) {
+                    for (let k = c - run; k < c; k++) {
+                        matched.push({ r, c: k, val: board[r][k].value });
+                    }
+                }
+                run = 1;
+            }
+        }
+    }
+
+    // Vertical
+    for (let c = 0; c < GRID_COLS; c++) {
+        let run = 1;
+        for (let r = 1; r <= GRID_ROWS; r++) {
+            if (r < GRID_ROWS && board[r][c].value > 0 && board[r][c].value === board[r - 1][c].value) {
+                run++;
+            } else {
+                if (run >= 3) {
+                    for (let k = r - run; k < r; k++) {
+                        matched.push({ r: k, c, val: board[k][c].value });
+                    }
+                }
+                run = 1;
+            }
+        }
+    }
+
+    // Deduplicate
+    const unique = [];
+    const seen = new Set();
+    for (const m of matched) {
+        const key = `${m.r},${m.c}`;
+        if (!seen.has(key)) { seen.add(key); unique.push(m); }
+    }
+    return unique;
+};
+
+const checkMatches = (chainDepth) => {
+    const matches = findMatches();
+    if (matches.length === 0) {
+        isAnimating = false;
+        // After all chains resolve, check for game state
+        if (movesLeft <= 0 && !hasValidMove()) {
+            endGame();
+        }
+        // Award bonus for chains
+        if (chainDepth > 1) {
+            const chainBonus = chainDepth * 100 + getUpgradeValue('chainBonus') * chainDepth;
+            score += Math.floor(chainBonus * getUpgradeValue('scoreMulti'));
+            floatingTexts.push(new FloatingText(W / 2, H * 0.4, `${chainDepth}x CHAIN! +${chainBonus}`, COL.gold, 28));
+            playSound('chain');
+            triggerShake(chainDepth * 2, 0.3);
+            bestChainThisRun = Math.max(bestChainThisRun, chainDepth);
+        }
+        // Level up check
+        const newLevel = Math.floor(matchesThisRun / 15) + 1;
+        if (newLevel > level) {
+            level = newLevel;
+            movesLeft += 5 + Math.floor(level / 2);
+            playSound('levelup');
+            floatingTexts.push(new FloatingText(W / 2, H * 0.3, `LEVEL ${level}!`, COL.green, 36));
+            // Award special dominoes on level up
+            if (level % 2 === 0 && saveData.unlocks.splitter) specials.splitter++;
+            if (level % 3 === 0 && saveData.unlocks.bomb) specials.bomb++;
+            if (level % 4 === 0 && saveData.unlocks.multiplier) specials.multiplier++;
+            if (level % 5 === 0 && saveData.unlocks.wildcard) specials.wildcard++;
+        }
+        return;
+    }
+
+    isAnimating = true;
+    const chain = chainDepth + 1;
+    chainCount = Math.max(chainCount, chain);
+
+    // Score
+    const baseScore = matches.length * 10 * chain;
+    const multi = getUpgradeValue('scoreMulti') * (activeSpecial === 'multiplier' ? 2 : 1);
+    const gained = Math.floor(baseScore * multi);
+    score += gained;
+    matchesThisRun += matches.length;
+    goldEarned += Math.floor(matches.length * (1 + chain * 0.5) * getUpgradeValue('goldMulti'));
+
+    // Visual feedback
+    for (const m of matches) {
+        const cx = BOARD_X + m.c * CELL_SIZE + CELL_SIZE / 2;
+        const cy = BOARD_Y + m.r * CELL_SIZE + CELL_SIZE / 2;
+        spawnParticles(cx, cy, DOMINO_COLORS[m.val - 1], 8, 120);
+        board[m.r][m.c].marked = true;
+    }
+
+    playSound('match');
+    if (chain > 1) triggerShake(3 + chain, 0.2);
+
+    const cx = BOARD_X + matches[0].c * CELL_SIZE + CELL_SIZE / 2;
+    const cy = BOARD_Y + matches[0].r * CELL_SIZE + CELL_SIZE / 2;
+    floatingTexts.push(new FloatingText(cx, cy, `+${gained}`, chain > 1 ? COL.gold : COL.green, 18 + chain * 3));
+
+    // Clear after delay then drop
+    setTimeout(() => {
+        for (const m of matches) {
+            board[m.r][m.c].value = 0;
+            board[m.r][m.c].marked = false;
+        }
+        applyGravity();
+        setTimeout(() => checkMatches(chain), 200);
+    }, 300);
+};
+
+// --- Gravity ---
+const applyGravity = () => {
+    for (let c = 0; c < GRID_COLS; c++) {
+        let writeRow = GRID_ROWS - 1;
+        for (let r = GRID_ROWS - 1; r >= 0; r--) {
+            if (board[r][c].value > 0) {
+                if (r !== writeRow) {
+                    board[writeRow][c].value = board[r][c].value;
+                    board[writeRow][c].flash = 0.15;
+                    board[r][c].value = 0;
+                }
+                writeRow--;
+            }
+        }
+    }
+};
+
+// --- Special Abilities ---
+const useSplitter = (row, col) => {
+    if (row < 0 || row >= GRID_ROWS || col < 0 || col >= GRID_COLS) return;
+    const val = board[row][col].value;
+    if (val === 0) return;
+
+    // Clear entire row and column of same value
+    let cleared = 0;
+    for (let c = 0; c < GRID_COLS; c++) {
+        if (board[row][c].value === val) {
+            const cx = BOARD_X + c * CELL_SIZE + CELL_SIZE / 2;
+            const cy = BOARD_Y + row * CELL_SIZE + CELL_SIZE / 2;
+            spawnParticles(cx, cy, COL.cyan, 6, 100);
+            board[row][c].value = 0;
+            cleared++;
+        }
+    }
+    for (let r = 0; r < GRID_ROWS; r++) {
+        if (board[r][col].value === val) {
+            const cx = BOARD_X + col * CELL_SIZE + CELL_SIZE / 2;
+            const cy = BOARD_Y + r * CELL_SIZE + CELL_SIZE / 2;
+            spawnParticles(cx, cy, COL.cyan, 6, 100);
+            board[r][col].value = 0;
+            cleared++;
+        }
+    }
+    score += cleared * 25;
+    goldEarned += cleared * 3;
+    playSound('special');
+    triggerShake(5, 0.3);
+    floatingTexts.push(new FloatingText(BOARD_X + col * CELL_SIZE + CELL_SIZE / 2, BOARD_Y + row * CELL_SIZE, `SPLIT! +${cleared * 25}`, COL.cyan, 24));
+    applyGravity();
+    setTimeout(() => checkMatches(0), 300);
+};
+
+const useBomb = (row, col) => {
+    let cleared = 0;
+    for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+            const nr = row + dr, nc = col + dc;
+            if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < GRID_COLS && board[nr][nc].value > 0) {
+                const cx = BOARD_X + nc * CELL_SIZE + CELL_SIZE / 2;
+                const cy = BOARD_Y + nr * CELL_SIZE + CELL_SIZE / 2;
+                spawnParticles(cx, cy, COL.orange, 10, 180);
+                board[nr][nc].value = 0;
+                cleared++;
+            }
+        }
+    }
+    score += cleared * 30;
+    goldEarned += cleared * 4;
+    playSound('bomb');
+    triggerShake(8, 0.4);
+    floatingTexts.push(new FloatingText(BOARD_X + col * CELL_SIZE + CELL_SIZE / 2, BOARD_Y + row * CELL_SIZE, `BOOM! +${cleared * 30}`, COL.orange, 28));
+    applyGravity();
+    setTimeout(() => checkMatches(0), 300);
+};
+
+const useWildcard = (row, col) => {
+    if (row < 0 || row >= GRID_ROWS || col < 0 || col >= GRID_COLS) return;
+    // Find most common adjacent value
+    const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+    const counts = {};
+    for (const [dr, dc] of dirs) {
+        const nr = row + dr, nc = col + dc;
+        if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < GRID_COLS && board[nr][nc].value > 0) {
+            counts[board[nr][nc].value] = (counts[board[nr][nc].value] || 0) + 1;
+        }
+    }
+    let bestVal = rand(1, 6);
+    let bestCount = 0;
+    for (const v in counts) {
+        if (counts[v] > bestCount) { bestCount = counts[v]; bestVal = parseInt(v); }
+    }
+    board[row][col].value = bestVal;
+    board[row][col].flash = 0.5;
+    playSound('special');
+    spawnParticles(BOARD_X + col * CELL_SIZE + CELL_SIZE / 2, BOARD_Y + row * CELL_SIZE + CELL_SIZE / 2, COL.purple, 15, 100);
+    floatingTexts.push(new FloatingText(BOARD_X + col * CELL_SIZE + CELL_SIZE / 2, BOARD_Y + row * CELL_SIZE, `WILD!`, COL.purple, 24));
+    setTimeout(() => checkMatches(0), 200);
+};
+
+// --- Valid Move Check ---
+const hasValidMove = () => {
+    if (movesLeft <= 0) return false;
+    for (const d of hand) {
+        for (let r = 0; r < GRID_ROWS; r++) {
+            for (let c = 0; c < GRID_COLS; c++) {
+                if (canPlace(d, r, c)) return true;
+                const rotated = d.clone();
+                rotated.rotate();
+                if (canPlace(rotated, r, c)) return true;
+            }
+        }
+    }
+    return false;
+};
+
+// --- End Game ---
+const endGame = () => {
+    saveData.gamesPlayed++;
+    saveData.totalGold += goldEarned;
+    saveData.totalMatches += matchesThisRun;
+    if (score > saveData.highScore) saveData.highScore = score;
+    if (bestChainThisRun > saveData.bestChain) saveData.bestChain = bestChainThisRun;
+
+    // Check achievements
+    checkAchievements();
+    savePersist();
+    playSound('gameover');
+    state = STATE.GAMEOVER;
+    stateTime = 0;
+};
+
+// --- Achievements ---
+const ACHIEVEMENTS = [
+    { id: 'first_game', name: 'First Steps', desc: 'Complete your first game', check: () => saveData.gamesPlayed >= 1 },
+    { id: 'chain_3', name: 'Chain Reaction', desc: 'Get a 3x chain', check: () => saveData.bestChain >= 3 },
+    { id: 'chain_5', name: 'Domino Effect', desc: 'Get a 5x chain', check: () => saveData.bestChain >= 5 },
+    { id: 'score_1k', name: 'Rising Star', desc: 'Score 1,000 points', check: () => saveData.highScore >= 1000 },
+    { id: 'score_5k', name: 'Champion', desc: 'Score 5,000 points', check: () => saveData.highScore >= 5000 },
+    { id: 'score_10k', name: 'Domino Master', desc: 'Score 10,000 points', check: () => saveData.highScore >= 10000 },
+    { id: 'gold_500', name: 'Investor', desc: 'Earn 500 total gold', check: () => saveData.totalGold >= 500 },
+    { id: 'matches_100', name: 'Match Maker', desc: 'Make 100 total matches', check: () => saveData.totalMatches >= 100 },
+    { id: 'games_10', name: 'Veteran', desc: 'Play 10 games', check: () => saveData.gamesPlayed >= 10 },
+];
+
+const checkAchievements = () => {
+    for (const a of ACHIEVEMENTS) {
+        if (!saveData.achievements.includes(a.id) && a.check()) {
+            saveData.achievements.push(a.id);
+        }
+    }
+};
+
+// --- Shop System ---
+const SHOP_ITEMS = [
+    { key: 'boardSize', name: 'Bigger Board', desc: ['6x6 Board', '7x7 Board', '8x8 Board'], costs: [0, 200, 500], max: 2 },
+    { key: 'startSpecials', name: 'Starting Specials', desc: ['+0', '+1', '+2', '+3'], costs: [0, 100, 250, 500], max: 3 },
+    { key: 'scoreMulti', name: 'Score Boost', desc: ['1.0x', '1.1x', '1.2x', '1.3x', '1.4x', '1.5x'], costs: [0, 80, 160, 300, 500, 800], max: 5 },
+    { key: 'chainBonus', name: 'Chain Bonus', desc: ['+0', '+50', '+100', '+150', '+200', '+250'], costs: [0, 100, 200, 350, 550, 800], max: 5 },
+    { key: 'goldMulti', name: 'Gold Bonus', desc: ['1.0x', '1.25x', '1.5x', '1.75x'], costs: [0, 150, 400, 800], max: 3 },
+    { key: 'extraMoves', name: 'Extra Moves', desc: ['+0', '+2', '+4', '+6', '+8', '+10'], costs: [0, 60, 120, 240, 400, 650], max: 5 },
+];
+
+const UNLOCK_ITEMS = [
+    { key: 'splitter', name: 'Splitter Domino', desc: 'Clears matching values in row & column', cost: 300 },
+    { key: 'bomb', name: 'Bomb Domino', desc: 'Clears 3x3 area', cost: 250 },
+    { key: 'multiplier', name: 'Multiplier Domino', desc: '2x score for next chain', cost: 400 },
+    { key: 'wildcard', name: 'Wildcard Domino', desc: 'Places optimal value', cost: 350 },
+];
+
+let shopScroll = 0;
+let shopButtons = [];
+
+// --- Input ---
+let mouseX = 0, mouseY = 0;
+let mouseDown = false;
+let justClicked = false;
+let touchActive = false;
+
+const getEventPos = (e) => {
+    if (e.touches && e.touches.length > 0) {
+        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    return { x: e.clientX, y: e.clientY };
+};
+
+canvas.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
+canvas.addEventListener('mousedown', (e) => { mouseDown = true; justClicked = true; ensureAudio(); });
+canvas.addEventListener('mouseup', () => { mouseDown = false; });
+
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    touchActive = true;
+    const p = getEventPos(e);
+    mouseX = p.x; mouseY = p.y;
+    mouseDown = true;
+    justClicked = true;
+    ensureAudio();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const p = getEventPos(e);
+    mouseX = p.x; mouseY = p.y;
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    mouseDown = false;
+    touchActive = false;
+}, { passive: false });
+
+// Keyboard
+const keys = {};
+window.addEventListener('keydown', (e) => {
+    keys[e.key] = true;
+    if (state === STATE.PLAY && !isAnimating) {
+        if (e.key === 'r' || e.key === 'R') {
+            if (selectedHandIdx >= 0) {
+                hand[selectedHandIdx].rotate();
+                playSound('click');
+            }
+        }
+        if (e.key >= '1' && e.key <= '5') {
+            const idx = parseInt(e.key) - 1;
+            if (idx < hand.length) {
+                selectedHandIdx = idx;
+                activeSpecial = null;
+                playSound('click');
+            }
+        }
+        if (e.key === 'q' && saveData.unlocks.splitter && specials.splitter > 0) {
+            activeSpecial = activeSpecial === 'splitter' ? null : 'splitter';
+            selectedHandIdx = -1;
+            playSound('click');
+        }
+        if (e.key === 'w' && saveData.unlocks.bomb && specials.bomb > 0) {
+            activeSpecial = activeSpecial === 'bomb' ? null : 'bomb';
+            selectedHandIdx = -1;
+            playSound('click');
+        }
+        if (e.key === 'e' && saveData.unlocks.multiplier && specials.multiplier > 0) {
+            activeSpecial = activeSpecial === 'multiplier' ? null : 'multiplier';
+            selectedHandIdx = -1;
+            playSound('click');
+        }
+        if (e.key === 'f' && saveData.unlocks.wildcard && specials.wildcard > 0) {
+            activeSpecial = activeSpecial === 'wildcard' ? null : 'wildcard';
+            selectedHandIdx = -1;
+            playSound('click');
+        }
+    }
+});
+window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+
+// --- Drawing Helpers ---
+const drawRoundRect = (x, y, w, h, r, fill, stroke) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); }
+};
+
+const drawDominoPips = (cx, cy, val, size, color = COL.white) => {
+    ctx.fillStyle = color;
+    const s = size * 0.15;
+    const positions = {
+        1: [[0, 0]],
+        2: [[-1, -1], [1, 1]],
+        3: [[-1, -1], [0, 0], [1, 1]],
+        4: [[-1, -1], [1, -1], [-1, 1], [1, 1]],
+        5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]],
+        6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]],
+    };
+    const pips = positions[val] || [];
+    for (const [px, py] of pips) {
+        ctx.beginPath();
+        ctx.arc(cx + px * size * 0.25, cy + py * size * 0.25, s, 0, Math.PI * 2);
+        ctx.fill();
+    }
+};
+
+const drawDominoCard = (x, y, w, h, domino, selected = false, hovered = false) => {
+    const glow = selected ? COL.gold : (hovered ? COL.green : null);
+    drawRoundRect(x, y, w, h, 6, COL.darkgrey, glow || COL.grey);
+
+    if (domino.rotation === 0) {
+        // Vertical layout
+        const halfH = h / 2;
+        const topColor = DOMINO_COLORS[domino.top - 1];
+        const botColor = DOMINO_COLORS[domino.bottom - 1];
+
+        drawRoundRect(x + 3, y + 3, w - 6, halfH - 4, 4, topColor + '33');
+        drawDominoPips(x + w / 2, y + halfH / 2, domino.top, w * 0.7);
+
+        drawRoundRect(x + 3, y + halfH + 1, w - 6, halfH - 4, 4, botColor + '33');
+        drawDominoPips(x + w / 2, y + halfH + halfH / 2, domino.bottom, w * 0.7);
+
+        // Divider
+        ctx.strokeStyle = COL.grey;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + 6, y + halfH);
+        ctx.lineTo(x + w - 6, y + halfH);
+        ctx.stroke();
+    } else {
+        // Horizontal layout
+        const halfW = w / 2;
+        const leftColor = DOMINO_COLORS[domino.top - 1];
+        const rightColor = DOMINO_COLORS[domino.bottom - 1];
+
+        drawRoundRect(x + 3, y + 3, halfW - 4, h - 6, 4, leftColor + '33');
+        drawDominoPips(x + halfW / 2, y + h / 2, domino.top, h * 0.6);
+
+        drawRoundRect(x + halfW + 1, y + 3, halfW - 4, h - 6, 4, rightColor + '33');
+        drawDominoPips(x + halfW + halfW / 2, y + h / 2, domino.bottom, h * 0.6);
+
+        ctx.strokeStyle = COL.grey;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + halfW, y + 6);
+        ctx.lineTo(x + halfW, y + h - 6);
+        ctx.stroke();
+    }
+
+    if (selected) {
+        ctx.strokeStyle = COL.gold;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x - 2, y - 2, w + 4, h + 4);
+    }
+};
+
+// --- Draw Board Cell ---
+const drawCell = (r, c, cell) => {
+    const x = BOARD_X + c * CELL_SIZE;
+    const y = BOARD_Y + r * CELL_SIZE;
+    const pad = 2;
+
+    // Background
+    const isHovered = hoverCell && hoverCell.r === r && hoverCell.c === c;
+    let bg = (r + c) % 2 === 0 ? '#1a1a2e' : '#16162a';
+    if (isHovered && !isAnimating) bg = '#2a2a4e';
+    drawRoundRect(x + pad, y + pad, CELL_SIZE - pad * 2, CELL_SIZE - pad * 2, 4, bg, '#2a2a44');
+
+    if (cell.value > 0) {
+        const color = DOMINO_COLORS[cell.value - 1];
+
+        // Flash effect
+        if (cell.flash > 0) {
+            ctx.globalAlpha = cell.flash * 2;
+            drawRoundRect(x + pad, y + pad, CELL_SIZE - pad * 2, CELL_SIZE - pad * 2, 4, COL.white);
+            ctx.globalAlpha = 1;
+        }
+
+        // Marked for clearing
+        if (cell.marked) {
+            ctx.globalAlpha = 0.5 + Math.sin(stateTime * 20) * 0.3;
+        }
+
+        // Draw value
+        drawRoundRect(x + pad + 2, y + pad + 2, CELL_SIZE - pad * 2 - 4, CELL_SIZE - pad * 2 - 4, 3, color + '44');
+        drawDominoPips(x + CELL_SIZE / 2, y + CELL_SIZE / 2, cell.value, CELL_SIZE * 0.7, color);
+
+        // Number in corner
+        ctx.font = `bold ${Math.floor(CELL_SIZE * 0.22)}px 'Segoe UI', Arial`;
+        ctx.fillStyle = color;
+        ctx.textAlign = 'right';
+        ctx.fillText(cell.value, x + CELL_SIZE - pad - 4, y + pad + CELL_SIZE * 0.25);
+
+        ctx.globalAlpha = 1;
+    }
+};
+
+// --- Ghost Preview ---
+const drawGhostPreview = (domino, row, col) => {
+    if (!canPlace(domino, row, col)) return;
+    ctx.globalAlpha = 0.35;
+    if (domino.rotation === 0) {
+        const x1 = BOARD_X + col * CELL_SIZE, y1 = BOARD_Y + row * CELL_SIZE;
+        const x2 = x1, y2 = y1 + CELL_SIZE;
+        drawRoundRect(x1 + 4, y1 + 4, CELL_SIZE - 8, CELL_SIZE - 8, 4, DOMINO_COLORS[domino.top - 1]);
+        drawRoundRect(x2 + 4, y2 + 4, CELL_SIZE - 8, CELL_SIZE - 8, 4, DOMINO_COLORS[domino.bottom - 1]);
+        drawDominoPips(x1 + CELL_SIZE / 2, y1 + CELL_SIZE / 2, domino.top, CELL_SIZE * 0.6);
+        drawDominoPips(x2 + CELL_SIZE / 2, y2 + CELL_SIZE / 2, domino.bottom, CELL_SIZE * 0.6);
+    } else {
+        const x1 = BOARD_X + col * CELL_SIZE, y1 = BOARD_Y + row * CELL_SIZE;
+        const x2 = x1 + CELL_SIZE, y2 = y1;
+        drawRoundRect(x1 + 4, y1 + 4, CELL_SIZE - 8, CELL_SIZE - 8, 4, DOMINO_COLORS[domino.top - 1]);
+        drawRoundRect(x2 + 4, y2 + 4, CELL_SIZE - 8, CELL_SIZE - 8, 4, DOMINO_COLORS[domino.bottom - 1]);
+        drawDominoPips(x1 + CELL_SIZE / 2, y1 + CELL_SIZE / 2, domino.top, CELL_SIZE * 0.6);
+        drawDominoPips(x2 + CELL_SIZE / 2, y2 + CELL_SIZE / 2, domino.bottom, CELL_SIZE * 0.6);
+    }
+    ctx.globalAlpha = 1;
+};
+
+// --- Button Helper ---
+const drawButton = (x, y, w, h, text, color, hovered = false) => {
+    const bg = hovered ? color : color + '88';
+    drawRoundRect(x, y, w, h, 8, bg, color);
+    ctx.fillStyle = COL.white;
+    ctx.font = `bold ${Math.floor(h * 0.4)}px 'Segoe UI', Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x + w / 2, y + h / 2);
+};
+
+const isInRect = (px, py, x, y, w, h) => px >= x && px <= x + w && py >= y && py <= y + h;
+
+// --- TITLE SCREEN ---
+const drawTitle = (dt) => {
+    // Background
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Animated domino tiles in background
+    for (let i = 0; i < 15; i++) {
+        const t = stateTime * 0.3 + i * 1.7;
+        const bx = (Math.sin(t * 0.7 + i) * 0.3 + 0.5) * W;
+        const by = (Math.cos(t * 0.5 + i * 0.4) * 0.3 + 0.5) * H;
+        ctx.globalAlpha = 0.08;
+        drawRoundRect(bx - 15, by - 25, 30, 50, 4, DOMINO_COLORS[i % 6]);
+        ctx.globalAlpha = 1;
+    }
+
+    // Title
+    const titleY = H * 0.22;
+    ctx.font = `bold ${Math.floor(56 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = COL.gold;
+    ctx.fillText('DOMINO', W / 2, titleY);
+    ctx.font = `bold ${Math.floor(44 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.fillStyle = COL.green;
+    ctx.fillText('CHAMPIONS', W / 2, titleY + 50 * SCALE);
+
+    // Tagline
+    ctx.font = `${Math.floor(16 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.fillStyle = COL.grey;
+    ctx.fillText('Chain. React. Dominate.', W / 2, titleY + 85 * SCALE);
+
+    // Stats
+    const statsY = H * 0.45;
+    ctx.font = `${Math.floor(14 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.fillStyle = '#667788';
+    ctx.fillText(`High Score: ${saveData.highScore}  |  Gold: ${saveData.totalGold}  |  Games: ${saveData.gamesPlayed}`, W / 2, statsY);
+    ctx.fillText(`Best Chain: ${saveData.bestChain}x  |  Achievements: ${saveData.achievements.length}/${ACHIEVEMENTS.length}`, W / 2, statsY + 22 * SCALE);
+
+    // Buttons
+    const btnW = 220 * SCALE;
+    const btnH = 50 * SCALE;
+    const btnX = W / 2 - btnW / 2;
+    const playY = H * 0.55;
+    const shopY = playY + btnH + 15 * SCALE;
+
+    const playHov = isInRect(mouseX, mouseY, btnX, playY, btnW, btnH);
+    const shopHov = isInRect(mouseX, mouseY, btnX, shopY, btnW, btnH);
+
+    drawButton(btnX, playY, btnW, btnH, 'PLAY', COL.green, playHov);
+    drawButton(btnX, shopY, btnW, btnH, 'SHOP & UPGRADES', COL.gold, shopHov);
+
+    // Pulse play button
+    if (Math.sin(stateTime * 3) > 0.5) {
+        ctx.strokeStyle = COL.green + '44';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(btnX - 4, playY - 4, btnW + 8, btnH + 8);
+    }
+
+    // Controls hint
+    ctx.font = `${Math.floor(12 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.fillStyle = '#445566';
+    ctx.fillText('Desktop: Click to select & place dominoes. R to rotate. 1-5 to select hand slot.', W / 2, H * 0.82);
+    ctx.fillText('Q/W/E/F for special abilities. Mobile: Tap to interact.', W / 2, H * 0.86);
+
+    if (justClicked) {
+        if (playHov) { playSound('click'); startGame(); }
+        else if (shopHov) { playSound('click'); state = STATE.SHOP; stateTime = 0; shopScroll = 0; }
+    }
+};
+
+// --- SHOP SCREEN ---
+const drawShop = (dt) => {
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Title
+    ctx.font = `bold ${Math.floor(36 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = COL.gold;
+    ctx.fillText('SHOP & UPGRADES', W / 2, 45 * SCALE);
+
+    // Gold display
+    ctx.font = `bold ${Math.floor(18 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.fillStyle = COL.gold;
+    ctx.fillText(`Gold: ${saveData.totalGold}`, W / 2, 75 * SCALE);
+
+    const startY = 100 * SCALE - shopScroll;
+    const itemH = 65 * SCALE;
+    const itemW = Math.min(400 * SCALE, W * 0.9);
+    const itemX = W / 2 - itemW / 2;
+
+    // Upgrades
+    ctx.font = `bold ${Math.floor(16 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.fillStyle = COL.green;
+    ctx.textAlign = 'left';
+    ctx.fillText('UPGRADES', itemX, startY);
+
+    shopButtons = [];
+
+    for (let i = 0; i < SHOP_ITEMS.length; i++) {
+        const item = SHOP_ITEMS[i];
+        const y = startY + 15 * SCALE + i * itemH;
+        const currentLevel = saveData.upgrades[item.key];
+        const maxed = currentLevel >= item.max;
+        const cost = maxed ? 0 : item.costs[currentLevel + 1];
+        const canAfford = saveData.totalGold >= cost;
+
+        const hov = isInRect(mouseX, mouseY, itemX, y, itemW, itemH - 5);
+
+        drawRoundRect(itemX, y, itemW, itemH - 5, 6, hov ? '#1e1e38' : '#14142a', maxed ? '#335533' : (canAfford ? COL.gold + '66' : '#332222'));
+
+        ctx.font = `bold ${Math.floor(14 * SCALE)}px 'Segoe UI', Arial`;
+        ctx.fillStyle = COL.white;
+        ctx.textAlign = 'left';
+        ctx.fillText(item.name, itemX + 10, y + 20 * SCALE);
+
+        ctx.font = `${Math.floor(11 * SCALE)}px 'Segoe UI', Arial`;
+        ctx.fillStyle = '#8899aa';
+        ctx.fillText(`Current: ${item.desc[currentLevel]}${maxed ? '' : ` → ${item.desc[currentLevel + 1]}`}`, itemX + 10, y + 38 * SCALE);
+
+        // Level pips
+        for (let lv = 0; lv <= item.max; lv++) {
+            const px = itemX + itemW - 100 * SCALE + lv * 14 * SCALE;
+            ctx.fillStyle = lv <= currentLevel ? COL.green : '#333344';
+            ctx.fillRect(px, y + 12 * SCALE, 10 * SCALE, 10 * SCALE);
+        }
+
+        if (!maxed) {
+            ctx.font = `bold ${Math.floor(13 * SCALE)}px 'Segoe UI', Arial`;
+            ctx.fillStyle = canAfford ? COL.gold : COL.red;
+            ctx.textAlign = 'right';
+            ctx.fillText(`${cost} gold`, itemX + itemW - 10, y + 48 * SCALE);
+        } else {
+            ctx.font = `bold ${Math.floor(13 * SCALE)}px 'Segoe UI', Arial`;
+            ctx.fillStyle = COL.green;
+            ctx.textAlign = 'right';
+            ctx.fillText('MAXED', itemX + itemW - 10, y + 48 * SCALE);
+        }
+
+        if (!maxed && canAfford) {
+            shopButtons.push({ type: 'upgrade', key: item.key, cost, x: itemX, y, w: itemW, h: itemH - 5 });
+        }
+    }
+
+    // Unlocks
+    const unlockStartY = startY + 15 * SCALE + SHOP_ITEMS.length * itemH + 30 * SCALE;
+    ctx.font = `bold ${Math.floor(16 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.fillStyle = COL.purple;
+    ctx.textAlign = 'left';
+    ctx.fillText('SPECIAL DOMINOES', itemX, unlockStartY);
+
+    for (let i = 0; i < UNLOCK_ITEMS.length; i++) {
+        const item = UNLOCK_ITEMS[i];
+        const y = unlockStartY + 15 * SCALE + i * itemH;
+        const owned = saveData.unlocks[item.key];
+        const canAfford = saveData.totalGold >= item.cost;
+
+        const hov = isInRect(mouseX, mouseY, itemX, y, itemW, itemH - 5);
+        drawRoundRect(itemX, y, itemW, itemH - 5, 6, hov ? '#1e1e38' : '#14142a', owned ? '#335533' : (canAfford ? COL.purple + '66' : '#332222'));
+
+        ctx.font = `bold ${Math.floor(14 * SCALE)}px 'Segoe UI', Arial`;
+        ctx.fillStyle = COL.white;
+        ctx.textAlign = 'left';
+        ctx.fillText(item.name, itemX + 10, y + 20 * SCALE);
+
+        ctx.font = `${Math.floor(11 * SCALE)}px 'Segoe UI', Arial`;
+        ctx.fillStyle = '#8899aa';
+        ctx.fillText(item.desc, itemX + 10, y + 38 * SCALE);
+
+        if (owned) {
+            ctx.font = `bold ${Math.floor(13 * SCALE)}px 'Segoe UI', Arial`;
+            ctx.fillStyle = COL.green;
+            ctx.textAlign = 'right';
+            ctx.fillText('OWNED', itemX + itemW - 10, y + 30 * SCALE);
+        } else {
+            ctx.font = `bold ${Math.floor(13 * SCALE)}px 'Segoe UI', Arial`;
+            ctx.fillStyle = canAfford ? COL.gold : COL.red;
+            ctx.textAlign = 'right';
+            ctx.fillText(`${item.cost} gold`, itemX + itemW - 10, y + 30 * SCALE);
+            if (canAfford) {
+                shopButtons.push({ type: 'unlock', key: item.key, cost: item.cost, x: itemX, y, w: itemW, h: itemH - 5 });
+            }
+        }
+    }
+
+    // Achievements section
+    const achStartY = unlockStartY + 15 * SCALE + UNLOCK_ITEMS.length * itemH + 30 * SCALE;
+    ctx.font = `bold ${Math.floor(16 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.fillStyle = COL.cyan;
+    ctx.textAlign = 'left';
+    ctx.fillText(`ACHIEVEMENTS (${saveData.achievements.length}/${ACHIEVEMENTS.length})`, itemX, achStartY);
+
+    for (let i = 0; i < ACHIEVEMENTS.length; i++) {
+        const ach = ACHIEVEMENTS[i];
+        const y = achStartY + 15 * SCALE + i * 40 * SCALE;
+        const earned = saveData.achievements.includes(ach.id);
+
+        drawRoundRect(itemX, y, itemW, 35 * SCALE, 4, earned ? '#1a2a1a' : '#14142a', earned ? '#336633' : '#222233');
+
+        ctx.font = `bold ${Math.floor(12 * SCALE)}px 'Segoe UI', Arial`;
+        ctx.fillStyle = earned ? COL.green : '#556666';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${earned ? '★' : '☆'} ${ach.name}`, itemX + 10, y + 15 * SCALE);
+
+        ctx.font = `${Math.floor(10 * SCALE)}px 'Segoe UI', Arial`;
+        ctx.fillStyle = '#667788';
+        ctx.fillText(ach.desc, itemX + 10, y + 28 * SCALE);
+    }
+
+    // Back button
+    const backW = 160 * SCALE;
+    const backH = 44 * SCALE;
+    const backX = W / 2 - backW / 2;
+    const backY = H - 60 * SCALE;
+    const backHov = isInRect(mouseX, mouseY, backX, backY, backW, backH);
+    drawButton(backX, backY, backW, backH, 'BACK', COL.grey, backHov);
+
+    if (justClicked) {
+        if (backHov) { playSound('click'); state = STATE.TITLE; stateTime = 0; }
+        for (const btn of shopButtons) {
+            if (isInRect(mouseX, mouseY, btn.x, btn.y, btn.w, btn.h)) {
+                if (btn.type === 'upgrade') {
+                    saveData.totalGold -= btn.cost;
+                    saveData.upgrades[btn.key]++;
+                    playSound('buy');
+                    savePersist();
+                } else if (btn.type === 'unlock') {
+                    saveData.totalGold -= btn.cost;
+                    saveData.unlocks[btn.key] = true;
+                    playSound('buy');
+                    savePersist();
+                }
+                break;
+            }
+        }
+    }
+
+    // Scroll with drag
+    if (mouseDown && touchActive) {
+        // Simple scroll detection could go here for mobile
+    }
+};
+
+// --- GAMEPLAY ---
+const drawPlay = (dt) => {
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // HUD
+    const hudY = 5 * SCALE;
+    ctx.font = `bold ${Math.floor(16 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = COL.gold;
+    ctx.fillText(`Score: ${score}`, 10, hudY + 20 * SCALE);
+
+    ctx.fillStyle = COL.green;
+    ctx.fillText(`Level: ${level}`, 10, hudY + 40 * SCALE);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = movesLeft <= 5 ? COL.red : COL.white;
+    ctx.fillText(`Moves: ${movesLeft}`, W - 10, hudY + 20 * SCALE);
+
+    ctx.fillStyle = COL.gold;
+    ctx.fillText(`Gold: +${goldEarned}`, W - 10, hudY + 40 * SCALE);
+
+    // Chain indicator
+    if (chainCount > 0) {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = COL.gold;
+        ctx.font = `bold ${Math.floor(14 * SCALE)}px 'Segoe UI', Arial`;
+        ctx.fillText(`Best Chain: ${bestChainThisRun}x`, W / 2, hudY + 20 * SCALE);
+    }
+
+    // Determine hover cell
+    hoverCell = null;
+    if (!isAnimating) {
+        const gridX = Math.floor((mouseX - BOARD_X) / CELL_SIZE);
+        const gridY = Math.floor((mouseY - BOARD_Y) / CELL_SIZE);
+        if (gridX >= 0 && gridX < GRID_COLS && gridY >= 0 && gridY < GRID_ROWS) {
+            hoverCell = { r: gridY, c: gridX };
+        }
+    }
+
+    // Apply shake
+    ctx.save();
+    if (shakeTimer > 0) {
+        ctx.translate(shakeX, shakeY);
+    }
+
+    // Draw board
+    for (let r = 0; r < GRID_ROWS; r++) {
+        for (let c = 0; c < GRID_COLS; c++) {
+            drawCell(r, c, board[r][c]);
+        }
+    }
+
+    // Ghost preview of selected domino
+    if (selectedHandIdx >= 0 && hoverCell && !isAnimating && !activeSpecial) {
+        const domino = hand[selectedHandIdx];
+        drawGhostPreview(domino, hoverCell.r, hoverCell.c);
+    }
+
+    // Special targeting
+    if (activeSpecial && hoverCell) {
+        const tx = BOARD_X + hoverCell.c * CELL_SIZE + CELL_SIZE / 2;
+        const ty = BOARD_Y + hoverCell.r * CELL_SIZE + CELL_SIZE / 2;
+        ctx.strokeStyle = activeSpecial === 'bomb' ? COL.orange : activeSpecial === 'splitter' ? COL.cyan : activeSpecial === 'multiplier' ? COL.gold : COL.purple;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        if (activeSpecial === 'bomb') {
+            ctx.strokeRect(BOARD_X + (hoverCell.c - 1) * CELL_SIZE, BOARD_Y + (hoverCell.r - 1) * CELL_SIZE, CELL_SIZE * 3, CELL_SIZE * 3);
+        } else {
+            ctx.strokeRect(BOARD_X + hoverCell.c * CELL_SIZE, BOARD_Y + hoverCell.r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+        }
+        ctx.setLineDash([]);
+
+        // Crosshair for splitter
+        if (activeSpecial === 'splitter') {
+            ctx.strokeStyle = COL.cyan + '44';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(BOARD_X, ty);
+            ctx.lineTo(BOARD_X + GRID_COLS * CELL_SIZE, ty);
+            ctx.moveTo(tx, BOARD_Y);
+            ctx.lineTo(tx, BOARD_Y + GRID_ROWS * CELL_SIZE);
+            ctx.stroke();
+        }
+    }
+
+    ctx.restore();
+
+    // Hand area
+    const handY = BOARD_Y + GRID_ROWS * CELL_SIZE + 15 * SCALE;
+    const cardW = Math.min(55 * SCALE, (W - 40) / MAX_HAND - 8);
+    const cardH = cardW * 1.6;
+    const handTotalW = MAX_HAND * (cardW + 8);
+    const handStartX = (W - handTotalW) / 2;
+
+    ctx.font = `${Math.floor(12 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.fillStyle = '#556677';
+    ctx.textAlign = 'center';
+    ctx.fillText('YOUR HAND (tap to select, tap board to place, R to rotate)', W / 2, handY - 5);
+
+    for (let i = 0; i < hand.length; i++) {
+        const cx = handStartX + i * (cardW + 8);
+        const hov = isInRect(mouseX, mouseY, cx, handY, cardW, cardH);
+        drawDominoCard(cx, handY, cardW, cardH, hand[i], i === selectedHandIdx, hov);
+
+        // Slot number
+        ctx.font = `${Math.floor(10 * SCALE)}px 'Segoe UI', Arial`;
+        ctx.fillStyle = '#556677';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${i + 1}`, cx + cardW / 2, handY + cardH + 12 * SCALE);
+    }
+
+    // Special abilities bar
+    const specY = handY + cardH + 22 * SCALE;
+    const specBtnW = Math.min(70 * SCALE, (W - 20) / 4 - 5);
+    const specBtnH = 30 * SCALE;
+    const specNames = ['splitter', 'bomb', 'multiplier', 'wildcard'];
+    const specLabels = ['Split(Q)', 'Bomb(W)', 'Multi(E)', 'Wild(F)'];
+    const specColors = [COL.cyan, COL.orange, COL.gold, COL.purple];
+    const totalSpecW = specNames.filter((_, i) => saveData.unlocks[specNames[i]]).length * (specBtnW + 6);
+    let specStartX = (W - totalSpecW) / 2;
+
+    let anySpecUnlocked = false;
+    for (let i = 0; i < specNames.length; i++) {
+        if (!saveData.unlocks[specNames[i]]) continue;
+        anySpecUnlocked = true;
+        const count = specials[specNames[i]];
+        const isActive = activeSpecial === specNames[i];
+        const hov = isInRect(mouseX, mouseY, specStartX, specY, specBtnW, specBtnH);
+
+        drawRoundRect(specStartX, specY, specBtnW, specBtnH, 5,
+            isActive ? specColors[i] + '44' : '#14142a',
+            count > 0 ? specColors[i] : '#333344');
+
+        ctx.font = `bold ${Math.floor(10 * SCALE)}px 'Segoe UI', Arial`;
+        ctx.fillStyle = count > 0 ? specColors[i] : '#555566';
+        ctx.textAlign = 'center';
+        ctx.fillText(specLabels[i], specStartX + specBtnW / 2, specY + 13 * SCALE);
+        ctx.font = `${Math.floor(9 * SCALE)}px 'Segoe UI', Arial`;
+        ctx.fillText(`x${count}`, specStartX + specBtnW / 2, specY + 24 * SCALE);
+
+        // Click handler for specials
+        if (justClicked && hov && count > 0 && !isAnimating) {
+            if (activeSpecial === specNames[i]) {
+                activeSpecial = null;
+            } else {
+                activeSpecial = specNames[i];
+                selectedHandIdx = -1;
+            }
+            playSound('click');
+        }
+
+        specStartX += specBtnW + 6;
+    }
+
+    if (!anySpecUnlocked) {
+        ctx.font = `${Math.floor(11 * SCALE)}px 'Segoe UI', Arial`;
+        ctx.fillStyle = '#445566';
+        ctx.textAlign = 'center';
+        ctx.fillText('Unlock special dominoes in the Shop!', W / 2, specY + 15 * SCALE);
+    }
+
+    // Rotate button for mobile
+    if (touchActive || true) {
+        const rotBtnX = W - 60 * SCALE;
+        const rotBtnY = BOARD_Y + GRID_ROWS * CELL_SIZE - 50 * SCALE;
+        const rotBtnS = 45 * SCALE;
+        const rotHov = isInRect(mouseX, mouseY, rotBtnX, rotBtnY, rotBtnS, rotBtnS);
+        drawRoundRect(rotBtnX, rotBtnY, rotBtnS, rotBtnS, 8, rotHov ? COL.gold + '44' : '#1a1a2e', COL.gold);
+        ctx.font = `bold ${Math.floor(22 * SCALE)}px 'Segoe UI', Arial`;
+        ctx.fillStyle = COL.gold;
+        ctx.textAlign = 'center';
+        ctx.fillText('⟳', rotBtnX + rotBtnS / 2, rotBtnY + rotBtnS / 2 + 7 * SCALE);
+
+        if (justClicked && rotHov && selectedHandIdx >= 0) {
+            hand[selectedHandIdx].rotate();
+            playSound('click');
+        }
+    }
+
+    // Click logic: select hand, place domino, use special
+    if (justClicked && !isAnimating) {
+        // Check hand click
+        let clickedHand = false;
+        for (let i = 0; i < hand.length; i++) {
+            const cx = handStartX + i * (cardW + 8);
+            if (isInRect(mouseX, mouseY, cx, handY, cardW, cardH)) {
+                if (selectedHandIdx === i) {
+                    // Double-tap rotates
+                    hand[i].rotate();
+                } else {
+                    selectedHandIdx = i;
+                    activeSpecial = null;
+                }
+                playSound('click');
+                clickedHand = true;
+                break;
+            }
+        }
+
+        // Check board click
+        if (!clickedHand && hoverCell) {
+            if (activeSpecial) {
+                const r = hoverCell.r, c = hoverCell.c;
+                if (activeSpecial === 'splitter' && board[r][c].value > 0) {
+                    specials.splitter--;
+                    useSplitter(r, c);
+                    activeSpecial = null;
+                    movesLeft--;
+                } else if (activeSpecial === 'bomb') {
+                    specials.bomb--;
+                    useBomb(r, c);
+                    activeSpecial = null;
+                    movesLeft--;
+                } else if (activeSpecial === 'multiplier') {
+                    // Multiplier: activate for next chain (doesn't target board)
+                    specials.multiplier--;
+                    floatingTexts.push(new FloatingText(W / 2, H * 0.4, '2x MULTIPLIER ACTIVE!', COL.gold, 24));
+                    playSound('special');
+                    // Keep active until next chain resolves
+                } else if (activeSpecial === 'wildcard' && board[r][c].value === 0) {
+                    specials.wildcard--;
+                    useWildcard(r, c);
+                    activeSpecial = null;
+                    movesLeft--;
+                }
+            } else if (selectedHandIdx >= 0) {
+                const domino = hand[selectedHandIdx];
+                const r = hoverCell.r, c = hoverCell.c;
+                if (canPlace(domino, r, c)) {
+                    placeDomino(domino, r, c);
+                    hand.splice(selectedHandIdx, 1);
+                    selectedHandIdx = -1;
+                    fillHand();
+
+                    // Check end conditions
+                    if (movesLeft <= 0 && !isAnimating) {
+                        setTimeout(() => {
+                            if (!isAnimating && !hasValidMove()) endGame();
+                        }, 500);
+                    }
+                }
+            }
+        }
+    }
+
+    // No valid moves warning
+    if (!isAnimating && movesLeft > 0 && !hasValidMove()) {
+        // Board is full, clear some random cells
+        let cleared = 0;
+        for (let r = 0; r < GRID_ROWS && cleared < 4; r++) {
+            for (let c = 0; c < GRID_COLS && cleared < 4; c++) {
+                if (board[r][c].value > 0 && Math.random() < 0.15) {
+                    board[r][c].value = 0;
+                    cleared++;
+                }
+            }
+        }
+        if (cleared > 0) {
+            applyGravity();
+            floatingTexts.push(new FloatingText(W / 2, H * 0.35, 'Board cleared!', COL.cyan, 20));
+        }
+    }
+};
+
+// --- GAME OVER ---
+const drawGameOver = (dt) => {
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Fading dominos background
+    for (let i = 0; i < 20; i++) {
+        const t = stateTime * 0.2 + i * 1.3;
+        ctx.globalAlpha = 0.06;
+        const bx = (Math.sin(t * 0.5 + i) * 0.4 + 0.5) * W;
+        const by = ((t * 30 + i * 50) % (H + 100)) - 50;
+        drawRoundRect(bx, by, 20, 35, 3, DOMINO_COLORS[i % 6]);
+        ctx.globalAlpha = 1;
+    }
+
+    const cy = H * 0.15;
+
+    ctx.font = `bold ${Math.floor(42 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = COL.red;
+    ctx.fillText('GAME OVER', W / 2, cy);
+
+    ctx.font = `bold ${Math.floor(28 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.fillStyle = COL.gold;
+    ctx.fillText(`Score: ${score}`, W / 2, cy + 55 * SCALE);
+
+    if (score >= saveData.highScore) {
+        ctx.fillStyle = COL.green;
+        ctx.font = `bold ${Math.floor(18 * SCALE)}px 'Segoe UI', Arial`;
+        ctx.fillText('NEW HIGH SCORE!', W / 2, cy + 85 * SCALE);
+    }
+
+    // Stats
+    const statsY = cy + 115 * SCALE;
+    ctx.font = `${Math.floor(16 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.fillStyle = '#8899aa';
+    ctx.fillText(`Level Reached: ${level}`, W / 2, statsY);
+    ctx.fillText(`Best Chain: ${bestChainThisRun}x`, W / 2, statsY + 28 * SCALE);
+    ctx.fillText(`Matches: ${matchesThisRun}`, W / 2, statsY + 56 * SCALE);
+
+    ctx.fillStyle = COL.gold;
+    ctx.font = `bold ${Math.floor(20 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.fillText(`+${goldEarned} Gold Earned!`, W / 2, statsY + 95 * SCALE);
+
+    ctx.font = `${Math.floor(14 * SCALE)}px 'Segoe UI', Arial`;
+    ctx.fillStyle = '#667788';
+    ctx.fillText(`Total Gold: ${saveData.totalGold}`, W / 2, statsY + 120 * SCALE);
+
+    // New achievements
+    const newAch = ACHIEVEMENTS.filter(a => saveData.achievements.includes(a.id));
+    if (newAch.length > 0) {
+        ctx.font = `bold ${Math.floor(14 * SCALE)}px 'Segoe UI', Arial`;
+        ctx.fillStyle = COL.cyan;
+        ctx.fillText('Achievements Earned:', W / 2, statsY + 155 * SCALE);
+        for (let i = 0; i < Math.min(3, newAch.length); i++) {
+            ctx.font = `${Math.floor(12 * SCALE)}px 'Segoe UI', Arial`;
+            ctx.fillStyle = '#aabbcc';
+            ctx.fillText(`★ ${newAch[i].name}`, W / 2, statsY + 175 * SCALE + i * 20 * SCALE);
+        }
+    }
+
+    // Buttons
+    const btnW = 200 * SCALE;
+    const btnH = 45 * SCALE;
+    const btnX = W / 2 - btnW / 2;
+    const playY = H * 0.78;
+    const shopY = playY + btnH + 12 * SCALE;
+    const menuY = shopY + btnH + 12 * SCALE;
+
+    const playHov = isInRect(mouseX, mouseY, btnX, playY, btnW, btnH);
+    const shopHov = isInRect(mouseX, mouseY, btnX, shopY, btnW, btnH);
+    const menuHov = isInRect(mouseX, mouseY, btnX, menuY, btnW, btnH);
+
+    drawButton(btnX, playY, btnW, btnH, 'PLAY AGAIN', COL.green, playHov);
+    drawButton(btnX, shopY, btnW, btnH, 'SHOP', COL.gold, shopHov);
+    drawButton(btnX, menuY, btnW, btnH, 'MENU', COL.grey, menuHov);
+
+    if (justClicked) {
+        if (playHov) { playSound('click'); startGame(); }
+        else if (shopHov) { playSound('click'); state = STATE.SHOP; stateTime = 0; }
+        else if (menuHov) { playSound('click'); state = STATE.TITLE; stateTime = 0; }
+    }
+};
+
+// --- MAIN LOOP ---
+let lastTime = performance.now();
+
+const loop = (now) => {
+    requestAnimationFrame(loop);
+    const dt = Math.min((now - lastTime) / 1000, 0.05);
+    lastTime = now;
+    stateTime += dt;
+
+    // Update particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update(dt);
+        if (particles[i].life <= 0) particles.splice(i, 1);
+    }
+
+    // Update floating texts
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        floatingTexts[i].update(dt);
+        if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
+    }
+
+    // Update shake
+    if (shakeTimer > 0) {
+        shakeTimer -= dt;
+        shakeX = (Math.random() - 0.5) * shakeIntensity * 2;
+        shakeY = (Math.random() - 0.5) * shakeIntensity * 2;
+        shakeIntensity *= 0.95;
+    } else {
+        shakeX = 0; shakeY = 0;
+    }
+
+    // Update flash
+    if (state === STATE.PLAY) {
+        for (let r = 0; r < GRID_ROWS; r++) {
+            for (let c = 0; c < GRID_COLS; c++) {
+                if (board[r] && board[r][c] && board[r][c].flash > 0) {
+                    board[r][c].flash -= dt * 2;
+                }
+            }
+        }
+
+        // Combo timer
+        if (comboTimer > 0) {
+            comboTimer -= dt;
+            if (comboTimer <= 0) comboMultiplier = 1;
+        }
+    }
+
+    // Draw
+    switch (state) {
+        case STATE.TITLE: drawTitle(dt); break;
+        case STATE.SHOP: drawShop(dt); break;
+        case STATE.PLAY: drawPlay(dt); break;
+        case STATE.GAMEOVER: drawGameOver(dt); break;
+    }
+
+    // Draw particles on top
+    for (const p of particles) p.draw();
+    for (const f of floatingTexts) f.draw();
+
+    justClicked = false;
+};
+
+requestAnimationFrame(loop);
+
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

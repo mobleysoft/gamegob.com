@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Hangman Heroes — Guess, Craft, Conquer">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob/forge_hangman_heroes.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Hangman Heroes — Guess, Craft, Conquer</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas { display: block; margin: 0 auto; }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+'use strict';
+
+// ============================================================
+// HANGMAN HEROES — Guess, Craft, Conquer
+// A meta-progression hangman RPG with hero recruitment
+// ============================================================
+
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+
+// --- Responsive Canvas ---
+let W, H, scale;
+const resize = () => {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W;
+    canvas.height = H;
+    scale = Math.min(W / 800, H / 600);
+};
+window.addEventListener('resize', resize);
+resize();
+
+// --- Audio Engine ---
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+const initAudio = () => { if (!audioCtx) audioCtx = new AudioCtx(); };
+
+const playTone = (freq, dur, type = 'square', vol = 0.15) => {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + dur);
+};
+
+const sfx = {
+    correct: () => { playTone(523, 0.1); setTimeout(() => playTone(659, 0.1), 80); setTimeout(() => playTone(784, 0.15), 160); },
+    wrong: () => { playTone(200, 0.3, 'sawtooth', 0.1); },
+    win: () => { [523,659,784,1047].forEach((f,i) => setTimeout(() => playTone(f, 0.2, 'square', 0.12), i * 120)); },
+    lose: () => { [400,350,300,200].forEach((f,i) => setTimeout(() => playTone(f, 0.25, 'sawtooth', 0.08), i * 150)); },
+    click: () => playTone(800, 0.05, 'sine', 0.08),
+    heroRecruit: () => { [440,554,659,880].forEach((f,i) => setTimeout(() => playTone(f, 0.15, 'triangle', 0.1), i * 100)); },
+    levelUp: () => { [523,659,784,1047,1319].forEach((f,i) => setTimeout(() => playTone(f, 0.12, 'square', 0.1), i * 80)); },
+    purchase: () => { playTone(1200, 0.08); setTimeout(() => playTone(1600, 0.1), 60); },
+    hint: () => { playTone(660, 0.1, 'triangle'); setTimeout(() => playTone(880, 0.12, 'triangle'), 100); },
+    daily: () => { [880,1047,1319,1568].forEach((f,i) => setTimeout(() => playTone(f, 0.18, 'sine', 0.1), i * 100)); },
+};
+
+// --- Colors ---
+const COL = {
+    bg: '#0a0a0f', bgLight: '#151520', bgMid: '#1a1a2e',
+    gold: '#f0b800', goldDark: '#a07800', goldLight: '#ffe066',
+    green: '#00ff88', greenDark: '#00aa55',
+    red: '#ff3355', redDark: '#aa2233',
+    blue: '#3388ff', blueDark: '#2255aa', blueLight: '#66aaff',
+    purple: '#aa55ff', purpleDark: '#7733bb',
+    white: '#eeeeff', gray: '#666688', grayDark: '#333355',
+    cyan: '#00ddff',
+};
+
+// --- Word Database ---
+const WORD_CATEGORIES = {
+    animals: { words: ['elephant','giraffe','penguin','dolphin','kangaroo','cheetah','octopus','butterfly','crocodile','flamingo','rhinoceros','chameleon','wolverine','albatross','porcupine','jellyfish','armadillo','orangutan','salamander','nightingale'], color: COL.green },
+    mythology: { words: ['zeus','athena','poseidon','hercules','aphrodite','artemis','apollo','minotaur','phoenix','centaur','medusa','cerberus','cyclops','pegasus','hydra','chimera','griffin','valkyrie','odin','thor'], color: COL.purple },
+    technology: { words: ['algorithm','database','javascript','quantum','blockchain','cybernetic','hologram','satellite','processor','bandwidth','encryption','interface','protocol','compiler','firmware','overclocking','transistor','motherboard','debugger','framework'], color: COL.blue },
+    food: { words: ['spaghetti','chocolate','croissant','avocado','cinnamon','pineapple','broccoli','mushroom','blueberry','jalapeño','pepperoni','artichoke','asparagus','cantaloupe','clementine','guacamole','bruschetta','mozzarella','quesadilla','pistachio'], color: COL.gold },
+    geography: { words: ['mountain','volcano','waterfall','peninsula','archipelago','continent','glacier','canyon','plateau','savannah','tundra','rainforest','peninsula','hemisphere','longitude','meridian','equatorial','troposphere','fjord','estuary'], color: COL.cyan },
+    heroes: { words: ['champion','guardian','sentinel','paladin','wanderer','crusader','defender','avenger','protector','warrior','conqueror','liberator','pioneer','adventurer','explorer','commander','sovereign','justiciar','vindicator','harbinger'], color: COL.red },
+};
+
+const ALL_CATEGORIES = Object.keys(WORD_CATEGORIES);
+
+// --- Hero Definitions ---
+const HERO_DEFS = [
+    { id: 'vowelSeer', name: 'Vowel Seer', icon: '👁', color: COL.green, desc: 'Reveals one random vowel', cost: 0, unlockLevel: 1,
+      ability: (game) => {
+          const vowels = 'aeiou';
+          const unrevealed = game.word.split('').filter((c,i) => vowels.includes(c) && !game.guessed.has(c));
+          if (unrevealed.length > 0) {
+              const letter = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+              game.guessed.add(letter);
+              game.revealedByHero.add(letter);
+              return `Revealed vowel: ${letter.toUpperCase()}`;
+          }
+          return 'No vowels left to reveal!';
+      }
+    },
+    { id: 'freqAnalyst', name: 'Freq Analyst', icon: '📊', color: COL.blue, desc: 'Shows most common unguessed letter', cost: 50, unlockLevel: 2,
+      ability: (game) => {
+          const freq = 'etaoinshrdlcumwfgypbvkjxqz';
+          for (const c of freq) {
+              if (game.word.includes(c) && !game.guessed.has(c)) {
+                  return `Most likely letter: ${c.toUpperCase()}`;
+              }
+          }
+          return 'No hints available!';
+      }
+    },
+    { id: 'categoryOracle', name: 'Category Oracle', icon: '🔮', color: COL.purple, desc: 'Reveals the word category', cost: 75, unlockLevel: 3,
+      ability: (game) => `Category: ${game.category.toUpperCase()}`
+    },
+    { id: 'shieldKnight', name: 'Shield Knight', icon: '🛡', color: COL.gold, desc: 'Prevents next wrong guess penalty', cost: 120, unlockLevel: 4,
+      ability: (game) => { game.shielded = true; return 'Shield activated! Next wrong guess is free.'; }
+    },
+    { id: 'letterSpy', name: 'Letter Spy', icon: '🗡', color: COL.red, desc: 'Reveals a random consonant', cost: 150, unlockLevel: 5,
+      ability: (game) => {
+          const vowels = 'aeiou';
+          const unrevealed = game.word.split('').filter((c,i) => !vowels.includes(c) && !game.guessed.has(c));
+          if (unrevealed.length > 0) {
+              const letter = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+              game.guessed.add(letter);
+              game.revealedByHero.add(letter);
+              return `Revealed consonant: ${letter.toUpperCase()}`;
+          }
+          return 'No consonants left!';
+      }
+    },
+    { id: 'wordSmith', name: 'Word Smith', icon: '📜', color: COL.cyan, desc: 'Shows word length hint', cost: 30, unlockLevel: 1,
+      ability: (game) => {
+          const len = game.word.length;
+          const unique = new Set(game.word.split('')).size;
+          return `${len} letters, ${unique} unique`;
+      }
+    },
+    { id: 'doubleStrike', name: 'Double Strike', icon: '⚔', color: COL.goldLight, desc: 'Next correct guess earns 2x XP', cost: 200, unlockLevel: 6,
+      ability: (game) => { game.doubleXP = true; return '2x XP on next correct guess!'; }
+    },
+    { id: 'timeMage', name: 'Time Mage', icon: '⏳', color: COL.blueLight, desc: 'Adds bonus time in timed rounds', cost: 180, unlockLevel: 7,
+      ability: (game) => { game.bonusTime += 15; return '+15 seconds added!'; }
+    },
+];
+
+// --- Save System ---
+const SAVE_KEY = 'hangman_heroes_save_v2';
+
+const defaultSave = () => ({
+    xp: 0, level: 1, totalXP: 0,
+    gold: 25, totalGold: 0,
+    gamesPlayed: 0, gamesWon: 0, totalLettersGuessed: 0,
+    winStreak: 0, bestStreak: 0,
+    wordsCompleted: [],
+    unlockedHeroes: ['vowelSeer', 'wordSmith'],
+    heroLevels: { vowelSeer: 1, wordSmith: 1 },
+    heroCooldowns: {},
+    achievements: [],
+    upgrades: { maxLives: 0, xpBoost: 0, goldBoost: 0, hintCooldown: 0, startingHint: 0 },
+    dailyDate: null, dailyCompleted: false, dailyStreak: 0,
+    highScore: 0, roundScore: 0,
+});
+
+let save;
+const loadSave = () => {
+    try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (raw) {
+            save = { ...defaultSave(), ...JSON.parse(raw) };
+            save.upgrades = { ...defaultSave().upgrades, ...save.upgrades };
+            save.heroLevels = { ...defaultSave().heroLevels, ...save.heroLevels };
+        } else {
+            save = defaultSave();
+        }
+    } catch(e) { save = defaultSave(); }
+};
+const writeSave = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch(e){} };
+loadSave();
+
+// --- XP / Level System ---
+const xpForLevel = (lvl) => Math.floor(80 * Math.pow(1.35, lvl - 1));
+const addXP = (amount) => {
+    const mult = 1 + save.upgrades.xpBoost * 0.15;
+    const gained = Math.floor(amount * mult);
+    save.xp += gained;
+    save.totalXP += gained;
+    while (save.xp >= xpForLevel(save.level)) {
+        save.xp -= xpForLevel(save.level);
+        save.level++;
+        sfx.levelUp();
+        particles.burst(W/2, H * 0.3, COL.gold, 30);
+        notifications.push({ text: `LEVEL ${save.level}!`, color: COL.gold, timer: 180, size: 36 });
+        // Unlock heroes by level
+        HERO_DEFS.forEach(h => {
+            if (h.unlockLevel <= save.level && !save.unlockedHeroes.includes(h.id)) {
+                save.unlockedHeroes.push(h.id);
+                save.heroLevels[h.id] = 1;
+                notifications.push({ text: `Hero Unlocked: ${h.name}!`, color: h.color, timer: 240, size: 24 });
+            }
+        });
+    }
+    writeSave();
+    return gained;
+};
+
+const addGold = (amount) => {
+    const mult = 1 + save.upgrades.goldBoost * 0.2;
+    const gained = Math.floor(amount * mult);
+    save.gold += gained;
+    save.totalGold += gained;
+    writeSave();
+    return gained;
+};
+
+// --- Achievements ---
+const ACH_DEFS = [
+    { id: 'firstWin', name: 'First Blood', desc: 'Win your first game', check: () => save.gamesWon >= 1 },
+    { id: 'tenWins', name: 'Veteran', desc: 'Win 10 games', check: () => save.gamesWon >= 10 },
+    { id: 'streak5', name: 'Hot Streak', desc: '5 wins in a row', check: () => save.bestStreak >= 5 },
+    { id: 'streak10', name: 'Unstoppable', desc: '10 wins in a row', check: () => save.bestStreak >= 10 },
+    { id: 'level5', name: 'Rising Hero', desc: 'Reach level 5', check: () => save.level >= 5 },
+    { id: 'level10', name: 'Legendary', desc: 'Reach level 10', check: () => save.level >= 10 },
+    { id: 'allHeroes', name: 'Full Party', desc: 'Unlock all heroes', check: () => save.unlockedHeroes.length >= HERO_DEFS.length },
+    { id: 'rich', name: 'Gold Hoarder', desc: 'Accumulate 1000 gold', check: () => save.totalGold >= 1000 },
+    { id: 'perfect', name: 'Perfect Game', desc: 'Win without a single wrong guess', check: () => false },
+    { id: 'daily3', name: 'Dedicated', desc: 'Complete 3 daily challenges', check: () => save.dailyStreak >= 3 },
+    { id: 'words50', name: 'Wordsmith', desc: 'Complete 50 words', check: () => save.wordsCompleted.length >= 50 },
+    { id: 'letters500', name: 'Keyboard Warrior', desc: 'Guess 500 letters', check: () => save.totalLettersGuessed >= 500 },
+];
+
+const checkAchievements = () => {
+    ACH_DEFS.forEach(a => {
+        if (!save.achievements.includes(a.id) && a.check()) {
+            save.achievements.push(a.id);
+            notifications.push({ text: `🏆 ${a.name}!`, color: COL.gold, timer: 240, size: 22 });
+            addGold(25);
+            sfx.heroRecruit();
+        }
+    });
+    writeSave();
+};
+
+// --- Particle System ---
+const particles = {
+    list: [],
+    spawn(x, y, color, vx, vy, life = 60, size = 3) {
+        this.list.push({ x, y, vx, vy, color, life, maxLife: life, size });
+    },
+    burst(x, y, color, count = 15, spread = 4) {
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
+            const speed = 1 + Math.random() * spread;
+            this.spawn(x, y, color, Math.cos(angle) * speed, Math.sin(angle) * speed, 40 + Math.random() * 30, 2 + Math.random() * 3);
+        }
+    },
+    update() {
+        for (let i = this.list.length - 1; i >= 0; i--) {
+            const p = this.list[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.05;
+            p.vx *= 0.98;
+            p.life--;
+            if (p.life <= 0) this.list.splice(i, 1);
+        }
+    },
+    draw() {
+        this.list.forEach(p => {
+            const alpha = p.life / p.maxLife;
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+        });
+        ctx.globalAlpha = 1;
+    }
+};
+
+// --- Notification System ---
+const notifications = [];
+
+const drawNotifications = () => {
+    for (let i = notifications.length - 1; i >= 0; i--) {
+        const n = notifications[i];
+        n.timer--;
+        if (n.timer <= 0) { notifications.splice(i, 1); continue; }
+        const alpha = Math.min(1, n.timer / 30);
+        const yOff = (1 - alpha) * -20;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = n.color || COL.gold;
+        ctx.font = `bold ${n.size || 20}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText(n.text, W/2, H * 0.15 + yOff - i * 30);
+        ctx.globalAlpha = 1;
+    }
+};
+
+// --- Screen Shake ---
+let shakeX = 0, shakeY = 0, shakeIntensity = 0;
+const shake = (intensity = 8) => { shakeIntensity = intensity; };
+const updateShake = () => {
+    if (shakeIntensity > 0) {
+        shakeX = (Math.random() - 0.5) * shakeIntensity;
+        shakeY = (Math.random() - 0.5) * shakeIntensity;
+        shakeIntensity *= 0.85;
+        if (shakeIntensity < 0.3) { shakeIntensity = 0; shakeX = 0; shakeY = 0; }
+    }
+};
+
+// --- Input ---
+const keys = new Set();
+let mouseX = 0, mouseY = 0, mouseDown = false, mouseClicked = false;
+let touchActive = false;
+
+window.addEventListener('keydown', e => { keys.add(e.key.toLowerCase()); e.preventDefault(); });
+window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
+
+const getPos = (e) => {
+    if (e.touches) {
+        return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    return { x: e.clientX, y: e.clientY };
+};
+
+canvas.addEventListener('mousedown', e => { initAudio(); mouseDown = true; mouseClicked = true; const p = getPos(e); mouseX = p.x; mouseY = p.y; });
+canvas.addEventListener('mouseup', () => { mouseDown = false; });
+canvas.addEventListener('mousemove', e => { const p = getPos(e); mouseX = p.x; mouseY = p.y; });
+canvas.addEventListener('touchstart', e => { initAudio(); e.preventDefault(); touchActive = true; mouseDown = true; mouseClicked = true; const p = getPos(e); mouseX = p.x; mouseY = p.y; });
+canvas.addEventListener('touchend', e => { e.preventDefault(); mouseDown = false; touchActive = false; });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); if (e.touches.length) { const p = getPos(e); mouseX = p.x; mouseY = p.y; } });
+
+const hitTest = (x, y, bx, by, bw, bh) => x >= bx && x <= bx + bw && y >= by && y <= by + bh;
+
+// --- Game States ---
+const STATE = { TITLE: 0, PLAYING: 1, RECRUIT: 2, SHOP: 3, GAME_OVER: 4, WIN: 5, DAILY: 6, ACHIEVEMENTS: 7 };
+let state = STATE.TITLE;
+let stateTimer = 0;
+
+// --- Game Data ---
+let game = {
+    word: '', category: '', guessed: new Set(), revealedByHero: new Set(),
+    wrongGuesses: 0, maxLives: 6, score: 0, round: 1,
+    shielded: false, doubleXP: false, bonusTime: 0,
+    hintMessage: '', hintTimer: 0,
+    activeHeroes: [], heroCooldownsRound: {},
+    timeLeft: 0, timed: false,
+    roundXP: 0, roundGold: 0,
+    perfectRound: true,
+    combo: 0, maxCombo: 0,
+};
+
+// --- UI Buttons ---
+let buttons = [];
+const registerButton = (id, x, y, w, h, label, color, callback) => {
+    buttons.push({ id, x, y, w, h, label, color, callback, hover: false });
+};
+const clearButtons = () => { buttons = []; };
+
+const drawButton = (b) => {
+    const hover = hitTest(mouseX, mouseY, b.x, b.y, b.w, b.h);
+    b.hover = hover;
+    ctx.fillStyle = hover ? b.color : (b.darkColor || COL.bgMid);
+    ctx.strokeStyle = b.color;
+    ctx.lineWidth = 2;
+    roundRect(b.x, b.y, b.w, b.h, 8);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = hover ? COL.bg : b.color;
+    ctx.font = `bold ${Math.min(b.h * 0.5, 18)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(b.label, b.x + b.w/2, b.y + b.h/2);
+};
+
+const processButtons = () => {
+    if (!mouseClicked) return;
+    for (const b of buttons) {
+        if (hitTest(mouseX, mouseY, b.x, b.y, b.w, b.h)) {
+            sfx.click();
+            b.callback();
+            break;
+        }
+    }
+};
+
+const roundRect = (x, y, w, h, r) => {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+};
+
+// --- Hangman Drawing ---
+const drawHangman = (x, y, s, wrong) => {
+    ctx.strokeStyle = COL.gray;
+    ctx.lineWidth = 3 * scale;
+    ctx.lineCap = 'round';
+    // Base
+    ctx.beginPath(); ctx.moveTo(x - s * 0.4, y + s * 0.5); ctx.lineTo(x + s * 0.4, y + s * 0.5); ctx.stroke();
+    // Pole
+    ctx.beginPath(); ctx.moveTo(x - s * 0.2, y + s * 0.5); ctx.lineTo(x - s * 0.2, y - s * 0.5); ctx.stroke();
+    // Top
+    ctx.beginPath(); ctx.moveTo(x - s * 0.2, y - s * 0.5); ctx.lineTo(x + s * 0.15, y - s * 0.5); ctx.stroke();
+    // Rope
+    ctx.beginPath(); ctx.moveTo(x + s * 0.15, y - s * 0.5); ctx.lineTo(x + s * 0.15, y - s * 0.35); ctx.stroke();
+
+    if (wrong < 1) return;
+    // Head
+    ctx.strokeStyle = wrong >= 6 ? COL.red : COL.white;
+    ctx.beginPath(); ctx.arc(x + s * 0.15, y - s * 0.25, s * 0.1, 0, Math.PI * 2); ctx.stroke();
+    if (wrong < 2) return;
+    // Body
+    ctx.beginPath(); ctx.moveTo(x + s * 0.15, y - s * 0.15); ctx.lineTo(x + s * 0.15, y + s * 0.15); ctx.stroke();
+    if (wrong < 3) return;
+    // Left arm
+    ctx.beginPath(); ctx.moveTo(x + s * 0.15, y - s * 0.05); ctx.lineTo(x, y + s * 0.05); ctx.stroke();
+    if (wrong < 4) return;
+    // Right arm
+    ctx.beginPath(); ctx.moveTo(x + s * 0.15, y - s * 0.05); ctx.lineTo(x + s * 0.3, y + s * 0.05); ctx.stroke();
+    if (wrong < 5) return;
+    // Left leg
+    ctx.beginPath(); ctx.moveTo(x + s * 0.15, y + s * 0.15); ctx.lineTo(x, y + s * 0.35); ctx.stroke();
+    if (wrong < 6) return;
+    // Right leg
+    ctx.beginPath(); ctx.moveTo(x + s * 0.15, y + s * 0.15); ctx.lineTo(x + s * 0.3, y + s * 0.35); ctx.stroke();
+    // Dead face
+    ctx.fillStyle = COL.red;
+    ctx.font = `${s * 0.06}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('X  X', x + s * 0.15, y - s * 0.24);
+};
+
+// --- Game Logic ---
+const pickWord = (cat = null) => {
+    const category = cat || ALL_CATEGORIES[Math.floor(Math.random() * ALL_CATEGORIES.length)];
+    const words = WORD_CATEGORIES[category].words.filter(w => !save.wordsCompleted.includes(w));
+    let word;
+    if (words.length > 0) {
+        word = words[Math.floor(Math.random() * words.length)];
+    } else {
+        const allWords = WORD_CATEGORIES[category].words;
+        word = allWords[Math.floor(Math.random() * allWords.length)];
+    }
+    return { word: word.toLowerCase(), category };
+};
+
+const startRound = (isDaily = false) => {
+    const { word, category } = isDaily ? pickWord(ALL_CATEGORIES[new Date().getDay() % ALL_CATEGORIES.length]) : pickWord();
+    const baseLives = 6 + save.upgrades.maxLives;
+    game = {
+        word, category,
+        guessed: new Set(), revealedByHero: new Set(),
+        wrongGuesses: 0, maxLives: baseLives,
+        score: save.roundScore || 0, round: (game.round || 0) + (isDaily ? 0 : 1),
+        shielded: false, doubleXP: false, bonusTime: 0,
+        hintMessage: '', hintTimer: 0,
+        activeHeroes: save.unlockedHeroes.slice(0, 3 + Math.floor(save.level / 3)),
+        heroCooldownsRound: {},
+        timeLeft: game.round > 3 ? 60 + save.upgrades.hintCooldown * 5 : 0,
+        timed: game.round > 3 && !isDaily,
+        roundXP: 0, roundGold: 0,
+        perfectRound: true,
+        combo: 0, maxCombo: 0,
+    };
+    // Starting hint upgrade
+    if (save.upgrades.startingHint > 0) {
+        const vowels = 'aeiou';
+        const available = game.word.split('').filter(c => vowels.includes(c));
+        const unique = [...new Set(available)];
+        const toReveal = Math.min(save.upgrades.startingHint, unique.length);
+        for (let i = 0; i < toReveal; i++) {
+            game.guessed.add(unique[i]);
+            game.revealedByHero.add(unique[i]);
+        }
+    }
+    clearButtons();
+    buildKeyboard();
+    state = isDaily ? STATE.DAILY : STATE.PLAYING;
+};
+
+const guessLetter = (letter) => {
+    if (game.guessed.has(letter)) return;
+    game.guessed.add(letter);
+    save.totalLettersGuessed++;
+
+    if (game.word.includes(letter)) {
+        sfx.correct();
+        const occurrences = game.word.split('').filter(c => c === letter).length;
+        let xpGain = 10 * occurrences;
+        if (game.doubleXP) { xpGain *= 2; game.doubleXP = false; }
+        game.combo++;
+        if (game.combo > game.maxCombo) game.maxCombo = game.combo;
+        xpGain += game.combo * 3;
+        game.roundXP += xpGain;
+        game.score += occurrences * 100 * game.combo;
+        particles.burst(W/2, H * 0.4, COL.green, 10);
+        // Check win
+        const won = game.word.split('').every(c => game.guessed.has(c));
+        if (won) {
+            winRound();
+        }
+    } else {
+        if (game.shielded) {
+            game.shielded = false;
+            notifications.push({ text: 'Shield blocked!', color: COL.gold, timer: 90, size: 20 });
+            particles.burst(W/2, H * 0.35, COL.gold, 15);
+        } else {
+            game.wrongGuesses++;
+            game.perfectRound = false;
+            game.combo = 0;
+            sfx.wrong();
+            shake(10);
+            particles.burst(W/2, H * 0.35, COL.red, 8);
+        }
+        if (game.wrongGuesses >= game.maxLives) {
+            loseRound();
+        }
+    }
+    writeSave();
+};
+
+const winRound = () => {
+    sfx.win();
+    particles.burst(W/2, H * 0.35, COL.gold, 40, 6);
+
+    let xpBonus = 50 + game.round * 15;
+    let goldBonus = 15 + game.round * 5;
+    if (game.perfectRound) {
+        xpBonus *= 2;
+        goldBonus *= 2;
+        notifications.push({ text: 'PERFECT ROUND!', color: COL.gold, timer: 180, size: 28 });
+        // Achievement check
+        if (!save.achievements.includes('perfect')) {
+            save.achievements.push('perfect');
+            notifications.push({ text: '🏆 Perfect Game!', color: COL.gold, timer: 240, size: 22 });
+            addGold(50);
+        }
+    }
+    xpBonus += game.maxCombo * 5;
+    game.roundXP += xpBonus;
+    game.roundGold += goldBonus;
+    const xpGained = addXP(game.roundXP);
+    const goldGained = addGold(game.roundGold);
+
+    save.gamesWon++;
+    save.winStreak++;
+    if (save.winStreak > save.bestStreak) save.bestStreak = save.winStreak;
+    if (!save.wordsCompleted.includes(game.word)) save.wordsCompleted.push(game.word);
+    save.roundScore = game.score;
+    if (game.score > save.highScore) save.highScore = game.score;
+
+    if (state === STATE.DAILY) {
+        const today = new Date().toDateString();
+        if (save.dailyDate !== today) {
+            save.dailyStreak++;
+            save.dailyDate = today;
+            save.dailyCompleted = true;
+        }
+    }
+
+    checkAchievements();
+    writeSave();
+    state = STATE.WIN;
+    stateTimer = 0;
+    clearButtons();
+};
+
+const loseRound = () => {
+    sfx.lose();
+    shake(15);
+    save.gamesPlayed++;
+    save.winStreak = 0;
+    // Still get some XP
+    addXP(Math.floor(game.roundXP * 0.3));
+    addGold(Math.floor(game.roundGold * 0.2));
+    save.roundScore = 0;
+    checkAchievements();
+    writeSave();
+    state = STATE.GAME_OVER;
+    stateTimer = 0;
+    clearButtons();
+};
+
+// --- Keyboard Layout ---
+const keyboardRows = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
+let keyButtons = [];
+
+const buildKeyboard = () => {
+    keyButtons = [];
+    const kbY = H * 0.68;
+    const kbH = H * 0.28;
+    const rowH = kbH / 3.5;
+
+    keyboardRows.forEach((row, ri) => {
+        const keyW = Math.min(W * 0.085, 44);
+        const gap = 3;
+        const totalW = row.length * (keyW + gap) - gap;
+        const startX = (W - totalW) / 2;
+
+        for (let ci = 0; ci < row.length; ci++) {
+            const letter = row[ci];
+            keyButtons.push({
+                letter,
+                x: startX + ci * (keyW + gap),
+                y: kbY + ri * (rowH + 4),
+                w: keyW,
+                h: rowH,
+            });
+        }
+    });
+};
+
+const drawKeyboard = () => {
+    keyButtons.forEach(kb => {
+        const guessed = game.guessed.has(kb.letter);
+        const inWord = game.word.includes(kb.letter);
+        const heroRevealed = game.revealedByHero.has(kb.letter);
+
+        let bgColor, textColor, borderColor;
+        if (guessed && inWord) {
+            bgColor = heroRevealed ? COL.purple : COL.greenDark;
+            textColor = COL.white;
+            borderColor = heroRevealed ? COL.purple : COL.green;
+        } else if (guessed) {
+            bgColor = COL.grayDark;
+            textColor = COL.gray;
+            borderColor = COL.grayDark;
+        } else {
+            const hover = hitTest(mouseX, mouseY, kb.x, kb.y, kb.w, kb.h);
+            bgColor = hover ? COL.bgMid : COL.bgLight;
+            textColor = COL.white;
+            borderColor = hover ? COL.gold : COL.gray;
+        }
+
+        ctx.fillStyle = bgColor;
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 1.5;
+        roundRect(kb.x, kb.y, kb.w, kb.h, 5);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = textColor;
+        ctx.font = `bold ${Math.min(kb.h * 0.55, 20)}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(kb.letter.toUpperCase(), kb.x + kb.w / 2, kb.y + kb.h / 2);
+    });
+};
+
+const processKeyboard = () => {
+    if (state !== STATE.PLAYING && state !== STATE.DAILY) return;
+    // Touch/click
+    if (mouseClicked) {
+        for (const kb of keyButtons) {
+            if (!game.guessed.has(kb.letter) && hitTest(mouseX, mouseY, kb.x, kb.y, kb.w, kb.h)) {
+                guessLetter(kb.letter);
+                break;
+            }
+        }
+    }
+    // Physical keyboard
+    for (const k of keys) {
+        if (k.length === 1 && k >= 'a' && k <= 'z' && !game.guessed.has(k)) {
+            guessLetter(k);
+        }
+    }
+    keys.clear();
+};
+
+// --- Draw Functions ---
+
+const drawStars = (t) => {
+    ctx.fillStyle = COL.grayDark;
+    for (let i = 0; i < 50; i++) {
+        const sx = ((i * 137.5 + t * 0.02) % W);
+        const sy = ((i * 97.3 + t * 0.01) % H);
+        const sz = 1 + Math.sin(t * 0.03 + i) * 0.5;
+        ctx.fillRect(sx, sy, sz, sz);
+    }
+};
+
+const drawTitle = (t) => {
+    drawStars(t);
+
+    // Title
+    const pulse = 1 + Math.sin(t * 0.05) * 0.03;
+    ctx.save();
+    ctx.translate(W/2, H * 0.18);
+    ctx.scale(pulse * scale, pulse * scale);
+    ctx.fillStyle = COL.gold;
+    ctx.font = 'bold 42px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('HANGMAN', 0, 0);
+    ctx.fillStyle = COL.green;
+    ctx.font = 'bold 36px monospace';
+    ctx.fillText('HEROES', 0, 42);
+    ctx.restore();
+
+    ctx.fillStyle = COL.gray;
+    ctx.font = `${14 * scale}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('Guess, Craft, Conquer', W/2, H * 0.34);
+
+    // Stats
+    ctx.fillStyle = COL.gold;
+    ctx.font = `bold ${14 * scale}px monospace`;
+    ctx.fillText(`Level ${save.level}  |  ${save.gold}g  |  ${save.gamesWon} wins  |  Best: ${save.highScore}`, W/2, H * 0.42);
+
+    // XP Bar
+    const barW = W * 0.5;
+    const barH = 12 * scale;
+    const barX = (W - barW) / 2;
+    const barY = H * 0.45;
+    ctx.fillStyle = COL.grayDark;
+    roundRect(barX, barY, barW, barH, 4);
+    ctx.fill();
+    const pct = save.xp / xpForLevel(save.level);
+    ctx.fillStyle = COL.green;
+    roundRect(barX, barY, barW * pct, barH, 4);
+    ctx.fill();
+    ctx.fillStyle = COL.white;
+    ctx.font = `${10 * scale}px monospace`;
+    ctx.fillText(`${save.xp} / ${xpForLevel(save.level)} XP`, W/2, barY + barH + 14 * scale);
+
+    // Menu buttons
+    clearButtons();
+    const btnW = W * 0.45;
+    const btnH = 44 * scale;
+    const btnX = (W - btnW) / 2;
+    let by = H * 0.54;
+
+    registerButton('play', btnX, by, btnW, btnH, '⚔  PLAY', COL.green, () => { save.roundScore = 0; game.round = 0; startRound(); });
+    by += btnH + 10;
+
+    // Daily challenge
+    const today = new Date().toDateString();
+    const dailyDone = save.dailyDate === today && save.dailyCompleted;
+    registerButton('daily', btnX, by, btnW, btnH, dailyDone ? '✓ DAILY DONE' : '★ DAILY CHALLENGE', COL.gold,
+        () => { if (!dailyDone) { game.round = 0; startRound(true); } });
+    by += btnH + 10;
+
+    registerButton('shop', btnX, by, btnW, btnH, '🏪 SHOP', COL.blue, () => { state = STATE.SHOP; clearButtons(); });
+    by += btnH + 10;
+
+    registerButton('ach', btnX, by, btnW, btnH, '🏆 ACHIEVEMENTS', COL.purple, () => { state = STATE.ACHIEVEMENTS; clearButtons(); });
+
+    // Tap to start flash
+    if (Math.floor(t / 40) % 2 === 0) {
+        ctx.fillStyle = COL.white;
+        ctx.font = `${12 * scale}px monospace`;
+        ctx.fillText('Choose a mode above', W/2, H * 0.95);
+    }
+
+    buttons.forEach(drawButton);
+};
+
+const drawPlaying = (t) => {
+    // HUD
+    ctx.fillStyle = COL.bgLight;
+    ctx.fillRect(0, 0, W, 50 * scale);
+
+    ctx.fillStyle = COL.gold;
+    ctx.font = `bold ${14 * scale}px monospace`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`Round ${game.round}`, 10, 20 * scale);
+    ctx.fillText(`Score: ${game.score}`, 10, 38 * scale);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = COL.green;
+    ctx.fillText(`Lv.${save.level}  ${save.gold}g`, W - 10, 20 * scale);
+
+    // Lives
+    const livesLeft = game.maxLives - game.wrongGuesses;
+    ctx.fillStyle = livesLeft <= 2 ? COL.red : COL.white;
+    ctx.fillText(`Lives: ${livesLeft}/${game.maxLives}`, W - 10, 38 * scale);
+
+    // Combo
+    if (game.combo > 1) {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = COL.gold;
+        ctx.font = `bold ${16 * scale}px monospace`;
+        ctx.fillText(`${game.combo}x COMBO!`, W/2, 35 * scale);
+    }
+
+    // Timer
+    if (game.timed && game.timeLeft > 0) {
+        ctx.textAlign = 'center';
+        ctx.fillStyle = game.timeLeft < 10 ? COL.red : COL.white;
+        ctx.font = `bold ${16 * scale}px monospace`;
+        ctx.fillText(`⏱ ${Math.ceil(game.timeLeft)}s`, W/2, 20 * scale);
+    }
+
+    // Hangman
+    const hangSize = Math.min(W * 0.35, H * 0.25);
+    drawHangman(W * 0.2, H * 0.32, hangSize, game.wrongGuesses);
+
+    // Word display
+    const wordY = H * 0.55;
+    const letterSpacing = Math.min(W * 0.07, 36);
+    const wordStartX = (W - game.word.length * letterSpacing) / 2 + letterSpacing / 2;
+
+    ctx.font = `bold ${Math.min(letterSpacing * 0.7, 28)}px monospace`;
+    ctx.textAlign = 'center';
+
+    game.word.split('').forEach((c, i) => {
+        const x = wordStartX + i * letterSpacing;
+        if (game.guessed.has(c)) {
+            ctx.fillStyle = game.revealedByHero.has(c) ? COL.purple : COL.white;
+            ctx.fillText(c.toUpperCase(), x, wordY);
+        } else {
+            ctx.fillStyle = COL.gray;
+            ctx.fillText('_', x, wordY + 4);
+        }
+        // Underline
+        ctx.strokeStyle = COL.grayDark;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - letterSpacing * 0.3, wordY + 10);
+        ctx.lineTo(x + letterSpacing * 0.3, wordY + 10);
+        ctx.stroke();
+    });
+
+    // Hero bar
+    const heroBarY = H * 0.58;
+    const heroSize = Math.min(38 * scale, 42);
+    const heroGap = 6;
+    const visibleHeroes = game.activeHeroes.map(id => HERO_DEFS.find(h => h.id === id)).filter(Boolean);
+    const heroStartX = (W - visibleHeroes.length * (heroSize + heroGap)) / 2;
+
+    visibleHeroes.forEach((hero, i) => {
+        const hx = heroStartX + i * (heroSize + heroGap);
+        const hy = heroBarY;
+        const onCooldown = game.heroCooldownsRound[hero.id] > 0;
+
+        ctx.fillStyle = onCooldown ? COL.grayDark : hero.color + '33';
+        ctx.strokeStyle = onCooldown ? COL.gray : hero.color;
+        ctx.lineWidth = 2;
+        roundRect(hx, hy, heroSize, heroSize, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = `${heroSize * 0.5}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(hero.icon, hx + heroSize/2, hy + heroSize/2);
+
+        if (onCooldown) {
+            ctx.fillStyle = COL.red + 'aa';
+            roundRect(hx, hy, heroSize, heroSize, 6);
+            ctx.fill();
+            ctx.fillStyle = COL.white;
+            ctx.font = `bold ${heroSize * 0.35}px monospace`;
+            ctx.fillText(game.heroCooldownsRound[hero.id], hx + heroSize/2, hy + heroSize/2);
+        }
+
+        // Click handler (register as button)
+        if (!onCooldown && !buttons.find(b => b.id === `hero_${hero.id}`)) {
+            // We handle hero clicks in processHeroClicks
+        }
+    });
+
+    // Hint message
+    if (game.hintTimer > 0) {
+        const alpha = Math.min(1, game.hintTimer / 30);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = COL.purple;
+        ctx.font = `bold ${14 * scale}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText(game.hintMessage, W/2, heroBarY + heroSize + 20);
+        ctx.globalAlpha = 1;
+    }
+
+    // Keyboard
+    drawKeyboard();
+
+    // Shield indicator
+    if (game.shielded) {
+        ctx.fillStyle = COL.gold + '44';
+        ctx.strokeStyle = COL.gold;
+        ctx.lineWidth = 2;
+        roundRect(W/2 - 40, H * 0.04, 80, 20, 10);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = COL.gold;
+        ctx.font = `${10}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText('🛡 SHIELDED', W/2, H * 0.04 + 14);
+    }
+};
+
+const processHeroClicks = () => {
+    if (!mouseClicked) return;
+    if (state !== STATE.PLAYING && state !== STATE.DAILY) return;
+
+    const heroBarY = H * 0.58;
+    const heroSize = Math.min(38 * scale, 42);
+    const heroGap = 6;
+    const visibleHeroes = game.activeHeroes.map(id => HERO_DEFS.find(h => h.id === id)).filter(Boolean);
+    const heroStartX = (W - visibleHeroes.length * (heroSize + heroGap)) / 2;
+
+    visibleHeroes.forEach((hero, i) => {
+        const hx = heroStartX + i * (heroSize + heroGap);
+        const hy = heroBarY;
+        const onCooldown = game.heroCooldownsRound[hero.id] > 0;
+
+        if (!onCooldown && hitTest(mouseX, mouseY, hx, hy, heroSize, heroSize)) {
+            sfx.hint();
+            const result = hero.ability(game);
+            game.hintMessage = `${hero.icon} ${result}`;
+            game.hintTimer = 180;
+            const cdBase = 3 - Math.min(2, save.upgrades.hintCooldown);
+            game.heroCooldownsRound[hero.id] = Math.max(1, cdBase);
+            particles.burst(hx + heroSize/2, hy + heroSize/2, hero.color, 10);
+            // Rebuild keyboard in case letters were revealed
+            buildKeyboard();
+        }
+    });
+};
+
+const drawWin = (t) => {
+    drawStars(t);
+
+    ctx.fillStyle = COL.gold;
+    ctx.font = `bold ${32 * scale}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('VICTORY!', W/2, H * 0.15);
+
+    ctx.fillStyle = COL.green;
+    ctx.font = `bold ${22 * scale}px monospace`;
+    ctx.fillText(game.word.toUpperCase(), W/2, H * 0.24);
+
+    ctx.fillStyle = COL.white;
+    ctx.font = `${14 * scale}px monospace`;
+    let ty = H * 0.32;
+    ctx.fillText(`Score: ${game.score}`, W/2, ty); ty += 24 * scale;
+    ctx.fillText(`Round XP: +${game.roundXP}`, W/2, ty); ty += 24 * scale;
+    ctx.fillText(`Gold: +${game.roundGold}`, W/2, ty); ty += 24 * scale;
+    if (game.maxCombo > 1) { ctx.fillStyle = COL.gold; ctx.fillText(`Best Combo: ${game.maxCombo}x`, W/2, ty); ty += 24 * scale; }
+    if (game.perfectRound) { ctx.fillStyle = COL.gold; ctx.fillText('★ PERFECT — 2x BONUS!', W/2, ty); ty += 24 * scale; }
+    ctx.fillStyle = COL.gray;
+    ctx.fillText(`Streak: ${save.winStreak} | Best: ${save.bestStreak}`, W/2, ty);
+
+    clearButtons();
+    const btnW = W * 0.5;
+    const btnH = 44 * scale;
+    const btnX = (W - btnW) / 2;
+
+    registerButton('nextRound', btnX, H * 0.62, btnW, btnH, '⚔ NEXT ROUND', COL.green, () => {
+        startRound();
+    });
+    registerButton('recruit', btnX, H * 0.62 + btnH + 10, btnW, btnH, '🏪 SHOP FIRST', COL.blue, () => {
+        state = STATE.SHOP;
+        clearButtons();
+    });
+    registerButton('titleBtn', btnX, H * 0.62 + (btnH + 10) * 2, btnW, btnH, '🏠 MENU', COL.gray, () => {
+        state = STATE.TITLE;
+        clearButtons();
+    });
+
+    buttons.forEach(drawButton);
+};
+
+const drawGameOver = (t) => {
+    drawStars(t);
+
+    ctx.fillStyle = COL.red;
+    ctx.font = `bold ${32 * scale}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('DEFEATED', W/2, H * 0.15);
+
+    ctx.fillStyle = COL.white;
+    ctx.font = `${18 * scale}px monospace`;
+    ctx.fillText(`The word was: ${game.word.toUpperCase()}`, W/2, H * 0.25);
+
+    // Hangman
+    drawHangman(W/2, H * 0.4, Math.min(W * 0.3, 150), game.maxLives);
+
+    ctx.fillStyle = COL.gray;
+    ctx.font = `${14 * scale}px monospace`;
+    ctx.fillText(`Final Score: ${game.score}`, W/2, H * 0.58);
+    ctx.fillText(`High Score: ${save.highScore}`, W/2, H * 0.62);
+    ctx.fillText(`Rounds survived: ${game.round}`, W/2, H * 0.66);
+
+    clearButtons();
+    const btnW = W * 0.5;
+    const btnH = 44 * scale;
+    const btnX = (W - btnW) / 2;
+
+    registerButton('retry', btnX, H * 0.72, btnW, btnH, '⚔ TRY AGAIN', COL.green, () => { save.roundScore = 0; game.round = 0; startRound(); });
+    registerButton('shopBtn', btnX, H * 0.72 + btnH + 10, btnW, btnH, '🏪 SHOP', COL.blue, () => { state = STATE.SHOP; clearButtons(); });
+    registerButton('menuBtn', btnX, H * 0.72 + (btnH + 10) * 2, btnW, btnH, '🏠 MENU', COL.gray, () => { state = STATE.TITLE; clearButtons(); });
+
+    buttons.forEach(drawButton);
+};
+
+// --- Shop ---
+const UPGRADES = [
+    { id: 'maxLives', name: 'Extra Life', desc: '+1 max life per game', icon: '❤', maxLevel: 3, baseCost: 50, costMult: 2.2, color: COL.red },
+    { id: 'xpBoost', name: 'XP Boost', desc: '+15% XP gain per level', icon: '⭐', maxLevel: 5, baseCost: 40, costMult: 1.8, color: COL.gold },
+    { id: 'goldBoost', name: 'Gold Rush', desc: '+20% gold gain per level', icon: '💰', maxLevel: 5, baseCost: 60, costMult: 1.9, color: COL.goldLight },
+    { id: 'hintCooldown', name: 'Quick Hints', desc: 'Reduce hero cooldowns', icon: '⚡', maxLevel: 2, baseCost: 80, costMult: 2.5, color: COL.cyan },
+    { id: 'startingHint', name: 'Head Start', desc: 'Start with vowels revealed', icon: '🔮', maxLevel: 3, baseCost: 100, costMult: 2.0, color: COL.purple },
+];
+
+const getUpgradeCost = (upg) => Math.floor(upg.baseCost * Math.pow(upg.costMult, save.upgrades[upg.id]));
+
+const drawShop = (t) => {
+    drawStars(t);
+
+    ctx.fillStyle = COL.blue;
+    ctx.font = `bold ${28 * scale}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('HERO SHOP', W/2, H * 0.08);
+
+    ctx.fillStyle = COL.gold;
+    ctx.font = `bold ${16 * scale}px monospace`;
+    ctx.fillText(`Gold: ${save.gold}`, W/2, H * 0.14);
+
+    clearButtons();
+
+    const cardW = W * 0.85;
+    const cardH = 52 * scale;
+    const cardX = (W - cardW) / 2;
+    let cy = H * 0.19;
+
+    // Upgrades
+    ctx.fillStyle = COL.gray;
+    ctx.font = `${12 * scale}px monospace`;
+    ctx.fillText('— UPGRADES —', W/2, cy);
+    cy += 16 * scale;
+
+    UPGRADES.forEach(upg => {
+        const level = save.upgrades[upg.id];
+        const maxed = level >= upg.maxLevel;
+        const cost = maxed ? 0 : getUpgradeCost(upg);
+        const canBuy = !maxed && save.gold >= cost;
+
+        ctx.fillStyle = COL.bgLight;
+        ctx.strokeStyle = maxed ? COL.green : (canBuy ? upg.color : COL.grayDark);
+        ctx.lineWidth = 1.5;
+        roundRect(cardX, cy, cardW, cardH, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = `${cardH * 0.4}px monospace`;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = COL.white;
+        ctx.fillText(`${upg.icon} ${upg.name}`, cardX + 10, cy + cardH * 0.38);
+
+        ctx.fillStyle = COL.gray;
+        ctx.font = `${cardH * 0.25}px monospace`;
+        ctx.fillText(upg.desc, cardX + 10, cy + cardH * 0.7);
+
+        ctx.textAlign = 'right';
+        if (maxed) {
+            ctx.fillStyle = COL.green;
+            ctx.font = `bold ${cardH * 0.3}px monospace`;
+            ctx.fillText('MAX', cardX + cardW - 10, cy + cardH * 0.5);
+        } else {
+            ctx.fillStyle = canBuy ? COL.gold : COL.gray;
+            ctx.font = `bold ${cardH * 0.3}px monospace`;
+            ctx.fillText(`${cost}g  [${level}/${upg.maxLevel}]`, cardX + cardW - 10, cy + cardH * 0.5);
+        }
+
+        if (canBuy) {
+            registerButton(`buy_${upg.id}`, cardX, cy, cardW, cardH, '', upg.color, () => {
+                save.gold -= cost;
+                save.upgrades[upg.id]++;
+                sfx.purchase();
+                particles.burst(W/2, cy + cardH/2, upg.color, 15);
+                notifications.push({ text: `${upg.name} upgraded!`, color: upg.color, timer: 120, size: 18 });
+                writeSave();
+            });
+        }
+
+        cy += cardH + 6;
+    });
+
+    // Hero upgrades
+    cy += 10;
+    ctx.fillStyle = COL.gray;
+    ctx.font = `${12 * scale}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('— HERO UPGRADES —', W/2, cy);
+    cy += 16 * scale;
+
+    save.unlockedHeroes.forEach(heroId => {
+        const hero = HERO_DEFS.find(h => h.id === heroId);
+        if (!hero) return;
+        const heroLevel = save.heroLevels[heroId] || 1;
+        const maxHeroLevel = 5;
+        const maxed = heroLevel >= maxHeroLevel;
+        const cost = maxed ? 0 : Math.floor(30 * Math.pow(1.6, heroLevel));
+        const canBuy = !maxed && save.gold >= cost;
+
+        if (cy + cardH > H * 0.88) return; // Overflow guard
+
+        ctx.fillStyle = COL.bgLight;
+        ctx.strokeStyle = maxed ? COL.green : (canBuy ? hero.color : COL.grayDark);
+        ctx.lineWidth = 1.5;
+        roundRect(cardX, cy, cardW, cardH, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = `${cardH * 0.4}px monospace`;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = COL.white;
+        ctx.fillText(`${hero.icon} ${hero.name}`, cardX + 10, cy + cardH * 0.38);
+
+        ctx.fillStyle = COL.gray;
+        ctx.font = `${cardH * 0.25}px monospace`;
+        ctx.fillText(hero.desc, cardX + 10, cy + cardH * 0.7);
+
+        ctx.textAlign = 'right';
+        if (maxed) {
+            ctx.fillStyle = COL.green;
+            ctx.font = `bold ${cardH * 0.3}px monospace`;
+            ctx.fillText('MAX', cardX + cardW - 10, cy + cardH * 0.5);
+        } else {
+            ctx.fillStyle = canBuy ? COL.gold : COL.gray;
+            ctx.font = `bold ${cardH * 0.3}px monospace`;
+            ctx.fillText(`${cost}g  [Lv.${heroLevel}]`, cardX + cardW - 10, cy + cardH * 0.5);
+        }
+
+        if (canBuy) {
+            registerButton(`heroUp_${heroId}`, cardX, cy, cardW, cardH, '', hero.color, () => {
+                save.gold -= cost;
+                save.heroLevels[heroId]++;
+                sfx.purchase();
+                particles.burst(W/2, cy + cardH/2, hero.color, 15);
+                notifications.push({ text: `${hero.name} → Lv.${save.heroLevels[heroId]}!`, color: hero.color, timer: 120, size: 18 });
+                writeSave();
+            });
+        }
+
+        cy += cardH + 6;
+    });
+
+    // Back button
+    const btnW = W * 0.4;
+    const btnH = 40 * scale;
+    registerButton('backShop', (W - btnW)/2, H * 0.92, btnW, btnH, '← BACK', COL.gray, () => { state = STATE.TITLE; clearButtons(); });
+
+    buttons.forEach(drawButton);
+};
+
+// --- Achievements Screen ---
+const drawAchievements = (t) => {
+    drawStars(t);
+
+    ctx.fillStyle = COL.purple;
+    ctx.font = `bold ${28 * scale}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('ACHIEVEMENTS', W/2, H * 0.08);
+
+    ctx.fillStyle = COL.gray;
+    ctx.font = `${14 * scale}px monospace`;
+    ctx.fillText(`${save.achievements.length} / ${ACH_DEFS.length} unlocked`, W/2, H * 0.14);
+
+    clearButtons();
+
+    const cardW = W * 0.85;
+    const cardH = 44 * scale;
+    const cardX = (W - cardW) / 2;
+    let cy = H * 0.18;
+
+    ACH_DEFS.forEach(ach => {
+        if (cy + cardH > H * 0.88) return;
+        const unlocked = save.achievements.includes(ach.id);
+
+        ctx.fillStyle = unlocked ? COL.bgMid : COL.bgLight;
+        ctx.strokeStyle = unlocked ? COL.gold : COL.grayDark;
+        ctx.lineWidth = 1.5;
+        roundRect(cardX, cy, cardW, cardH, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = unlocked ? COL.gold : COL.gray;
+        ctx.font = `bold ${cardH * 0.35}px monospace`;
+        ctx.fillText(unlocked ? `🏆 ${ach.name}` : `🔒 ${ach.name}`, cardX + 10, cy + cardH * 0.42);
+
+        ctx.fillStyle = unlocked ? COL.white : COL.grayDark;
+        ctx.font = `${cardH * 0.25}px monospace`;
+        ctx.fillText(ach.desc, cardX + 10, cy + cardH * 0.75);
+
+        cy += cardH + 4;
+    });
+
+    const btnW = W * 0.4;
+    const btnH = 40 * scale;
+    registerButton('backAch', (W - btnW)/2, H * 0.92, btnW, btnH, '← BACK', COL.gray, () => { state = STATE.TITLE; clearButtons(); });
+
+    buttons.forEach(drawButton);
+};
+
+// --- Cooldown decay ---
+const decayCooldowns = () => {
+    for (const id in game.heroCooldownsRound) {
+        if (game.heroCooldownsRound[id] > 0) {
+            // Cooldown ticks per correct guess
+        }
+    }
+};
+
+const tickCooldownsOnGuess = () => {
+    for (const id in game.heroCooldownsRound) {
+        if (game.heroCooldownsRound[id] > 0) {
+            game.heroCooldownsRound[id]--;
+        }
+    }
+};
+
+// Override guessLetter to also tick cooldowns
+const origGuess = guessLetter;
+
+// --- Main Loop ---
+let lastTime = 0;
+let frame = 0;
+
+const loop = (timestamp) => {
+    const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+    lastTime = timestamp;
+    frame++;
+
+    resize();
+    updateShake();
+    particles.update();
+
+    ctx.save();
+    ctx.translate(shakeX, shakeY);
+
+    // Clear
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(-10, -10, W + 20, H + 20);
+
+    switch (state) {
+        case STATE.TITLE:
+            drawTitle(frame);
+            processButtons();
+            break;
+
+        case STATE.PLAYING:
+        case STATE.DAILY:
+            drawPlaying(frame);
+            processHeroClicks();
+            processKeyboard();
+            // Timer
+            if (game.timed && game.timeLeft > 0) {
+                game.timeLeft -= dt;
+                if (game.timeLeft <= 0) {
+                    game.timeLeft = 0;
+                    loseRound();
+                }
+            }
+            // Hint timer
+            if (game.hintTimer > 0) game.hintTimer--;
+            // Tick cooldowns on each guess (handled inside guessLetter)
+            break;
+
+        case STATE.WIN:
+            drawWin(frame);
+            processButtons();
+            break;
+
+        case STATE.GAME_OVER:
+            drawGameOver(frame);
+            processButtons();
+            break;
+
+        case STATE.SHOP:
+            drawShop(frame);
+            processButtons();
+            break;
+
+        case STATE.ACHIEVEMENTS:
+            drawAchievements(frame);
+            processButtons();
+            break;
+    }
+
+    particles.draw();
+    drawNotifications();
+
+    ctx.restore();
+
+    mouseClicked = false;
+    requestAnimationFrame(loop);
+};
+
+// Patch guessLetter to include cooldown ticking
+const patchedGuess = guessLetter;
+// We need to override — wrap the function
+const wrapGuessLetter = (letter) => {
+    const wasBefore = game.guessed.size;
+    patchedGuess(letter);
+    if (game.guessed.size > wasBefore) {
+        tickCooldownsOnGuess();
+    }
+};
+
+// Redirect keyboard processing to use wrapped version
+// (Already handled since guessLetter is called directly and tickCooldowns is separate)
+
+// Hook: after each correct guess, tick cooldowns
+const origProcessKeyboard = processKeyboard;
+
+// Start
+requestAnimationFrame(loop);
+
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

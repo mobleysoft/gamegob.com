@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="RPS Wands — Unleash Your Inner Magician">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>RPS Wands — Unleash Your Inner Magician</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0f; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas { display: block; margin: 0 auto; }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════
+// RPS WANDS — A Tic-Tac-Toe Remix with Elemental Dueling
+// ═══════════════════════════════════════════════════════════════
+// Each cell on the 3x3 board is contested via Rock-Paper-Scissors
+// style elemental duels. Your wand element determines bonus effects.
+// Win duels to claim cells, get 3 in a row to win rounds.
+// Earn gold, buy upgrades, unlock new elements, grow stronger.
+
+const C = document.getElementById('gc');
+const ctx = C.getContext('2d');
+
+// ── Responsive Canvas ──
+let W, H, S;
+const resize = () => {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    S = Math.min(W, H);
+    C.width = W;
+    C.height = H;
+};
+window.addEventListener('resize', resize);
+resize();
+
+// ── Audio Engine ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+const initAudio = () => { if (!audioCtx) audioCtx = new AudioCtx(); };
+
+const playSound = (freq, type, dur, vol = 0.15, slide = 0) => {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    if (slide) osc.frequency.exponentialRampToValueAtTime(freq + slide, audioCtx.currentTime + dur);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + dur);
+};
+
+const sfx = {
+    select: () => playSound(600, 'square', 0.08, 0.1),
+    win: () => { playSound(523, 'square', 0.15, 0.12); setTimeout(() => playSound(659, 'square', 0.15, 0.12), 100); setTimeout(() => playSound(784, 'square', 0.25, 0.12), 200); },
+    lose: () => { playSound(300, 'sawtooth', 0.3, 0.1, -200); },
+    draw: () => playSound(400, 'triangle', 0.2, 0.08),
+    roundWin: () => { playSound(523, 'square', 0.12, 0.15); setTimeout(() => playSound(659, 'square', 0.12, 0.15), 80); setTimeout(() => playSound(784, 'square', 0.12, 0.15), 160); setTimeout(() => playSound(1047, 'square', 0.3, 0.15), 240); },
+    roundLose: () => { playSound(400, 'sawtooth', 0.15, 0.12); setTimeout(() => playSound(300, 'sawtooth', 0.15, 0.12), 120); setTimeout(() => playSound(200, 'sawtooth', 0.4, 0.12), 240); },
+    buy: () => { playSound(800, 'sine', 0.1, 0.1); setTimeout(() => playSound(1200, 'sine', 0.15, 0.1), 80); },
+    unlock: () => { for (let i = 0; i < 5; i++) setTimeout(() => playSound(400 + i * 150, 'square', 0.12, 0.1), i * 60); },
+    charge: () => playSound(900, 'sine', 0.2, 0.08, 400),
+    deplete: () => playSound(500, 'sine', 0.2, 0.08, -300),
+    hover: () => playSound(1000, 'sine', 0.04, 0.03),
+    cast: () => { playSound(200, 'sawtooth', 0.1, 0.1); playSound(800, 'sine', 0.15, 0.08, 200); },
+    explosion: () => { const dur = 0.3; if (!audioCtx) return; const bufferSize = audioCtx.sampleRate * dur; const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); const data = buffer.getChannelData(0); for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2); const src = audioCtx.createBufferSource(); const g = audioCtx.createGain(); src.buffer = buffer; g.gain.setValueAtTime(0.15, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur); src.connect(g); g.connect(audioCtx.destination); src.start(); },
+};
+
+// ── Colors & Theme ──
+const COLORS = {
+    bg: '#0a0a0f',
+    bgLight: '#12121f',
+    gold: '#f0b800',
+    green: '#00ff88',
+    red: '#ff3355',
+    blue: '#3388ff',
+    purple: '#aa44ff',
+    white: '#eeeef8',
+    gray: '#555577',
+    darkGray: '#2a2a3f',
+    fire: '#ff4422',
+    ice: '#44ccff',
+    lightning: '#ffee00',
+    earth: '#88aa33',
+    wind: '#aaeeff',
+    void: '#9933ff',
+};
+
+const ELEMENT_DATA = {
+    fire:      { color: '#ff4422', glow: '#ff6600', symbol: '🔥', name: 'Fire',      beats: ['ice', 'wind'],       desc: 'Burns bright. Beats Ice & Wind.' },
+    ice:       { color: '#44ccff', glow: '#66eeff', symbol: '❄️', name: 'Ice',       beats: ['lightning', 'earth'], desc: 'Freezing cold. Beats Lightning & Earth.' },
+    lightning: { color: '#ffee00', glow: '#ffffaa', symbol: '⚡', name: 'Lightning', beats: ['fire', 'wind'],       desc: 'Strikes fast. Beats Fire & Wind.' },
+    earth:     { color: '#88aa33', glow: '#aacc55', symbol: '🌿', name: 'Earth',     beats: ['lightning', 'void'],  desc: 'Steady ground. Beats Lightning & Void.' },
+    wind:      { color: '#aaeeff', glow: '#ccffff', symbol: '🌀', name: 'Wind',      beats: ['earth', 'ice'],       desc: 'Swift breeze. Beats Earth & Ice.' },
+    void:      { color: '#9933ff', glow: '#bb66ff', symbol: '🌑', name: 'Void',      beats: ['fire', 'ice'],        desc: 'Pure nothing. Beats Fire & Ice.' },
+};
+
+// ── Persistence ──
+const SAVE_KEY = 'rps_wands_save_v2';
+
+const defaultSave = () => ({
+    gold: 0,
+    totalGold: 0,
+    totalWins: 0,
+    totalLosses: 0,
+    totalDraws: 0,
+    totalDuels: 0,
+    roundsWon: 0,
+    roundsLost: 0,
+    streak: 0,
+    bestStreak: 0,
+    unlockedElements: ['fire', 'ice', 'lightning'],
+    equippedWand: 'fire',
+    wandLevels: { fire: 1, ice: 1, lightning: 1, earth: 1, wind: 1, void: 1 },
+    wandXP: { fire: 0, ice: 0, lightning: 0, earth: 0, wind: 0, void: 0 },
+    upgrades: {
+        duelPower: 0,      // +% chance in draws
+        goldBonus: 0,       // +% gold earned
+        chargeRate: 0,      // +charge on win
+        shieldStrength: 0,  // reduce charge loss on loss
+        luckyDraw: 0,       // % chance draw becomes win
+        elementMastery: 0,  // +% damage with element advantage
+    },
+    achievements: [],
+    difficulty: 1,
+    aiLevel: 1,
+});
+
+let save;
+const loadSave = () => {
+    try {
+        const d = localStorage.getItem(SAVE_KEY);
+        if (d) {
+            save = { ...defaultSave(), ...JSON.parse(d) };
+            // Ensure all keys exist
+            const def = defaultSave();
+            for (const k in def.upgrades) if (!(k in save.upgrades)) save.upgrades[k] = 0;
+            for (const k in def.wandLevels) if (!(k in save.wandLevels)) save.wandLevels[k] = 1;
+            for (const k in def.wandXP) if (!(k in save.wandXP)) save.wandXP[k] = 0;
+        } else {
+            save = defaultSave();
+        }
+    } catch { save = defaultSave(); }
+};
+const writeSave = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch {} };
+loadSave();
+
+// ── Achievements ──
+const ACHIEVEMENTS = [
+    { id: 'first_win', name: 'First Victory', desc: 'Win your first round', check: () => save.roundsWon >= 1 },
+    { id: 'streak_3', name: 'Hot Streak', desc: 'Win 3 rounds in a row', check: () => save.bestStreak >= 3 },
+    { id: 'streak_5', name: 'Unstoppable', desc: 'Win 5 rounds in a row', check: () => save.bestStreak >= 5 },
+    { id: 'streak_10', name: 'Legendary', desc: 'Win 10 rounds in a row', check: () => save.bestStreak >= 10 },
+    { id: 'gold_100', name: 'Coin Collector', desc: 'Earn 100 total gold', check: () => save.totalGold >= 100 },
+    { id: 'gold_1000', name: 'Treasure Hoard', desc: 'Earn 1000 total gold', check: () => save.totalGold >= 1000 },
+    { id: 'duels_50', name: 'Duelist', desc: 'Fight 50 duels', check: () => save.totalDuels >= 50 },
+    { id: 'duels_200', name: 'Grand Duelist', desc: 'Fight 200 duels', check: () => save.totalDuels >= 200 },
+    { id: 'all_elements', name: 'Elemental Master', desc: 'Unlock all 6 elements', check: () => save.unlockedElements.length >= 6 },
+    { id: 'max_wand', name: 'Archmage', desc: 'Level any wand to 10', check: () => Object.values(save.wandLevels).some(l => l >= 10) },
+    { id: 'wins_10', name: 'Warlock', desc: 'Win 10 rounds', check: () => save.roundsWon >= 10 },
+    { id: 'wins_50', name: 'Sorcerer Supreme', desc: 'Win 50 rounds', check: () => save.roundsWon >= 50 },
+];
+
+let newAchievements = [];
+const checkAchievements = () => {
+    for (const a of ACHIEVEMENTS) {
+        if (!save.achievements.includes(a.id) && a.check()) {
+            save.achievements.push(a.id);
+            newAchievements.push({ ...a, timer: 180 });
+            sfx.unlock();
+            save.gold += 25;
+            save.totalGold += 25;
+        }
+    }
+};
+
+// ── Upgrade Definitions ──
+const UPGRADE_DEFS = [
+    { key: 'duelPower', name: 'Duel Power', desc: '+5% draw advantage', maxLevel: 10, baseCost: 30, costMult: 1.5 },
+    { key: 'goldBonus', name: 'Gold Bonus', desc: '+10% gold earned', maxLevel: 10, baseCost: 25, costMult: 1.4 },
+    { key: 'chargeRate', name: 'Charge Rate', desc: '+1 charge on duel win', maxLevel: 8, baseCost: 40, costMult: 1.6 },
+    { key: 'shieldStrength', name: 'Shield', desc: 'Reduce charge loss', maxLevel: 8, baseCost: 35, costMult: 1.5 },
+    { key: 'luckyDraw', name: 'Lucky Draw', desc: '+5% draw→win chance', maxLevel: 6, baseCost: 50, costMult: 1.8 },
+    { key: 'elementMastery', name: 'Mastery', desc: '+8% element bonus', maxLevel: 10, baseCost: 45, costMult: 1.6 },
+];
+
+const getUpgradeCost = (def) => Math.floor(def.baseCost * Math.pow(def.costMult, save.upgrades[def.key]));
+
+// ── Particles ──
+const particles = [];
+
+class Particle {
+    constructor(x, y, vx, vy, color, life = 60, size = 3) {
+        this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+        this.color = color; this.life = life; this.maxLife = life; this.size = size;
+        this.alive = true;
+    }
+    update() {
+        this.x += this.vx; this.y += this.vy;
+        this.vy += 0.05;
+        this.vx *= 0.98;
+        this.life--;
+        if (this.life <= 0) this.alive = false;
+    }
+    draw() {
+        const a = this.life / this.maxLife;
+        ctx.globalAlpha = a;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size * a, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+}
+
+const spawnParticles = (x, y, color, count = 12, speed = 3, life = 40, size = 3) => {
+    for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
+        const spd = speed * (0.5 + Math.random());
+        particles.push(new Particle(x, y, Math.cos(angle) * spd, Math.sin(angle) * spd, color, life, size));
+    }
+};
+
+const spawnElementParticles = (x, y, element) => {
+    const col = ELEMENT_DATA[element]?.color || COLORS.gold;
+    spawnParticles(x, y, col, 20, 4, 50, 4);
+};
+
+// ── Screen Shake ──
+let shakeX = 0, shakeY = 0, shakeMag = 0, shakeDur = 0;
+const shake = (mag, dur) => { shakeMag = mag; shakeDur = dur; };
+
+// ── Float Texts ──
+const floatTexts = [];
+const addFloatText = (x, y, text, color, size = 18) => {
+    floatTexts.push({ x, y, text, color, size, life: 90, maxLife: 90 });
+};
+
+// ── Game State ──
+const STATE = {
+    TITLE: 'title',
+    SHOP: 'shop',
+    WAND_SELECT: 'wand_select',
+    BOARD: 'board',
+    DUEL: 'duel',
+    DUEL_RESULT: 'duel_result',
+    ROUND_RESULT: 'round_result',
+    GAME_OVER: 'game_over',
+    ACHIEVEMENTS: 'achievements',
+};
+
+let state = STATE.TITLE;
+let stateTimer = 0;
+let mouseX = 0, mouseY = 0;
+let mouseDown = false;
+let mouseClicked = false;
+let hoverBtn = -1;
+
+// Board state
+let board = []; // 9 cells: null, 'player', 'enemy'
+let playerWand = 'fire';
+let playerCharge = 50; // 0-100
+let enemyCharge = 50;
+let currentCell = -1;
+let playerTurn = true;
+let roundGold = 0;
+let roundNum = 0;
+let totalRoundsPlayed = 0;
+
+// Duel state
+let duelPlayerElement = '';
+let duelEnemyElement = '';
+let duelResult = ''; // 'win', 'lose', 'draw'
+let duelAnimTimer = 0;
+let duelCell = -1;
+
+// Enemy wand
+let enemyWand = 'ice';
+
+// Shop scroll
+let shopScroll = 0;
+let shopTab = 0; // 0=upgrades, 1=wands, 2=elements
+
+// Wand XP needed per level
+const wandXPNeeded = (level) => Math.floor(20 * Math.pow(1.5, level - 1));
+
+// ── Animation Helpers ──
+let globalTime = 0;
+const pulse = (speed = 1) => Math.sin(globalTime * speed * 0.05) * 0.5 + 0.5;
+const breathe = (speed = 1) => Math.sin(globalTime * speed * 0.03) * 0.15 + 0.85;
+
+// ── Sprite Animation System ──
+class SpriteAnim {
+    constructor(frames, frameDur = 8) {
+        this.frames = frames;
+        this.frameDur = frameDur;
+        this.frameIndex = 0;
+        this.timer = 0;
+        this.loop = true;
+    }
+    update() {
+        this.timer++;
+        if (this.timer >= this.frameDur) {
+            this.timer = 0;
+            this.frameIndex++;
+            if (this.frameIndex >= this.frames.length) {
+                this.frameIndex = this.loop ? 0 : this.frames.length - 1;
+            }
+        }
+    }
+    getFrame() { return this.frames[this.frameIndex]; }
+}
+
+// Wand drawing frames (procedural sprite animation)
+const drawWand = (x, y, size, element, animFrame = 0) => {
+    const el = ELEMENT_DATA[element];
+    const wobble = Math.sin(animFrame * 0.1) * 2;
+    const glowPulse = Math.sin(animFrame * 0.08) * 0.3 + 0.7;
+
+    // Glow
+    ctx.save();
+    ctx.shadowColor = el.glow;
+    ctx.shadowBlur = 15 * glowPulse;
+
+    // Wand body
+    ctx.strokeStyle = el.color;
+    ctx.lineWidth = size * 0.08;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x, y + size * 0.4);
+    ctx.lineTo(x + wobble * 0.3, y - size * 0.2);
+    ctx.stroke();
+
+    // Wand tip orb
+    const orbY = y - size * 0.2 + Math.sin(animFrame * 0.12) * 3;
+    ctx.fillStyle = el.glow;
+    ctx.beginPath();
+    ctx.arc(x + wobble * 0.3, orbY, size * 0.1 + Math.sin(animFrame * 0.15) * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Element symbol
+    ctx.restore();
+    ctx.font = `${size * 0.35}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(el.symbol, x + wobble * 0.3, orbY);
+};
+
+// ── Drawing Utilities ──
+const drawText = (text, x, y, color = COLORS.white, size = 16, align = 'center', baseline = 'middle') => {
+    ctx.font = `${size}px 'Courier New', monospace`;
+    ctx.textAlign = align;
+    ctx.textBaseline = baseline;
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+};
+
+const drawTextBold = (text, x, y, color = COLORS.white, size = 16, align = 'center') => {
+    ctx.font = `bold ${size}px 'Courier New', monospace`;
+    ctx.textAlign = align;
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+};
+
+const drawGlowText = (text, x, y, color, glowColor, size = 20) => {
+    ctx.save();
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 12;
+    drawTextBold(text, x, y, color, size);
+    ctx.restore();
+};
+
+const drawRect = (x, y, w, h, color, radius = 0) => {
+    ctx.fillStyle = color;
+    if (radius > 0) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, radius);
+        ctx.fill();
+    } else {
+        ctx.fillRect(x, y, w, h);
+    }
+};
+
+const drawRectOutline = (x, y, w, h, color, lw = 2, radius = 0) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    if (radius > 0) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, radius);
+        ctx.stroke();
+    } else {
+        ctx.strokeRect(x, y, w, h);
+    }
+};
+
+// Button helper
+const buttons = [];
+const clearButtons = () => { buttons.length = 0; };
+const addButton = (x, y, w, h, label, callback, color = COLORS.gold, textColor = '#0a0a0f') => {
+    buttons.push({ x, y, w, h, label, callback, color, textColor });
+};
+
+const drawButtons = () => {
+    hoverBtn = -1;
+    for (let i = 0; i < buttons.length; i++) {
+        const b = buttons[i];
+        const hover = mouseX >= b.x && mouseX <= b.x + b.w && mouseY >= b.y && mouseY <= b.y + b.h;
+        if (hover) hoverBtn = i;
+
+        const brightness = hover ? 1.2 : 1;
+        ctx.save();
+        if (hover) {
+            ctx.shadowColor = b.color;
+            ctx.shadowBlur = 10;
+        }
+        drawRect(b.x, b.y, b.w, b.h, hover ? b.color : b.color + '88', 6);
+        drawRectOutline(b.x, b.y, b.w, b.h, b.color, 2, 6);
+        ctx.restore();
+
+        const fontSize = Math.min(16, b.w * 0.12, b.h * 0.45);
+        drawTextBold(b.label, b.x + b.w / 2, b.y + b.h / 2, hover ? b.textColor : b.color, fontSize);
+
+        if (hover && mouseClicked) {
+            sfx.select();
+            b.callback();
+        }
+    }
+};
+
+// ── Bar Drawing ──
+const drawBar = (x, y, w, h, value, max, color, bgColor = COLORS.darkGray) => {
+    drawRect(x, y, w, h, bgColor, 4);
+    const fillW = Math.max(0, (value / max) * w);
+    if (fillW > 0) drawRect(x, y, fillW, h, color, 4);
+    drawRectOutline(x, y, w, h, color + '44', 1, 4);
+};
+
+// ── Element Advantage Check ──
+const getAdvantage = (atk, def) => {
+    if (atk === def) return 'draw';
+    if (ELEMENT_DATA[atk].beats.includes(def)) return 'win';
+    return 'lose';
+};
+
+// ── AI Logic ──
+const aiChooseCell = () => {
+    // Try to win
+    const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    for (const line of lines) {
+        const vals = line.map(i => board[i]);
+        if (vals.filter(v => v === 'enemy').length === 2 && vals.includes(null)) {
+            return line[vals.indexOf(null)];
+        }
+    }
+    // Block player
+    for (const line of lines) {
+        const vals = line.map(i => board[i]);
+        if (vals.filter(v => v === 'player').length === 2 && vals.includes(null)) {
+            return line[vals.indexOf(null)];
+        }
+    }
+    // Center
+    if (board[4] === null) return 4;
+    // Corners
+    const corners = [0, 2, 6, 8].filter(i => board[i] === null);
+    if (corners.length > 0) return corners[Math.floor(Math.random() * corners.length)];
+    // Any
+    const empty = board.map((v, i) => v === null ? i : -1).filter(i => i >= 0);
+    return empty.length > 0 ? empty[Math.floor(Math.random() * empty.length)] : -1;
+};
+
+const aiChooseElement = () => {
+    const available = save.unlockedElements.slice();
+    const aiDifficulty = save.difficulty;
+
+    // Higher difficulty = more likely to counter player's wand
+    if (Math.random() < 0.3 * aiDifficulty) {
+        // Try to pick element that beats player's equipped wand
+        const counters = available.filter(e => ELEMENT_DATA[e].beats.includes(playerWand));
+        if (counters.length > 0) return counters[Math.floor(Math.random() * counters.length)];
+    }
+
+    // Random from first N elements based on difficulty
+    const pool = ['fire', 'ice', 'lightning', 'earth', 'wind', 'void'];
+    const availPool = pool.slice(0, Math.min(pool.length, 3 + Math.floor(aiDifficulty * 0.5)));
+    return availPool[Math.floor(Math.random() * availPool.length)];
+};
+
+// ── Game Logic ──
+const startNewRound = () => {
+    board = Array(9).fill(null);
+    playerCharge = 50 + save.upgrades.chargeRate * 3;
+    enemyCharge = 50 + save.difficulty * 5;
+    playerTurn = true;
+    roundGold = 0;
+    roundNum++;
+    totalRoundsPlayed++;
+    currentCell = -1;
+    enemyWand = aiChooseElement();
+    state = STATE.BOARD;
+    stateTimer = 0;
+};
+
+const checkWin = (owner) => {
+    const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    for (const line of lines) {
+        if (line.every(i => board[i] === owner)) return line;
+    }
+    return null;
+};
+
+const isBoardFull = () => board.every(c => c !== null);
+
+const resolveDuel = () => {
+    const playerEl = duelPlayerElement;
+    const enemyEl = duelEnemyElement;
+    let result = getAdvantage(playerEl, enemyEl);
+
+    // Apply upgrades
+    if (result === 'draw') {
+        // Duel power & lucky draw
+        const luckyChance = save.upgrades.luckyDraw * 0.05;
+        const powerChance = save.upgrades.duelPower * 0.05;
+        if (Math.random() < luckyChance + powerChance) {
+            result = 'win';
+        }
+    }
+
+    // Wand level bonus: higher level = small advantage
+    const wandLevel = save.wandLevels[playerWand] || 1;
+    if (result === 'draw' && Math.random() < wandLevel * 0.02) {
+        result = 'win';
+    }
+
+    // Element mastery bonus
+    if (result === 'win') {
+        const masteryBonus = save.upgrades.elementMastery * 0.08;
+        // Extra charge on element advantage
+        playerCharge = Math.min(100, playerCharge + 5 + Math.floor(masteryBonus * 10));
+    }
+
+    duelResult = result;
+    save.totalDuels++;
+
+    if (result === 'win') {
+        board[duelCell] = 'player';
+        const chargeGain = 8 + save.upgrades.chargeRate * 2;
+        playerCharge = Math.min(100, playerCharge + chargeGain);
+        enemyCharge = Math.max(0, enemyCharge - 5);
+        const goldEarned = Math.floor((3 + save.difficulty) * (1 + save.upgrades.goldBonus * 0.1));
+        roundGold += goldEarned;
+        save.totalWins++;
+        // Wand XP
+        save.wandXP[playerWand] = (save.wandXP[playerWand] || 0) + 2;
+        sfx.win();
+    } else if (result === 'lose') {
+        board[duelCell] = 'enemy';
+        const chargeLoss = Math.max(2, 8 - save.upgrades.shieldStrength);
+        playerCharge = Math.max(0, playerCharge - chargeLoss);
+        enemyCharge = Math.min(100, enemyCharge + 8);
+        save.totalLosses++;
+        save.wandXP[playerWand] = (save.wandXP[playerWand] || 0) + 1;
+        sfx.lose();
+    } else {
+        // Draw - cell stays empty, both lose a bit of charge
+        playerCharge = Math.max(0, playerCharge - 3);
+        enemyCharge = Math.max(0, enemyCharge - 3);
+        save.totalDraws++;
+        sfx.draw();
+    }
+
+    // Check wand level up
+    const xpNeeded = wandXPNeeded(save.wandLevels[playerWand]);
+    if (save.wandXP[playerWand] >= xpNeeded && save.wandLevels[playerWand] < 20) {
+        save.wandLevels[playerWand]++;
+        save.wandXP[playerWand] -= xpNeeded;
+        addFloatText(W / 2, H / 2 - 60, `${ELEMENT_DATA[playerWand].name} Wand → Lv.${save.wandLevels[playerWand]}!`, ELEMENT_DATA[playerWand].color, 22);
+        sfx.charge();
+    }
+
+    writeSave();
+    state = STATE.DUEL_RESULT;
+    stateTimer = 0;
+    duelAnimTimer = 0;
+};
+
+const endRound = (winner) => {
+    if (winner === 'player') {
+        save.roundsWon++;
+        save.streak++;
+        if (save.streak > save.bestStreak) save.bestStreak = save.streak;
+        const streakBonus = Math.floor(save.streak * 2);
+        const chargeBonus = Math.floor(playerCharge / 10);
+        roundGold += 10 + streakBonus + chargeBonus + save.difficulty * 3;
+        save.gold += roundGold;
+        save.totalGold += roundGold;
+        sfx.roundWin();
+    } else if (winner === 'enemy') {
+        save.roundsLost++;
+        save.streak = 0;
+        const consolation = Math.max(2, Math.floor(roundGold * 0.3));
+        save.gold += consolation;
+        save.totalGold += consolation;
+        roundGold = consolation;
+        sfx.roundLose();
+    } else {
+        // Draw
+        const drawGold = Math.floor(roundGold * 0.5) + 3;
+        save.gold += drawGold;
+        save.totalGold += drawGold;
+        roundGold = drawGold;
+    }
+
+    // Difficulty ramp
+    if (save.roundsWon > 0 && save.roundsWon % 3 === 0) {
+        save.difficulty = Math.min(10, save.difficulty + 0.5);
+    }
+
+    checkAchievements();
+    writeSave();
+    state = STATE.ROUND_RESULT;
+    stateTimer = 0;
+};
+
+// ── Input Handling ──
+const onInput = (x, y, isClick) => {
+    mouseX = x;
+    mouseY = y;
+    if (isClick) mouseClicked = true;
+};
+
+C.addEventListener('mousedown', (e) => { mouseDown = true; onInput(e.clientX, e.clientY, true); });
+C.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
+C.addEventListener('mouseup', () => { mouseDown = false; });
+
+C.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    initAudio();
+    const t = e.touches[0];
+    mouseDown = true;
+    onInput(t.clientX, t.clientY, true);
+}, { passive: false });
+C.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const t = e.touches[0];
+    mouseX = t.clientX;
+    mouseY = t.clientY;
+}, { passive: false });
+C.addEventListener('touchend', (e) => { e.preventDefault(); mouseDown = false; }, { passive: false });
+
+window.addEventListener('keydown', (e) => {
+    initAudio();
+    if (state === STATE.TITLE && (e.key === 'Enter' || e.key === ' ')) {
+        state = STATE.WAND_SELECT;
+        sfx.select();
+    }
+});
+
+C.addEventListener('click', () => { initAudio(); });
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+
+const renderTitle = () => {
+    // Starfield background
+    for (let i = 0; i < 80; i++) {
+        const sx = ((i * 137 + globalTime * (0.2 + (i % 3) * 0.1)) % W);
+        const sy = ((i * 251 + globalTime * 0.05) % H);
+        const brightness = pulse(0.5 + (i % 5) * 0.2);
+        ctx.globalAlpha = brightness * 0.5;
+        ctx.fillStyle = i % 7 === 0 ? COLORS.gold : i % 5 === 0 ? COLORS.green : COLORS.white;
+        ctx.fillRect(sx, sy, 1.5, 1.5);
+    }
+    ctx.globalAlpha = 1;
+
+    const cx = W / 2;
+    const cy = H / 2;
+
+    // Animated wands orbiting
+    for (let i = 0; i < 6; i++) {
+        const elements = ['fire', 'ice', 'lightning', 'earth', 'wind', 'void'];
+        const angle = (Math.PI * 2 / 6) * i + globalTime * 0.01;
+        const radius = S * 0.28;
+        const wx = cx + Math.cos(angle) * radius;
+        const wy = cy + Math.sin(angle) * radius + Math.sin(globalTime * 0.03 + i) * 10;
+        const el = ELEMENT_DATA[elements[i]];
+        ctx.globalAlpha = 0.4 + pulse(0.3 + i * 0.1) * 0.3;
+        ctx.font = `${S * 0.05}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(el.symbol, wx, wy);
+        ctx.globalAlpha = 1;
+    }
+
+    // Title
+    drawGlowText('⚡ RPS WANDS ⚡', cx, cy - S * 0.15, COLORS.gold, COLORS.gold, S * 0.07);
+    drawText('Unleash Your Inner Magician', cx, cy - S * 0.07, COLORS.green, S * 0.025);
+
+    // Stats
+    if (save.totalGold > 0) {
+        drawText(`Gold: ${save.gold} | Wins: ${save.roundsWon} | Best Streak: ${save.bestStreak}`, cx, cy + S * 0.02, COLORS.gray, S * 0.02);
+    }
+
+    // Buttons
+    clearButtons();
+    const bw = S * 0.35;
+    const bh = S * 0.06;
+
+    addButton(cx - bw / 2, cy + S * 0.08, bw, bh, '▶ PLAY', () => {
+        state = STATE.WAND_SELECT;
+    });
+
+    addButton(cx - bw / 2, cy + S * 0.16, bw, bh, '🛒 SHOP', () => {
+        state = STATE.SHOP;
+        shopTab = 0;
+    }, COLORS.green, '#0a0a0f');
+
+    addButton(cx - bw / 2, cy + S * 0.24, bw, bh, '🏆 ACHIEVEMENTS', () => {
+        state = STATE.ACHIEVEMENTS;
+    }, COLORS.purple, '#fff');
+
+    drawButtons();
+
+    // Tap to play hint
+    const tapAlpha = pulse(1.5);
+    ctx.globalAlpha = tapAlpha;
+    drawText('Press Enter or Tap to Begin', cx, cy + S * 0.35, COLORS.gray, S * 0.018);
+    ctx.globalAlpha = 1;
+};
+
+const renderWandSelect = () => {
+    const cx = W / 2;
+
+    drawGlowText('Choose Your Wand', cx, H * 0.08, COLORS.gold, COLORS.gold, S * 0.04);
+    drawText(`Gold: ${save.gold}`, cx, H * 0.14, COLORS.gold, S * 0.025);
+
+    clearButtons();
+
+    const elements = ['fire', 'ice', 'lightning', 'earth', 'wind', 'void'];
+    const cols = Math.min(3, Math.floor(W / (S * 0.28)));
+    const cardW = S * 0.24;
+    const cardH = S * 0.28;
+    const gap = S * 0.03;
+
+    const unlocked = save.unlockedElements;
+
+    for (let i = 0; i < elements.length; i++) {
+        const el = elements[i];
+        const ed = ELEMENT_DATA[el];
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const totalRowW = cols * cardW + (cols - 1) * gap;
+        const startX = cx - totalRowW / 2;
+        const x = startX + col * (cardW + gap);
+        const y = H * 0.2 + row * (cardH + gap);
+
+        const isUnlocked = unlocked.includes(el);
+        const isEquipped = playerWand === el;
+        const hover = mouseX >= x && mouseX <= x + cardW && mouseY >= y && mouseY <= y + cardH;
+
+        // Card background
+        const bgCol = isEquipped ? ed.color + '33' : hover && isUnlocked ? '#1a1a2f' : COLORS.bgLight;
+        drawRect(x, y, cardW, cardH, bgCol, 8);
+        drawRectOutline(x, y, cardW, cardH, isEquipped ? ed.color : isUnlocked ? ed.color + '66' : COLORS.gray, isEquipped ? 3 : 1, 8);
+
+        if (isUnlocked) {
+            // Wand animation
+            drawWand(x + cardW / 2, y + cardH * 0.35, cardW * 0.5, el, globalTime);
+
+            // Name and level
+            drawTextBold(ed.name, x + cardW / 2, y + cardH * 0.62, ed.color, S * 0.022);
+            drawText(`Lv.${save.wandLevels[el]}`, x + cardW / 2, y + cardH * 0.72, COLORS.white, S * 0.018);
+
+            // XP bar
+            const xpNeeded = wandXPNeeded(save.wandLevels[el]);
+            const xpRatio = save.wandXP[el] / xpNeeded;
+            drawBar(x + cardW * 0.1, y + cardH * 0.78, cardW * 0.8, S * 0.012, save.wandXP[el], xpNeeded, ed.color);
+            drawText(`${save.wandXP[el]}/${xpNeeded} XP`, x + cardW / 2, y + cardH * 0.88, COLORS.gray, S * 0.013);
+
+            if (hover && mouseClicked && !isEquipped) {
+                playerWand = el;
+                save.equippedWand = el;
+                sfx.select();
+                writeSave();
+            }
+        } else {
+            // Locked
+            ctx.globalAlpha = 0.4;
+            ctx.font = `${S * 0.06}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🔒', x + cardW / 2, y + cardH * 0.35);
+            drawText(ed.name, x + cardW / 2, y + cardH * 0.62, COLORS.gray, S * 0.022);
+            drawText('Locked', x + cardW / 2, y + cardH * 0.75, COLORS.gray, S * 0.016);
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    // Bottom buttons
+    const bw = S * 0.25;
+    const bh = S * 0.055;
+    addButton(cx - bw - S * 0.02, H - S * 0.12, bw, bh, '← BACK', () => { state = STATE.TITLE; });
+    addButton(cx + S * 0.02, H - S * 0.12, bw, bh, 'BATTLE →', () => { startNewRound(); }, COLORS.green, '#0a0a0f');
+
+    drawButtons();
+};
+
+const renderBoard = () => {
+    const cx = W / 2;
+    const cy = H / 2;
+    const cellSize = S * 0.1;
+    const gridSize = cellSize * 3 + 8;
+    const gridX = cx - gridSize / 2;
+    const gridY = cy - gridSize / 2 - S * 0.02;
+
+    // HUD
+    // Player info (left/top)
+    const hudY = H * 0.04;
+    drawWand(W * 0.08, hudY + S * 0.04, S * 0.08, playerWand, globalTime);
+    drawTextBold(`${ELEMENT_DATA[playerWand].name} Lv.${save.wandLevels[playerWand]}`, W * 0.18, hudY + S * 0.015, ELEMENT_DATA[playerWand].color, S * 0.02);
+    drawText('YOU', W * 0.18, hudY + S * 0.045, COLORS.white, S * 0.016);
+    drawBar(W * 0.18, hudY + S * 0.065, S * 0.2, S * 0.015, playerCharge, 100, COLORS.green);
+    drawText(`⚡${Math.floor(playerCharge)}`, W * 0.18 + S * 0.22, hudY + S * 0.065 + S * 0.007, COLORS.green, S * 0.013, 'left');
+
+    // Enemy info (right/top)
+    drawWand(W - W * 0.08, hudY + S * 0.04, S * 0.08, enemyWand, globalTime + 50);
+    drawTextBold(`${ELEMENT_DATA[enemyWand].name} Lv.${Math.floor(save.difficulty + 1)}`, W - W * 0.18, hudY + S * 0.015, ELEMENT_DATA[enemyWand].color, S * 0.02, 'center');
+    drawText('ENEMY', W - W * 0.18, hudY + S * 0.045, COLORS.red, S * 0.016);
+    drawBar(W - W * 0.18 - S * 0.1, hudY + S * 0.065, S * 0.2, S * 0.015, enemyCharge, 100, COLORS.red);
+    drawText(`⚡${Math.floor(enemyCharge)}`, W - W * 0.18 + S * 0.12, hudY + S * 0.065 + S * 0.007, COLORS.red, S * 0.013, 'left');
+
+    // Round + Gold
+    drawText(`Round ${roundNum}`, cx, hudY + S * 0.015, COLORS.white, S * 0.022);
+    drawText(`💰 ${roundGold} gold`, cx, hudY + S * 0.05, COLORS.gold, S * 0.018);
+    drawText(`Streak: ${save.streak}`, cx, hudY + S * 0.08, save.streak >= 3 ? COLORS.green : COLORS.gray, S * 0.015);
+
+    // Turn indicator
+    const turnText = playerTurn ? '⬇ YOUR TURN — Choose a cell' : '⬆ ENEMY THINKING...';
+    const turnColor = playerTurn ? COLORS.green : COLORS.red;
+    drawText(turnText, cx, gridY - S * 0.04, turnColor, S * 0.02);
+
+    clearButtons();
+
+    // Draw grid
+    for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+            const idx = r * 3 + c;
+            const x = gridX + c * (cellSize + 4);
+            const y = gridY + r * (cellSize + 4);
+
+            const cellVal = board[idx];
+            const hover = mouseX >= x && mouseX <= x + cellSize && mouseY >= y && mouseY <= y + cellSize;
+            const canClick = cellVal === null && playerTurn;
+
+            // Cell background
+            let bgCol = COLORS.bgLight;
+            if (cellVal === 'player') bgCol = ELEMENT_DATA[playerWand].color + '22';
+            else if (cellVal === 'enemy') bgCol = ELEMENT_DATA[enemyWand].color + '22';
+            else if (hover && canClick) bgCol = '#1a1a3f';
+
+            drawRect(x, y, cellSize, cellSize, bgCol, 6);
+
+            // Cell border
+            let borderCol = COLORS.darkGray;
+            if (cellVal === 'player') borderCol = ELEMENT_DATA[playerWand].color;
+            else if (cellVal === 'enemy') borderCol = ELEMENT_DATA[enemyWand].color;
+            else if (hover && canClick) borderCol = COLORS.gold;
+
+            drawRectOutline(x, y, cellSize, cellSize, borderCol, hover && canClick ? 3 : 1.5, 6);
+
+            // Cell content
+            if (cellVal === 'player') {
+                drawWand(x + cellSize / 2, y + cellSize / 2, cellSize * 0.6, playerWand, globalTime);
+            } else if (cellVal === 'enemy') {
+                drawWand(x + cellSize / 2, y + cellSize / 2, cellSize * 0.6, enemyWand, globalTime + 30);
+            } else if (hover && canClick) {
+                ctx.globalAlpha = 0.3 + pulse(2) * 0.2;
+                ctx.font = `${cellSize * 0.3}px serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('✨', x + cellSize / 2, y + cellSize / 2);
+                ctx.globalAlpha = 1;
+            }
+
+            // Click handler
+            if (hover && mouseClicked && canClick) {
+                duelCell = idx;
+                playerTurn = false;
+                state = STATE.DUEL;
+                stateTimer = 0;
+                duelPlayerElement = '';
+                duelEnemyElement = '';
+                sfx.select();
+            }
+        }
+    }
+
+    // Element advantages guide at bottom
+    const guideY = gridY + gridSize + S * 0.06;
+    drawText('Element Matchups:', cx, guideY, COLORS.gray, S * 0.015);
+    const ed = ELEMENT_DATA[playerWand];
+    drawText(`${ed.symbol} ${ed.name} beats: ${ed.beats.map(b => ELEMENT_DATA[b].symbol + ELEMENT_DATA[b].name).join(', ')}`, cx, guideY + S * 0.03, ELEMENT_DATA[playerWand].color, S * 0.015);
+
+    // AI turn logic
+    if (!playerTurn && state === STATE.BOARD) {
+        stateTimer++;
+        if (stateTimer > 40) {
+            const cell = aiChooseCell();
+            if (cell >= 0) {
+                duelCell = cell;
+                state = STATE.DUEL;
+                stateTimer = 0;
+                duelPlayerElement = '';
+                duelEnemyElement = '';
+            }
+        }
+    }
+
+    drawButtons();
+};
+
+const renderDuel = () => {
+    const cx = W / 2;
+    const cy = H / 2;
+
+    // Dark overlay
+    ctx.fillStyle = 'rgba(5,5,10,0.85)';
+    ctx.fillRect(0, 0, W, H);
+
+    drawGlowText('⚔️ ELEMENTAL DUEL ⚔️', cx, cy - S * 0.22, COLORS.gold, COLORS.gold, S * 0.04);
+    drawText(`Cell #${duelCell + 1} — Choose your element!`, cx, cy - S * 0.15, COLORS.white, S * 0.02);
+
+    clearButtons();
+
+    const unlocked = save.unlockedElements;
+    const btnW = S * 0.13;
+    const btnH = S * 0.12;
+    const cols = Math.min(unlocked.length, 3);
+    const rows = Math.ceil(unlocked.length / cols);
+    const gap = S * 0.02;
+
+    for (let i = 0; i < unlocked.length; i++) {
+        const el = unlocked[i];
+        const ed = ELEMENT_DATA[el];
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const totalW = cols * btnW + (cols - 1) * gap;
+        const startX = cx - totalW / 2;
+        const x = startX + col * (btnW + gap);
+        const y = cy - S * 0.08 + row * (btnH + gap);
+
+        const hover = mouseX >= x && mouseX <= x + btnW && mouseY >= y && mouseY <= y + btnH;
+        const selected = duelPlayerElement === el;
+
+        drawRect(x, y, btnW, btnH, selected ? ed.color + '44' : hover ? '#1a1a3f' : COLORS.bgLight, 8);
+        drawRectOutline(x, y, btnW, btnH, selected ? ed.color : hover ? ed.color + 'aa' : ed.color + '44', selected ? 3 : 1.5, 8);
+
+        // Element symbol
+        ctx.font = `${btnH * 0.35}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(ed.symbol, x + btnW / 2, y + btnH * 0.35);
+        drawText(ed.name, x + btnW / 2, y + btnH * 0.7, ed.color, S * 0.015);
+        drawText(`Lv.${save.wandLevels[el]}`, x + btnW / 2, y + btnH * 0.88, COLORS.gray, S * 0.012);
+
+        if (hover && mouseClicked) {
+            duelPlayerElement = el;
+            sfx.cast();
+            spawnElementParticles(x + btnW / 2, y + btnH / 2, el);
+        }
+    }
+
+    // Confirm button
+    if (duelPlayerElement) {
+        const confirmW = S * 0.25;
+        const confirmH = S * 0.06;
+        const confirmY = cy + S * 0.18;
+        addButton(cx - confirmW / 2, confirmY, confirmW, confirmH, '⚡ CAST SPELL', () => {
+            duelEnemyElement = aiChooseElement();
+            duelAnimTimer = 0;
+            sfx.cast();
+            resolveDuel();
+        }, ELEMENT_DATA[duelPlayerElement].color, '#0a0a0f');
+    }
+
+    // Wand charge display
+    drawText(`Your Charge: ⚡${Math.floor(playerCharge)}`, cx, cy + S * 0.28, COLORS.green, S * 0.018);
+
+    drawButtons();
+};
+
+const renderDuelResult = () => {
+    const cx = W / 2;
+    const cy = H / 2;
+
+    ctx.fillStyle = 'rgba(5,5,10,0.9)';
+    ctx.fillRect(0, 0, W, H);
+
+    stateTimer++;
+    duelAnimTimer++;
+
+    // Animated clash
+    const progress = Math.min(1, duelAnimTimer / 30);
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+
+    // Player element flies in from left
+    const playerX = cx - S * 0.15 * easeOut;
+    const enemyX = cx + S * 0.15 * easeOut;
+    const clashY = cy - S * 0.05;
+
+    if (duelPlayerElement && ELEMENT_DATA[duelPlayerElement]) {
+        ctx.font = `${S * 0.08}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(ELEMENT_DATA[duelPlayerElement].symbol, playerX, clashY);
+    }
+    if (duelEnemyElement && ELEMENT_DATA[duelEnemyElement]) {
+        ctx.font = `${S * 0.08}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(ELEMENT_DATA[duelEnemyElement].symbol, enemyX, clashY);
+    }
+
+    // VS
+    if (progress > 0.5) {
+        const vsAlpha = Math.min(1, (progress - 0.5) * 4);
+        ctx.globalAlpha = vsAlpha;
+        drawGlowText('VS', cx, clashY, COLORS.gold, COLORS.gold, S * 0.04);
+        ctx.globalAlpha = 1;
+    }
+
+    // Result text
+    if (duelAnimTimer > 40) {
+        let resultText, resultColor;
+        if (duelResult === 'win') {
+            resultText = '✨ YOU WIN THE CELL! ✨';
+            resultColor = COLORS.green;
+            if (duelAnimTimer === 41) {
+                shake(8, 10);
+                spawnParticles(cx, cy + S * 0.08, COLORS.green, 25, 5, 50);
+            }
+        } else if (duelResult === 'lose') {
+            resultText = '💀 ENEMY CLAIMS THE CELL';
+            resultColor = COLORS.red;
+            if (duelAnimTimer === 41) shake(5, 8);
+        } else {
+            resultText = '🌀 DRAW — CELL STAYS EMPTY';
+            resultColor = COLORS.gold;
+        }
+
+        drawGlowText(resultText, cx, cy + S * 0.1, resultColor, resultColor, S * 0.025);
+
+        // Advantage info
+        if (duelPlayerElement && duelEnemyElement) {
+            const pName = ELEMENT_DATA[duelPlayerElement].name;
+            const eName = ELEMENT_DATA[duelEnemyElement].name;
+            drawText(`${pName} vs ${eName}`, cx, cy + S * 0.16, COLORS.gray, S * 0.018);
+        }
+    }
+
+    // Continue button
+    clearButtons();
+    if (duelAnimTimer > 60) {
+        const bw = S * 0.25;
+        const bh = S * 0.055;
+        addButton(cx - bw / 2, cy + S * 0.22, bw, bh, 'CONTINUE', () => {
+            // Check for round end
+            const playerWin = checkWin('player');
+            const enemyWin = checkWin('enemy');
+            const full = isBoardFull();
+
+            if (playerWin) {
+                // Flash winning line
+                endRound('player');
+            } else if (enemyWin) {
+                endRound('enemy');
+            } else if (full) {
+                endRound('draw');
+            } else {
+                // Next turn
+                playerTurn = !playerTurn;
+                if (!playerTurn) {
+                    // AI auto-picks cell
+                    stateTimer = 0;
+                }
+                state = STATE.BOARD;
+                stateTimer = 0;
+            }
+        });
+    }
+
+    drawButtons();
+};
+
+const renderRoundResult = () => {
+    const cx = W / 2;
+    const cy = H / 2;
+    stateTimer++;
+
+    ctx.fillStyle = 'rgba(5,5,10,0.92)';
+    ctx.fillRect(0, 0, W, H);
+
+    const playerWin = checkWin('player');
+    const enemyWin = checkWin('enemy');
+
+    let titleText, titleColor;
+    if (playerWin) {
+        titleText = '🏆 VICTORY! 🏆';
+        titleColor = COLORS.green;
+        if (stateTimer === 1) {
+            shake(12, 15);
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => spawnParticles(cx + (Math.random() - 0.5) * S * 0.3, cy - S * 0.1, COLORS.gold, 15, 4, 40), i * 100);
+            }
+        }
+    } else if (enemyWin) {
+        titleText = '💀 DEFEAT 💀';
+        titleColor = COLORS.red;
+    } else {
+        titleText = '🤝 STALEMATE 🤝';
+        titleColor = COLORS.gold;
+    }
+
+    drawGlowText(titleText, cx, cy - S * 0.15, titleColor, titleColor, S * 0.05);
+
+    // Stats
+    drawText(`Gold Earned: 💰 ${roundGold}`, cx, cy - S * 0.04, COLORS.gold, S * 0.025);
+    drawText(`Win Streak: ${save.streak}`, cx, cy + S * 0.01, save.streak >= 3 ? COLORS.green : COLORS.white, S * 0.02);
+    drawText(`Total Gold: ${save.gold}`, cx, cy + S * 0.05, COLORS.gray, S * 0.018);
+    drawText(`Difficulty: ${save.difficulty.toFixed(1)}`, cx, cy + S * 0.09, COLORS.gray, S * 0.016);
+
+    clearButtons();
+    const bw = S * 0.22;
+    const bh = S * 0.055;
+
+    addButton(cx - bw - S * 0.02, cy + S * 0.16, bw, bh, '🛒 SHOP', () => {
+        state = STATE.SHOP;
+        shopTab = 0;
+    }, COLORS.green, '#0a0a0f');
+
+    addButton(cx + S * 0.02, cy + S * 0.16, bw, bh, '⚔️ NEXT ROUND', () => {
+        startNewRound();
+    });
+
+    addButton(cx - bw / 2, cy + S * 0.24, bw, bh, '🏠 MENU', () => {
+        state = STATE.TITLE;
+    }, COLORS.gray, COLORS.white);
+
+    drawButtons();
+};
+
+const renderShop = () => {
+    const cx = W / 2;
+
+    drawGlowText('🛒 ARCANE SHOP', cx, H * 0.05, COLORS.gold, COLORS.gold, S * 0.04);
+    drawText(`Gold: 💰 ${save.gold}`, cx, H * 0.1, COLORS.gold, S * 0.025);
+
+    clearButtons();
+
+    // Tabs
+    const tabW = S * 0.18;
+    const tabH = S * 0.04;
+    const tabY = H * 0.14;
+    const tabs = ['Upgrades', 'Elements', 'Wands'];
+    const tabColors = [COLORS.gold, COLORS.green, COLORS.purple];
+
+    for (let i = 0; i < tabs.length; i++) {
+        const x = cx - (tabs.length * tabW + (tabs.length - 1) * 4) / 2 + i * (tabW + 4);
+        const active = shopTab === i;
+        drawRect(x, tabY, tabW, tabH, active ? tabColors[i] + '33' : COLORS.bgLight, 4);
+        drawRectOutline(x, tabY, tabW, tabH, active ? tabColors[i] : COLORS.gray, active ? 2 : 1, 4);
+        drawText(tabs[i], x + tabW / 2, tabY + tabH / 2, active ? tabColors[i] : COLORS.gray, S * 0.016);
+
+        if (mouseX >= x && mouseX <= x + tabW && mouseY >= tabY && mouseY <= tabY + tabH && mouseClicked) {
+            shopTab = i;
+            sfx.select();
+        }
+    }
+
+    const contentY = tabY + tabH + S * 0.03;
+
+    if (shopTab === 0) {
+        // Upgrades
+        const itemH = S * 0.07;
+        const itemW = S * 0.45;
+
+        for (let i = 0; i < UPGRADE_DEFS.length; i++) {
+            const def = UPGRADE_DEFS[i];
+            const level = save.upgrades[def.key];
+            const maxed = level >= def.maxLevel;
+            const cost = getUpgradeCost(def);
+            const canBuy = !maxed && save.gold >= cost;
+
+            const x = cx - itemW / 2;
+            const y = contentY + i * (itemH + S * 0.015);
+
+            if (y + itemH > H - S * 0.1) continue;
+
+            const hover = mouseX >= x && mouseX <= x + itemW && mouseY >= y && mouseY <= y + itemH;
+
+            drawRect(x, y, itemW, itemH, hover ? '#1a1a3f' : COLORS.bgLight, 6);
+            drawRectOutline(x, y, itemW, itemH, canBuy ? COLORS.gold + '66' : COLORS.darkGray, 1, 6);
+
+            // Info
+            drawTextBold(def.name, x + S * 0.02, y + itemH * 0.3, COLORS.white, S * 0.018, 'left');
+            drawText(def.desc, x + S * 0.02, y + itemH * 0.65, COLORS.gray, S * 0.013, 'left');
+
+            // Level
+            drawText(`Lv.${level}/${def.maxLevel}`, x + itemW - S * 0.15, y + itemH * 0.3, maxed ? COLORS.green : COLORS.white, S * 0.016);
+
+            // Buy button
+            if (!maxed) {
+                const buyW = S * 0.1;
+                const buyH = itemH * 0.5;
+                const buyX = x + itemW - buyW - S * 0.01;
+                const buyY = y + itemH * 0.45;
+
+                addButton(buyX, buyY, buyW, buyH, `💰${cost}`, () => {
+                    if (save.gold >= cost) {
+                        save.gold -= cost;
+                        save.upgrades[def.key]++;
+                        sfx.buy();
+                        writeSave();
+                    }
+                }, canBuy ? COLORS.gold : COLORS.gray, '#0a0a0f');
+            } else {
+                drawText('MAX', x + itemW - S * 0.06, y + itemH * 0.65, COLORS.green, S * 0.014);
+            }
+        }
+    } else if (shopTab === 1) {
+        // Elements unlock
+        const elements = ['earth', 'wind', 'void'];
+        const costs = [80, 150, 300];
+        const itemH = S * 0.1;
+        const itemW = S * 0.4;
+
+        for (let i = 0; i < elements.length; i++) {
+            const el = elements[i];
+            const ed = ELEMENT_DATA[el];
+            const unlocked = save.unlockedElements.includes(el);
+            const cost = costs[i];
+            const canBuy = !unlocked && save.gold >= cost;
+
+            const x = cx - itemW / 2;
+            const y = contentY + i * (itemH + S * 0.02);
+
+            const hover = mouseX >= x && mouseX <= x + itemW && mouseY >= y && mouseY <= y + itemH;
+
+            drawRect(x, y, itemW, itemH, hover ? '#1a1a3f' : COLORS.bgLight, 8);
+            drawRectOutline(x, y, itemW, itemH, unlocked ? ed.color : canBuy ? COLORS.gold + '66' : COLORS.darkGray, unlocked ? 2 : 1, 8);
+
+            ctx.font = `${itemH * 0.4}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(ed.symbol, x + itemH * 0.5, y + itemH * 0.45);
+
+            drawTextBold(ed.name, x + itemH + S * 0.02, y + itemH * 0.3, unlocked ? ed.color : COLORS.white, S * 0.02, 'left');
+            drawText(ed.desc, x + itemH + S * 0.02, y + itemH * 0.65, COLORS.gray, S * 0.013, 'left');
+
+            if (unlocked) {
+                drawText('✓ UNLOCKED', x + itemW - S * 0.08, y + itemH * 0.5, COLORS.green, S * 0.014);
+            } else {
+                const buyW = S * 0.1;
+                const buyH = itemH * 0.45;
+                const buyX = x + itemW - buyW - S * 0.01;
+                const buyY = y + itemH * 0.3;
+
+                addButton(buyX, buyY, buyW, buyH, `💰${cost}`, () => {
+                    if (save.gold >= cost) {
+                        save.gold -= cost;
+                        save.unlockedElements.push(el);
+                        sfx.unlock();
+                        spawnElementParticles(cx, y + itemH / 2, el);
+                        writeSave();
+                        checkAchievements();
+                    }
+                }, canBuy ? COLORS.gold : COLORS.gray, '#0a0a0f');
+            }
+        }
+    } else if (shopTab === 2) {
+        // Wand info
+        const elements = save.unlockedElements;
+        const itemH = S * 0.08;
+        const itemW = S * 0.4;
+
+        for (let i = 0; i < elements.length; i++) {
+            const el = elements[i];
+            const ed = ELEMENT_DATA[el];
+            const level = save.wandLevels[el];
+            const xp = save.wandXP[el];
+            const xpNeeded = wandXPNeeded(level);
+
+            const x = cx - itemW / 2;
+            const y = contentY + i * (itemH + S * 0.015);
+
+            if (y + itemH > H - S * 0.1) continue;
+
+            drawRect(x, y, itemW, itemH, COLORS.bgLight, 6);
+            drawRectOutline(x, y, itemW, itemH, ed.color + '44', 1, 6);
+
+            ctx.font = `${itemH * 0.35}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(ed.symbol, x + itemH * 0.5, y + itemH * 0.4);
+
+            drawTextBold(`${ed.name} Wand`, x + itemH + S * 0.01, y + itemH * 0.3, ed.color, S * 0.018, 'left');
+            drawText(`Level ${level}`, x + itemH + S * 0.01, y + itemH * 0.6, COLORS.white, S * 0.014, 'left');
+
+            // XP bar
+            drawBar(x + itemW * 0.5, y + itemH * 0.25, itemW * 0.35, S * 0.01, xp, xpNeeded, ed.color);
+            drawText(`${xp}/${xpNeeded} XP`, x + itemW * 0.5 + itemW * 0.18, y + itemH * 0.5, COLORS.gray, S * 0.012);
+
+            // Beats info
+            drawText(`Beats: ${ed.beats.map(b => ELEMENT_DATA[b].symbol).join(' ')}`, x + itemW * 0.5 + itemW * 0.18, y + itemH * 0.72, COLORS.gray, S * 0.012);
+        }
+    }
+
+    // Back button
+    const bw = S * 0.2;
+    const bh = S * 0.05;
+    addButton(cx - bw / 2, H - S * 0.08, bw, bh, '← BACK', () => {
+        state = save.roundsWon > 0 || save.roundsLost > 0 ? STATE.ROUND_RESULT : STATE.TITLE;
+        if (totalRoundsPlayed > 0 && state === STATE.TITLE) state = STATE.TITLE;
+    });
+
+    drawButtons();
+};
+
+const renderAchievements = () => {
+    const cx = W / 2;
+
+    drawGlowText('🏆 ACHIEVEMENTS', cx, H * 0.06, COLORS.gold, COLORS.gold, S * 0.04);
+
+    const itemH = S * 0.06;
+    const itemW = S * 0.45;
+
+    for (let i = 0; i < ACHIEVEMENTS.length; i++) {
+        const a = ACHIEVEMENTS[i];
+        const unlocked = save.achievements.includes(a.id);
+
+        const x = cx - itemW / 2;
+        const y = H * 0.13 + i * (itemH + S * 0.01);
+
+        if (y + itemH > H - S * 0.1) continue;
+
+        drawRect(x, y, itemW, itemH, unlocked ? '#1a2a1a' : COLORS.bgLight, 6);
+        drawRectOutline(x, y, itemW, itemH, unlocked ? COLORS.green + '44' : COLORS.darkGray, 1, 6);
+
+        const icon = unlocked ? '✅' : '🔒';
+        drawText(icon, x + S * 0.025, y + itemH * 0.5, COLORS.white, S * 0.02, 'center');
+        drawTextBold(a.name, x + S * 0.05, y + itemH * 0.35, unlocked ? COLORS.green : COLORS.gray, S * 0.016, 'left');
+        drawText(a.desc, x + S * 0.05, y + itemH * 0.7, unlocked ? COLORS.white : COLORS.gray, S * 0.012, 'left');
+        drawText('+25💰', x + itemW - S * 0.04, y + itemH * 0.5, unlocked ? COLORS.gold : COLORS.gray, S * 0.012);
+    }
+
+    clearButtons();
+    const bw = S * 0.2;
+    const bh = S * 0.05;
+    addButton(cx - bw / 2, H - S * 0.08, bw, bh, '← BACK', () => { state = STATE.TITLE; });
+    drawButtons();
+};
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN GAME LOOP
+// ═══════════════════════════════════════════════════════════════
+
+let lastTime = performance.now();
+
+const gameLoop = (now) => {
+    const dt = Math.min(50, now - lastTime) / 16.667;
+    lastTime = now;
+    globalTime++;
+
+    // ── Clear ──
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // ── Screen Shake ──
+    if (shakeDur > 0) {
+        shakeDur -= dt;
+        shakeX = (Math.random() - 0.5) * shakeMag * (shakeDur / 15);
+        shakeY = (Math.random() - 0.5) * shakeMag * (shakeDur / 15);
+        ctx.save();
+        ctx.translate(shakeX, shakeY);
+    }
+
+    // ── Render Current State ──
+    switch (state) {
+        case STATE.TITLE: renderTitle(); break;
+        case STATE.WAND_SELECT: renderWandSelect(); break;
+        case STATE.BOARD: renderBoard(); break;
+        case STATE.DUEL: renderDuel(); break;
+        case STATE.DUEL_RESULT: renderDuelResult(); break;
+        case STATE.ROUND_RESULT: renderRoundResult(); break;
+        case STATE.SHOP: renderShop(); break;
+        case STATE.ACHIEVEMENTS: renderAchievements(); break;
+    }
+
+    // ── Particles ──
+    for (let i = particles.length - 1; i >= 0; i--) {
+        particles[i].update();
+        particles[i].draw();
+        if (!particles[i].alive) particles.splice(i, 1);
+    }
+
+    // ── Float Texts ──
+    for (let i = floatTexts.length - 1; i >= 0; i--) {
+        const ft = floatTexts[i];
+        ft.life--;
+        ft.y -= 0.5;
+        const alpha = ft.life / ft.maxLife;
+        ctx.globalAlpha = alpha;
+        drawTextBold(ft.text, ft.x, ft.y, ft.color, ft.size);
+        ctx.globalAlpha = 1;
+        if (ft.life <= 0) floatTexts.splice(i, 1);
+    }
+
+    // ── Achievement Notifications ──
+    for (let i = newAchievements.length - 1; i >= 0; i--) {
+        const a = newAchievements[i];
+        a.timer--;
+        const alpha = Math.min(1, a.timer / 30, (180 - a.timer + 30) / 30);
+        const y = H * 0.05 + (newAchievements.length - 1 - i) * S * 0.06;
+
+        ctx.globalAlpha = alpha;
+        drawRect(W / 2 - S * 0.2, y, S * 0.4, S * 0.05, '#1a2a1a', 8);
+        drawRectOutline(W / 2 - S * 0.2, y, S * 0.4, S * 0.05, COLORS.green, 2, 8);
+        drawText(`🏆 ${a.name}`, W / 2, y + S * 0.015, COLORS.green, S * 0.016);
+        drawText(a.desc, W / 2, y + S * 0.035, COLORS.white, S * 0.012);
+        ctx.globalAlpha = 1;
+
+        if (a.timer <= 0) newAchievements.splice(i, 1);
+    }
+
+    // ── Restore shake ──
+    if (shakeDur > 0) ctx.restore();
+    if (shakeDur <= 0) { shakeX = 0; shakeY = 0; }
+
+    // ── Reset click ──
+    mouseClicked = false;
+
+    requestAnimationFrame(gameLoop);
+};
+
+requestAnimationFrame(gameLoop);
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

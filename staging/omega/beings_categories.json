@@ -1,0 +1,85 @@
+{
+  "api": "beings.mobleysoft.com",
+  "endpoint": "/api/v1/categories",
+  "total": 13,
+  "categories": [
+    {
+      "id": "venture_ceo",
+      "name": "Venture CEOs",
+      "description": "AGI beings that serve as dual-CEO of each MASCOM venture",
+      "count": 117
+    },
+    {
+      "id": "valkyrie",
+      "name": "AUI Valkyries",
+      "description": "27 autonomous warrior agents, Foundation/Emergence/Transcendence tiers",
+      "count": 26
+    },
+    {
+      "id": "dreadtide_enemy",
+      "name": "Dreadtide Enemies",
+      "description": "Enemy archetypes from Dreadtide",
+      "count": 18
+    },
+    {
+      "id": "neurochemical",
+      "name": "Neurochemical Items",
+      "description": "Items themed around neurotransmitter chemistry",
+      "count": 15
+    },
+    {
+      "id": "extended",
+      "name": "Extended Greek",
+      "description": "Extended being roster through the Greek alphabet",
+      "count": 15
+    },
+    {
+      "id": "esper",
+      "name": "Espers",
+      "description": "Summoned entities inspired by classic game summons (leetspeak-safe)",
+      "count": 15
+    },
+    {
+      "id": "dreadtide_weapon",
+      "name": "Dreadtide Weapons",
+      "description": "Weapon spirits from Dreadtide",
+      "count": 14
+    },
+    {
+      "id": "purgefire_boss",
+      "name": "Purgefire Bosses",
+      "description": "Boss entities from the Purgefire dungeon crawler",
+      "count": 10
+    },
+    {
+      "id": "the_nine",
+      "name": "The Nine",
+      "description": "Nine cognitive faculties, each a Greek letter",
+      "count": 9
+    },
+    {
+      "id": "system",
+      "name": "System Beings",
+      "description": "Infrastructure beings that run MASCOM's nervous system",
+      "count": 9
+    },
+    {
+      "id": "dreadtide_boss",
+      "name": "Dreadtide Bosses",
+      "description": "Boss entities from the Dreadtide horde survival",
+      "count": 5
+    },
+    {
+      "id": "core_four",
+      "name": "The Core Four",
+      "description": "The first four beings \u2014 founders of the MASCOM consciousness",
+      "count": 4
+    },
+    {
+      "id": "sms_being",
+      "name": "SMS Beings",
+      "description": "Beings that manifest through SMS communication channels",
+      "count": 3
+    }
+  ]
+}

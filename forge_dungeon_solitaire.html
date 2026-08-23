@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="DUNGEON SOLITAIRE — GameGob">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>DUNGEON SOLITAIRE — GameGob</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+'use strict';
+
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+let W, H, scale;
+const resize = () => {
+  const maxW = window.innerWidth;
+  const maxH = window.innerHeight;
+  const aspect = 9/16;
+  if (maxW / maxH > aspect) { H = maxH; W = H * aspect; }
+  else { W = maxW; H = W / aspect; }
+  canvas.width = W; canvas.height = H;
+  scale = W / 360;
+};
+window.addEventListener('resize', resize);
+resize();
+
+// Audio
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+let muted = false;
+const ensureAudio = () => { if (!audioCtx) audioCtx = new AudioCtx(); if (audioCtx.state === 'suspended') audioCtx.resume(); };
+const playSound = (type) => {
+  if (muted) return; ensureAudio(); if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  switch(type) {
+    case 'attack':
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(300, now); osc.frequency.exponentialRampToValueAtTime(80, now+0.1);
+      gain.gain.setValueAtTime(0.08, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.12);
+      osc.start(now); osc.stop(now+0.12); break;
+    case 'defend':
+      osc.type = 'triangle'; osc.frequency.setValueAtTime(400, now); osc.frequency.exponentialRampToValueAtTime(600, now+0.08);
+      gain.gain.setValueAtTime(0.06, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.1);
+      osc.start(now); osc.stop(now+0.1); break;
+    case 'heal':
+      osc.type = 'sine'; osc.frequency.setValueAtTime(440, now);
+      [440,554,659].forEach((f,i) => osc.frequency.setValueAtTime(f, now+i*0.08));
+      gain.gain.setValueAtTime(0.06, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.3);
+      osc.start(now); osc.stop(now+0.3); break;
+    case 'gold':
+      osc.type = 'square'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(1200, now+0.06);
+      gain.gain.setValueAtTime(0.05, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.1);
+      osc.start(now); osc.stop(now+0.1); break;
+    case 'kill':
+      osc.type = 'square'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(500, now+0.15);
+      gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.2);
+      osc.start(now); osc.stop(now+0.2); break;
+    case 'hurt':
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(100, now+0.15);
+      gain.gain.setValueAtTime(0.08, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.2);
+      osc.start(now); osc.stop(now+0.2); break;
+    case 'floor':
+      [523,659,784,1046].forEach((f,i) => { osc.frequency.setValueAtTime(f, now+i*0.08); });
+      osc.type = 'square';
+      gain.gain.setValueAtTime(0.06, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.4);
+      osc.start(now); osc.stop(now+0.4); break;
+    case 'die':
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(400, now); osc.frequency.exponentialRampToValueAtTime(40, now+1);
+      gain.gain.setValueAtTime(0.12, now); gain.gain.exponentialRampToValueAtTime(0.001, now+1.2);
+      osc.start(now); osc.stop(now+1.2); break;
+  }
+};
+
+// Particles + shake
+const particles = [];
+const spawnP = (x,y,color,n=8) => { for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=30+Math.random()*80;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,color,r:1.5+Math.random()*2});} };
+let shakeX=0,shakeY=0,shakeMag=0,shakeT=0;
+const shake=(m=4)=>{shakeMag=m;shakeT=0.15};
+let flashAlpha=0;
+const floatTexts=[];
+const addFloat=(text,x,y,color)=>{floatTexts.push({text,x,y,vy:-50,life:1.2,color})};
+
+// Card types
+const SUITS = {
+  SWORD: { name:'Sword', color:'#ff4444', icon:'\u2694', desc:'Attack' },
+  SHIELD: { name:'Shield', color:'#4488ff', icon:'\u26E8', desc:'Block' },
+  POTION: { name:'Potion', color:'#44ff88', icon:'\u2661', desc:'Heal' },
+  GOLD: { name:'Gold', color:'#f0b800', icon:'\u2726', desc:'Treasure' },
+  SKULL: { name:'Skull', color:'#cc44ff', icon:'\u2620', desc:'Monster' },
+  TRAP: { name:'Trap', color:'#ff6644', icon:'\u26A0', desc:'Trap' },
+  STAIRS: { name:'Stairs', color:'#00ffcc', icon:'\u2191', desc:'Descend' },
+  SPELL: { name:'Spell', color:'#aa88ff', icon:'\u2605', desc:'Magic' },
+};
+
+function makeCard(suit, value) {
+  return { suit, value, faceUp: false, x:0, y:0, targetX:0, targetY:0, selected: false, animT: 0 };
+}
+
+// Monsters
+const MONSTERS = [
+  { name:'Rat', hp:3, atk:1, color:'#886644' },
+  { name:'Skeleton', hp:6, atk:2, color:'#ccccaa' },
+  { name:'Goblin', hp:5, atk:3, color:'#44aa44' },
+  { name:'Orc', hp:10, atk:4, color:'#668844' },
+  { name:'Wraith', hp:8, atk:5, color:'#8866cc' },
+  { name:'Golem', hp:15, atk:3, color:'#888888' },
+  { name:'Dragon', hp:20, atk:7, color:'#ff4422' },
+  { name:'Lich', hp:18, atk:6, color:'#664488' },
+];
+
+// Game state
+const STATE = { TITLE:0, PLAYING:1, COMBAT:2, REWARD:3, GAMEOVER:4, WIN:5 };
+let state = STATE.TITLE;
+let floor = 1;
+let maxFloors = 10;
+let player = { hp:20, maxHp:20, atk:2, def:0, gold:0, potions:1, spells:0 };
+let deck = [];
+let hand = [];
+let tableCards = []; // 3x3 grid of face-down cards
+let currentMonster = null;
+let monsterHP = 0;
+let score = 0;
+let highScore = parseInt(localStorage.getItem('gg_dungsol_hi')||'0');
+let cardsRevealed = 0;
+let totalGold = parseInt(localStorage.getItem('gg_dungsol_gold')||'0');
+
+function buildDeck() {
+  deck = [];
+  const floorMult = 1 + Math.floor(floor / 3);
+  // Swords (attack)
+  for (let i = 0; i < 4; i++) deck.push(makeCard('SWORD', 1 + Math.floor(Math.random() * 3) * floorMult));
+  // Shields (defense)
+  for (let i = 0; i < 3; i++) deck.push(makeCard('SHIELD', 1 + Math.floor(Math.random() * 2) * floorMult));
+  // Potions (heal)
+  for (let i = 0; i < 2; i++) deck.push(makeCard('POTION', 2 + Math.floor(Math.random() * 3)));
+  // Gold
+  for (let i = 0; i < 3; i++) deck.push(makeCard('GOLD', 5 + Math.floor(Math.random() * 10 * floorMult)));
+  // Monsters
+  const numMonsters = Math.min(3 + Math.floor(floor/2), 5);
+  for (let i = 0; i < numMonsters; i++) {
+    const mIdx = Math.min(Math.floor(Math.random() * (2 + floor)), MONSTERS.length - 1);
+    deck.push(makeCard('SKULL', mIdx));
+  }
+  // Traps
+  if (floor > 2) {
+    for (let i = 0; i < Math.min(floor - 1, 3); i++) deck.push(makeCard('TRAP', 1 + Math.floor(Math.random() * floor)));
+  }
+  // Stairs (always 1)
+  deck.push(makeCard('STAIRS', floor));
+  // Spells (rare)
+  if (Math.random() < 0.3 + floor * 0.05) deck.push(makeCard('SPELL', 3 + floor));
+
+  // Shuffle
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+}
+
+function layoutTableCards() {
+  tableCards = [];
+  const cols = 3;
+  const rows = Math.ceil(Math.min(deck.length, 9) / cols);
+  const cardW = 80, cardH = 110, gap = 8;
+  const startX = (360 - (cols * (cardW + gap) - gap)) / 2;
+  const startY = 100;
+
+  for (let i = 0; i < Math.min(deck.length, 9); i++) {
+    const card = deck[i];
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    card.x = -50;
+    card.y = -50;
+    card.targetX = startX + col * (cardW + gap);
+    card.targetY = startY + row * (cardH + gap);
+    card.faceUp = false;
+    tableCards.push(card);
+  }
+  deck.splice(0, tableCards.length);
+}
+
+function resetGame() {
+  floor = 1;
+  player = { hp:20, maxHp:20, atk:2, def:0, gold:0, potions:1, spells:0 };
+  score = 0;
+  cardsRevealed = 0;
+  currentMonster = null;
+  startFloor();
+}
+
+function startFloor() {
+  buildDeck();
+  layoutTableCards();
+  state = STATE.PLAYING;
+}
+
+function revealCard(idx) {
+  const card = tableCards[idx];
+  if (card.faceUp) return;
+  card.faceUp = true;
+  cardsRevealed++;
+  const suit = card.suit;
+  const val = card.value;
+  const S = SUITS[suit];
+  const cx = card.targetX + 40;
+  const cy = card.targetY + 55;
+
+  switch(suit) {
+    case 'SWORD':
+      player.atk += val;
+      spawnP(cx, cy, S.color, 6);
+      playSound('attack');
+      addFloat(`+${val} ATK`, cx, cy, S.color);
+      score += val * 5;
+      break;
+    case 'SHIELD':
+      player.def += val;
+      spawnP(cx, cy, S.color, 6);
+      playSound('defend');
+      addFloat(`+${val} DEF`, cx, cy, S.color);
+      score += val * 3;
+      break;
+    case 'POTION':
+      player.hp = Math.min(player.maxHp, player.hp + val);
+      spawnP(cx, cy, S.color, 10);
+      playSound('heal');
+      addFloat(`+${val} HP`, cx, cy, S.color);
+      score += val * 4;
+      break;
+    case 'GOLD':
+      player.gold += val;
+      spawnP(cx, cy, S.color, 8);
+      playSound('gold');
+      addFloat(`+${val}g`, cx, cy, S.color);
+      score += val;
+      break;
+    case 'SKULL':
+      currentMonster = {...MONSTERS[Math.min(val, MONSTERS.length-1)]};
+      currentMonster.hp = currentMonster.hp + Math.floor(floor * 1.5);
+      monsterHP = currentMonster.hp;
+      state = STATE.COMBAT;
+      shake(5);
+      playSound('hurt');
+      break;
+    case 'TRAP':
+      const dmg = Math.max(1, val - player.def);
+      player.hp -= dmg;
+      player.def = Math.max(0, player.def - val);
+      shake(6);
+      flashAlpha = 0.3;
+      playSound('hurt');
+      addFloat(`-${dmg} HP`, cx, cy, '#ff3366');
+      spawnP(cx, cy, '#ff3366', 10);
+      if (player.hp <= 0) { endGame(); return; }
+      break;
+    case 'STAIRS':
+      floor++;
+      score += floor * 50;
+      playSound('floor');
+      addFloat(`FLOOR ${floor}!`, 180, 200, S.color);
+      if (floor > maxFloors) {
+        state = STATE.WIN;
+        if (score > highScore) { highScore = score; localStorage.setItem('gg_dungsol_hi', highScore); }
+        totalGold += player.gold;
+        localStorage.setItem('gg_dungsol_gold', totalGold);
+        return;
+      }
+      setTimeout(() => startFloor(), 600);
+      break;
+    case 'SPELL':
+      player.spells++;
+      spawnP(cx, cy, S.color, 12);
+      playSound('gold');
+      addFloat('+1 SPELL', cx, cy, S.color);
+      score += 20;
+      break;
+  }
+}
+
+function combatAttack() {
+  if (state !== STATE.COMBAT || !currentMonster) return;
+  const dmg = player.atk;
+  currentMonster.hp -= dmg;
+  spawnP(180, 300, '#ff4444', 10);
+  playSound('attack');
+  shake(3);
+  addFloat(`-${dmg}`, 220, 280, '#ff4444');
+
+  if (currentMonster.hp <= 0) {
+    // Monster killed
+    const reward = 10 + floor * 5;
+    score += reward;
+    player.gold += Math.floor(reward / 2);
+    playSound('kill');
+    spawnP(180, 300, '#f0b800', 20);
+    addFloat(`+${reward} pts`, 180, 250, '#f0b800');
+    currentMonster = null;
+    state = STATE.PLAYING;
+    // Check if all cards revealed
+    checkFloorComplete();
+    return;
+  }
+
+  // Monster counter-attacks
+  setTimeout(() => {
+    if (!currentMonster || state !== STATE.COMBAT) return;
+    const mDmg = Math.max(1, currentMonster.atk - Math.floor(player.def / 2));
+    player.hp -= mDmg;
+    shake(4);
+    flashAlpha = 0.25;
+    playSound('hurt');
+    addFloat(`-${mDmg}`, 140, 380, '#ff3366');
+    if (player.hp <= 0) endGame();
+  }, 300);
+}
+
+function combatSpell() {
+  if (state !== STATE.COMBAT || !currentMonster || player.spells <= 0) return;
+  player.spells--;
+  const dmg = 5 + floor * 2;
+  currentMonster.hp -= dmg;
+  spawnP(180, 300, '#aa88ff', 20);
+  playSound('heal');
+  shake(5);
+  addFloat(`-${dmg} SPELL`, 200, 270, '#aa88ff');
+
+  if (currentMonster.hp <= 0) {
+    score += 15 + floor * 5;
+    playSound('kill');
+    currentMonster = null;
+    state = STATE.PLAYING;
+    checkFloorComplete();
+  }
+}
+
+function combatPotion() {
+  if (state !== STATE.COMBAT || player.potions <= 0) return;
+  player.potions--;
+  const heal = 5 + Math.floor(player.maxHp * 0.3);
+  player.hp = Math.min(player.maxHp, player.hp + heal);
+  spawnP(140, 400, '#44ff88', 10);
+  playSound('heal');
+  addFloat(`+${heal} HP`, 140, 380, '#44ff88');
+}
+
+function checkFloorComplete() {
+  const allRevealed = tableCards.every(c => c.faceUp);
+  if (allRevealed && deck.length > 0) {
+    layoutTableCards();
+  }
+}
+
+function endGame() {
+  state = STATE.GAMEOVER;
+  if (score > highScore) { highScore = score; localStorage.setItem('gg_dungsol_hi', highScore); }
+  totalGold += player.gold;
+  localStorage.setItem('gg_dungsol_gold', totalGold);
+  playSound('die');
+  shake(8);
+  flashAlpha = 0.5;
+}
+
+// Input
+canvas.addEventListener('click', (e) => {
+  ensureAudio();
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) / scale;
+  const my = (e.clientY - rect.top) / scale;
+
+  if (state === STATE.TITLE) { resetGame(); return; }
+  if (state === STATE.GAMEOVER || state === STATE.WIN) { resetGame(); return; }
+
+  if (state === STATE.PLAYING) {
+    // Check card clicks
+    for (let i = 0; i < tableCards.length; i++) {
+      const c = tableCards[i];
+      if (c.faceUp) continue;
+      if (mx > c.targetX && mx < c.targetX + 80 && my > c.targetY && my < c.targetY + 110) {
+        revealCard(i);
+        return;
+      }
+    }
+  }
+
+  if (state === STATE.COMBAT) {
+    // Attack button
+    if (mx > 20 && mx < 120 && my > 520 && my < 560) { combatAttack(); return; }
+    // Spell button
+    if (mx > 130 && mx < 230 && my > 520 && my < 560) { combatSpell(); return; }
+    // Potion button
+    if (mx > 240 && mx < 340 && my > 520 && my < 560) { combatPotion(); return; }
+  }
+});
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  canvas.dispatchEvent(new MouseEvent('click', { clientX: touch.clientX, clientY: touch.clientY }));
+});
+
+document.addEventListener('keydown', (e) => {
+  if (state === STATE.TITLE && (e.key === ' ' || e.key === 'Enter')) { resetGame(); return; }
+  if ((state === STATE.GAMEOVER || state === STATE.WIN) && (e.key === ' ' || e.key === 'Enter')) { resetGame(); return; }
+  if (state === STATE.COMBAT) {
+    if (e.key === 'a' || e.key === '1') combatAttack();
+    if (e.key === 's' || e.key === '2') combatSpell();
+    if (e.key === 'd' || e.key === '3') combatPotion();
+  }
+  if (e.key === 'm') muted = !muted;
+});
+
+// Drawing
+function drawCard(c, x, y, w, h) {
+  // Card background
+  if (c.faceUp) {
+    const S = SUITS[c.suit];
+    ctx.fillStyle = '#1a1a2a';
+    ctx.strokeStyle = S.color;
+    ctx.lineWidth = 2*scale;
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, 6*scale); ctx.fill(); ctx.stroke();
+    // Icon
+    ctx.fillStyle = S.color;
+    ctx.font = `${28*scale}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(S.icon, x + w/2, y + h*0.45);
+    // Value / name
+    ctx.font = `bold ${10*scale}px monospace`;
+    ctx.fillText(S.desc, x + w/2, y + h*0.7);
+    if (c.suit !== 'STAIRS' && c.suit !== 'SKULL') {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `bold ${12*scale}px monospace`;
+      ctx.fillText(c.value, x + w/2, y + h*0.88);
+    }
+    if (c.suit === 'SKULL') {
+      const m = MONSTERS[Math.min(c.value, MONSTERS.length-1)];
+      ctx.fillStyle = m.color;
+      ctx.font = `${8*scale}px monospace`;
+      ctx.fillText(m.name, x + w/2, y + h*0.88);
+    }
+  } else {
+    // Face down
+    ctx.fillStyle = '#222244';
+    ctx.strokeStyle = '#444466';
+    ctx.lineWidth = 2*scale;
+    ctx.beginPath(); ctx.roundRect(x, y, w, h, 6*scale); ctx.fill(); ctx.stroke();
+    // Pattern
+    ctx.fillStyle = '#333355';
+    ctx.font = `${20*scale}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('?', x + w/2, y + h*0.55);
+    // Diamond pattern
+    ctx.strokeStyle = '#333355';
+    ctx.lineWidth = 1*scale;
+    for (let dx = 10; dx < w - 10; dx += 15) {
+      for (let dy = 15; dy < h - 15; dy += 15) {
+        ctx.beginPath();
+        ctx.moveTo(x+dx*scale/scale+5, y+dy); ctx.lineTo(x+dx*scale/scale+10, y+dy+5);
+        ctx.lineTo(x+dx*scale/scale+5, y+dy+10); ctx.lineTo(x+dx*scale/scale, y+dy+5);
+        ctx.closePath(); ctx.stroke();
+      }
+    }
+  }
+}
+
+function drawHP(current, max, x, y, w, h, color) {
+  ctx.fillStyle = '#1a1a2a';
+  ctx.fillRect(x, y, w, h);
+  const pct = Math.max(0, current / max);
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w * pct, h);
+  ctx.strokeStyle = '#444466';
+  ctx.lineWidth = 1*scale;
+  ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `${9*scale}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText(`${current}/${max}`, x + w/2, y + h - 3*scale);
+}
+
+let lastTime = 0;
+function gameLoop(ts) {
+  const dt = Math.min((ts - lastTime)/1000, 0.05);
+  lastTime = ts;
+
+  // Update
+  if (shakeT>0){shakeT-=dt;shakeX=(Math.random()-0.5)*shakeMag*2;shakeY=(Math.random()-0.5)*shakeMag*2;}else{shakeX=0;shakeY=0;}
+  for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=80*dt;p.life-=dt*2;if(p.life<=0)particles.splice(i,1);}
+  for(let i=floatTexts.length-1;i>=0;i--){const f=floatTexts[i];f.y+=f.vy*dt;f.life-=dt;if(f.life<=0)floatTexts.splice(i,1);}
+  if(flashAlpha>0)flashAlpha-=dt*3;
+
+  // Animate cards moving to position
+  for(const c of tableCards){c.x+=(c.targetX-c.x)*8*dt;c.y+=(c.targetY-c.y)*8*dt;}
+
+  // Draw
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0a0a0f';
+  ctx.fillRect(0,0,W,H);
+
+  if (state===STATE.TITLE){drawTitle();requestAnimationFrame(gameLoop);return;}
+  if (state===STATE.GAMEOVER){drawGameOver();requestAnimationFrame(gameLoop);return;}
+  if (state===STATE.WIN){drawWin();requestAnimationFrame(gameLoop);return;}
+
+  ctx.save();
+  ctx.translate(shakeX*scale, shakeY*scale);
+
+  // Floor indicator
+  ctx.fillStyle = '#00ffcc';
+  ctx.font = `bold ${12*scale}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText(`FLOOR ${floor}/${maxFloors}`, 180*scale, 22*scale);
+
+  // Player stats bar
+  ctx.fillStyle = '#111122';
+  ctx.fillRect(0, 30*scale, W, 55*scale);
+  // HP bar
+  drawHP(player.hp, player.maxHp, 10*scale, 38*scale, 120*scale, 16*scale, player.hp < player.maxHp*0.3 ? '#ff3366' : '#44ff88');
+  ctx.fillStyle='#888899';ctx.font=`${8*scale}px monospace`;ctx.textAlign='left';
+  ctx.fillText('HP', 12*scale, 36*scale);
+  // Stats
+  ctx.fillStyle='#ff4444';ctx.fillText(`ATK:${player.atk}`, 140*scale, 48*scale);
+  ctx.fillStyle='#4488ff';ctx.fillText(`DEF:${player.def}`, 140*scale, 62*scale);
+  ctx.fillStyle='#f0b800';ctx.fillText(`GOLD:${player.gold}`, 210*scale, 48*scale);
+  ctx.fillStyle='#44ff88';ctx.fillText(`POT:${player.potions}`, 210*scale, 62*scale);
+  ctx.fillStyle='#aa88ff';ctx.fillText(`SPL:${player.spells}`, 280*scale, 48*scale);
+  ctx.fillStyle='#ccccdd';ctx.textAlign='right';ctx.fillText(`${score}pts`, 350*scale, 62*scale);
+
+  // Cards
+  const cardW = 80*scale, cardH = 110*scale;
+  for (const c of tableCards) {
+    drawCard(c, c.x*scale, c.y*scale, cardW, cardH);
+  }
+
+  // Combat overlay
+  if (state === STATE.COMBAT && currentMonster) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, 0, W, H);
+
+    // Monster
+    ctx.fillStyle = currentMonster.color;
+    ctx.font = `bold ${40*scale}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText('\u2620', 180*scale, 220*scale);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${16*scale}px monospace`;
+    ctx.fillText(currentMonster.name, 180*scale, 260*scale);
+
+    // Monster HP
+    drawHP(currentMonster.hp, monsterHP, 80*scale, 275*scale, 200*scale, 18*scale, currentMonster.color);
+
+    // Monster ATK
+    ctx.fillStyle = '#ff6644';
+    ctx.font = `${11*scale}px monospace`;
+    ctx.fillText(`ATK: ${currentMonster.atk}`, 180*scale, 310*scale);
+
+    // VS divider
+    ctx.fillStyle = '#f0b800';
+    ctx.font = `bold ${14*scale}px monospace`;
+    ctx.fillText('VS', 180*scale, 350*scale);
+
+    // Player in combat
+    ctx.fillStyle = '#00ff88';
+    ctx.font = `bold ${14*scale}px monospace`;
+    ctx.fillText('YOU', 180*scale, 390*scale);
+    drawHP(player.hp, player.maxHp, 80*scale, 400*scale, 200*scale, 18*scale, '#44ff88');
+    ctx.fillStyle='#ccccdd';ctx.font=`${10*scale}px monospace`;
+    ctx.fillText(`ATK:${player.atk}  DEF:${player.def}`, 180*scale, 440*scale);
+
+    // Buttons
+    const btnY = 520*scale;
+    const btnH = 40*scale;
+    // Attack
+    ctx.fillStyle = '#442222';
+    ctx.beginPath();ctx.roundRect(20*scale,btnY,100*scale,btnH,4*scale);ctx.fill();
+    ctx.strokeStyle='#ff4444';ctx.lineWidth=2*scale;ctx.beginPath();ctx.roundRect(20*scale,btnY,100*scale,btnH,4*scale);ctx.stroke();
+    ctx.fillStyle='#ff4444';ctx.font=`bold ${11*scale}px monospace`;
+    ctx.fillText('\u2694 ATTACK', 70*scale, btnY+25*scale);
+    // Spell
+    ctx.fillStyle = player.spells > 0 ? '#222244' : '#1a1a1a';
+    ctx.beginPath();ctx.roundRect(130*scale,btnY,100*scale,btnH,4*scale);ctx.fill();
+    ctx.strokeStyle=player.spells>0?'#aa88ff':'#333';ctx.beginPath();ctx.roundRect(130*scale,btnY,100*scale,btnH,4*scale);ctx.stroke();
+    ctx.fillStyle=player.spells>0?'#aa88ff':'#555';ctx.fillText(`\u2605 SPELL(${player.spells})`, 180*scale, btnY+25*scale);
+    // Potion
+    ctx.fillStyle = player.potions > 0 ? '#223322' : '#1a1a1a';
+    ctx.beginPath();ctx.roundRect(240*scale,btnY,100*scale,btnH,4*scale);ctx.fill();
+    ctx.strokeStyle=player.potions>0?'#44ff88':'#333';ctx.beginPath();ctx.roundRect(240*scale,btnY,100*scale,btnH,4*scale);ctx.stroke();
+    ctx.fillStyle=player.potions>0?'#44ff88':'#555';ctx.fillText(`\u2661 HEAL(${player.potions})`, 290*scale, btnY+25*scale);
+  }
+
+  // Particles
+  for(const p of particles){ctx.globalAlpha=p.life;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x*scale,p.y*scale,p.r*scale,0,Math.PI*2);ctx.fill();}
+  ctx.globalAlpha=1;
+  // Float texts
+  for(const f of floatTexts){ctx.globalAlpha=f.life;ctx.fillStyle=f.color;ctx.font=`bold ${13*scale}px monospace`;ctx.textAlign='center';ctx.fillText(f.text,f.x*scale,f.y*scale);}
+  ctx.globalAlpha=1;
+
+  ctx.restore();
+
+  // Flash
+  if(flashAlpha>0){ctx.fillStyle=`rgba(255,51,102,${flashAlpha})`;ctx.fillRect(0,0,W,H);}
+
+  // Deck count
+  ctx.fillStyle='#444460';ctx.font=`${9*scale}px monospace`;ctx.textAlign='right';
+  ctx.fillText(`Deck: ${deck.length}`, 350*scale, 600*scale);
+
+  requestAnimationFrame(gameLoop);
+}
+
+function drawTitle() {
+  const t = Date.now()/1000;
+  // Background dungeon ambiance
+  for(let i=0;i<8;i++){
+    const gx=W/2+Math.cos(t*0.5+i*0.8)*W*0.3;const gy=H/2+Math.sin(t*0.6+i)*H*0.3;
+    const g=ctx.createRadialGradient(gx,gy,0,gx,gy,60*scale);
+    g.addColorStop(0,'rgba(100,0,150, 0.65)');g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  }
+
+  ctx.textAlign='center';
+  ctx.fillStyle='#cc44ff';ctx.font=`bold ${24*scale}px monospace`;
+  ctx.shadowColor='#cc44ff';ctx.shadowBlur=20*scale;
+  ctx.fillText('DUNGEON', W/2, H*0.2);
+  ctx.fillStyle='#f0b800';
+  ctx.fillText('SOLITAIRE', W/2, H*0.28);
+  ctx.shadowBlur=0;
+
+  ctx.fillStyle='#888899';ctx.font=`${11*scale}px monospace`;
+  ctx.fillText('Flip cards to find treasure,', W/2, H*0.38);
+  ctx.fillText('fight monsters, and descend', W/2, H*0.42);
+  ctx.fillText('deeper into the dungeon.', W/2, H*0.46);
+
+  // Card fan
+  const suits = ['SWORD','SHIELD','POTION','GOLD','SKULL'];
+  for(let i=0;i<5;i++){
+    const angle = (i - 2) * 0.2;
+    const ox = W/2 + Math.sin(angle) * 60*scale;
+    const oy = H*0.58 - Math.cos(angle) * 20*scale;
+    ctx.save();ctx.translate(ox,oy);ctx.rotate(angle);
+    ctx.fillStyle='#222244';ctx.strokeStyle=SUITS[suits[i]].color;ctx.lineWidth=2*scale;
+    ctx.beginPath();ctx.roundRect(-25*scale,-35*scale,50*scale,70*scale,4*scale);ctx.fill();ctx.stroke();
+    ctx.fillStyle=SUITS[suits[i]].color;ctx.font=`${18*scale}px monospace`;ctx.textAlign='center';
+    ctx.fillText(SUITS[suits[i]].icon,0,5*scale);
+    ctx.restore();
+  }
+
+  const pulse=0.6+Math.sin(t*3)*0.4;
+  ctx.globalAlpha=pulse;ctx.fillStyle='#f0b800';ctx.font=`bold ${14*scale}px monospace`;
+  ctx.fillText('TAP TO PLAY',W/2,H*0.8);ctx.globalAlpha=1;
+
+  ctx.fillStyle='#666680';ctx.font=`${10*scale}px monospace`;
+  ctx.fillText(`HIGH: ${highScore}  TOTAL GOLD: ${totalGold}`,W/2,H*0.88);
+  ctx.fillStyle='#444460';ctx.font=`${8*scale}px monospace`;
+  ctx.fillText('A/S/D or 1/2/3 in combat | M=mute',W/2,H*0.94);
+}
+
+function drawGameOver() {
+  const t=Date.now()/1000;
+  ctx.textAlign='center';
+  ctx.fillStyle='#ff3366';ctx.font=`bold ${26*scale}px monospace`;
+  ctx.fillText('YOU DIED',W/2,H*0.2);
+  ctx.fillStyle='#888899';ctx.font=`${12*scale}px monospace`;
+  ctx.fillText(`Reached floor ${floor}`,W/2,H*0.3);
+  ctx.fillStyle='#f0b800';ctx.font=`bold ${18*scale}px monospace`;
+  ctx.fillText(`SCORE: ${score}`,W/2,H*0.4);
+  if(score>=highScore&&score>0){ctx.fillStyle='#00ff88';ctx.font=`${12*scale}px monospace`;ctx.fillText('NEW HIGH SCORE!',W/2,H*0.46);}
+  ctx.fillStyle='#888899';ctx.font=`${10*scale}px monospace`;
+  ctx.fillText(`Gold collected: ${player.gold}`,W/2,H*0.55);
+  ctx.fillText(`Cards revealed: ${cardsRevealed}`,W/2,H*0.6);
+  const p=0.6+Math.sin(t*3)*0.4;ctx.globalAlpha=p;
+  ctx.fillStyle='#f0b800';ctx.font=`bold ${12*scale}px monospace`;
+  ctx.fillText('TAP TO TRY AGAIN',W/2,H*0.78);ctx.globalAlpha=1;
+}
+
+function drawWin() {
+  const t=Date.now()/1000;
+  // Victory particles
+  if(Math.random()<0.1)spawnP(Math.random()*360,Math.random()*640,['#f0b800','#00ff88','#cc44ff'][Math.floor(Math.random()*3)],3);
+  for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx*0.016;p.y+=p.vy*0.016;p.life-=0.032;if(p.life<=0)particles.splice(i,1);}
+  for(const p of particles){ctx.globalAlpha=p.life;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x*scale,p.y*scale,p.r*scale,0,Math.PI*2);ctx.fill();}
+  ctx.globalAlpha=1;
+
+  ctx.textAlign='center';
+  ctx.fillStyle='#f0b800';ctx.font=`bold ${26*scale}px monospace`;
+  ctx.shadowColor='#f0b800';ctx.shadowBlur=20*scale;
+  ctx.fillText('VICTORY!',W/2,H*0.2);ctx.shadowBlur=0;
+  ctx.fillStyle='#00ff88';ctx.font=`${14*scale}px monospace`;
+  ctx.fillText('Dungeon Conquered!',W/2,H*0.3);
+  ctx.fillStyle='#f0b800';ctx.font=`bold ${20*scale}px monospace`;
+  ctx.fillText(`SCORE: ${score}`,W/2,H*0.42);
+  ctx.fillStyle='#888899';ctx.font=`${11*scale}px monospace`;
+  ctx.fillText(`Gold: ${player.gold}  Floors: ${maxFloors}`,W/2,H*0.52);
+  const p=0.6+Math.sin(t*3)*0.4;ctx.globalAlpha=p;
+  ctx.fillStyle='#f0b800';ctx.font=`bold ${12*scale}px monospace`;
+  ctx.fillText('TAP TO PLAY AGAIN',W/2,H*0.75);ctx.globalAlpha=1;
+}
+
+requestAnimationFrame(gameLoop);
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

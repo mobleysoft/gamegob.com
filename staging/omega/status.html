@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="GameGob System Status">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob/status.html">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GameGob System Status</title>
+<meta name="robots" content="noindex">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #08080e;
+    color: #c8c8d8;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 40px 20px;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 32px;
+    color: #88CC88;
+    margin-bottom: 8px;
+    text-shadow: 0 0 20px rgba(136,204,136,0.4);
+}
+
+.subtitle {
+    font-size: 14px;
+    color: #666680;
+    margin-bottom: 40px;
+}
+
+.section {
+    background: #111122;
+    border: 1px solid #222244;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.section h2 {
+    font-size: 18px;
+    color: #88CC88;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.status-card {
+    background: #0a0a14;
+    border: 1px solid #222244;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.status-card .label {
+    font-size: 11px;
+    color: #666680;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.status-card .value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #c8c8d8;
+}
+
+.status-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.status-operational { background: #88CC88; box-shadow: 0 0 12px rgba(136,204,136,0.6); }
+.status-degraded { background: #FFAA22; box-shadow: 0 0 12px rgba(255,170,34,0.6); }
+.status-down { background: #FF4444; box-shadow: 0 0 12px rgba(255,68,68,0.6); }
+.status-loading { background: #666680; animation: pulse 2s infinite; }
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
+
+.endpoint-list {
+    list-style: none;
+}
+
+.endpoint-list li {
+    padding: 12px;
+    border-bottom: 1px solid #1a1a2e;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+}
+
+.endpoint-list li:last-child { border-bottom: none; }
+
+.endpoint-list .url {
+    color: #8899cc;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+}
+
+.endpoint-list .latency {
+    color: #666680;
+    font-size: 11px;
+}
+
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.game-status {
+    background: #0a0a14;
+    border: 1px solid #222244;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 12px;
+}
+
+.game-status .name {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #c8c8d8;
+}
+
+.game-status .size {
+    color: #666680;
+    font-size: 10px;
+}
+
+.footer {
+    text-align: center;
+    margin-top: 40px;
+    font-size: 11px;
+    color: #333344;
+}
+
+.timestamp {
+    color: #666680;
+    font-size: 11px;
+    margin-top: 16px;
+}
+
+button {
+    background: linear-gradient(135deg, #2a4a2a, #1a3a1a);
+    border: 1px solid #88CC88;
+    color: #88CC88;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+button:hover {
+    background: linear-gradient(135deg, #3a6a3a, #2a5a2a);
+    box-shadow: 0 0 20px rgba(136,204,136, 0.65);
+}
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+</head>
+<body>
+
+<div class="container">
+    <h1>GameGob System Status</h1>
+    <p class="subtitle">Real-time operational metrics</p>
+
+    <!-- Overall Status -->
+    <div class="section">
+        <h2>Overall Status</h2>
+        <div class="status-grid">
+            <div class="status-card">
+                <div class="label">System Health</div>
+                <div class="value">
+                    <span class="status-indicator status-loading" id="health-indicator"></span>
+                    <span id="health-status">Checking...</span>
+                </div>
+            </div>
+            <div class="status-card">
+                <div class="label">API Response Time</div>
+                <div class="value" id="api-latency">—</div>
+            </div>
+            <div class="status-card">
+                <div class="label">Active Games</div>
+                <div class="value">13</div>
+            </div>
+            <div class="status-card">
+                <div class="label">Deployment</div>
+                <div class="value">CF Pages + Workers</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Endpoints -->
+    <div class="section">
+        <h2>Endpoints</h2>
+        <ul class="endpoint-list">
+            <li>
+                <div>
+                    <span class="status-indicator status-loading" id="status-main"></span>
+                    Main Site
+                </div>
+                <div class="url">gamegob.com</div>
+            </li>
+            <li>
+                <div>
+                    <span class="status-indicator status-loading" id="status-api"></span>
+                    API Worker
+                </div>
+                <div class="url">gamegob.com</div>
+            </li>
+            <li>
+                <div>
+                    <span class="status-indicator status-loading" id="status-health"></span>
+                    Health Check
+                </div>
+                <div class="url">/api/health</div>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Bindings Status -->
+    <div class="section">
+        <h2>Infrastructure Bindings</h2>
+        <div id="bindings-status">
+            <p style="color:#666680;font-size:12px;">Loading binding status...</p>
+        </div>
+    </div>
+
+    <!-- Games -->
+    <div class="section">
+        <h2>Deployed Games</h2>
+        <div class="games-grid">
+            <div class="game-status">
+                <div class="name">Haven RPG</div>
+                <div class="size">1.2 MB • ⭐ Featured</div>
+            </div>
+            <div class="game-status">
+                <div class="name">Arena of Minds</div>
+                <div class="size">494 KB • MOBA</div>
+            </div>
+            <div class="game-status">
+                <div class="name">Haven Survivors</div>
+                <div class="size">23 MB • Horde</div>
+            </div>
+            <div class="game-status">
+                <div class="name">Battle Royale</div>
+                <div class="size">469 KB • BR</div>
+            </div>
+            <div class="game-status">
+                <div class="name">Smash Arena</div>
+                <div class="size">448 KB • Fighter</div>
+            </div>
+            <div class="game-status">
+                <div class="name">Battle Chess</div>
+                <div class="size">470 KB • Strategy</div>
+            </div>
+            <div class="game-status">
+                <div class="name">Tower Defense</div>
+                <div class="size">446 KB • TD</div>
+            </div>
+            <div class="game-status">
+                <div class="name">Auto-Battler</div>
+                <div class="size">551 KB • Auto Chess</div>
+            </div>
+            <div class="game-status">
+                <div class="name">Platformer</div>
+                <div class="size">11 MB • Side-scroller</div>
+            </div>
+            <div class="game-status">
+                <div class="name">Bullet Hell</div>
+                <div class="size">839 KB • Shmup</div>
+            </div>
+            <div class="game-status">
+                <div class="name">Sentient TCG</div>
+                <div class="size">473 KB • Card Game</div>
+            </div>
+            <div class="game-status">
+                <div class="name">Dungeon Purge</div>
+                <div class="size">483 KB • FPS</div>
+            </div>
+            <div class="game-status">
+                <div class="name">Neural Circuit</div>
+                <div class="size">470 KB • Racing</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>MASCOM Monitoring Dashboard • Generation 6</p>
+        <p class="timestamp" id="last-updated">Last updated: —</p>
+        <button onclick="checkStatus()" style="margin-top:16px;">↻ Refresh Status</button>
+    </div>
+</div>
+
+<script>
+async function checkStatus() {
+    const startTime = Date.now();
+
+    // Check main site
+    try {
+        const mainRes = await fetch('https://gamegob.com', {method: 'HEAD'});
+        document.getElementById('status-main').className = mainRes.ok ? 'status-indicator status-operational' : 'status-indicator status-degraded';
+    } catch {
+        document.getElementById('status-main').className = 'status-indicator status-down';
+    }
+
+    // Check API health
+    try {
+        const apiRes = await fetch('https://gamegob.com/api/health');
+        const healthData = await apiRes.json();
+
+        const latency = Date.now() - startTime;
+        document.getElementById('api-latency').textContent = `${latency}ms`;
+
+        if (healthData.status === 'healthy') {
+            document.getElementById('health-status').textContent = 'Operational';
+            document.getElementById('health-indicator').className = 'status-indicator status-operational';
+            document.getElementById('status-api').className = 'status-indicator status-operational';
+            document.getElementById('status-health').className = 'status-indicator status-operational';
+
+            // Display bindings
+            const bindingsHtml = Object.entries(healthData.checks)
+                .map(([key, value]) => {
+                    const indicator = value ? '✓' : '✗';
+                    const color = value ? '#88CC88' : '#FF4444';
+                    return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1a1a2e;font-size:12px;">
+                        <span>${key.replace(/_/g, ' ').toUpperCase()}</span>
+                        <span style="color:${color};font-weight:700;">${indicator}</span>
+                    </div>`;
+                })
+                .join('');
+            document.getElementById('bindings-status').innerHTML = bindingsHtml;
+        } else {
+            document.getElementById('health-status').textContent = 'Degraded';
+            document.getElementById('health-indicator').className = 'status-indicator status-degraded';
+        }
+    } catch (err) {
+        document.getElementById('health-status').textContent = 'Error';
+        document.getElementById('health-indicator').className = 'status-indicator status-down';
+        document.getElementById('status-api').className = 'status-indicator status-down';
+        document.getElementById('status-health').className = 'status-indicator status-down';
+        document.getElementById('bindings-status').innerHTML = `<p style="color:#FF4444;font-size:12px;">Failed to connect to API</p>`;
+    }
+
+    // Update timestamp
+    const now = new Date();
+    document.getElementById('last-updated').textContent = `Last updated: ${now.toLocaleTimeString()} UTC`;
+}
+
+// Auto-refresh every 30 seconds
+checkStatus();
+setInterval(checkStatus, 30000);
+</script>
+
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

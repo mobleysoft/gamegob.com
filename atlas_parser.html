@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Universal Sprite Atlas Parser — GameGob">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Universal Sprite Atlas Parser — GameGob</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0f; color: #e0e0e0; font-family: 'Courier New', monospace; min-height: 100vh; }
+
+.header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 16px 24px; border-bottom: 2px solid #0f3460; display: flex; align-items: center; gap: 16px; }
+.header h1 { font-size: 18px; color: #e94560; }
+.header .sub { font-size: 12px; color: #888; }
+
+.drop-zone {
+  margin: 24px auto; max-width: 800px; min-height: 200px; border: 3px dashed #333;
+  border-radius: 12px; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 12px; cursor: pointer; transition: all 0.3s;
+  background: #111118; padding: 32px;
+}
+.drop-zone.active { border-color: #e94560; background: #1a1a2e; }
+.drop-zone h2 { color: #e94560; font-size: 20px; }
+.drop-zone p { color: #666; font-size: 13px; }
+.drop-zone input { display: none; }
+
+.controls {
+  max-width: 1200px; margin: 16px auto; padding: 0 24px;
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+}
+.controls label { color: #888; font-size: 12px; }
+.controls input[type=range] { width: 100px; }
+.controls input[type=number] { width: 60px; background: #1a1a2e; border: 1px solid #333; color: #e0e0e0; padding: 4px 6px; border-radius: 4px; font-family: inherit; }
+.controls select { background: #1a1a2e; border: 1px solid #333; color: #e0e0e0; padding: 4px 8px; border-radius: 4px; font-family: inherit; }
+.controls button { background: #e94560; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 12px; }
+.controls button:hover { background: #c73650; }
+.controls .sep { width: 1px; height: 24px; background: #333; }
+
+.info-bar {
+  max-width: 1200px; margin: 8px auto; padding: 4px 24px;
+  font-size: 11px; color: #666; display: flex; gap: 16px; flex-wrap: wrap;
+}
+.info-bar span { color: #e94560; }
+
+#sheetPreview {
+  max-width: 1200px; margin: 12px auto; padding: 0 24px;
+  display: none;
+}
+#sheetPreview h3 { color: #888; font-size: 13px; margin-bottom: 8px; }
+#sheetCanvas { border: 1px solid #333; image-rendering: pixelated; max-width: 100%; }
+
+#gridOverlay {
+  position: relative; display: inline-block;
+}
+#gridOverlay canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+#animations {
+  max-width: 1200px; margin: 24px auto; padding: 0 24px;
+  display: none;
+}
+#animations h3 { color: #e94560; font-size: 14px; margin-bottom: 12px; }
+
+.anim-row {
+  display: flex; align-items: center; gap: 16px; margin-bottom: 16px;
+  background: #111118; border: 1px solid #222; border-radius: 8px; padding: 12px;
+}
+.anim-label { min-width: 80px; font-size: 12px; color: #888; text-align: center; }
+.anim-label .row-num { font-size: 18px; color: #e94560; display: block; }
+.anim-player { position: relative; }
+.anim-player canvas { border: 1px solid #333; image-rendering: pixelated; background: #1a1a2e; }
+.anim-frames { display: flex; gap: 4px; flex-wrap: wrap; }
+.anim-frames canvas { border: 1px solid #222; image-rendering: pixelated; cursor: pointer; transition: border-color 0.2s; }
+.anim-frames canvas:hover { border-color: #e94560; }
+.anim-frames canvas.active { border-color: #e94560; box-shadow: 0 0 8px rgba(233,69,96,0.5); }
+.frame-counter { font-size: 11px; color: #666; min-width: 40px; text-align: center; }
+
+.export-section {
+  max-width: 1200px; margin: 24px auto; padding: 0 24px 48px;
+  display: none;
+}
+.export-section button { margin-right: 8px; margin-bottom: 8px; }
+
+/* Detection algorithm visualization */
+#detection {
+  max-width: 1200px; margin: 16px auto; padding: 0 24px;
+  display: none;
+}
+#detection h3 { color: #888; font-size: 13px; margin-bottom: 8px; }
+.detect-row { display: flex; gap: 16px; margin-bottom: 12px; }
+.detect-chart { background: #111118; border: 1px solid #222; border-radius: 4px; padding: 8px; flex: 1; }
+.detect-chart h4 { font-size: 11px; color: #666; margin-bottom: 4px; }
+.detect-chart canvas { width: 100%; height: 80px; }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+</head>
+<body>
+
+<div class="header">
+  <h1>Universal Sprite Atlas Parser</h1>
+  <span class="sub">Drop any spritesheet — auto-detect grid, animate everything</span>
+</div>
+
+<div class="drop-zone" id="dropZone">
+  <h2>Drop Spritesheet Here</h2>
+  <p>PNG, GIF, or any image — any size, any game, any style</p>
+  <p style="color:#555; font-size:11px;">or click to browse files</p>
+  <input type="file" id="fileInput" accept="image/*" multiple>
+</div>
+
+<div class="controls" id="controlsBar" style="display:none;">
+  <label>Cell W: <input type="number" id="cellW" min="4" max="256" value="16"></label>
+  <label>Cell H: <input type="number" id="cellH" min="4" max="256" value="24"></label>
+  <div class="sep"></div>
+  <label>FPS: <input type="range" id="fps" min="1" max="30" value="8"> <span id="fpsVal">8</span></label>
+  <label>Zoom: <input type="range" id="zoom" min="1" max="12" value="4"> <span id="zoomVal">4</span>x</label>
+  <div class="sep"></div>
+  <button id="btnRedetect">Re-detect Grid</button>
+  <button id="btnAutoSize">Auto-detect Size</button>
+  <label>BG:
+    <select id="bgColor">
+      <option value="#1a1a2e">Dark</option>
+      <option value="#333333">Gray</option>
+      <option value="#ffffff">White</option>
+      <option value="checker">Checker</option>
+    </select>
+  </label>
+  <div class="sep"></div>
+  <label>Preset:
+    <select id="gamePreset">
+      <option value="">Auto-detect</option>
+      <option value="16,24">FF6 / CT (16×24)</option>
+      <option value="16,16">LttP / SoM (16×16)</option>
+      <option value="32,32">32×32 (large)</option>
+      <option value="24,32">24×32 (tall)</option>
+      <option value="48,48">48×48 (HD)</option>
+      <option value="64,64">64×64 (HD+)</option>
+    </select>
+  </label>
+</div>
+
+<div class="info-bar" id="infoBar" style="display:none;">
+  <div>Image: <span id="infoSize">-</span></div>
+  <div>Grid: <span id="infoGrid">-</span></div>
+  <div>Cells: <span id="infoCells">-</span></div>
+  <div>Non-empty: <span id="infoFilled">-</span></div>
+  <div>Animations: <span id="infoAnims">-</span></div>
+</div>
+
+<div id="detection">
+  <h3>Grid Detection</h3>
+  <div class="detect-row">
+    <div class="detect-chart"><h4>Column Alpha Profile</h4><canvas id="chartX"></canvas></div>
+    <div class="detect-chart"><h4>Row Alpha Profile</h4><canvas id="chartY"></canvas></div>
+  </div>
+</div>
+
+<div id="sheetPreview">
+  <h3>Source Sheet (grid overlay)</h3>
+  <div id="gridOverlay">
+    <canvas id="sheetCanvas"></canvas>
+    <canvas id="overlayCanvas"></canvas>
+  </div>
+</div>
+
+<div id="animations">
+  <h3>Detected Animations</h3>
+  <div id="animContainer"></div>
+</div>
+
+<div id="paletteSection" style="display:none; max-width:1200px; margin:16px auto; padding:0 24px;">
+  <h3 style="color:#888; font-size:13px; margin-bottom:8px;">Extracted Palette</h3>
+  <div id="paletteSwatches" style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:12px;"></div>
+  <div id="paletteInfo" style="font-size:11px; color:#666;"></div>
+</div>
+
+<div id="statsSection" style="display:none; max-width:1200px; margin:16px auto; padding:0 24px;">
+  <h3 style="color:#888; font-size:13px; margin-bottom:8px;">Statistics</h3>
+  <div id="statsContent" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px;">
+  </div>
+</div>
+
+<div class="export-section" id="exportSection">
+  <button id="btnExportJSON">Export JSON Atlas</button>
+  <button id="btnExportTraining">Export Training JSON (SpriteVAE)</button>
+  <button id="btnExportFrames">Export Individual Frames</button>
+  <button id="btnExportGIF">Export GIF (per row)</button>
+</div>
+
+<script>
+// =========================================================
+// UNIVERSAL SPRITE ATLAS PARSER
+// =========================================================
+
+let sourceImage = null;   // HTMLImageElement
+let sourceData = null;    // ImageData (RGBA)
+let cells = [];           // [{row, col, x, y, w, h, empty, imageData}]
+let animations = [];      // [{label, frames: [cell indices]}]
+let animTimers = [];
+let currentSheet = null;
+
+const $ = id => document.getElementById(id);
+
+// --- FILE DROP / SELECT ---
+const dropZone = $('dropZone');
+const fileInput = $('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('active'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('active'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('active');
+  if (e.dataTransfer.files.length) loadImage(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => { if (e.target.files.length) loadImage(e.target.files[0]); });
+
+// Also support paste
+document.addEventListener('paste', e => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      loadImage(item.getAsFile());
+      return;
+    }
+  }
+});
+
+function loadImage(file) {
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    sourceImage = img;
+    // Get pixel data
+    const c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    sourceData = ctx.getImageData(0, 0, img.width, img.height);
+    URL.revokeObjectURL(url);
+    // Auto-detect and render
+    autoDetect();
+  };
+  img.src = url;
+}
+
+// --- GRID AUTO-DETECTION ---
+
+function getAlpha(x, y) {
+  if (x < 0 || y < 0 || x >= sourceData.width || y >= sourceData.height) return 0;
+  return sourceData.data[(y * sourceData.width + x) * 4 + 3];
+}
+
+function isBackground(r, g, b, a) {
+  // Transparent or near the dominant background color
+  if (a < 10) return true;
+  return false;
+}
+
+function computeAlphaProfiles() {
+  const w = sourceData.width, h = sourceData.height;
+  const d = sourceData.data;
+
+  // For each column x, count non-transparent pixels
+  const colProfile = new Float32Array(w);
+  const rowProfile = new Float32Array(h);
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const a = d[(y * w + x) * 4 + 3];
+      if (a > 10) {
+        colProfile[x]++;
+        rowProfile[y]++;
+      }
+    }
+  }
+  return { colProfile, rowProfile };
+}
+
+function detectPeriod(profile, minPeriod = 8, maxPeriod = 128) {
+  // Autocorrelation-based period detection
+  const n = profile.length;
+  if (n < minPeriod * 2) return minPeriod;
+
+  // Compute autocorrelation at different lags
+  let bestPeriod = minPeriod;
+  let bestScore = -Infinity;
+
+  // Also try: find positions where profile drops to zero (gutter detection)
+  const gutters = [];
+  const threshold = Math.max(...profile) * 0.05;
+  let inGutter = profile[0] <= threshold;
+  let gutterStart = inGutter ? 0 : -1;
+
+  for (let i = 1; i < n; i++) {
+    const isLow = profile[i] <= threshold;
+    if (isLow && !inGutter) { gutterStart = i; inGutter = true; }
+    else if (!isLow && inGutter) { gutters.push({ start: gutterStart, end: i }); inGutter = false; }
+  }
+  if (inGutter) gutters.push({ start: gutterStart, end: n });
+
+  // If we have clear gutters, use them to detect cell boundaries
+  if (gutters.length >= 2) {
+    // Cell boundaries are between gutters
+    const boundaries = [];
+    // First cell starts at 0 or after first gutter
+    if (gutters[0].start === 0) {
+      boundaries.push(gutters[0].end); // start of first cell
+      for (let i = 1; i < gutters.length; i++) {
+        boundaries.push(gutters[i].start); // end of cell
+        if (i < gutters.length - 1 || gutters[i].end < n) {
+          boundaries.push(gutters[i].end); // start of next cell
+        }
+      }
+    } else {
+      boundaries.push(0); // start of first cell
+      for (const g of gutters) {
+        boundaries.push(g.start); // end of cell
+        boundaries.push(g.end);   // start of next cell
+      }
+    }
+
+    // Compute cell sizes from boundaries
+    const sizes = [];
+    for (let i = 0; i < boundaries.length - 1; i += 2) {
+      sizes.push(boundaries[i + 1] - boundaries[i]);
+    }
+    if (sizes.length >= 2) {
+      // Find most common size
+      const counts = {};
+      sizes.forEach(s => { counts[s] = (counts[s] || 0) + 1; });
+      const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      const detected = parseInt(sorted[0][0]);
+      if (detected >= minPeriod && detected <= maxPeriod) return detected;
+    }
+  }
+
+  // Fallback: autocorrelation
+  // Normalize profile
+  const mean = profile.reduce((a, b) => a + b, 0) / n;
+  const norm = profile.map(v => v - mean);
+
+  for (let lag = minPeriod; lag <= Math.min(maxPeriod, Math.floor(n / 2)); lag++) {
+    let corr = 0;
+    let count = 0;
+    for (let i = 0; i < n - lag; i++) {
+      corr += norm[i] * norm[i + lag];
+      count++;
+    }
+    corr /= count;
+
+    // Bonus for common sizes
+    const commonBonus = [8,16,24,32,48,64].includes(lag) ? 1.1 : 1.0;
+    const score = corr * commonBonus;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestPeriod = lag;
+    }
+  }
+
+  // Also try: if image dimensions are evenly divisible by common sizes
+  const common = [16, 24, 32, 48, 64, 8, 12, 20, 28, 36, 40, 96, 128];
+  for (const sz of common) {
+    if (n % sz === 0 && sz >= minPeriod && sz <= maxPeriod) {
+      // Check if this gives a reasonable number of cells
+      const numCells = n / sz;
+      if (numCells >= 2 && numCells <= 32) {
+        // Verify by checking that cell boundaries align with low-alpha regions
+        let aligned = 0;
+        for (let b = sz; b < n; b += sz) {
+          if (profile[b] <= threshold || profile[b - 1] <= threshold) aligned++;
+        }
+        if (aligned >= (numCells - 1) * 0.5) return sz;
+      }
+    }
+  }
+
+  return bestPeriod;
+}
+
+function autoDetect() {
+  const w = sourceData.width, h = sourceData.height;
+
+  // Compute alpha profiles
+  const { colProfile, rowProfile } = computeAlphaProfiles();
+
+  // Detect cell dimensions
+  const cellW = detectPeriod(colProfile, 8, Math.min(128, Math.floor(w / 2)));
+  const cellH = detectPeriod(rowProfile, 8, Math.min(128, Math.floor(h / 2)));
+
+  $('cellW').value = cellW;
+  $('cellH').value = cellH;
+
+  // Draw detection charts
+  drawChart($('chartX'), colProfile, cellW);
+  drawChart($('chartY'), rowProfile, cellH);
+
+  applyGrid(cellW, cellH);
+}
+
+function drawChart(canvas, profile, period) {
+  const w = canvas.parentElement.clientWidth - 16;
+  canvas.width = w;
+  canvas.height = 80;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, w, 80);
+
+  const maxVal = Math.max(...profile) || 1;
+  const step = profile.length / w;
+
+  // Draw profile
+  ctx.strokeStyle = '#e94560';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 0; i < w; i++) {
+    const idx = Math.floor(i * step);
+    const val = profile[idx] / maxVal;
+    const y = 78 - val * 70;
+    if (i === 0) ctx.moveTo(i, y);
+    else ctx.lineTo(i, y);
+  }
+  ctx.stroke();
+
+  // Draw period lines
+  ctx.strokeStyle = 'rgba(255,255,255, 0.65)';
+  ctx.setLineDash([2, 2]);
+  for (let p = period; p < profile.length; p += period) {
+    const x = (p / profile.length) * w;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, 80);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}
+
+function applyGrid(cellW, cellH) {
+  const w = sourceData.width, h = sourceData.height;
+  const cols = Math.floor(w / cellW);
+  const rows = Math.floor(h / cellH);
+
+  // Extract cells
+  cells = [];
+  const tmpCanvas = document.createElement('canvas');
+  tmpCanvas.width = cellW; tmpCanvas.height = cellH;
+  const tmpCtx = tmpCanvas.getContext('2d');
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = c * cellW, y = r * cellH;
+
+      // Check if cell is empty (all transparent)
+      let nonTransparent = 0;
+      for (let py = 0; py < cellH && py + y < h; py++) {
+        for (let px = 0; px < cellW && px + x < w; px++) {
+          const a = sourceData.data[((y + py) * w + (x + px)) * 4 + 3];
+          if (a > 10) nonTransparent++;
+        }
+      }
+
+      const empty = nonTransparent < (cellW * cellH * 0.01); // <1% content = empty
+
+      // Extract cell ImageData
+      tmpCtx.clearRect(0, 0, cellW, cellH);
+      tmpCtx.drawImage(sourceImage, x, y, cellW, cellH, 0, 0, cellW, cellH);
+      const imgData = tmpCtx.getImageData(0, 0, cellW, cellH);
+
+      cells.push({ row: r, col: c, x, y, w: cellW, h: cellH, empty, imageData: imgData, nonTransparent });
+    }
+  }
+
+  // Group into animations (one per row, skip empty rows)
+  animations = [];
+  for (let r = 0; r < rows; r++) {
+    const rowCells = cells.filter(c => c.row === r && !c.empty);
+    if (rowCells.length === 0) continue;
+
+    // Label guess based on row index and total rows
+    let label = `Row ${r}`;
+    if (rows === 4) {
+      label = ['South / Down', 'West / Left', 'East / Right', 'North / Up'][r] || label;
+    } else if (rows === 8) {
+      label = ['South', 'SW', 'West', 'NW', 'North', 'NE', 'East', 'SE'][r] || label;
+    } else if (rows >= 12) {
+      // Probably multiple animation types (walk, attack, cast, etc.)
+      const animsPerDir = Math.floor(rows / 4);
+      const dir = Math.floor(r / animsPerDir);
+      const animIdx = r % animsPerDir;
+      const dirNames = ['South', 'West', 'East', 'North'];
+      const animNames = ['Walk', 'Attack', 'Cast', 'Hurt', 'Idle', 'Run'];
+      label = `${dirNames[dir] || 'Dir' + dir} — ${animNames[animIdx] || 'Anim' + animIdx}`;
+    }
+
+    animations.push({ label, row: r, frames: rowCells, cols });
+  }
+
+  // Update UI
+  $('infoSize').textContent = `${w}×${h}`;
+  $('infoGrid').textContent = `${cols}×${rows} (${cellW}×${cellH}px cells)`;
+  $('infoCells').textContent = `${cols * rows}`;
+  $('infoFilled').textContent = `${cells.filter(c => !c.empty).length}`;
+  $('infoAnims').textContent = `${animations.length} rows`;
+
+  $('controlsBar').style.display = 'flex';
+  $('infoBar').style.display = 'flex';
+  $('detection').style.display = 'block';
+  $('sheetPreview').style.display = 'block';
+  $('animations').style.display = 'block';
+  $('exportSection').style.display = 'block';
+
+  renderSheetPreview(cellW, cellH, cols, rows);
+  renderAnimations();
+}
+
+function renderSheetPreview(cellW, cellH, cols, rows) {
+  const zoom = parseInt($('zoom').value);
+  const sc = $('sheetCanvas');
+  const oc = $('overlayCanvas');
+  const w = sourceData.width, h = sourceData.height;
+
+  sc.width = w * zoom; sc.height = h * zoom;
+  sc.style.width = (w * zoom) + 'px';
+  sc.style.height = (h * zoom) + 'px';
+
+  oc.width = sc.width; oc.height = sc.height;
+  oc.style.width = sc.style.width; oc.style.height = sc.style.height;
+
+  const ctx = sc.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(sourceImage, 0, 0, w * zoom, h * zoom);
+
+  // Grid overlay
+  const octx = oc.getContext('2d');
+  octx.clearRect(0, 0, oc.width, oc.height);
+  octx.strokeStyle = 'rgba(233, 69, 96, 0.4)';
+  octx.lineWidth = 1;
+
+  for (let x = cellW; x < w; x += cellW) {
+    octx.beginPath();
+    octx.moveTo(x * zoom, 0);
+    octx.lineTo(x * zoom, h * zoom);
+    octx.stroke();
+  }
+  for (let y = cellH; y < h; y += cellH) {
+    octx.beginPath();
+    octx.moveTo(0, y * zoom);
+    octx.lineTo(w * zoom, y * zoom);
+    octx.stroke();
+  }
+
+  // Mark empty cells with X
+  octx.strokeStyle = 'rgba(255,255,255, 0.65)';
+  cells.filter(c => c.empty).forEach(cell => {
+    const x = cell.col * cellW * zoom;
+    const y = cell.row * cellH * zoom;
+    octx.beginPath();
+    octx.moveTo(x, y);
+    octx.lineTo(x + cellW * zoom, y + cellH * zoom);
+    octx.moveTo(x + cellW * zoom, y);
+    octx.lineTo(x, y + cellH * zoom);
+    octx.stroke();
+  });
+}
+
+function renderAnimations() {
+  // Stop existing timers
+  animTimers.forEach(t => clearInterval(t));
+  animTimers = [];
+
+  const container = $('animContainer');
+  container.innerHTML = '';
+
+  const zoom = parseInt($('zoom').value);
+  const fps = parseInt($('fps').value);
+  const bg = $('bgColor').value;
+
+  animations.forEach((anim, ai) => {
+    const row = document.createElement('div');
+    row.className = 'anim-row';
+
+    // Label
+    const label = document.createElement('div');
+    label.className = 'anim-label';
+    label.innerHTML = `<span class="row-num">${anim.row}</span>${anim.label}<br><span style="font-size:10px;color:#555">${anim.frames.length} frames</span>`;
+    row.appendChild(label);
+
+    // Animated preview
+    const player = document.createElement('div');
+    player.className = 'anim-player';
+    const pCanvas = document.createElement('canvas');
+    const cellW = anim.frames[0].w, cellH = anim.frames[0].h;
+    pCanvas.width = cellW * zoom;
+    pCanvas.height = cellH * zoom;
+    pCanvas.style.width = (cellW * zoom) + 'px';
+    pCanvas.style.height = (cellH * zoom) + 'px';
+    drawBg(pCanvas, bg, zoom);
+    player.appendChild(pCanvas);
+    row.appendChild(player);
+
+    // Frame counter
+    const counter = document.createElement('div');
+    counter.className = 'frame-counter';
+    counter.textContent = '0/' + anim.frames.length;
+    row.appendChild(counter);
+
+    // Individual frames
+    const framesDiv = document.createElement('div');
+    framesDiv.className = 'anim-frames';
+    const frameCanvases = [];
+
+    anim.frames.forEach((frame, fi) => {
+      const fc = document.createElement('canvas');
+      fc.width = cellW * Math.min(zoom, 3);
+      fc.height = cellH * Math.min(zoom, 3);
+      fc.style.width = (cellW * Math.min(zoom, 3)) + 'px';
+      fc.style.height = (cellH * Math.min(zoom, 3)) + 'px';
+      drawBg(fc, bg, Math.min(zoom, 3));
+      const fctx = fc.getContext('2d');
+      fctx.imageSmoothingEnabled = false;
+      // Draw frame
+      const tmpC = imageDataToCanvas(frame.imageData);
+      fctx.drawImage(tmpC, 0, 0, cellW * Math.min(zoom, 3), cellH * Math.min(zoom, 3));
+
+      fc.title = `Frame ${fi} (col ${frame.col})`;
+      framesDiv.appendChild(fc);
+      frameCanvases.push(fc);
+    });
+    row.appendChild(framesDiv);
+
+    container.appendChild(row);
+
+    // Animate
+    let frameIdx = 0;
+    function tick() {
+      frameIdx = (frameIdx + 1) % anim.frames.length;
+      const frame = anim.frames[frameIdx];
+
+      const pctx = pCanvas.getContext('2d');
+      pctx.imageSmoothingEnabled = false;
+      pctx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+      drawBg(pCanvas, bg, zoom);
+      const tmpC = imageDataToCanvas(frame.imageData);
+      pctx.drawImage(tmpC, 0, 0, cellW * zoom, cellH * zoom);
+
+      counter.textContent = `${frameIdx}/${anim.frames.length}`;
+
+      // Highlight active frame
+      frameCanvases.forEach((fc, i) => {
+        fc.className = i === frameIdx ? 'active' : '';
+      });
+    }
+
+    // Initial render
+    if (anim.frames.length > 0) {
+      const pctx = pCanvas.getContext('2d');
+      pctx.imageSmoothingEnabled = false;
+      const tmpC = imageDataToCanvas(anim.frames[0].imageData);
+      pctx.drawImage(tmpC, 0, 0, cellW * zoom, cellH * zoom);
+      if (frameCanvases[0]) frameCanvases[0].className = 'active';
+    }
+
+    const timer = setInterval(tick, 1000 / fps);
+    animTimers.push(timer);
+  });
+}
+
+function imageDataToCanvas(imgData) {
+  const c = document.createElement('canvas');
+  c.width = imgData.width;
+  c.height = imgData.height;
+  c.getContext('2d').putImageData(imgData, 0, 0);
+  return c;
+}
+
+function drawBg(canvas, bg, zoom) {
+  const ctx = canvas.getContext('2d');
+  if (bg === 'checker') {
+    const sz = Math.max(4, zoom);
+    for (let y = 0; y < canvas.height; y += sz) {
+      for (let x = 0; x < canvas.width; x += sz) {
+        ctx.fillStyle = ((x / sz + y / sz) % 2 === 0) ? '#1a1a2e' : '#222240';
+        ctx.fillRect(x, y, sz, sz);
+      }
+    }
+  } else {
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+// --- CONTROLS ---
+$('btnRedetect').addEventListener('click', () => {
+  const cw = parseInt($('cellW').value);
+  const ch = parseInt($('cellH').value);
+  applyGrid(cw, ch);
+});
+
+$('btnAutoSize').addEventListener('click', () => {
+  if (sourceData) autoDetect();
+});
+
+$('fps').addEventListener('input', e => {
+  $('fpsVal').textContent = e.target.value;
+  if (animations.length) renderAnimations();
+});
+
+$('zoom').addEventListener('input', e => {
+  $('zoomVal').textContent = e.target.value;
+  if (cells.length) {
+    const cw = parseInt($('cellW').value);
+    const ch = parseInt($('cellH').value);
+    renderSheetPreview(cw, ch, Math.floor(sourceData.width / cw), Math.floor(sourceData.height / ch));
+    renderAnimations();
+  }
+});
+
+$('bgColor').addEventListener('change', () => {
+  if (animations.length) renderAnimations();
+});
+
+$('cellW').addEventListener('change', () => {
+  const cw = parseInt($('cellW').value);
+  const ch = parseInt($('cellH').value);
+  applyGrid(cw, ch);
+});
+$('cellH').addEventListener('change', () => {
+  const cw = parseInt($('cellW').value);
+  const ch = parseInt($('cellH').value);
+  applyGrid(cw, ch);
+});
+
+// --- EXPORT ---
+$('btnExportJSON').addEventListener('click', () => {
+  const atlas = {
+    source: sourceImage.src,
+    cellWidth: parseInt($('cellW').value),
+    cellHeight: parseInt($('cellH').value),
+    animations: animations.map(a => ({
+      label: a.label,
+      row: a.row,
+      frameCount: a.frames.length,
+      frames: a.frames.map(f => ({ col: f.col, row: f.row }))
+    }))
+  };
+  const blob = new Blob([JSON.stringify(atlas, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'sprite_atlas.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+$('btnExportFrames').addEventListener('click', () => {
+  // Export each non-empty cell as individual PNG
+  cells.filter(c => !c.empty).forEach(cell => {
+    const c = imageDataToCanvas(cell.imageData);
+    c.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `frame_r${cell.row}_c${cell.col}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  });
+});
+
+$('btnExportGIF').addEventListener('click', () => {
+  alert('GIF export requires gif.js library — coming soon. Use individual frame export for now.');
+});
+
+// --- GAME PRESETS ---
+$('gamePreset').addEventListener('change', e => {
+  const val = e.target.value;
+  if (val && sourceData) {
+    const [w, h] = val.split(',').map(Number);
+    $('cellW').value = w;
+    $('cellH').value = h;
+    applyGrid(w, h);
+  } else if (!val && sourceData) {
+    autoDetect();
+  }
+});
+
+// --- PALETTE EXTRACTION ---
+function extractPalette() {
+  if (!cells.length) return;
+  const colorCounts = {};
+  const nonEmptyCells = cells.filter(c => !c.empty);
+
+  nonEmptyCells.forEach(cell => {
+    const d = cell.imageData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 10) continue;
+      const key = `${d[i]},${d[i+1]},${d[i+2]}`;
+      colorCounts[key] = (colorCounts[key] || 0) + 1;
+    }
+  });
+
+  const sorted = Object.entries(colorCounts).sort((a, b) => b[1] - a[1]);
+  const top16 = sorted.slice(0, 16);
+
+  // Render swatches
+  const swatchDiv = $('paletteSwatches');
+  swatchDiv.innerHTML = '';
+  top16.forEach(([rgb, count], i) => {
+    const [r, g, b] = rgb.split(',').map(Number);
+    const hex = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+    const swatch = document.createElement('div');
+    swatch.style.cssText = `width:32px;height:32px;background:${hex};border:2px solid #333;border-radius:4px;cursor:pointer;position:relative;`;
+    swatch.title = `${hex} (${count} px)`;
+    const idx = document.createElement('span');
+    idx.style.cssText = 'position:absolute;bottom:-14px;left:0;right:0;text-align:center;font-size:9px;color:#666;';
+    idx.textContent = i;
+    swatch.appendChild(idx);
+    swatchDiv.appendChild(swatch);
+  });
+
+  $('paletteInfo').textContent = `${Object.keys(colorCounts).length} unique colors → top 16 shown. ` +
+    `Total non-transparent pixels: ${sorted.reduce((a, [, c]) => a + c, 0).toLocaleString()}`;
+  $('paletteSection').style.display = 'block';
+
+  return top16.map(([rgb]) => {
+    const [r, g, b] = rgb.split(',').map(Number);
+    return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+  });
+}
+
+// --- STATISTICS ---
+function computeStats() {
+  if (!animations.length) return;
+
+  const cellW = parseInt($('cellW').value), cellH = parseInt($('cellH').value);
+  const statsDiv = $('statsContent');
+  statsDiv.innerHTML = '';
+
+  const stat = (label, value) => {
+    const d = document.createElement('div');
+    d.style.cssText = 'background:#111118;border:1px solid #222;border-radius:4px;padding:8px;';
+    d.innerHTML = `<div style="font-size:10px;color:#666;">${label}</div><div style="font-size:16px;color:#e94560;">${value}</div>`;
+    statsDiv.appendChild(d);
+  };
+
+  stat('Frame Size', `${cellW}×${cellH}px`);
+  stat('Total Cells', cells.length);
+  stat('Non-Empty', cells.filter(c => !c.empty).length);
+  stat('Empty', cells.filter(c => c.empty).length);
+  stat('Animation Rows', animations.length);
+  stat('Avg Frames/Row', (animations.reduce((a, r) => a + r.frames.length, 0) / animations.length).toFixed(1));
+
+  // Row similarity (cosine similarity of pixel data between rows)
+  if (animations.length >= 2) {
+    const rowVectors = animations.map(anim => {
+      const vec = [];
+      anim.frames.forEach(f => {
+        const d = f.imageData.data;
+        for (let i = 0; i < d.length; i += 4) vec.push(d[i], d[i+1], d[i+2], d[i+3]);
+      });
+      return vec;
+    });
+
+    let maxSim = 0, maxPair = '';
+    for (let i = 0; i < rowVectors.length; i++) {
+      for (let j = i + 1; j < rowVectors.length; j++) {
+        const minLen = Math.min(rowVectors[i].length, rowVectors[j].length);
+        if (minLen === 0) continue;
+        let dot = 0, magA = 0, magB = 0;
+        for (let k = 0; k < minLen; k++) {
+          dot += rowVectors[i][k] * rowVectors[j][k];
+          magA += rowVectors[i][k] ** 2;
+          magB += rowVectors[j][k] ** 2;
+        }
+        const sim = dot / (Math.sqrt(magA) * Math.sqrt(magB) + 1e-8);
+        if (sim > maxSim) { maxSim = sim; maxPair = `Row ${animations[i].row}↔${animations[j].row}`; }
+      }
+    }
+    stat('Most Similar Rows', `${maxPair} (${(maxSim * 100).toFixed(0)}%)`);
+  }
+
+  $('statsSection').style.display = 'block';
+}
+
+// Hook palette + stats into applyGrid
+const _origApplyGrid = applyGrid;
+applyGrid = function(cellW, cellH) {
+  _origApplyGrid(cellW, cellH);
+  extractPalette();
+  computeStats();
+};
+
+// --- TRAINING EXPORT (SpriteVAE-compatible JSON) ---
+$('btnExportTraining').addEventListener('click', () => {
+  const cellW = parseInt($('cellW').value), cellH = parseInt($('cellH').value);
+  const palette = extractPalette() || [];
+  const fullPalette = ['transparent', ...palette];
+
+  // Build color→index map for quantization
+  const colorMap = {};
+  palette.forEach((hex, i) => {
+    colorMap[hex] = i + 1;
+  });
+
+  function pixelToIndex(r, g, b, a) {
+    if (a < 10) return 0;
+    const hex = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+    if (colorMap[hex] !== undefined) return colorMap[hex];
+    // Nearest color
+    let bestIdx = 1, bestDist = Infinity;
+    palette.forEach((ph, i) => {
+      const pr = parseInt(ph.slice(1,3), 16), pg = parseInt(ph.slice(3,5), 16), pb = parseInt(ph.slice(5,7), 16);
+      const dist = (r-pr)**2 + (g-pg)**2 + (b-pb)**2;
+      if (dist < bestDist) { bestDist = dist; bestIdx = i + 1; }
+    });
+    return bestIdx;
+  }
+
+  // Convert each frame to indexed grid, normalized to 16×24
+  const frames = {};
+  animations.forEach(anim => {
+    anim.frames.forEach((frame, fi) => {
+      const key = `${anim.label.replace(/ /g,'_').replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()}_${fi === 0 ? 'idle' : 'walk_' + (fi-1)}`;
+      const d = frame.imageData.data;
+      const srcW = frame.w, srcH = frame.h;
+
+      // Build source grid at original size
+      const srcGrid = [];
+      for (let y = 0; y < srcH; y++) {
+        const row = [];
+        for (let x = 0; x < srcW; x++) {
+          const off = (y * srcW + x) * 4;
+          row.push(pixelToIndex(d[off], d[off+1], d[off+2], d[off+3]));
+        }
+        srcGrid.push(row);
+      }
+
+      // Nearest-neighbor resize to 16×24
+      const targetW = 16, targetH = 24;
+      const grid = [];
+      for (let ty = 0; ty < targetH; ty++) {
+        const row = [];
+        for (let tx = 0; tx < targetW; tx++) {
+          const sx = Math.min(Math.floor(tx * srcW / targetW), srcW - 1);
+          const sy = Math.min(Math.floor(ty * srcH / targetH), srcH - 1);
+          row.push(srcGrid[sy][sx]);
+        }
+        grid.push(row);
+      }
+
+      frames[key] = grid;
+    });
+  });
+
+  const trainingJSON = {
+    character: 'imported',
+    palette: fullPalette,
+    frames: frames,
+    source: {
+      cellWidth: cellW, cellHeight: cellH,
+      originalWidth: sourceData.width, originalHeight: sourceData.height,
+      animationCount: animations.length,
+      format: 'spritevae_atlas_v1'
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(trainingJSON, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'training_atlas.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+// --- URL LOADING (single or batch) ---
+const params = new URLSearchParams(window.location.search);
+if (params.has('url')) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    sourceImage = img;
+    const c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    sourceData = ctx.getImageData(0, 0, img.width, img.height);
+    autoDetect();
+  };
+  img.src = params.get('url');
+}
+
+// Batch mode: ?batch=url1,url2,url3
+if (params.has('batch')) {
+  const urls = params.get('batch').split(',').map(u => u.trim()).filter(Boolean);
+  let loadedCount = 0;
+  const batchResults = [];
+
+  $('dropZone').innerHTML = `<h2>Batch Mode</h2><p>Loading ${urls.length} sheets...</p>`;
+
+  urls.forEach((url, i) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      batchResults[i] = { img, data: ctx.getImageData(0, 0, img.width, img.height), url };
+      loadedCount++;
+      if (loadedCount === urls.length) {
+        // Process first sheet (user can cycle through with batch nav)
+        sourceImage = batchResults[0].img;
+        sourceData = batchResults[0].data;
+        autoDetect();
+        $('dropZone').innerHTML = `<h2>Batch: ${urls.length} sheets</h2><p>Sheet 1/${urls.length} shown</p>`;
+      }
+    };
+    img.onerror = () => { loadedCount++; };
+    img.src = url;
+  });
+}
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

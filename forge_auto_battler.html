@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Forge Auto-Battler">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Forge Auto-Battler</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas { display: block; margin: 0 auto; }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+'use strict';
+
+// ===================== CANVAS & GLOBALS =====================
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let W, H, SCALE;
+const GRID_COLS = 7;
+const GRID_ROWS = 4;
+let CELL_SIZE;
+let BOARD_X, BOARD_Y;
+let ENEMY_BOARD_Y;
+
+const COL = {
+  bg: '#0a0a0f', gold: '#f0b800', green: '#00ff88', red: '#ff3344',
+  blue: '#3388ff', purple: '#aa44ff', white: '#eeeef6', dark: '#181825',
+  panel: '#12121f', grid: '#1a1a2f', gridLine: '#252540',
+  hp: '#00ff88', hpBg: '#1a2a1f', dmg: '#ff3344',
+  shopBg: '#0f0f1a', shopItem: '#1a1a30', shopHighlight: '#2a2a50',
+  synergy: '#f0b800', levelUp: '#3388ff',
+  cyan: '#00ddff', orange: '#ff8800', pink: '#ff44aa',
+};
+
+// ===================== AUDIO ENGINE =====================
+class AudioEngine {
+  constructor() {
+    this.ctx = null;
+    this.initialized = false;
+  }
+  init() {
+    if (this.initialized) return;
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.initialized = true;
+    } catch(e) {}
+  }
+  play(type) {
+    if (!this.initialized) return;
+    const ac = this.ctx;
+    const now = ac.currentTime;
+    const g = ac.createGain();
+    g.connect(ac.destination);
+    const o = ac.createOscillator();
+    o.connect(g);
+    switch(type) {
+      case 'buy':
+        o.type = 'sine'; o.frequency.setValueAtTime(440, now);
+        o.frequency.linearRampToValueAtTime(880, now + 0.1);
+        g.gain.setValueAtTime(0.15, now);
+        g.gain.linearRampToValueAtTime(0, now + 0.15);
+        o.start(now); o.stop(now + 0.15);
+        break;
+      case 'sell':
+        o.type = 'sawtooth'; o.frequency.setValueAtTime(600, now);
+        o.frequency.linearRampToValueAtTime(200, now + 0.15);
+        g.gain.setValueAtTime(0.1, now);
+        g.gain.linearRampToValueAtTime(0, now + 0.2);
+        o.start(now); o.stop(now + 0.2);
+        break;
+      case 'place':
+        o.type = 'sine'; o.frequency.setValueAtTime(523, now);
+        g.gain.setValueAtTime(0.12, now);
+        g.gain.linearRampToValueAtTime(0, now + 0.08);
+        o.start(now); o.stop(now + 0.08);
+        break;
+      case 'hit':
+        o.type = 'square'; o.frequency.setValueAtTime(150, now);
+        o.frequency.linearRampToValueAtTime(60, now + 0.1);
+        g.gain.setValueAtTime(0.12, now);
+        g.gain.linearRampToValueAtTime(0, now + 0.12);
+        o.start(now); o.stop(now + 0.12);
+        break;
+      case 'kill':
+        o.type = 'sawtooth'; o.frequency.setValueAtTime(800, now);
+        o.frequency.linearRampToValueAtTime(100, now + 0.3);
+        g.gain.setValueAtTime(0.15, now);
+        g.gain.linearRampToValueAtTime(0, now + 0.35);
+        o.start(now); o.stop(now + 0.35);
+        break;
+      case 'win':
+        o.type = 'sine';
+        [523, 659, 784].forEach((f, i) => {
+          const o2 = ac.createOscillator();
+          const g2 = ac.createGain();
+          o2.connect(g2); g2.connect(ac.destination);
+          o2.type = 'sine'; o2.frequency.setValueAtTime(f, now + i * 0.15);
+          g2.gain.setValueAtTime(0.12, now + i * 0.15);
+          g2.gain.linearRampToValueAtTime(0, now + i * 0.15 + 0.3);
+          o2.start(now + i * 0.15); o2.stop(now + i * 0.15 + 0.3);
+        });
+        g.gain.setValueAtTime(0, now); o.start(now); o.stop(now + 0.01);
+        break;
+      case 'lose':
+        o.type = 'sawtooth'; o.frequency.setValueAtTime(300, now);
+        o.frequency.linearRampToValueAtTime(80, now + 0.5);
+        g.gain.setValueAtTime(0.12, now);
+        g.gain.linearRampToValueAtTime(0, now + 0.6);
+        o.start(now); o.stop(now + 0.6);
+        break;
+      case 'reroll':
+        o.type = 'triangle'; o.frequency.setValueAtTime(300, now);
+        o.frequency.linearRampToValueAtTime(600, now + 0.08);
+        o.frequency.linearRampToValueAtTime(300, now + 0.16);
+        g.gain.setValueAtTime(0.1, now);
+        g.gain.linearRampToValueAtTime(0, now + 0.2);
+        o.start(now); o.stop(now + 0.2);
+        break;
+      case 'levelup':
+        o.type = 'sine';
+        o.frequency.setValueAtTime(400, now);
+        o.frequency.linearRampToValueAtTime(800, now + 0.15);
+        o.frequency.linearRampToValueAtTime(1200, now + 0.3);
+        g.gain.setValueAtTime(0.15, now);
+        g.gain.linearRampToValueAtTime(0, now + 0.4);
+        o.start(now); o.stop(now + 0.4);
+        break;
+      case 'start':
+        o.type = 'sine'; o.frequency.setValueAtTime(262, now);
+        o.frequency.linearRampToValueAtTime(523, now + 0.2);
+        g.gain.setValueAtTime(0.15, now);
+        g.gain.linearRampToValueAtTime(0, now + 0.3);
+        o.start(now); o.stop(now + 0.3);
+        break;
+      default:
+        g.gain.setValueAtTime(0, now); o.start(now); o.stop(now + 0.01);
+    }
+  }
+}
+const audio = new AudioEngine();
+
+// ===================== PARTICLES =====================
+const particles = [];
+class Particle {
+  constructor(x, y, color, vx, vy, life, size) {
+    this.x = x; this.y = y; this.color = color;
+    this.vx = vx; this.vy = vy;
+    this.life = life; this.maxLife = life;
+    this.size = size || 3;
+  }
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.life -= dt;
+    this.vy += 80 * dt;
+  }
+  draw() {
+    const a = Math.max(0, this.life / this.maxLife);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size * a, this.size * a);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function spawnParticles(x, y, color, count, speed) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = (Math.random() * 0.5 + 0.5) * (speed || 120);
+    particles.push(new Particle(x, y, color, Math.cos(angle) * spd, Math.sin(angle) * spd, 0.5 + Math.random() * 0.5, 2 + Math.random() * 3));
+  }
+}
+
+// ===================== SCREEN SHAKE =====================
+let shakeAmount = 0;
+let shakeDuration = 0;
+function triggerShake(amount, duration) {
+  shakeAmount = amount;
+  shakeDuration = duration;
+}
+
+// ===================== FLOATING TEXT =====================
+const floatingTexts = [];
+class FloatingText {
+  constructor(x, y, text, color, size) {
+    this.x = x; this.y = y; this.text = text;
+    this.color = color; this.size = size || 14;
+    this.life = 1.0; this.vy = -40;
+  }
+  update(dt) {
+    this.y += this.vy * dt;
+    this.life -= dt;
+  }
+  draw() {
+    const a = Math.max(0, this.life);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = this.color;
+    ctx.font = `bold ${this.size * SCALE}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(this.text, this.x, this.y);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ===================== UNIT DEFINITIONS =====================
+const SYNERGY_TYPES = {
+  WARRIOR: { name: 'Warrior', color: '#ff4444', icon: 'W', bonus: 'bonus_armor', desc: '+3 Armor' },
+  MAGE: { name: 'Mage', color: '#4488ff', icon: 'M', bonus: 'bonus_spell', desc: '+30% Spell Dmg' },
+  RANGER: { name: 'Ranger', color: '#44ff44', icon: 'R', bonus: 'bonus_speed', desc: '+40% Atk Spd' },
+  TANK: { name: 'Tank', color: '#888888', icon: 'T', bonus: 'bonus_hp', desc: '+200 HP' },
+  ASSASSIN: { name: 'Assassin', color: '#ff44ff', icon: 'A', bonus: 'bonus_crit', desc: '+30% Crit' },
+  HEALER: { name: 'Healer', color: '#44ffaa', icon: 'H', bonus: 'bonus_heal', desc: 'Heal 20/s' },
+};
+
+const UNIT_DEFS = [
+  { name: 'Knight', synergy: 'WARRIOR', tier: 1, cost: 1, hp: 350, atk: 25, atkSpd: 1.0, range: 1, armor: 5, shape: 'shield', color: '#cc3333' },
+  { name: 'Archer', synergy: 'RANGER', tier: 1, cost: 1, hp: 250, atk: 30, atkSpd: 0.8, range: 3, armor: 1, shape: 'arrow', color: '#33cc33' },
+  { name: 'Monk', synergy: 'HEALER', tier: 1, cost: 1, hp: 280, atk: 15, atkSpd: 1.2, range: 2, armor: 2, shape: 'cross', color: '#33ccaa' },
+  { name: 'Brute', synergy: 'TANK', tier: 1, cost: 1, hp: 500, atk: 18, atkSpd: 1.4, range: 1, armor: 8, shape: 'square', color: '#888888' },
+  { name: 'Blade', synergy: 'ASSASSIN', tier: 2, cost: 2, hp: 280, atk: 45, atkSpd: 0.7, range: 1, armor: 2, shape: 'diamond', color: '#cc44cc' },
+  { name: 'Wizard', synergy: 'MAGE', tier: 2, cost: 2, hp: 220, atk: 40, atkSpd: 1.1, range: 3, armor: 1, shape: 'star', color: '#4488ff' },
+  { name: 'Paladin', synergy: 'WARRIOR', tier: 2, cost: 2, hp: 450, atk: 35, atkSpd: 1.0, range: 1, armor: 7, shape: 'shield', color: '#ff6633' },
+  { name: 'Sniper', synergy: 'RANGER', tier: 2, cost: 2, hp: 200, atk: 55, atkSpd: 1.3, range: 4, armor: 0, shape: 'arrow', color: '#66ff33' },
+  { name: 'Golem', synergy: 'TANK', tier: 3, cost: 3, hp: 800, atk: 22, atkSpd: 1.8, range: 1, armor: 15, shape: 'square', color: '#aaaacc' },
+  { name: 'Archmage', synergy: 'MAGE', tier: 3, cost: 3, hp: 280, atk: 65, atkSpd: 1.2, range: 3, armor: 2, shape: 'star', color: '#6644ff' },
+  { name: 'Shadow', synergy: 'ASSASSIN', tier: 3, cost: 3, hp: 350, atk: 70, atkSpd: 0.6, range: 1, armor: 3, shape: 'diamond', color: '#ff22ff' },
+  { name: 'Cleric', synergy: 'HEALER', tier: 3, cost: 3, hp: 380, atk: 25, atkSpd: 1.0, range: 2, armor: 4, shape: 'cross', color: '#22ffcc' },
+  { name: 'Champion', synergy: 'WARRIOR', tier: 3, cost: 4, hp: 600, atk: 50, atkSpd: 0.9, range: 1, armor: 10, shape: 'shield', color: '#ff2200' },
+  { name: 'Necro', synergy: 'MAGE', tier: 3, cost: 4, hp: 300, atk: 80, atkSpd: 1.5, range: 3, armor: 2, shape: 'star', color: '#8800ff' },
+  { name: 'Dragon', synergy: 'TANK', tier: 4, cost: 5, hp: 1200, atk: 60, atkSpd: 1.5, range: 2, armor: 12, shape: 'square', color: '#ffaa00' },
+];
+
+// ===================== GAME STATE =====================
+const STATE = { TITLE: 0, SHOP: 1, ARRANGE: 2, BATTLE: 3, RESULT: 4, GAMEOVER: 5 };
+
+let gameState = STATE.TITLE;
+let player = null;
+let enemyAI = null;
+let round = 0;
+let maxRounds = 20;
+let battleUnits = [];
+let battleProjectiles = [];
+let battleTimer = 0;
+let resultTimer = 0;
+let resultText = '';
+let selectedUnit = null;
+let dragUnit = null;
+let dragOffsetX = 0, dragOffsetY = 0;
+let shopUnits = [];
+let benchUnits = [];
+let highScore = parseInt(localStorage.getItem('autoBattlerHighScore') || '0');
+let titlePulse = 0;
+let battleAnimTimer = 0;
+let phaseTimer = 0;
+let phaseText = '';
+let showSynergyPanel = false;
+
+// ===================== GOBADAPT ADAPTIVE DIFFICULTY =====================
+const GobAdapt = (() => {
+  const KEY = 'gg_autobattler_adapt';
+  let data;
+  const load = () => { try { data = JSON.parse(localStorage.getItem(KEY)); } catch(e) {} if (!data) data = { games: 0, totalRounds: 0, recentRounds: [] }; };
+  const save = () => localStorage.setItem(KEY, JSON.stringify(data));
+  load();
+  const TARGET = 8;
+  const getAllyMod = () => {
+    if (data.games < 2) return 1.1;
+    const recent = data.recentRounds.slice(-10);
+    const avg = recent.length ? recent.reduce((a,b)=>a+b,0)/recent.length : TARGET;
+    if (avg < TARGET * 0.3) return 1.25;
+    if (avg < TARGET) return 1.0 + (1.0 - avg/TARGET) * 0.25;
+    return 1.0;
+  };
+  const record = (roundsWon) => {
+    data.games++; data.totalRounds += roundsWon;
+    data.recentRounds.push(roundsWon);
+    if (data.recentRounds.length > 10) data.recentRounds.shift();
+    save();
+  };
+  return { getAllyMod, record };
+})();
+
+// Touch / mouse state
+let mouseX = 0, mouseY = 0;
+let mouseDown = false;
+let touchActive = false;
+let hoveredCell = null;
+let hoveredShopIdx = -1;
+let hoveredBench = -1;
+
+// Button rects for touch
+let btnReroll = null;
+let btnLevelUp = null;
+let btnSell = null;
+let btnReady = null;
+let btnPlayAgain = null;
+let btnStart = null;
+let btnSynergy = null;
+let shopItemRects = [];
+let benchRects = [];
+let boardCellRects = [];
+
+// ===================== PLAYER / ENEMY CLASSES =====================
+class Player {
+  constructor(isAI) {
+    this.isAI = isAI;
+    this.hp = 100;
+    this.gold = 3;
+    this.level = 2;
+    this.xp = 0;
+    this.xpNeeded = 4;
+    this.board = Array.from({length: GRID_ROWS}, () => Array(GRID_COLS).fill(null));
+    this.bench = Array(7).fill(null);
+    this.wins = 0;
+    this.losses = 0;
+    this.streak = 0;
+  }
+  maxUnits() { return this.level; }
+  unitCount() {
+    let c = 0;
+    for (let r = 0; r < GRID_ROWS; r++)
+      for (let co = 0; co < GRID_COLS; co++)
+        if (this.board[r][co]) c++;
+    return c;
+  }
+  addXP(amount) {
+    this.xp += amount;
+    while (this.xp >= this.xpNeeded && this.level < 9) {
+      this.xp -= this.xpNeeded;
+      this.level++;
+      this.xpNeeded = 4 + this.level;
+      audio.play('levelup');
+    }
+  }
+  getSynergies() {
+    const counts = {};
+    for (let r = 0; r < GRID_ROWS; r++)
+      for (let c = 0; c < GRID_COLS; c++) {
+        const u = this.board[r][c];
+        if (u) counts[u.synergy] = (counts[u.synergy] || 0) + 1;
+      }
+    return counts;
+  }
+  getActiveSynergies() {
+    const counts = this.getSynergies();
+    const active = {};
+    for (const [key, count] of Object.entries(counts)) {
+      if (count >= 2) active[key] = count;
+    }
+    return active;
+  }
+}
+
+// ===================== UNIT INSTANCE =====================
+class Unit {
+  constructor(def, starLevel) {
+    this.def = def;
+    this.name = def.name;
+    this.synergy = def.synergy;
+    this.tier = def.tier;
+    this.cost = def.cost;
+    this.starLevel = starLevel || 1;
+    const mult = this.starLevel === 2 ? 1.8 : this.starLevel === 3 ? 3.2 : 1;
+    this.maxHp = Math.floor(def.hp * mult);
+    this.hp = this.maxHp;
+    this.atk = Math.floor(def.atk * mult);
+    this.atkSpd = def.atkSpd;
+    this.range = def.range;
+    this.armor = Math.floor(def.armor * mult);
+    this.shape = def.shape;
+    this.color = def.color;
+    this.atkTimer = 0;
+    this.target = null;
+    this.gridRow = -1;
+    this.gridCol = -1;
+    this.x = 0; this.y = 0;
+    this.targetX = 0; this.targetY = 0;
+    this.moveSpeed = 60;
+    this.alive = true;
+    this.side = 0; // 0=player, 1=enemy
+    this.flashTimer = 0;
+    this.bonusArmor = 0;
+    this.bonusAtkMult = 1;
+    this.bonusAtkSpdMult = 1;
+    this.bonusCrit = 0;
+    this.bonusHeal = 0;
+    this.bonusSpellMult = 1;
+  }
+  applyBonus(bonusType) {
+    switch(bonusType) {
+      case 'bonus_armor': this.bonusArmor += 3; break;
+      case 'bonus_spell': this.bonusSpellMult += 0.3; break;
+      case 'bonus_speed': this.bonusAtkSpdMult += 0.4; break;
+      case 'bonus_hp': this.maxHp += 200; this.hp += 200; break;
+      case 'bonus_crit': this.bonusCrit += 0.3; break;
+      case 'bonus_heal': this.bonusHeal += 20; break;
+    }
+  }
+  effectiveAtk() {
+    let a = this.atk * this.bonusAtkMult;
+    if (this.synergy === 'MAGE') a *= this.bonusSpellMult;
+    return Math.floor(a);
+  }
+  effectiveArmor() { return this.armor + this.bonusArmor; }
+  effectiveAtkSpd() { return this.atkSpd / this.bonusAtkSpdMult; }
+  clone() {
+    const u = new Unit(this.def, this.starLevel);
+    return u;
+  }
+}
+
+// ===================== SHOP GENERATION =====================
+function generateShop(playerLevel, roundNum) {
+  const pool = [];
+  for (const def of UNIT_DEFS) {
+    let weight = 0;
+    if (def.tier === 1) weight = Math.max(1, 10 - playerLevel);
+    else if (def.tier === 2) weight = Math.min(10, playerLevel * 2);
+    else if (def.tier === 3) weight = Math.max(0, playerLevel - 2) * 2;
+    else if (def.tier === 4) weight = Math.max(0, playerLevel - 5) * 2;
+    for (let i = 0; i < weight; i++) pool.push(def);
+  }
+  const shop = [];
+  const count = Math.min(5, 3 + Math.floor(playerLevel / 3));
+  for (let i = 0; i < count; i++) {
+    const def = pool[Math.floor(Math.random() * pool.length)];
+    shop.push(new Unit(def, 1));
+  }
+  return shop;
+}
+
+// ===================== AI OPPONENT =====================
+function generateEnemyBoard(roundNum) {
+  const ai = new Player(true);
+  ai.level = Math.min(9, 2 + Math.floor(roundNum / 2));
+  const budget = 3 + roundNum * 2;
+  let spent = 0;
+  const available = UNIT_DEFS.filter(d => d.cost <= Math.min(4, 1 + Math.floor(roundNum / 3)));
+
+  const unitCount = Math.min(ai.maxUnits(), 2 + Math.floor(roundNum * 0.7));
+  for (let i = 0; i < unitCount && spent < budget; i++) {
+    const candidates = available.filter(d => d.cost <= budget - spent);
+    if (candidates.length === 0) break;
+    const def = candidates[Math.floor(Math.random() * candidates.length)];
+    const starLvl = roundNum >= 8 && Math.random() < 0.3 ? 2 : 1;
+    const unit = new Unit(def, starLvl);
+    spent += def.cost;
+    // Place in valid position
+    let placed = false;
+    for (let attempts = 0; attempts < 50 && !placed; attempts++) {
+      const r = Math.floor(Math.random() * GRID_ROWS);
+      const c = Math.floor(Math.random() * GRID_COLS);
+      if (!ai.board[r][c]) {
+        ai.board[r][c] = unit;
+        unit.gridRow = r;
+        unit.gridCol = c;
+        placed = true;
+      }
+    }
+  }
+  return ai;
+}
+
+// ===================== SYNERGY APPLICATION =====================
+function applySynergies(boardOwner, units) {
+  const synergies = boardOwner.getActiveSynergies();
+  for (const u of units) {
+    if (u.side === (boardOwner.isAI ? 1 : 0)) {
+      for (const [synKey, count] of Object.entries(synergies)) {
+        if (u.synergy === synKey || count >= 4) {
+          u.applyBonus(SYNERGY_TYPES[synKey].bonus);
+        }
+      }
+    }
+  }
+}
+
+// ===================== BATTLE LOGIC =====================
+function setupBattle() {
+  battleUnits = [];
+  battleProjectiles = [];
+  battleTimer = 0;
+
+  // Clone player units (with GobAdapt stat boost)
+  const allyMod = GobAdapt.getAllyMod();
+  for (let r = 0; r < GRID_ROWS; r++) {
+    for (let c = 0; c < GRID_COLS; c++) {
+      const u = player.board[r][c];
+      if (u) {
+        const bu = u.clone();
+        bu.side = 0;
+        if (allyMod > 1.0) {
+          bu.hp = Math.ceil(bu.hp * allyMod);
+          bu.maxHp = Math.ceil(bu.maxHp * allyMod);
+          bu.atk = Math.ceil(bu.atk * allyMod);
+        }
+        bu.gridRow = GRID_ROWS + r;
+        bu.gridCol = c;
+        bu.x = BOARD_X + c * CELL_SIZE + CELL_SIZE / 2;
+        bu.y = ENEMY_BOARD_Y + GRID_ROWS * CELL_SIZE + 10 * SCALE + r * CELL_SIZE + CELL_SIZE / 2;
+        bu.targetX = bu.x;
+        bu.targetY = bu.y;
+        battleUnits.push(bu);
+      }
+    }
+  }
+
+  // Clone enemy units (mirrored)
+  for (let r = 0; r < GRID_ROWS; r++) {
+    for (let c = 0; c < GRID_COLS; c++) {
+      const u = enemyAI.board[r][c];
+      if (u) {
+        const bu = u.clone();
+        bu.side = 1;
+        bu.gridRow = GRID_ROWS - 1 - r;
+        bu.gridCol = c;
+        bu.x = BOARD_X + c * CELL_SIZE + CELL_SIZE / 2;
+        bu.y = ENEMY_BOARD_Y + (GRID_ROWS - 1 - r) * CELL_SIZE + CELL_SIZE / 2;
+        bu.targetX = bu.x;
+        bu.targetY = bu.y;
+        battleUnits.push(bu);
+      }
+    }
+  }
+
+  // Apply synergies
+  applySynergies(player, battleUnits);
+  applySynergies(enemyAI, battleUnits);
+}
+
+function distBattle(a, b) {
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+}
+
+function findTarget(unit) {
+  let nearest = null;
+  let nearDist = Infinity;
+  for (const other of battleUnits) {
+    if (!other.alive || other.side === unit.side) continue;
+    const d = distBattle(unit, other);
+    if (d < nearDist) { nearDist = d; nearest = other; }
+  }
+  return nearest;
+}
+
+function updateBattle(dt) {
+  battleTimer += dt;
+  battleAnimTimer += dt;
+
+  for (const u of battleUnits) {
+    if (!u.alive) continue;
+
+    // Heal from synergy
+    if (u.bonusHeal > 0) {
+      u.hp = Math.min(u.maxHp, u.hp + u.bonusHeal * dt);
+    }
+
+    // Find target
+    u.target = findTarget(u);
+    if (!u.target) continue;
+
+    const d = distBattle(u, u.target);
+    const attackRange = u.range * CELL_SIZE;
+
+    if (d > attackRange) {
+      // Move toward target
+      const dx = u.target.x - u.x;
+      const dy = u.target.y - u.y;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len > 0) {
+        u.x += (dx / len) * u.moveSpeed * SCALE * dt;
+        u.y += (dy / len) * u.moveSpeed * SCALE * dt;
+      }
+    } else {
+      // Attack
+      u.atkTimer += dt;
+      if (u.atkTimer >= u.effectiveAtkSpd()) {
+        u.atkTimer = 0;
+        let dmg = u.effectiveAtk();
+        const isCrit = Math.random() < u.bonusCrit;
+        if (isCrit) dmg = Math.floor(dmg * 2);
+        const armor = u.target.effectiveArmor();
+        dmg = Math.max(1, dmg - armor);
+
+        if (u.range > 1) {
+          // Ranged: spawn projectile
+          battleProjectiles.push({
+            x: u.x, y: u.y,
+            tx: u.target.x, ty: u.target.y,
+            target: u.target,
+            dmg, isCrit,
+            color: u.color,
+            speed: 300 * SCALE,
+            alive: true
+          });
+        } else {
+          dealDamage(u.target, dmg, isCrit);
+        }
+      }
+    }
+  }
+
+  // Update projectiles
+  for (const p of battleProjectiles) {
+    if (!p.alive) continue;
+    if (!p.target.alive) { p.alive = false; continue; }
+    const dx = p.target.x - p.x;
+    const dy = p.target.y - p.y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d < 5 * SCALE) {
+      dealDamage(p.target, p.dmg, p.isCrit);
+      p.alive = false;
+    } else {
+      p.x += (dx / d) * p.speed * dt;
+      p.y += (dy / d) * p.speed * dt;
+    }
+  }
+
+  battleProjectiles = battleProjectiles.filter(p => p.alive);
+
+  // Check battle end
+  const playerAlive = battleUnits.filter(u => u.alive && u.side === 0);
+  const enemyAlive = battleUnits.filter(u => u.alive && u.side === 1);
+
+  if (playerAlive.length === 0 || enemyAlive.length === 0 || battleTimer > 45) {
+    endBattle(playerAlive.length, enemyAlive.length);
+  }
+}
+
+function dealDamage(target, dmg, isCrit) {
+  target.hp -= dmg;
+  target.flashTimer = 0.15;
+  const col = isCrit ? COL.gold : COL.red;
+  floatingTexts.push(new FloatingText(target.x, target.y - 15 * SCALE, (isCrit ? 'CRIT ' : '') + dmg, col, isCrit ? 16 : 12));
+  spawnParticles(target.x, target.y, col, isCrit ? 8 : 4, 80);
+  audio.play('hit');
+  triggerShake(isCrit ? 4 : 2, 0.1);
+
+  if (target.hp <= 0) {
+    target.alive = false;
+    spawnParticles(target.x, target.y, target.color, 15, 150);
+    audio.play('kill');
+    triggerShake(5, 0.15);
+  }
+}
+
+function endBattle(playerCount, enemyCount) {
+  gameState = STATE.RESULT;
+  resultTimer = 0;
+
+  if (playerCount > 0 && enemyCount === 0) {
+    resultText = 'VICTORY!';
+    player.wins++;
+    player.streak = Math.max(1, player.streak + 1);
+    const bonusGold = Math.min(3, player.streak);
+    player.gold += 5 + round + bonusGold;
+    player.addXP(2);
+    audio.play('win');
+  } else if (enemyCount > 0 && playerCount === 0) {
+    resultText = 'DEFEAT';
+    player.losses++;
+    player.streak = Math.min(-1, player.streak - 1);
+    const dmg = 2 + Math.floor(round / 2) + enemyCount;
+    player.hp -= dmg;
+    player.gold += 5 + round;
+    player.addXP(1);
+    audio.play('lose');
+    triggerShake(8, 0.3);
+    floatingTexts.push(new FloatingText(W / 2, H / 2, `-${dmg} HP`, COL.red, 24));
+  } else {
+    resultText = 'DRAW';
+    player.gold += 5 + round;
+    player.addXP(1);
+  }
+
+  // Interest gold
+  const interest = Math.min(5, Math.floor(player.gold / 10));
+  player.gold += interest;
+
+  if (player.hp <= 0) {
+    player.hp = 0;
+    gameState = STATE.GAMEOVER;
+    GobAdapt.record(player.wins);
+    if (round > highScore) {
+      highScore = round;
+      localStorage.setItem('autoBattlerHighScore', highScore.toString());
+    }
+  }
+}
+
+// ===================== TRIPLE CHECK (Star upgrades) =====================
+function checkTriples() {
+  // Check board + bench for 3 matching units -> upgrade to star 2, etc.
+  const unitsByName = {};
+  const allUnits = [];
+
+  for (let r = 0; r < GRID_ROWS; r++) {
+    for (let c = 0; c < GRID_COLS; c++) {
+      const u = player.board[r][c];
+      if (u) {
+        const key = `${u.name}_${u.starLevel}`;
+        if (!unitsByName[key]) unitsByName[key] = [];
+        unitsByName[key].push({ unit: u, location: 'board', row: r, col: c });
+      }
+    }
+  }
+  for (let i = 0; i < player.bench.length; i++) {
+    const u = player.bench[i];
+    if (u) {
+      const key = `${u.name}_${u.starLevel}`;
+      if (!unitsByName[key]) unitsByName[key] = [];
+      unitsByName[key].push({ unit: u, location: 'bench', idx: i });
+    }
+  }
+
+  let upgraded = false;
+  for (const [key, entries] of Object.entries(unitsByName)) {
+    if (entries.length >= 3 && entries[0].unit.starLevel < 3) {
+      // Upgrade first one, remove other two
+      const keeper = entries[0];
+      const newStar = keeper.unit.starLevel + 1;
+      const newUnit = new Unit(keeper.unit.def, newStar);
+
+      if (keeper.location === 'board') {
+        player.board[keeper.row][keeper.col] = newUnit;
+        newUnit.gridRow = keeper.row;
+        newUnit.gridCol = keeper.col;
+      } else {
+        player.bench[keeper.idx] = newUnit;
+      }
+
+      for (let i = 1; i < 3; i++) {
+        const e = entries[i];
+        if (e.location === 'board') player.board[e.row][e.col] = null;
+        else player.bench[e.idx] = null;
+      }
+
+      spawnParticles(W / 2, H / 2, COL.gold, 20, 200);
+      floatingTexts.push(new FloatingText(W / 2, H / 3, `${newUnit.name} ★${newStar}!`, COL.gold, 20));
+      audio.play('levelup');
+      upgraded = true;
+    }
+  }
+  if (upgraded) checkTriples(); // Recursive for double upgrades
+}
+
+// ===================== RESIZE =====================
+function resize() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W;
+  canvas.height = H;
+  SCALE = Math.min(W / 400, H / 720);
+  CELL_SIZE = Math.floor(Math.min((W - 20 * SCALE) / GRID_COLS, (H * 0.35) / GRID_ROWS));
+  BOARD_X = Math.floor((W - GRID_COLS * CELL_SIZE) / 2);
+  ENEMY_BOARD_Y = Math.floor(50 * SCALE);
+}
+window.addEventListener('resize', resize);
+
+// ===================== INPUT HANDLERS =====================
+function getXY(e) {
+  if (e.touches) {
+    return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+  return { x: e.clientX, y: e.clientY };
+}
+
+function hitRect(x, y, rect) {
+  if (!rect) return false;
+  return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
+}
+
+function getCellAt(x, y, boardY) {
+  const col = Math.floor((x - BOARD_X) / CELL_SIZE);
+  const row = Math.floor((y - boardY) / CELL_SIZE);
+  if (col >= 0 && col < GRID_COLS && row >= 0 && row < GRID_ROWS) return { row, col };
+  return null;
+}
+
+function handleDown(x, y) {
+  mouseX = x; mouseY = y; mouseDown = true;
+  audio.init();
+
+  if (gameState === STATE.TITLE) {
+    if (hitRect(x, y, btnStart)) {
+      startGame();
+    }
+    return;
+  }
+
+  if (gameState === STATE.GAMEOVER) {
+    if (hitRect(x, y, btnPlayAgain)) {
+      gameState = STATE.TITLE;
+    }
+    return;
+  }
+
+  if (gameState === STATE.RESULT) return;
+
+  if (gameState === STATE.SHOP || gameState === STATE.ARRANGE) {
+    // Check shop items
+    for (let i = 0; i < shopItemRects.length; i++) {
+      if (hitRect(x, y, shopItemRects[i]) && shopUnits[i]) {
+        buyUnit(i);
+        return;
+      }
+    }
+
+    // Check buttons
+    if (hitRect(x, y, btnReroll)) { rerollShop(); return; }
+    if (hitRect(x, y, btnLevelUp)) { buyXP(); return; }
+    if (hitRect(x, y, btnReady)) { startBattlePhase(); return; }
+    if (hitRect(x, y, btnSynergy)) { showSynergyPanel = !showSynergyPanel; return; }
+
+    // Check bench for drag
+    for (let i = 0; i < benchRects.length; i++) {
+      if (hitRect(x, y, benchRects[i]) && player.bench[i]) {
+        // Check if sell button area
+        if (hitRect(x, y, btnSell) && selectedUnit) {
+          sellUnit();
+          return;
+        }
+        dragUnit = player.bench[i];
+        dragUnit._fromBench = i;
+        dragUnit._fromBoard = null;
+        player.bench[i] = null;
+        dragOffsetX = x - benchRects[i].x;
+        dragOffsetY = y - benchRects[i].y;
+        selectedUnit = dragUnit;
+        gameState = STATE.ARRANGE;
+        return;
+      }
+    }
+
+    // Check board for drag
+    const playerBoardY = ENEMY_BOARD_Y + GRID_ROWS * CELL_SIZE + 10 * SCALE;
+    const cell = getCellAt(x, y, playerBoardY);
+    if (cell && player.board[cell.row][cell.col]) {
+      dragUnit = player.board[cell.row][cell.col];
+      dragUnit._fromBoard = { row: cell.row, col: cell.col };
+      dragUnit._fromBench = null;
+      player.board[cell.row][cell.col] = null;
+      dragOffsetX = x - (BOARD_X + cell.col * CELL_SIZE);
+      dragOffsetY = y - (playerBoardY + cell.row * CELL_SIZE);
+      selectedUnit = dragUnit;
+      gameState = STATE.ARRANGE;
+      return;
+    }
+
+    // Sell button
+    if (hitRect(x, y, btnSell) && selectedUnit) {
+      sellUnit();
+      return;
+    }
+  }
+}
+
+function handleMove(x, y) {
+  mouseX = x; mouseY = y;
+}
+
+function handleUp(x, y) {
+  mouseX = x; mouseY = y; mouseDown = false;
+
+  if (dragUnit && (gameState === STATE.SHOP || gameState === STATE.ARRANGE)) {
+    const playerBoardY = ENEMY_BOARD_Y + GRID_ROWS * CELL_SIZE + 10 * SCALE;
+
+    // Check if dropped on sell button
+    if (hitRect(x, y, btnSell)) {
+      const sellValue = Math.max(1, dragUnit.cost * dragUnit.starLevel);
+      player.gold += sellValue;
+      floatingTexts.push(new FloatingText(x, y, `+${sellValue}g`, COL.gold, 16));
+      audio.play('sell');
+      dragUnit = null;
+      selectedUnit = null;
+      gameState = STATE.SHOP;
+      return;
+    }
+
+    // Check if dropped on board
+    const cell = getCellAt(x, y, playerBoardY);
+    if (cell && !player.board[cell.row][cell.col]) {
+      if (dragUnit._fromBench !== null || dragUnit._fromBoard) {
+        // Moving from bench/board to board
+        if (dragUnit._fromBench !== null && player.unitCount() >= player.maxUnits()) {
+          // Can't place, return to bench
+          returnDragUnit();
+        } else {
+          player.board[cell.row][cell.col] = dragUnit;
+          dragUnit.gridRow = cell.row;
+          dragUnit.gridCol = cell.col;
+          audio.play('place');
+        }
+      }
+    } else if (cell && player.board[cell.row][cell.col]) {
+      // Swap
+      const existing = player.board[cell.row][cell.col];
+      if (dragUnit._fromBoard) {
+        player.board[dragUnit._fromBoard.row][dragUnit._fromBoard.col] = existing;
+        existing.gridRow = dragUnit._fromBoard.row;
+        existing.gridCol = dragUnit._fromBoard.col;
+      } else if (dragUnit._fromBench !== null) {
+        player.bench[dragUnit._fromBench] = existing;
+      }
+      player.board[cell.row][cell.col] = dragUnit;
+      dragUnit.gridRow = cell.row;
+      dragUnit.gridCol = cell.col;
+      audio.play('place');
+    } else {
+      // Check if dropped on bench
+      let placedOnBench = false;
+      for (let i = 0; i < benchRects.length; i++) {
+        if (hitRect(x, y, benchRects[i])) {
+          if (!player.bench[i]) {
+            player.bench[i] = dragUnit;
+            placedOnBench = true;
+            audio.play('place');
+          } else {
+            // Swap bench slots
+            if (dragUnit._fromBench !== null) {
+              player.bench[dragUnit._fromBench] = player.bench[i];
+              player.bench[i] = dragUnit;
+              placedOnBench = true;
+              audio.play('place');
+            }
+          }
+          break;
+        }
+      }
+      if (!placedOnBench) returnDragUnit();
+    }
+    dragUnit = null;
+    checkTriples();
+    gameState = STATE.SHOP;
+  }
+}
+
+function returnDragUnit() {
+  if (!dragUnit) return;
+  if (dragUnit._fromBoard) {
+    player.board[dragUnit._fromBoard.row][dragUnit._fromBoard.col] = dragUnit;
+  } else if (dragUnit._fromBench !== null) {
+    player.bench[dragUnit._fromBench] = dragUnit;
+  }
+}
+
+// Mouse events
+canvas.addEventListener('mousedown', e => handleDown(e.clientX, e.clientY));
+canvas.addEventListener('mousemove', e => handleMove(e.clientX, e.clientY));
+canvas.addEventListener('mouseup', e => handleUp(e.clientX, e.clientY));
+
+// Touch events
+canvas.addEventListener('touchstart', e => { e.preventDefault(); touchActive = true; const t = e.touches[0]; handleDown(t.clientX, t.clientY); }, { passive: false });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); const t = e.touches[0]; handleMove(t.clientX, t.clientY); }, { passive: false });
+canvas.addEventListener('touchend', e => { e.preventDefault(); handleUp(mouseX, mouseY); touchActive = false; }, { passive: false });
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (gameState === STATE.TITLE) { startGame(); return; }
+  if (gameState === STATE.GAMEOVER) { gameState = STATE.TITLE; return; }
+  if (e.key === 'r' && (gameState === STATE.SHOP || gameState === STATE.ARRANGE)) rerollShop();
+  if (e.key === 'e' && (gameState === STATE.SHOP || gameState === STATE.ARRANGE)) buyXP();
+  if (e.key === ' ' && (gameState === STATE.SHOP || gameState === STATE.ARRANGE)) { e.preventDefault(); startBattlePhase(); }
+  if (e.key === 's' && selectedUnit && (gameState === STATE.SHOP || gameState === STATE.ARRANGE)) sellUnit();
+});
+
+// ===================== GAME ACTIONS =====================
+function startGame() {
+  audio.init();
+  audio.play('start');
+  player = new Player(false);
+  round = 0;
+  startNewRound();
+}
+
+function startNewRound() {
+  round++;
+  enemyAI = generateEnemyBoard(round);
+  shopUnits = generateShop(player.level, round);
+  gameState = STATE.SHOP;
+  selectedUnit = null;
+  dragUnit = null;
+  showSynergyPanel = false;
+  phaseTimer = 2;
+  phaseText = `Round ${round}`;
+}
+
+function buyUnit(idx) {
+  const unit = shopUnits[idx];
+  if (!unit || player.gold < unit.cost) return;
+
+  // Find bench slot
+  let benchIdx = -1;
+  for (let i = 0; i < player.bench.length; i++) {
+    if (!player.bench[i]) { benchIdx = i; break; }
+  }
+  if (benchIdx === -1) {
+    floatingTexts.push(new FloatingText(W / 2, H / 2, 'Bench Full!', COL.red, 16));
+    return;
+  }
+
+  player.gold -= unit.cost;
+  player.bench[benchIdx] = unit;
+  shopUnits[idx] = null;
+  audio.play('buy');
+  floatingTexts.push(new FloatingText(mouseX, mouseY, `-${unit.cost}g`, COL.gold, 14));
+  checkTriples();
+}
+
+function rerollShop() {
+  if (player.gold < 2) {
+    floatingTexts.push(new FloatingText(W / 2, H * 0.9, 'Need 2 Gold!', COL.red, 14));
+    return;
+  }
+  player.gold -= 2;
+  shopUnits = generateShop(player.level, round);
+  audio.play('reroll');
+}
+
+function buyXP() {
+  if (player.gold < 4) {
+    floatingTexts.push(new FloatingText(W / 2, H * 0.9, 'Need 4 Gold!', COL.red, 14));
+    return;
+  }
+  player.gold -= 4;
+  player.addXP(4);
+  floatingTexts.push(new FloatingText(W / 2, H * 0.5, '+4 XP', COL.blue, 16));
+}
+
+function sellUnit() {
+  if (!selectedUnit) return;
+  const sellValue = Math.max(1, selectedUnit.cost * selectedUnit.starLevel);
+  player.gold += sellValue;
+  floatingTexts.push(new FloatingText(W / 2, H / 2, `+${sellValue}g`, COL.gold, 16));
+  audio.play('sell');
+  // Remove from board/bench
+  for (let r = 0; r < GRID_ROWS; r++)
+    for (let c = 0; c < GRID_COLS; c++)
+      if (player.board[r][c] === selectedUnit) player.board[r][c] = null;
+  for (let i = 0; i < player.bench.length; i++)
+    if (player.bench[i] === selectedUnit) player.bench[i] = null;
+  selectedUnit = null;
+}
+
+function startBattlePhase() {
+  if (player.unitCount() === 0) {
+    floatingTexts.push(new FloatingText(W / 2, H / 2, 'Place units first!', COL.red, 16));
+    return;
+  }
+  setupBattle();
+  gameState = STATE.BATTLE;
+  audio.play('start');
+}
+
+// ===================== DRAWING HELPERS =====================
+function drawRoundedRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawUnitShape(x, y, size, unit) {
+  const s = size * 0.35;
+  ctx.fillStyle = unit.flashTimer > 0 ? '#ffffff' : unit.color;
+  ctx.strokeStyle = unit.starLevel >= 2 ? COL.gold : '#555';
+  ctx.lineWidth = unit.starLevel >= 2 ? 2 * SCALE : 1 * SCALE;
+
+  switch (unit.shape) {
+    case 'shield':
+      ctx.beginPath();
+      ctx.moveTo(x, y - s);
+      ctx.lineTo(x + s, y - s * 0.5);
+      ctx.lineTo(x + s, y + s * 0.5);
+      ctx.lineTo(x, y + s);
+      ctx.lineTo(x - s, y + s * 0.5);
+      ctx.lineTo(x - s, y - s * 0.5);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      break;
+    case 'arrow':
+      ctx.beginPath();
+      ctx.moveTo(x, y - s);
+      ctx.lineTo(x + s * 0.7, y + s * 0.3);
+      ctx.lineTo(x + s * 0.3, y + s * 0.3);
+      ctx.lineTo(x + s * 0.3, y + s);
+      ctx.lineTo(x - s * 0.3, y + s);
+      ctx.lineTo(x - s * 0.3, y + s * 0.3);
+      ctx.lineTo(x - s * 0.7, y + s * 0.3);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      break;
+    case 'cross':
+      ctx.beginPath();
+      const t = s * 0.3;
+      ctx.moveTo(x - t, y - s);
+      ctx.lineTo(x + t, y - s);
+      ctx.lineTo(x + t, y - t);
+      ctx.lineTo(x + s, y - t);
+      ctx.lineTo(x + s, y + t);
+      ctx.lineTo(x + t, y + t);
+      ctx.lineTo(x + t, y + s);
+      ctx.lineTo(x - t, y + s);
+      ctx.lineTo(x - t, y + t);
+      ctx.lineTo(x - s, y + t);
+      ctx.lineTo(x - s, y - t);
+      ctx.lineTo(x - t, y - t);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      break;
+    case 'diamond':
+      ctx.beginPath();
+      ctx.moveTo(x, y - s);
+      ctx.lineTo(x + s, y);
+      ctx.lineTo(x, y + s);
+      ctx.lineTo(x - s, y);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      break;
+    case 'star':
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI / 2 + (i * Math.PI * 2 / 5);
+        const r1 = s;
+        const r2 = s * 0.45;
+        ctx.lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1);
+        const a2 = a + Math.PI / 5;
+        ctx.lineTo(x + Math.cos(a2) * r2, y + Math.sin(a2) * r2);
+      }
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      break;
+    case 'square':
+      ctx.fillRect(x - s, y - s, s * 2, s * 2);
+      ctx.strokeRect(x - s, y - s, s * 2, s * 2);
+      break;
+  }
+
+  // Star indicators
+  if (unit.starLevel >= 2) {
+    ctx.fillStyle = COL.gold;
+    ctx.font = `bold ${8 * SCALE}px monospace`;
+    ctx.textAlign = 'center';
+    const stars = '★'.repeat(unit.starLevel);
+    ctx.fillText(stars, x, y - s - 4 * SCALE);
+  }
+
+  // Synergy icon
+  const syn = SYNERGY_TYPES[unit.synergy];
+  if (syn) {
+    ctx.fillStyle = syn.color;
+    ctx.font = `bold ${7 * SCALE}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(syn.icon, x + s + 3 * SCALE, y - s + 3 * SCALE);
+  }
+}
+
+function drawHPBar(x, y, w, h, hp, maxHp) {
+  const pct = Math.max(0, hp / maxHp);
+  ctx.fillStyle = COL.hpBg;
+  ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = pct > 0.5 ? COL.hp : pct > 0.25 ? COL.gold : COL.red;
+  ctx.fillRect(x, y, w * pct, h);
+}
+
+function drawButton(text, x, y, w, h, color, textColor) {
+  const hovered = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
+  ctx.fillStyle = hovered ? color + 'cc' : color + '88';
+  drawRoundedRect(x, y, w, h, 4 * SCALE);
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5 * SCALE;
+  drawRoundedRect(x, y, w, h, 4 * SCALE);
+  ctx.stroke();
+  ctx.fillStyle = textColor || COL.white;
+  ctx.font = `bold ${11 * SCALE}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x + w / 2, y + h / 2);
+  return { x, y, w, h };
+}
+
+// ===================== RENDER FUNCTIONS =====================
+function drawTitle(dt) {
+  titlePulse += dt * 2;
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid background effect
+  ctx.strokeStyle = '#111122';
+  ctx.lineWidth = 1;
+  const gridSize = 40 * SCALE;
+  for (let x = 0; x < W; x += gridSize) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += gridSize) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Floating units decoration
+  const time = performance.now() / 1000;
+  for (let i = 0; i < 8; i++) {
+    const ux = W * 0.15 + (i % 4) * W * 0.2;
+    const uy = H * 0.3 + Math.floor(i / 4) * H * 0.15 + Math.sin(time + i) * 10 * SCALE;
+    const def = UNIT_DEFS[i % UNIT_DEFS.length];
+    const fakeUnit = { shape: def.shape, color: def.color + '44', starLevel: 1, flashTimer: 0, synergy: def.synergy };
+    drawUnitShape(ux, uy, CELL_SIZE * 0.8, fakeUnit);
+  }
+
+  // Title
+  ctx.fillStyle = COL.gold;
+  ctx.font = `bold ${36 * SCALE}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('FORGE', W / 2, H * 0.15);
+
+  ctx.fillStyle = COL.green;
+  ctx.font = `bold ${24 * SCALE}px monospace`;
+  ctx.fillText('AUTO-BATTLER', W / 2, H * 0.22);
+
+  // Subtitle
+  ctx.fillStyle = COL.white + '88';
+  ctx.font = `${10 * SCALE}px monospace`;
+  ctx.fillText('Buy units. Build synergies. Battle!', W / 2, H * 0.28);
+
+  // How to play
+  const boxY = H * 0.42;
+  const boxH = H * 0.28;
+  ctx.fillStyle = COL.panel + '88';
+  drawRoundedRect(W * 0.1, boxY, W * 0.8, boxH, 8 * SCALE);
+  ctx.fill();
+
+  ctx.fillStyle = COL.gold;
+  ctx.font = `bold ${12 * SCALE}px monospace`;
+  ctx.fillText('HOW TO PLAY', W / 2, boxY + 18 * SCALE);
+
+  ctx.fillStyle = COL.white + 'cc';
+  ctx.font = `${9 * SCALE}px monospace`;
+  const instructions = [
+    'Buy units from the shop with gold',
+    'Drag units to your board to position them',
+    'Match 2+ of same type for synergy bonuses',
+    'Buy 3 of same unit to upgrade stars',
+    'Press Ready to fight - units battle auto!',
+    'Survive 20 rounds to win!',
+  ];
+  instructions.forEach((line, i) => {
+    ctx.fillText(line, W / 2, boxY + 36 * SCALE + i * 14 * SCALE);
+  });
+
+  // Controls
+  ctx.fillStyle = COL.white + '66';
+  ctx.font = `${8 * SCALE}px monospace`;
+  ctx.fillText('Desktop: R=Reroll  E=Level Up  Space=Ready  S=Sell', W / 2, boxY + boxH + 16 * SCALE);
+
+  // High score
+  if (highScore > 0) {
+    ctx.fillStyle = COL.gold;
+    ctx.font = `bold ${12 * SCALE}px monospace`;
+    ctx.fillText(`Best: Round ${highScore}`, W / 2, H * 0.82);
+  }
+
+  // Start button
+  const pulse = 0.8 + Math.sin(titlePulse) * 0.2;
+  ctx.globalAlpha = pulse;
+  btnStart = drawButton(touchActive ? 'TAP TO PLAY' : 'PRESS START', W / 2 - 80 * SCALE, H * 0.87, 160 * SCALE, 40 * SCALE, COL.gold, COL.bg);
+  ctx.globalAlpha = 1;
+}
+
+function drawShopPhase(dt) {
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // ---- Top HUD ----
+  const hudY = 6 * SCALE;
+  const hudH = 38 * SCALE;
+  ctx.fillStyle = COL.panel;
+  ctx.fillRect(0, 0, W, hudH);
+  ctx.strokeStyle = COL.gridLine;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, hudH); ctx.lineTo(W, hudH); ctx.stroke();
+
+  // Player HP
+  ctx.fillStyle = COL.white;
+  ctx.font = `bold ${10 * SCALE}px monospace`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`HP`, 8 * SCALE, hudY + 7 * SCALE);
+  drawHPBar(28 * SCALE, hudY + 2 * SCALE, 60 * SCALE, 10 * SCALE, player.hp, 100);
+  ctx.fillStyle = player.hp > 50 ? COL.green : player.hp > 25 ? COL.gold : COL.red;
+  ctx.font = `bold ${8 * SCALE}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText(`${player.hp}`, 58 * SCALE, hudY + 7 * SCALE);
+
+  // Gold
+  ctx.fillStyle = COL.gold;
+  ctx.font = `bold ${12 * SCALE}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText(`${player.gold}g`, W / 2, hudY + 7 * SCALE);
+
+  // Round
+  ctx.fillStyle = COL.white;
+  ctx.font = `${9 * SCALE}px monospace`;
+  ctx.textAlign = 'right';
+  ctx.fillText(`Rd ${round}/${maxRounds}`, W - 8 * SCALE, hudY + 7 * SCALE);
+
+  // Level / XP
+  ctx.fillStyle = COL.blue;
+  ctx.font = `${9 * SCALE}px monospace`;
+  ctx.textAlign = 'left';
+  ctx.fillText(`Lv${player.level}`, 8 * SCALE, hudY + 22 * SCALE);
+  ctx.fillStyle = COL.white + '88';
+  ctx.fillText(`XP:${player.xp}/${player.xpNeeded}`, 45 * SCALE, hudY + 22 * SCALE);
+
+  // Units count
+  ctx.fillStyle = COL.white;
+  ctx.textAlign = 'right';
+  ctx.fillText(`Units: ${player.unitCount()}/${player.maxUnits()}`, W - 8 * SCALE, hudY + 22 * SCALE);
+
+  // Streak
+  if (player.streak !== 0) {
+    ctx.fillStyle = player.streak > 0 ? COL.green : COL.red;
+    ctx.textAlign = 'center';
+    ctx.fillText(`${player.streak > 0 ? 'W' : 'L'}${Math.abs(player.streak)}`, W / 2, hudY + 22 * SCALE);
+  }
+
+  // ---- Enemy Board (top half) ----
+  const enemyBoardY = ENEMY_BOARD_Y;
+  ctx.fillStyle = COL.white + '33';
+  ctx.font = `${8 * SCALE}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('ENEMY BOARD', W / 2, enemyBoardY - 4 * SCALE);
+
+  drawGrid(BOARD_X, enemyBoardY, '#1a0a0a', '#2a1515');
+  // Show enemy units (hidden/silhouettes)
+  for (let r = 0; r < GRID_ROWS; r++) {
+    for (let c = 0; c < GRID_COLS; c++) {
+      if (enemyAI.board[r][c]) {
+        const cx = BOARD_X + c * CELL_SIZE + CELL_SIZE / 2;
+        const cy = enemyBoardY + r * CELL_SIZE + CELL_SIZE / 2;
+        ctx.fillStyle = '#33111155';
+        ctx.beginPath();
+        ctx.arc(cx, cy, CELL_SIZE * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ff333344';
+        ctx.font = `${8 * SCALE}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('?', cx, cy);
+      }
+    }
+  }
+
+  // ---- Player Board ----
+  const playerBoardY = enemyBoardY + GRID_ROWS * CELL_SIZE + 10 * SCALE;
+  ctx.fillStyle = COL.white + '55';
+  ctx.font = `${8 * SCALE}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('YOUR BOARD', W / 2, playerBoardY - 4 * SCALE);
+
+  drawGrid(BOARD_X, playerBoardY, '#0a1a0a', '#152a15');
+  boardCellRects = [];
+
+  for (let r = 0; r < GRID_ROWS; r++) {
+    for (let c = 0; c < GRID_COLS; c++) {
+      const cellX = BOARD_X + c * CELL_SIZE;
+      const cellY = playerBoardY + r * CELL_SIZE;
+      boardCellRects.push({ x: cellX, y: cellY, w: CELL_SIZE, h: CELL_SIZE, row: r, col: c });
+
+      const u = player.board[r][c];
+      if (u && u !== dragUnit) {
+        const cx = cellX + CELL_SIZE / 2;
+        const cy = cellY + CELL_SIZE / 2;
+        drawUnitShape(cx, cy, CELL_SIZE, u);
+        drawHPBar(cx - CELL_SIZE * 0.3, cy + CELL_SIZE * 0.32, CELL_SIZE * 0.6, 3 * SCALE, u.hp, u.maxHp);
+        ctx.fillStyle = COL.white;
+        ctx.font = `${6 * SCALE}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText(u.name, cx, cy + CELL_SIZE * 0.42);
+      }
+    }
+  }
+
+  // ---- Bench ----
+  const benchY = playerBoardY + GRID_ROWS * CELL_SIZE + 12 * SCALE;
+  ctx.fillStyle = COL.white + '44';
+  ctx.font = `${7 * SCALE}px monospace`;
+  ctx.textAlign = 'left';
+  ctx.fillText('BENCH', BOARD_X, benchY - 2 * SCALE);
+
+  benchRects = [];
+  const benchCellW = Math.min(CELL_SIZE, (W - 20 * SCALE) / 7);
+  const benchStartX = Math.floor((W - 7 * benchCellW) / 2);
+  for (let i = 0; i < 7; i++) {
+    const bx = benchStartX + i * benchCellW;
+    benchRects.push({ x: bx, y: benchY, w: benchCellW, h: CELL_SIZE });
+
+    ctx.fillStyle = COL.dark;
+    ctx.strokeStyle = COL.gridLine;
+    ctx.lineWidth = 1;
+    ctx.fillRect(bx, benchY, benchCellW - 2, CELL_SIZE - 2);
+    ctx.strokeRect(bx, benchY, benchCellW - 2, CELL_SIZE - 2);
+
+    const u = player.bench[i];
+    if (u && u !== dragUnit) {
+      const cx = bx + benchCellW / 2;
+      const cy = benchY + CELL_SIZE / 2;
+      drawUnitShape(cx, cy, CELL_SIZE * 0.9, u);
+      ctx.fillStyle = COL.white;
+      ctx.font = `${5 * SCALE}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText(u.name, cx, cy + CELL_SIZE * 0.42);
+    }
+  }
+
+  // ---- Shop ----
+  const shopY = benchY + CELL_SIZE + 10 * SCALE;
+  ctx.fillStyle = COL.shopBg;
+  ctx.fillRect(0, shopY, W, H - shopY);
+  ctx.strokeStyle = COL.gold + '44';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, shopY); ctx.lineTo(W, shopY); ctx.stroke();
+
+  ctx.fillStyle = COL.gold;
+  ctx.font = `bold ${10 * SCALE}px monospace`;
+  ctx.textAlign = 'left';
+  ctx.fillText('SHOP', 8 * SCALE, shopY + 12 * SCALE);
+
+  shopItemRects = [];
+  const shopItemW = Math.min(70 * SCALE, (W - 20 * SCALE) / shopUnits.length);
+  const shopStartX = Math.floor((W - shopUnits.length * shopItemW) / 2);
+  for (let i = 0; i < shopUnits.length; i++) {
+    const sx = shopStartX + i * shopItemW;
+    const sy = shopY + 22 * SCALE;
+    const sh = CELL_SIZE + 24 * SCALE;
+    shopItemRects.push({ x: sx, y: sy, w: shopItemW - 4, h: sh });
+
+    const u = shopUnits[i];
+    if (!u) {
+      ctx.fillStyle = COL.dark + '44';
+      drawRoundedRect(sx, sy, shopItemW - 4, sh, 4 * SCALE);
+      ctx.fill();
+      ctx.fillStyle = COL.white + '22';
+      ctx.font = `${9 * SCALE}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText('SOLD', sx + shopItemW / 2 - 2, sy + sh / 2);
+      continue;
+    }
+
+    const canAfford = player.gold >= u.cost;
+    const hovered = mouseX >= sx && mouseX <= sx + shopItemW - 4 && mouseY >= sy && mouseY <= sy + sh;
+    ctx.fillStyle = hovered ? COL.shopHighlight : COL.shopItem;
+    drawRoundedRect(sx, sy, shopItemW - 4, sh, 4 * SCALE);
+    ctx.fill();
+    ctx.strokeStyle = canAfford ? COL.gold + '88' : COL.red + '44';
+    ctx.lineWidth = 1;
+    drawRoundedRect(sx, sy, shopItemW - 4, sh, 4 * SCALE);
+    ctx.stroke();
+
+    // Unit preview
+    const cx = sx + shopItemW / 2 - 2;
+    const cy = sy + sh / 2 - 6 * SCALE;
+    drawUnitShape(cx, cy, CELL_SIZE * 0.7, u);
+
+    // Name
+    ctx.fillStyle = COL.white;
+    ctx.font = `${6 * SCALE}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(u.name, cx, cy + CELL_SIZE * 0.35);
+
+    // Cost
+    ctx.fillStyle = canAfford ? COL.gold : COL.red;
+    ctx.font = `bold ${8 * SCALE}px monospace`;
+    ctx.fillText(`${u.cost}g`, cx, sy + sh - 6 * SCALE);
+
+    // Synergy tag
+    const syn = SYNERGY_TYPES[u.synergy];
+    ctx.fillStyle = syn.color + '88';
+    ctx.font = `${5 * SCALE}px monospace`;
+    ctx.fillText(syn.name, cx, sy + 8 * SCALE);
+  }
+
+  // ---- Buttons ----
+  const btnY = shopY + CELL_SIZE + 52 * SCALE;
+  const btnW = 60 * SCALE;
+  const btnH = 26 * SCALE;
+  const gap = 8 * SCALE;
+  const totalBtnW = 4 * btnW + 3 * gap;
+  const btnStartX = (W - totalBtnW) / 2;
+
+  btnReroll = drawButton(`Reroll 2g`, btnStartX, btnY, btnW, btnH, player.gold >= 2 ? COL.gold : '#444');
+  btnLevelUp = drawButton(`Level 4g`, btnStartX + btnW + gap, btnY, btnW, btnH, player.gold >= 4 ? COL.blue : '#444');
+  btnSell = drawButton(`Sell`, btnStartX + 2 * (btnW + gap), btnY, btnW, btnH, COL.red);
+  btnReady = drawButton(`READY`, btnStartX + 3 * (btnW + gap), btnY, btnW, btnH, COL.green, COL.bg);
+
+  // Synergy button
+  btnSynergy = drawButton('Syn', W - 35 * SCALE, hudH + 2 * SCALE, 30 * SCALE, 18 * SCALE, COL.gold);
+
+  // ---- Synergy Panel ----
+  if (showSynergyPanel) {
+    drawSynergyPanel();
+  }
+
+  // ---- Drag unit ----
+  if (dragUnit) {
+    drawUnitShape(mouseX, mouseY, CELL_SIZE, dragUnit);
+  }
+
+  // ---- Phase text ----
+  if (phaseTimer > 0) {
+    phaseTimer -= dt;
+    const a = Math.min(1, phaseTimer);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = COL.gold;
+    ctx.font = `bold ${28 * SCALE}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(phaseText, W / 2, H * 0.45);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawSynergyPanel() {
+  const panelW = 180 * SCALE;
+  const panelH = 200 * SCALE;
+  const panelX = W - panelW - 5 * SCALE;
+  const panelY = 58 * SCALE;
+
+  ctx.fillStyle = COL.panel + 'ee';
+  drawRoundedRect(panelX, panelY, panelW, panelH, 6 * SCALE);
+  ctx.fill();
+  ctx.strokeStyle = COL.gold + '88';
+  ctx.lineWidth = 1;
+  drawRoundedRect(panelX, panelY, panelW, panelH, 6 * SCALE);
+  ctx.stroke();
+
+  ctx.fillStyle = COL.gold;
+  ctx.font = `bold ${10 * SCALE}px monospace`;
+  ctx.textAlign = 'left';
+  ctx.fillText('SYNERGIES', panelX + 8 * SCALE, panelY + 14 * SCALE);
+
+  const counts = player.getSynergies();
+  let yOff = 28 * SCALE;
+
+  for (const [key, syn] of Object.entries(SYNERGY_TYPES)) {
+    const count = counts[key] || 0;
+    const active = count >= 2;
+
+    ctx.fillStyle = active ? syn.color : syn.color + '44';
+    ctx.font = `bold ${9 * SCALE}px monospace`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`${syn.icon} ${syn.name}`, panelX + 8 * SCALE, panelY + yOff);
+
+    ctx.textAlign = 'right';
+    ctx.fillText(`${count}/2`, panelX + panelW - 40 * SCALE, panelY + yOff);
+
+    if (active) {
+      ctx.fillStyle = COL.green;
+      ctx.font = `${7 * SCALE}px monospace`;
+      ctx.textAlign = 'right';
+      ctx.fillText(syn.desc, panelX + panelW - 8 * SCALE, panelY + yOff + 10 * SCALE);
+      yOff += 12 * SCALE;
+    }
+
+    yOff += 16 * SCALE;
+  }
+}
+
+function drawGrid(x, y, bgColor, lineColor) {
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(x, y, GRID_COLS * CELL_SIZE, GRID_ROWS * CELL_SIZE);
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 1;
+  for (let r = 0; r <= GRID_ROWS; r++) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + r * CELL_SIZE);
+    ctx.lineTo(x + GRID_COLS * CELL_SIZE, y + r * CELL_SIZE);
+    ctx.stroke();
+  }
+  for (let c = 0; c <= GRID_COLS; c++) {
+    ctx.beginPath();
+    ctx.moveTo(x + c * CELL_SIZE, y);
+    ctx.lineTo(x + c * CELL_SIZE, y + GRID_ROWS * CELL_SIZE);
+    ctx.stroke();
+  }
+}
+
+function drawBattle(dt) {
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Battle arena
+  const arenaY = 30 * SCALE;
+  const arenaH = GRID_ROWS * 2 * CELL_SIZE + 20 * SCALE;
+
+  // Grid bg
+  drawGrid(BOARD_X, ENEMY_BOARD_Y, '#0a0a12', '#181828');
+  drawGrid(BOARD_X, ENEMY_BOARD_Y + GRID_ROWS * CELL_SIZE + 10 * SCALE, '#0a120a', '#182818');
+
+  // Dividing line
+  const divY = ENEMY_BOARD_Y + GRID_ROWS * CELL_SIZE + 5 * SCALE;
+  ctx.strokeStyle = COL.gold + '44';
+  ctx.lineWidth = 2 * SCALE;
+  ctx.beginPath();
+  ctx.moveTo(BOARD_X, divY);
+  ctx.lineTo(BOARD_X + GRID_COLS * CELL_SIZE, divY);
+  ctx.stroke();
+
+  // HUD
+  ctx.fillStyle = COL.white;
+  ctx.font = `bold ${10 * SCALE}px monospace`;
+  ctx.textAlign = 'left';
+  ctx.fillText(`You: ${player.hp}HP`, 8 * SCALE, 18 * SCALE);
+  ctx.textAlign = 'right';
+  ctx.fillText(`Round ${round}`, W - 8 * SCALE, 18 * SCALE);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = COL.gold;
+  ctx.fillText(`BATTLE`, W / 2, 18 * SCALE);
+
+  // Timer bar
+  const maxTime = 45;
+  const timePct = Math.max(0, 1 - battleTimer / maxTime);
+  ctx.fillStyle = '#222';
+  ctx.fillRect(BOARD_X, 24 * SCALE, GRID_COLS * CELL_SIZE, 3 * SCALE);
+  ctx.fillStyle = timePct > 0.3 ? COL.gold : COL.red;
+  ctx.fillRect(BOARD_X, 24 * SCALE, GRID_COLS * CELL_SIZE * timePct, 3 * SCALE);
+
+  // Draw units
+  for (const u of battleUnits) {
+    if (!u.alive) continue;
+    u.flashTimer = Math.max(0, u.flashTimer - dt);
+    drawUnitShape(u.x, u.y, CELL_SIZE, u);
+    drawHPBar(u.x - CELL_SIZE * 0.3, u.y + CELL_SIZE * 0.35, CELL_SIZE * 0.6, 3 * SCALE, u.hp, u.maxHp);
+
+    // Side indicator
+    ctx.fillStyle = u.side === 0 ? COL.green + '44' : COL.red + '44';
+    ctx.beginPath();
+    ctx.arc(u.x, u.y + CELL_SIZE * 0.45, 2 * SCALE, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Attack animation (pulse when attacking)
+    if (u.atkTimer > u.effectiveAtkSpd() * 0.8) {
+      ctx.strokeStyle = u.color + '66';
+      ctx.lineWidth = 2 * SCALE;
+      ctx.beginPath();
+      ctx.arc(u.x, u.y, CELL_SIZE * 0.45, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Healing aura
+    if (u.bonusHeal > 0) {
+      ctx.strokeStyle = COL.green + '33';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(u.x, u.y, CELL_SIZE * 0.5 + Math.sin(battleAnimTimer * 3) * 3 * SCALE, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  // Draw projectiles
+  for (const p of battleProjectiles) {
+    if (!p.alive) continue;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3 * SCALE, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff44';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 5 * SCALE, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Active synergies display
+  const playerSyn = player.getActiveSynergies();
+  const enemySyn = enemyAI.getActiveSynergies();
+  let synY = H - 30 * SCALE;
+
+  ctx.font = `${7 * SCALE}px monospace`;
+  ctx.textAlign = 'left';
+  let sx = 8 * SCALE;
+  for (const [key, count] of Object.entries(playerSyn)) {
+    const syn = SYNERGY_TYPES[key];
+    ctx.fillStyle = syn.color;
+    ctx.fillText(`${syn.icon}${count}`, sx, synY);
+    sx += 22 * SCALE;
+  }
+
+  ctx.textAlign = 'right';
+  sx = W - 8 * SCALE;
+  for (const [key, count] of Object.entries(enemySyn)) {
+    const syn = SYNERGY_TYPES[key];
+    ctx.fillStyle = syn.color + '88';
+    ctx.fillText(`${syn.icon}${count}`, sx, synY);
+    sx -= 22 * SCALE;
+  }
+}
+
+function drawResult(dt) {
+  // Continue showing battle field
+  drawBattle(0);
+
+  // Overlay
+  ctx.fillStyle = '#0a0a0f99';
+  ctx.fillRect(0, 0, W, H);
+
+  resultTimer += dt;
+
+  const isWin = resultText === 'VICTORY!';
+  const col = isWin ? COL.green : resultText === 'DRAW' ? COL.gold : COL.red;
+
+  ctx.fillStyle = col;
+  ctx.font = `bold ${32 * SCALE}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(resultText, W / 2, H * 0.35);
+
+  ctx.fillStyle = COL.white;
+  ctx.font = `${12 * SCALE}px monospace`;
+  ctx.fillText(`HP: ${player.hp}/100`, W / 2, H * 0.45);
+  ctx.fillText(`Gold: ${player.gold}g`, W / 2, H * 0.50);
+
+  if (resultTimer > 0.5) {
+    ctx.fillStyle = COL.gold;
+    ctx.font = `${10 * SCALE}px monospace`;
+    const streakText = player.streak > 0 ? `Win Streak: ${player.streak} (+${Math.min(3, player.streak)} bonus gold)` :
+                       player.streak < 0 ? `Loss Streak: ${Math.abs(player.streak)}` : '';
+    if (streakText) ctx.fillText(streakText, W / 2, H * 0.56);
+
+    const interest = Math.min(5, Math.floor(player.gold / 10));
+    if (interest > 0) {
+      ctx.fillStyle = COL.gold + '88';
+      ctx.fillText(`Interest: +${interest}g (${player.gold - interest} saved)`, W / 2, H * 0.61);
+    }
+  }
+
+  if (resultTimer > 2) {
+    if (round >= maxRounds && player.hp > 0) {
+      ctx.fillStyle = COL.gold;
+      ctx.font = `bold ${18 * SCALE}px monospace`;
+      ctx.fillText('YOU SURVIVED!', W / 2, H * 0.7);
+      ctx.font = `${12 * SCALE}px monospace`;
+      ctx.fillText(`Final Score: Round ${round}`, W / 2, H * 0.76);
+      btnPlayAgain = drawButton('PLAY AGAIN', W / 2 - 70 * SCALE, H * 0.82, 140 * SCALE, 36 * SCALE, COL.gold, COL.bg);
+      // Treat as game over win - record GobAdapt once
+      if (!player._adaptRecorded) { player._adaptRecorded = true; GobAdapt.record(player.wins); }
+      if (round > highScore) {
+        highScore = round;
+        localStorage.setItem('autoBattlerHighScore', highScore.toString());
+      }
+    } else {
+      ctx.globalAlpha = 0.6 + Math.sin(resultTimer * 3) * 0.4;
+      ctx.fillStyle = COL.white + '88';
+      ctx.font = `${10 * SCALE}px monospace`;
+      ctx.fillText('Tap to continue', W / 2, H * 0.75);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Auto-advance after tap or timeout
+  if (resultTimer > 2) {
+    if (round >= maxRounds && player.hp > 0) {
+      // Final win state - wait for play again button
+    } else {
+      // Clickable area to continue
+      if (mouseDown) {
+        mouseDown = false;
+        startNewRound();
+      }
+    }
+  }
+}
+
+function drawGameOver(dt) {
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Particles rain
+  const time = performance.now() / 1000;
+  for (let i = 0; i < 30; i++) {
+    const px = (W * (i / 30) + time * 20) % W;
+    const py = (time * 40 + i * 73) % H;
+    ctx.fillStyle = COL.red + '33';
+    ctx.fillRect(px, py, 2 * SCALE, 2 * SCALE);
+  }
+
+  ctx.fillStyle = COL.red;
+  ctx.font = `bold ${36 * SCALE}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('GAME OVER', W / 2, H * 0.25);
+
+  ctx.fillStyle = COL.white;
+  ctx.font = `${14 * SCALE}px monospace`;
+  ctx.fillText(`Survived ${round} rounds`, W / 2, H * 0.35);
+
+  ctx.fillStyle = COL.gold;
+  ctx.font = `${12 * SCALE}px monospace`;
+  ctx.fillText(`Wins: ${player.wins}  Losses: ${player.losses}`, W / 2, H * 0.42);
+
+  ctx.fillStyle = COL.green;
+  ctx.fillText(`Level Reached: ${player.level}`, W / 2, H * 0.48);
+
+  // Synergies used
+  const syn = player.getSynergies();
+  const synStr = Object.entries(syn).map(([k, v]) => `${SYNERGY_TYPES[k].icon}${v}`).join(' ');
+  if (synStr) {
+    ctx.fillStyle = COL.white + '88';
+    ctx.font = `${10 * SCALE}px monospace`;
+    ctx.fillText(`Team: ${synStr}`, W / 2, H * 0.54);
+  }
+
+  if (round >= highScore) {
+    ctx.fillStyle = COL.gold;
+    ctx.font = `bold ${14 * SCALE}px monospace`;
+    ctx.fillText('NEW HIGH SCORE!', W / 2, H * 0.62);
+  } else {
+    ctx.fillStyle = COL.gold + '88';
+    ctx.font = `${11 * SCALE}px monospace`;
+    ctx.fillText(`Best: Round ${highScore}`, W / 2, H * 0.62);
+  }
+
+  btnPlayAgain = drawButton('PLAY AGAIN', W / 2 - 70 * SCALE, H * 0.72, 140 * SCALE, 40 * SCALE, COL.gold, COL.bg);
+}
+
+// ===================== MAIN LOOP =====================
+let lastTime = 0;
+
+function gameLoop(timestamp) {
+  const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+  lastTime = timestamp;
+
+  // Screen shake
+  if (shakeDuration > 0) {
+    shakeDuration -= dt;
+    ctx.save();
+    const sx = (Math.random() - 0.5) * shakeAmount * SCALE;
+    const sy = (Math.random() - 0.5) * shakeAmount * SCALE;
+    ctx.translate(sx, sy);
+  }
+
+  switch (gameState) {
+    case STATE.TITLE:
+      drawTitle(dt);
+      break;
+    case STATE.SHOP:
+    case STATE.ARRANGE:
+      drawShopPhase(dt);
+      break;
+    case STATE.BATTLE:
+      updateBattle(dt);
+      drawBattle(dt);
+      break;
+    case STATE.RESULT:
+      drawResult(dt);
+      break;
+    case STATE.GAMEOVER:
+      drawGameOver(dt);
+      break;
+  }
+
+  // Update & draw particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update(dt);
+    particles[i].draw();
+    if (particles[i].life <= 0) particles.splice(i, 1);
+  }
+
+  // Update & draw floating texts
+  for (let i = floatingTexts.length - 1; i >= 0; i--) {
+    floatingTexts[i].update(dt);
+    floatingTexts[i].draw();
+    if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
+  }
+
+  if (shakeDuration > 0) {
+    ctx.restore();
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ===================== INIT =====================
+resize();
+requestAnimationFrame(gameLoop);
+
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

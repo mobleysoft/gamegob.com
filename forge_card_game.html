@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="Spire of Shadows — Deckbuilder">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>Spire of Shadows — Deckbuilder</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0f;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas{display:block;margin:0 auto}
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+'use strict';
+
+// ── CANVAS SETUP ──
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+let W, H, SCALE;
+function resize() {
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W; canvas.height = H;
+  SCALE = Math.min(W / 1200, H / 800);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── COLORS ──
+const COL = {
+  bg: '#0a0a0f', bg2: '#12121a', panel: '#1a1a2e', panelLight: '#22223a',
+  gold: '#f0b800', green: '#00ff88', red: '#ff4466', blue: '#4488ff',
+  purple: '#aa44ff', white: '#eeeef6', grey: '#666680', darkGrey: '#333348',
+  cardBg: '#1e1e32', cardBorder: '#3a3a5e', hp: '#ff4466', energy: '#f0b800',
+  shield: '#4488ff', poison: '#44dd66'
+};
+
+// ── AUDIO ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+function playSound(type) {
+  ensureAudio();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  const t = audioCtx.currentTime;
+  switch(type) {
+    case 'hit': osc.type='sawtooth'; osc.frequency.setValueAtTime(200,t); osc.frequency.exponentialRampToValueAtTime(80,t+0.15); gain.gain.setValueAtTime(0.3,t); gain.gain.exponentialRampToValueAtTime(0.01,t+0.15); osc.start(t); osc.stop(t+0.15); break;
+    case 'shield': osc.type='sine'; osc.frequency.setValueAtTime(600,t); osc.frequency.exponentialRampToValueAtTime(800,t+0.1); gain.gain.setValueAtTime(0.2,t); gain.gain.exponentialRampToValueAtTime(0.01,t+0.15); osc.start(t); osc.stop(t+0.15); break;
+    case 'card': osc.type='sine'; osc.frequency.setValueAtTime(1200,t); osc.frequency.exponentialRampToValueAtTime(600,t+0.08); gain.gain.setValueAtTime(0.15,t); gain.gain.exponentialRampToValueAtTime(0.01,t+0.08); osc.start(t); osc.stop(t+0.08); break;
+    case 'heal': osc.type='sine'; osc.frequency.setValueAtTime(400,t); osc.frequency.linearRampToValueAtTime(800,t+0.2); gain.gain.setValueAtTime(0.2,t); gain.gain.exponentialRampToValueAtTime(0.01,t+0.3); osc.start(t); osc.stop(t+0.3); break;
+    case 'death': osc.type='sawtooth'; osc.frequency.setValueAtTime(300,t); osc.frequency.exponentialRampToValueAtTime(40,t+0.5); gain.gain.setValueAtTime(0.3,t); gain.gain.exponentialRampToValueAtTime(0.01,t+0.5); osc.start(t); osc.stop(t+0.5); break;
+    case 'buy': osc.type='triangle'; osc.frequency.setValueAtTime(500,t); osc.frequency.linearRampToValueAtTime(1000,t+0.1); gain.gain.setValueAtTime(0.2,t); gain.gain.exponentialRampToValueAtTime(0.01,t+0.15); osc.start(t); osc.stop(t+0.15); break;
+    case 'click': osc.type='sine'; osc.frequency.setValueAtTime(800,t); gain.gain.setValueAtTime(0.1,t); gain.gain.exponentialRampToValueAtTime(0.01,t+0.05); osc.start(t); osc.stop(t+0.05); break;
+    case 'power': osc.type='square'; osc.frequency.setValueAtTime(150,t); osc.frequency.linearRampToValueAtTime(600,t+0.2); gain.gain.setValueAtTime(0.15,t); gain.gain.exponentialRampToValueAtTime(0.01,t+0.3); osc.start(t); osc.stop(t+0.3); break;
+    case 'win': osc.type='sine'; [400,500,600,800].forEach((f,i)=>{const o2=audioCtx.createOscillator();const g2=audioCtx.createGain();o2.connect(g2);g2.connect(audioCtx.destination);o2.type='sine';o2.frequency.setValueAtTime(f,t+i*0.15);g2.gain.setValueAtTime(0.2,t+i*0.15);g2.gain.exponentialRampToValueAtTime(0.01,t+i*0.15+0.2);o2.start(t+i*0.15);o2.stop(t+i*0.15+0.2);}); gain.gain.setValueAtTime(0,t); osc.start(t); osc.stop(t+0.01); break;
+  }
+}
+
+// ── PARTICLES ──
+const particles = [];
+function spawnParticles(x, y, color, count = 10, speed = 3) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = (0.5 + Math.random()) * speed;
+    particles.push({ x, y, vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd, life: 1, color, size: 2 + Math.random()*3 });
+  }
+}
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.1;
+    p.life -= dt * 2;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+function drawParticles() {
+  for (const p of particles) {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── SCREEN SHAKE ──
+let shakeAmount = 0, shakeDecay = 0.9;
+function shake(amount) { shakeAmount = Math.max(shakeAmount, amount); }
+function applyShake() {
+  if (shakeAmount > 0.5) {
+    ctx.translate((Math.random()-0.5)*shakeAmount, (Math.random()-0.5)*shakeAmount);
+    shakeAmount *= shakeDecay;
+  } else { shakeAmount = 0; }
+}
+
+// ── FLASH ──
+let flashColor = null, flashTimer = 0;
+function flash(color, duration = 0.1) { flashColor = color; flashTimer = duration; }
+
+// ── EASING ──
+function lerp(a, b, t) { return a + (b - a) * t; }
+function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+// ── CARD DATABASE (30+ unique cards) ──
+const CARD_DB = {
+  // ATTACKS
+  strike: { name: 'Strike', type: 'attack', cost: 1, desc: 'Deal 6 damage', rarity: 'starter', color: COL.red,
+    play(g,t) { g.dealDamage(t, 6); }},
+  heavyBlow: { name: 'Heavy Blow', type: 'attack', cost: 2, desc: 'Deal 14 damage', rarity: 'common', color: COL.red,
+    play(g,t) { g.dealDamage(t, 14); }},
+  quickSlash: { name: 'Quick Slash', type: 'attack', cost: 1, desc: 'Deal 4 damage. Draw 1', rarity: 'common', color: COL.red,
+    play(g,t) { g.dealDamage(t, 4); g.drawCards(1); }},
+  cleave: { name: 'Cleave', type: 'attack', cost: 1, desc: 'Deal 4 damage to ALL enemies', rarity: 'common', color: COL.red,
+    play(g) { g.enemies.forEach(e => { if (e.hp > 0) g.dealDamage(e, 4); }); }},
+  pommelStrike: { name: 'Pommel Strike', type: 'attack', cost: 1, desc: 'Deal 5 damage. Draw 2', rarity: 'uncommon', color: COL.red,
+    play(g,t) { g.dealDamage(t, 5); g.drawCards(2); }},
+  rampage: { name: 'Rampage', type: 'attack', cost: 1, desc: 'Deal 8 damage. +3 each play', rarity: 'uncommon', color: COL.red, bonus: 0,
+    play(g,t) { const c = this; if (!c._bonus) c._bonus = 0; g.dealDamage(t, 8 + c._bonus); c._bonus += 3; }},
+  whirlwind: { name: 'Whirlwind', type: 'attack', cost: 0, desc: 'Deal 5 damage to ALL X times', rarity: 'rare', color: COL.red,
+    play(g) { const times = g.energy; g.energy = 0; for (let i = 0; i < times; i++) g.enemies.forEach(e => { if (e.hp > 0) g.dealDamage(e, 5); }); }},
+  bodySlam: { name: 'Body Slam', type: 'attack', cost: 1, desc: 'Deal damage = your Block', rarity: 'uncommon', color: COL.red,
+    play(g,t) { g.dealDamage(t, g.player.block); }},
+  uppercut: { name: 'Uppercut', type: 'attack', cost: 2, desc: 'Deal 10 dmg. Apply 2 Weak', rarity: 'uncommon', color: COL.red,
+    play(g,t) { g.dealDamage(t, 10); t.weak = (t.weak||0) + 2; }},
+  swordBoomerang: { name: 'Sword Boomerang', type: 'attack', cost: 1, desc: 'Deal 3 damage 4 times randomly', rarity: 'common', color: COL.red,
+    play(g) { for (let i = 0; i < 4; i++) { const alive = g.enemies.filter(e=>e.hp>0); if (alive.length) g.dealDamage(alive[Math.floor(Math.random()*alive.length)], 3); }}},
+  execute: { name: 'Execute', type: 'attack', cost: 2, desc: 'Deal 8 dmg. If enemy <30% HP, deal 24', rarity: 'rare', color: COL.red,
+    play(g,t) { const dmg = t.hp < t.maxHp * 0.3 ? 24 : 8; g.dealDamage(t, dmg); }},
+  twinStrike: { name: 'Twin Strike', type: 'attack', cost: 1, desc: 'Deal 4 damage twice', rarity: 'common', color: COL.red,
+    play(g,t) { g.dealDamage(t, 4); g.dealDamage(t, 4); }},
+  // SKILLS (defense/utility)
+  defend: { name: 'Defend', type: 'skill', cost: 1, desc: 'Gain 5 Block', rarity: 'starter', color: COL.blue,
+    play(g) { g.gainBlock(5); }},
+  shieldBash: { name: 'Shield Bash', type: 'skill', cost: 2, desc: 'Gain 12 Block', rarity: 'common', color: COL.blue,
+    play(g) { g.gainBlock(12); }},
+  ironWave: { name: 'Iron Wave', type: 'skill', cost: 1, desc: 'Gain 5 Block. Deal 5 damage', rarity: 'common', color: COL.blue,
+    play(g,t) { g.gainBlock(5); g.dealDamage(t, 5); }},
+  shrugItOff: { name: 'Shrug It Off', type: 'skill', cost: 1, desc: 'Gain 8 Block. Draw 1', rarity: 'common', color: COL.blue,
+    play(g) { g.gainBlock(8); g.drawCards(1); }},
+  battleTrance: { name: 'Battle Trance', type: 'skill', cost: 0, desc: 'Draw 3 cards', rarity: 'uncommon', color: COL.blue,
+    play(g) { g.drawCards(3); }},
+  bloodletting: { name: 'Bloodletting', type: 'skill', cost: 0, desc: 'Lose 3 HP. Gain 2 Energy', rarity: 'uncommon', color: COL.blue,
+    play(g) { g.player.hp -= 3; g.energy += 2; }},
+  offering: { name: 'Offering', type: 'skill', cost: 0, desc: 'Lose 6 HP. Gain 2 Energy. Draw 3', rarity: 'rare', color: COL.blue,
+    play(g) { g.player.hp -= 6; g.energy += 2; g.drawCards(3); }},
+  entrench: { name: 'Entrench', type: 'skill', cost: 2, desc: 'Double your Block', rarity: 'uncommon', color: COL.blue,
+    play(g) { g.player.block *= 2; }},
+  secondWind: { name: 'Second Wind', type: 'skill', cost: 1, desc: 'Exhaust non-attack cards. Gain 5 Block each', rarity: 'uncommon', color: COL.blue,
+    play(g) { const toExhaust = g.hand.filter(c => c.type !== 'attack'); toExhaust.forEach(c => { g.hand.splice(g.hand.indexOf(c), 1); g.exhaustPile.push(c); g.gainBlock(5); }); }},
+  impervious: { name: 'Impervious', type: 'skill', cost: 2, desc: 'Gain 30 Block. Exhaust', rarity: 'rare', color: COL.blue, exhaust: true,
+    play(g) { g.gainBlock(30); }},
+  // POWERS
+  inflame: { name: 'Inflame', type: 'power', cost: 1, desc: 'Gain 2 Strength', rarity: 'uncommon', color: COL.purple,
+    play(g) { g.player.strength = (g.player.strength||0) + 2; }},
+  metallicize: { name: 'Metallicize', type: 'power', cost: 1, desc: 'Gain 3 Block each turn', rarity: 'uncommon', color: COL.purple,
+    play(g) { g.player.metallicize = (g.player.metallicize||0) + 3; }},
+  demonForm: { name: 'Demon Form', type: 'power', cost: 3, desc: 'Gain 2 Strength each turn', rarity: 'rare', color: COL.purple,
+    play(g) { g.player.demonForm = (g.player.demonForm||0) + 2; }},
+  barricade: { name: 'Barricade', type: 'power', cost: 3, desc: 'Block no longer decays', rarity: 'rare', color: COL.purple,
+    play(g) { g.player.barricade = true; }},
+  combust: { name: 'Combust', type: 'power', cost: 1, desc: 'Lose 1 HP. Deal 5 to ALL each turn', rarity: 'uncommon', color: COL.purple,
+    play(g) { g.player.combust = (g.player.combust||0) + 5; }},
+  juggernaut: { name: 'Juggernaut', type: 'power', cost: 2, desc: 'When you gain Block, deal 5 to random enemy', rarity: 'rare', color: COL.purple,
+    play(g) { g.player.juggernaut = (g.player.juggernaut||0) + 5; }},
+  rupture: { name: 'Rupture', type: 'power', cost: 1, desc: 'When you lose HP from a card, gain 1 Str', rarity: 'uncommon', color: COL.purple,
+    play(g) { g.player.rupture = (g.player.rupture||0) + 1; }},
+  // CURSES/STATUS
+  wound: { name: 'Wound', type: 'status', cost: -1, desc: 'Unplayable', rarity: 'special', color: COL.darkGrey,
+    play() {}},
+  dazed: { name: 'Dazed', type: 'status', cost: -1, desc: 'Unplayable. Ethereal', rarity: 'special', color: COL.darkGrey, ethereal: true,
+    play() {}},
+};
+
+// Ensure all cards have _bonus initialized properly for rampage
+function makeCard(id) {
+  const template = CARD_DB[id];
+  const card = Object.assign({}, template, { id, _bonus: 0 });
+  card.play = template.play;
+  return card;
+}
+
+// ── ENEMY DATABASE ──
+const ENEMY_DB = {
+  // Act 1
+  slime: { name: 'Slime', hp: [28, 40], sprite: 'slime', acts: [1],
+    moveset(e) { return Math.random() < 0.5 ? { type: 'attack', damage: 5 + e.str, name: 'Tackle' } : { type: 'attack', damage: 8 + e.str, name: 'Lick', debuff: 'weak', amount: 1 }; }},
+  cultist: { name: 'Cultist', hp: [44, 52], sprite: 'cultist', acts: [1],
+    moveset(e) { if (!e.turnCount) { e.turnCount = 0; e.str = 0; } e.turnCount++; if (e.turnCount === 1) return { type: 'buff', name: 'Incantation', buff: 'ritual', amount: 3 }; return { type: 'attack', damage: 6 + e.str, name: 'Dark Strike' }; }},
+  jawWorm: { name: 'Jaw Worm', hp: [38, 48], sprite: 'jawworm', acts: [1],
+    moveset(e) { const r = Math.random(); if (r < 0.4) return { type: 'attack', damage: 11 + e.str, name: 'Chomp' }; if (r < 0.7) return { type: 'mixed', damage: 5 + e.str, block: 6, name: 'Thrash' }; return { type: 'buff', name: 'Bellow', buff: 'str', amount: 3, block: 5 }; }},
+  // Act 2
+  chosen: { name: 'Chosen', hp: [85, 100], sprite: 'chosen', acts: [2],
+    moveset(e) { if (!e.turnCount) { e.turnCount = 0; e.str = 0; } e.turnCount++; if (e.turnCount === 1) return { type: 'debuff', name: 'Hex', debuff: 'dazed', amount: 2 }; return Math.random() < 0.5 ? { type: 'attack', damage: 12 + e.str, name: 'Poke' } : { type: 'attack', damage: 18 + e.str, name: 'Zap' }; }},
+  snakePlant: { name: 'Snake Plant', hp: [60, 80], sprite: 'plant', acts: [2],
+    moveset(e) { return Math.random() < 0.6 ? { type: 'attack', damage: 8 + (e.str||0), name: 'Bite', debuff: 'weak', amount: 1 } : { type: 'attack', damage: 14 + (e.str||0), name: 'Constrict' }; }},
+  centurion: { name: 'Centurion', hp: [70, 90], sprite: 'centurion', acts: [2],
+    moveset(e) { if (!e.turnCount) e.turnCount = 0; e.turnCount++; return e.turnCount % 3 === 0 ? { type: 'buff', name: 'Rally', buff: 'str', amount: 4 } : { type: 'attack', damage: 13 + (e.str||0), name: 'Slash' }; }},
+  // Act 3
+  reptomancer: { name: 'Reptomancer', hp: [140, 170], sprite: 'reptomancer', acts: [3],
+    moveset(e) { if (!e.turnCount) e.turnCount = 0; e.turnCount++; if (e.turnCount % 3 === 1) return { type: 'attack', damage: 8 + (e.str||0), name: 'Snake Strike', times: 3 }; return { type: 'attack', damage: 18 + (e.str||0), name: 'Big Bite' }; }},
+  nemesis: { name: 'Nemesis', hp: [160, 200], sprite: 'nemesis', acts: [3],
+    moveset(e) { if (!e.turnCount) { e.turnCount = 0; e.str = 0; } e.turnCount++; if (e.turnCount % 4 === 0) return { type: 'debuff', name: 'Scorch', debuff: 'burn', amount: 3 }; return { type: 'attack', damage: 15 + e.str, name: 'Inferno' }; }},
+  giantHead: { name: 'Giant Head', hp: [400, 500], sprite: 'gianthead', acts: [3],
+    moveset(e) { if (!e.turnCount) { e.turnCount = 0; e.str = 0; } e.turnCount++; if (e.turnCount <= 2) return { type: 'attack', damage: 10 + e.str, name: 'Glare' }; return { type: 'attack', damage: 20 + e.str + e.turnCount * 2, name: 'It Is Time' }; }},
+};
+
+// ── GAME STATE ──
+const STATE = { TITLE: 0, MAP: 1, COMBAT: 2, REWARD: 3, SHOP: 4, REST: 5, EVENT: 6, GAMEOVER: 7, VICTORY: 8 };
+let game = null;
+
+// ── GOBADAPT — Adaptive Difficulty ──
+const GobAdapt = (() => {
+  const KEY = 'gg_cardgame_adapt';
+  let data;
+  const load = () => { try { data = JSON.parse(localStorage.getItem(KEY)); } catch(e) {} if (!data) data = { games: 0, wins: 0, recentResults: [] }; };
+  const save = () => localStorage.setItem(KEY, JSON.stringify(data));
+  load();
+  const getEnemyMod = () => {
+    if (data.games < 2) return 0.85;
+    const recent = data.recentResults.slice(-10);
+    const wr = recent.length ? recent.filter(r=>r).length/recent.length : 0.5;
+    if (wr < 0.2) return 0.7;
+    if (wr < 0.5) return 0.7 + wr * 0.6;
+    if (wr > 0.8) return 1.1;
+    return 1.0;
+  };
+  const record = (won) => {
+    data.games++; if(won) data.wins++;
+    data.recentResults.push(won);
+    if (data.recentResults.length > 10) data.recentResults.shift();
+    save();
+  };
+  return { getEnemyMod, record };
+})();
+
+class Game {
+  constructor() {
+    this.state = STATE.TITLE;
+    this.player = { hp: 70, maxHp: 70, block: 0, gold: 99, strength: 0, demonForm: 0, metallicize: 0, barricade: false, combust: 0, juggernaut: 0, rupture: 0 };
+    this.deck = [];
+    this.drawPile = [];
+    this.hand = [];
+    this.discardPile = [];
+    this.exhaustPile = [];
+    this.energy = 0;
+    this.maxEnergy = 3;
+    this.enemies = [];
+    this.act = 1;
+    this.floor = 0;
+    this.maxFloor = 15;
+    this.turn = 0;
+    this.selectedCard = -1;
+    this.selectedEnemy = -1;
+    this.animQueue = [];
+    this.animating = false;
+    this.currentAnim = null;
+    this.animTimer = 0;
+    this.rewards = [];
+    this.shopItems = [];
+    this.map = [];
+    this.mapPath = [];
+    this.buildStarterDeck();
+    this.highScore = parseInt(localStorage.getItem('spire_high') || '0');
+    this.score = 0;
+    this.enemyIntents = [];
+    this.turnPhase = 'player'; // player, enemy, animating
+    this.cardPlayAnim = null;
+    this.damageNumbers = [];
+    this.tooltip = null;
+    this.hoverCard = -1;
+    this.endTurnBtn = { x: 0, y: 0, w: 0, h: 0 };
+    this.buttons = [];
+    this.cardRewards = [];
+    this.potions = [];
+    this.relics = [];
+    this.eventData = null;
+    this.generateMap();
+  }
+
+  buildStarterDeck() {
+    this.deck = [];
+    for (let i = 0; i < 5; i++) this.deck.push(makeCard('strike'));
+    for (let i = 0; i < 4; i++) this.deck.push(makeCard('defend'));
+    this.deck.push(makeCard('quickSlash'));
+  }
+
+  generateMap() {
+    this.map = [];
+    for (let f = 0; f < this.maxFloor; f++) {
+      const nodes = [];
+      let numNodes = 2 + Math.floor(Math.random() * 2);
+      for (let n = 0; n < numNodes; n++) {
+        let type;
+        if (f === 0) type = 'combat';
+        else if (f === this.maxFloor - 1) type = 'boss';
+        else if (f === 7) type = 'rest';
+        else {
+          const r = Math.random();
+          if (r < 0.45) type = 'combat';
+          else if (r < 0.65) type = 'shop';
+          else if (r < 0.8) type = 'rest';
+          else if (r < 0.9) type = 'elite';
+          else type = 'event';
+        }
+        nodes.push({ type, x: 0, y: 0, cleared: false });
+      }
+      this.map.push(nodes);
+    }
+    this.floor = 0;
+    this.mapPath = [];
+  }
+
+  enterNode(nodeIdx) {
+    const node = this.map[this.floor][nodeIdx];
+    this.mapPath.push({ floor: this.floor, node: nodeIdx });
+    node.cleared = true;
+
+    switch (node.type) {
+      case 'combat': this.startCombat(this.act, false); break;
+      case 'elite': this.startCombat(this.act, true); break;
+      case 'boss': this.startBossCombat(); break;
+      case 'shop': this.enterShop(); break;
+      case 'rest': this.enterRest(); break;
+      case 'event': this.enterEvent(); break;
+    }
+  }
+
+  startCombat(act, isElite) {
+    this.state = STATE.COMBAT;
+    this.enemies = [];
+    this.turn = 0;
+    this.exhaustPile = [];
+
+    const actEnemies = Object.entries(ENEMY_DB).filter(([_, e]) => e.acts.includes(act));
+
+    const eMod = GobAdapt.getEnemyMod();
+    if (isElite) {
+      const template = actEnemies[Math.floor(Math.random() * actEnemies.length)][1];
+      const hp = Math.floor((template.hp[0] + Math.floor(Math.random() * (template.hp[1] - template.hp[0]))) * 1.5 * eMod);
+      this.enemies.push({ ...template, hp, maxHp: hp, block: 0, str: 0, weak: 0, turnCount: 0, intent: null, elite: true, _adaptMod: eMod });
+    } else {
+      const numEnemies = 1 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < numEnemies; i++) {
+        const template = actEnemies[Math.floor(Math.random() * actEnemies.length)][1];
+        const hp = Math.floor((template.hp[0] + Math.floor(Math.random() * (template.hp[1] - template.hp[0]))) * eMod);
+        this.enemies.push({ ...template, hp, maxHp: hp, block: 0, str: 0, weak: 0, turnCount: 0, intent: null, _adaptMod: eMod });
+      }
+    }
+
+    this.startPlayerTurn();
+  }
+
+  startBossCombat() {
+    this.state = STATE.COMBAT;
+    this.enemies = [];
+    this.turn = 0;
+    this.exhaustPile = [];
+
+    let template;
+    if (this.act === 1) template = ENEMY_DB.jawWorm;
+    else if (this.act === 2) template = ENEMY_DB.centurion;
+    else template = ENEMY_DB.giantHead;
+
+    const bMod = GobAdapt.getEnemyMod();
+    const hp = Math.floor(template.hp[1] * 2 * bMod);
+    this.enemies.push({ ...template, name: 'BOSS: ' + template.name, hp, maxHp: hp, block: 0, str: 2, weak: 0, turnCount: 0, intent: null, boss: true, _adaptMod: bMod });
+
+    this.startPlayerTurn();
+  }
+
+  enterShop() {
+    this.state = STATE.SHOP;
+    this.shopItems = [];
+    const allCards = Object.keys(CARD_DB).filter(id => {
+      const c = CARD_DB[id];
+      return c.rarity !== 'starter' && c.rarity !== 'special';
+    });
+    // 5 cards + 1 remove option
+    for (let i = 0; i < 5; i++) {
+      const id = allCards[Math.floor(Math.random() * allCards.length)];
+      const card = CARD_DB[id];
+      let price = card.rarity === 'common' ? 40 + Math.floor(Math.random()*20) : card.rarity === 'uncommon' ? 70 + Math.floor(Math.random()*30) : 120 + Math.floor(Math.random()*40);
+      this.shopItems.push({ type: 'card', id, price, sold: false });
+    }
+    this.shopItems.push({ type: 'remove', price: 50 + this.act * 25, sold: false });
+    this.shopItems.push({ type: 'heal', price: 60, sold: false, desc: 'Heal 25% HP' });
+  }
+
+  enterRest() {
+    this.state = STATE.REST;
+  }
+
+  enterEvent() {
+    this.state = STATE.EVENT;
+    const events = [
+      { name: 'Mysterious Shrine', desc: 'A dark shrine pulses with energy.', options: [
+        { text: 'Pray (Upgrade random card, lose 7 HP)', action: g => { g.player.hp = Math.max(1, g.player.hp - 7); g.player.strength += 1; }},
+        { text: 'Leave', action: () => {} }
+      ]},
+      { name: 'Golden Idol', desc: 'A gleaming golden idol sits on a pedestal.', options: [
+        { text: 'Take it (+200 Gold, lose 10 HP)', action: g => { g.player.gold += 200; g.player.hp = Math.max(1, g.player.hp - 10); }},
+        { text: 'Leave', action: () => {} }
+      ]},
+      { name: 'Fountain of Life', desc: 'Crystal clear water flows from an ancient fountain.', options: [
+        { text: 'Drink (Heal 15 HP)', action: g => { g.player.hp = Math.min(g.player.maxHp, g.player.hp + 15); }},
+        { text: 'Bathe (+10 Max HP)', action: g => { g.player.maxHp += 10; g.player.hp += 10; }},
+      ]},
+    ];
+    this.eventData = events[Math.floor(Math.random() * events.length)];
+  }
+
+  startPlayerTurn() {
+    this.turn++;
+    this.turnPhase = 'player';
+    this.energy = this.maxEnergy;
+    if (!this.player.barricade) this.player.block = 0;
+    // Powers
+    if (this.player.metallicize) { this.gainBlock(this.player.metallicize); }
+    if (this.player.demonForm) { this.player.strength += this.player.demonForm; spawnParticles(W*0.15, H*0.55, COL.purple, 8); }
+    if (this.player.combust) {
+      this.player.hp -= 1;
+      this.enemies.forEach(e => { if (e.hp > 0) this.dealDamage(e, this.player.combust); });
+    }
+    // Draw
+    this.hand = [];
+    this.drawCards(5);
+    // Calc enemy intents
+    this.enemies.forEach(e => {
+      if (e.hp > 0) e.intent = e.moveset(e);
+    });
+    this.selectedCard = -1;
+  }
+
+  drawCards(n) {
+    for (let i = 0; i < n; i++) {
+      if (this.drawPile.length === 0) {
+        this.drawPile = [...this.discardPile];
+        this.discardPile = [];
+        this.shuffleDeck();
+      }
+      if (this.drawPile.length > 0 && this.hand.length < 10) {
+        this.hand.push(this.drawPile.pop());
+      }
+    }
+  }
+
+  shuffleDeck() {
+    for (let i = this.drawPile.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [this.drawPile[i], this.drawPile[j]] = [this.drawPile[j], this.drawPile[i]];
+    }
+  }
+
+  prepareDeck() {
+    this.drawPile = this.deck.map(c => makeCard(c.id));
+    this.discardPile = [];
+    this.hand = [];
+    this.exhaustPile = [];
+    this.shuffleDeck();
+  }
+
+  playCard(cardIdx, targetIdx) {
+    const card = this.hand[cardIdx];
+    if (!card || card.cost < 0) return false; // unplayable
+    if (card.cost > this.energy) return false;
+
+    this.energy -= card.cost;
+    // For whirlwind, energy was already spent inside play()
+    if (card.id === 'whirlwind') this.energy = this.maxEnergy - card.cost; // actually whirlwind costs 0 so re-handle
+    // Remove from hand
+    this.hand.splice(cardIdx, 1);
+
+    const target = this.enemies[targetIdx] || this.enemies.find(e => e.hp > 0);
+    const hpBefore = this.player.hp;
+    card.play(this, target);
+    // Rupture check
+    if (this.player.rupture && this.player.hp < hpBefore) {
+      this.player.strength += this.player.rupture;
+      spawnParticles(W*0.15, H*0.55, COL.red, 5);
+    }
+
+    playSound('card');
+
+    // Exhaust or discard
+    if (card.exhaust) {
+      this.exhaustPile.push(card);
+    } else {
+      this.discardPile.push(card);
+    }
+
+    this.selectedCard = -1;
+
+    // Check win
+    if (this.enemies.every(e => e.hp <= 0)) {
+      this.combatWin();
+    }
+    return true;
+  }
+
+  dealDamage(target, amount) {
+    let dmg = amount + (this.player.strength || 0);
+    if (target.weak > 0) dmg = Math.floor(dmg * 1.25); // player does MORE to weakened
+    // Wait, weak reduces THEIR damage. Let me fix: weak on enemy means they deal less. Strength adds to player attacks.
+    // Actually in Slay the Spire, Weak reduces damage dealt by 25%. If enemy is weak, they deal less. If target has weak...
+    // Let's simplify: strength adds to player outgoing damage. Weak on target = they deal less on their turn.
+
+    // Apply block
+    if (target.block > 0) {
+      if (target.block >= dmg) {
+        target.block -= dmg;
+        dmg = 0;
+        spawnParticles(target._drawX || W*0.65, target._drawY || H*0.35, COL.blue, 5, 2);
+      } else {
+        dmg -= target.block;
+        target.block = 0;
+      }
+    }
+
+    if (dmg > 0) {
+      target.hp -= dmg;
+      shake(dmg > 10 ? 8 : 4);
+      flash(COL.red, 0.05);
+      spawnParticles(target._drawX || W*0.65, target._drawY || H*0.35, COL.red, dmg > 10 ? 15 : 8);
+      this.damageNumbers.push({ x: (target._drawX || W*0.65) + (Math.random()-0.5)*30, y: (target._drawY || H*0.35) - 20, value: dmg, timer: 1.5, color: COL.red });
+      playSound('hit');
+    }
+
+    if (target.hp <= 0 && target !== this.player) {
+      target.hp = 0;
+      spawnParticles(target._drawX || W*0.65, target._drawY || H*0.35, COL.gold, 25, 5);
+      playSound('death');
+    }
+  }
+
+  gainBlock(amount) {
+    this.player.block += amount;
+    spawnParticles(W * 0.15, H * 0.55, COL.blue, 5, 2);
+    this.damageNumbers.push({ x: W*0.15, y: H*0.5, value: '+' + amount + ' Block', timer: 1, color: COL.blue });
+    playSound('shield');
+    // Juggernaut
+    if (this.player.juggernaut) {
+      const alive = this.enemies.filter(e => e.hp > 0);
+      if (alive.length) {
+        const t = alive[Math.floor(Math.random()*alive.length)];
+        this.dealDamageRaw(t, this.player.juggernaut);
+      }
+    }
+  }
+
+  dealDamageRaw(target, dmg) {
+    if (target.block > 0) {
+      if (target.block >= dmg) { target.block -= dmg; return; }
+      dmg -= target.block; target.block = 0;
+    }
+    target.hp = Math.max(0, target.hp - dmg);
+    spawnParticles(target._drawX || W*0.65, target._drawY || H*0.35, COL.red, 5);
+  }
+
+  endPlayerTurn() {
+    // Discard hand
+    this.hand.forEach(c => {
+      if (c.ethereal) this.exhaustPile.push(c);
+      else this.discardPile.push(c);
+    });
+    this.hand = [];
+    this.turnPhase = 'enemy';
+    this.enemyTurnIdx = 0;
+    this.enemyTurnTimer = 0.5;
+  }
+
+  processEnemyTurn(dt) {
+    this.enemyTurnTimer -= dt;
+    if (this.enemyTurnTimer > 0) return;
+
+    if (this.enemyTurnIdx >= this.enemies.length) {
+      // All enemies done
+      this.enemies.forEach(e => { if (e.weak > 0) e.weak--; });
+      this.startPlayerTurn();
+      return;
+    }
+
+    const e = this.enemies[this.enemyTurnIdx];
+    if (e.hp <= 0) { this.enemyTurnIdx++; return; }
+
+    const intent = e.intent;
+    if (!intent) { this.enemyTurnIdx++; return; }
+
+    e.block = 0;
+
+    switch (intent.type) {
+      case 'attack': {
+        let dmg = Math.floor(intent.damage * (e._adaptMod || 1));
+        if (e.weak > 0) dmg = Math.floor(dmg * 0.75);
+        const times = intent.times || 1;
+        for (let i = 0; i < times; i++) this.dealDamageToPlayer(dmg);
+        if (intent.debuff === 'weak') this.player.weak = (this.player.weak||0) + intent.amount;
+        break;
+      }
+      case 'mixed': {
+        let dmg = Math.floor(intent.damage * (e._adaptMod || 1));
+        if (e.weak > 0) dmg = Math.floor(dmg * 0.75);
+        this.dealDamageToPlayer(dmg);
+        e.block += intent.block || 0;
+        break;
+      }
+      case 'buff': {
+        if (intent.buff === 'str') e.str = (e.str||0) + intent.amount;
+        if (intent.buff === 'ritual') e.str = (e.str||0) + intent.amount;
+        if (intent.block) e.block += intent.block;
+        spawnParticles(e._drawX || W*0.65, e._drawY || H*0.35, COL.purple, 8);
+        playSound('power');
+        break;
+      }
+      case 'debuff': {
+        if (intent.debuff === 'dazed') {
+          for (let i = 0; i < intent.amount; i++) this.discardPile.push(makeCard('dazed'));
+        } else if (intent.debuff === 'burn') {
+          this.dealDamageToPlayer(intent.amount * 2);
+        }
+        playSound('power');
+        break;
+      }
+    }
+
+    this.enemyTurnIdx++;
+    this.enemyTurnTimer = 0.6;
+
+    // Check player death
+    if (this.player.hp <= 0) {
+      this.player.hp = 0;
+      this.gameOver();
+    }
+  }
+
+  dealDamageToPlayer(dmg) {
+    if (this.player.block > 0) {
+      if (this.player.block >= dmg) {
+        this.player.block -= dmg;
+        spawnParticles(W*0.15, H*0.55, COL.blue, 5, 2);
+        playSound('shield');
+        return;
+      }
+      dmg -= this.player.block;
+      this.player.block = 0;
+    }
+    this.player.hp = Math.max(0, this.player.hp - dmg);
+    shake(dmg > 10 ? 10 : 5);
+    flash(COL.red, 0.08);
+    spawnParticles(W*0.15, H*0.55, COL.red, 10);
+    this.damageNumbers.push({ x: W*0.15 + (Math.random()-0.5)*20, y: H*0.5, value: dmg, timer: 1.5, color: COL.red });
+    playSound('hit');
+  }
+
+  combatWin() {
+    this.score += 10 + this.act * 5;
+    const isElite = this.enemies.some(e => e.elite);
+    const isBoss = this.enemies.some(e => e.boss);
+    const goldReward = 15 + Math.floor(Math.random() * 15) + (isElite ? 25 : 0) + (isBoss ? 50 : 0);
+    this.player.gold += goldReward;
+    this.score += goldReward;
+
+    // Generate card rewards
+    this.cardRewards = [];
+    const allCards = Object.keys(CARD_DB).filter(id => {
+      const c = CARD_DB[id];
+      return c.rarity !== 'starter' && c.rarity !== 'special';
+    });
+    for (let i = 0; i < 3; i++) {
+      this.cardRewards.push(allCards[Math.floor(Math.random() * allCards.length)]);
+    }
+    this.rewards = [{ type: 'gold', amount: goldReward }];
+    this.state = STATE.REWARD;
+    playSound('win');
+  }
+
+  addCardToDeck(cardId) {
+    this.deck.push(makeCard(cardId));
+    playSound('buy');
+  }
+
+  removeCardFromDeck(idx) {
+    if (idx >= 0 && idx < this.deck.length) {
+      this.deck.splice(idx, 1);
+      playSound('card');
+    }
+  }
+
+  advanceFloor() {
+    this.floor++;
+    if (this.floor >= this.maxFloor) {
+      this.act++;
+      if (this.act > 3) {
+        this.victory();
+        return;
+      }
+      this.floor = 0;
+      this.maxFloor = 15;
+      this.generateMap();
+    }
+    this.state = STATE.MAP;
+    this.prepareDeck();
+  }
+
+  gameOver() {
+    this.state = STATE.GAMEOVER;
+    GobAdapt.record(false);
+    if (this.score > this.highScore) {
+      this.highScore = this.score;
+      localStorage.setItem('spire_high', this.score.toString());
+    }
+    playSound('death');
+  }
+
+  victory() {
+    this.state = STATE.VICTORY;
+    GobAdapt.record(true);
+    this.score += 200;
+    if (this.score > this.highScore) {
+      this.highScore = this.score;
+      localStorage.setItem('spire_high', this.score.toString());
+    }
+    playSound('win');
+  }
+}
+
+// ── DRAWING FUNCTIONS ──
+function drawRoundRect(x, y, w, h, r, fill, stroke) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); }
+}
+
+function drawBar(x, y, w, h, pct, color, bgColor = COL.darkGrey) {
+  drawRoundRect(x, y, w, h, 3, bgColor);
+  if (pct > 0) drawRoundRect(x, y, w * Math.min(1, pct), h, 3, color);
+}
+
+function drawText(text, x, y, size, color, align = 'center', baseline = 'middle') {
+  ctx.fillStyle = color;
+  ctx.font = `bold ${size}px monospace`;
+  ctx.textAlign = align;
+  ctx.textBaseline = baseline;
+  ctx.fillText(text, x, y);
+}
+
+function drawTextShadow(text, x, y, size, color, align = 'center') {
+  ctx.fillStyle = '#000';
+  ctx.font = `bold ${size}px monospace`;
+  ctx.textAlign = align;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x+2, y+2);
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+}
+
+function drawButton(x, y, w, h, text, color = COL.gold, hovered = false) {
+  drawRoundRect(x, y, w, h, 6, hovered ? color : COL.panel, hovered ? '#fff' : color);
+  drawText(text, x + w/2, y + h/2, Math.min(16, h*0.5), hovered ? '#000' : color);
+  return { x, y, w, h };
+}
+
+function drawCard(card, x, y, w, h, selected = false, hovered = false) {
+  const scale = hovered ? 1.08 : 1;
+  const sw = w * scale, sh = h * scale;
+  const sx = x - (sw - w) / 2, sy = y - (sh - h);
+
+  if (hovered) {
+    ctx.shadowColor = card.color || COL.gold;
+    ctx.shadowBlur = 15;
+  }
+
+  // Card body
+  drawRoundRect(sx, sy, sw, sh, 8, selected ? COL.panelLight : COL.cardBg, selected ? COL.gold : (card.color || COL.cardBorder));
+
+  ctx.shadowBlur = 0;
+
+  // Cost circle
+  if (card.cost >= 0) {
+    ctx.beginPath();
+    ctx.arc(sx + 16, sy + 16, 14, 0, Math.PI * 2);
+    ctx.fillStyle = COL.energy;
+    ctx.fill();
+    drawText(card.cost.toString(), sx + 16, sy + 16, 14, '#000');
+  }
+
+  // Type indicator stripe
+  const typeColor = card.type === 'attack' ? COL.red : card.type === 'skill' ? COL.blue : card.type === 'power' ? COL.purple : COL.darkGrey;
+  drawRoundRect(sx + 4, sy + 34, sw - 8, 3, 1, typeColor);
+
+  // Card name
+  const nameSize = Math.min(11, sw * 0.11);
+  drawText(card.name, sx + sw/2, sy + 48, nameSize, COL.white);
+
+  // Icon area
+  const iconY = sy + 55;
+  const iconH = sh - 95;
+  drawCardIcon(card, sx + sw/2, iconY + iconH/2, sw * 0.4, card.color || COL.gold);
+
+  // Description
+  const descY = sy + sh - 35;
+  const words = card.desc.split(' ');
+  let line = '';
+  let lineY = descY;
+  ctx.font = `${Math.min(9, sw*0.085)}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = COL.grey;
+  for (const word of words) {
+    const test = line + word + ' ';
+    if (ctx.measureText(test).width > sw - 12) {
+      ctx.fillText(line.trim(), sx + sw/2, lineY);
+      line = word + ' ';
+      lineY += 12;
+    } else {
+      line = test;
+    }
+  }
+  ctx.fillText(line.trim(), sx + sw/2, lineY);
+
+  // Type label
+  drawText(card.type.toUpperCase(), sx + sw/2, sy + sh - 10, 8, typeColor);
+}
+
+function drawCardIcon(card, cx, cy, size, color) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.7;
+
+  if (card.type === 'attack') {
+    // Sword icon
+    ctx.beginPath();
+    ctx.moveTo(cx - size*0.4, cy + size*0.4);
+    ctx.lineTo(cx + size*0.4, cy - size*0.4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - size*0.1, cy + size*0.05);
+    ctx.lineTo(cx + size*0.1, cy - size*0.05);
+    ctx.moveTo(cx + size*0.05, cy + size*0.1);
+    ctx.lineTo(cx - size*0.05, cy - size*0.1);
+    ctx.stroke();
+  } else if (card.type === 'skill') {
+    // Shield icon
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - size*0.4);
+    ctx.quadraticCurveTo(cx + size*0.5, cy - size*0.3, cx + size*0.4, cy);
+    ctx.quadraticCurveTo(cx + size*0.3, cy + size*0.3, cx, cy + size*0.45);
+    ctx.quadraticCurveTo(cx - size*0.3, cy + size*0.3, cx - size*0.4, cy);
+    ctx.quadraticCurveTo(cx - size*0.5, cy - size*0.3, cx, cy - size*0.4);
+    ctx.stroke();
+  } else if (card.type === 'power') {
+    // Star icon
+    for (let i = 0; i < 5; i++) {
+      const a = (i * 72 - 90) * Math.PI / 180;
+      const a2 = ((i * 72 + 36) - 90) * Math.PI / 180;
+      const px = cx + Math.cos(a) * size * 0.4;
+      const py = cy + Math.sin(a) * size * 0.4;
+      const px2 = cx + Math.cos(a2) * size * 0.2;
+      const py2 = cy + Math.sin(a2) * size * 0.2;
+      if (i === 0) ctx.beginPath();
+      ctx.lineTo(px, py);
+      ctx.lineTo(px2, py2);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  } else {
+    // X for status
+    ctx.beginPath();
+    ctx.moveTo(cx - size*0.3, cy - size*0.3);
+    ctx.lineTo(cx + size*0.3, cy + size*0.3);
+    ctx.moveTo(cx + size*0.3, cy - size*0.3);
+    ctx.lineTo(cx - size*0.3, cy + size*0.3);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawEnemySprite(enemy, cx, cy, size) {
+  ctx.save();
+  const s = size;
+
+  // Flash white when taking damage
+  const isHurt = enemy.hp < (enemy._prevHp || enemy.hp);
+  enemy._prevHp = enemy.hp;
+
+  switch (enemy.sprite) {
+    case 'slime':
+      ctx.fillStyle = isHurt ? '#fff' : '#44aa44';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + s*0.1, s*0.5, s*0.4, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(cx - s*0.15, cy - s*0.05, s*0.08, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + s*0.15, cy - s*0.05, s*0.08, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.arc(cx - s*0.15, cy - s*0.05, s*0.04, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + s*0.15, cy - s*0.05, s*0.04, 0, Math.PI*2); ctx.fill();
+      break;
+    case 'cultist':
+      ctx.fillStyle = isHurt ? '#fff' : '#8844aa';
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - s*0.5);
+      ctx.lineTo(cx + s*0.3, cy + s*0.4);
+      ctx.lineTo(cx - s*0.3, cy + s*0.4);
+      ctx.closePath();
+      ctx.fill();
+      // Hood
+      ctx.fillStyle = '#553388';
+      ctx.beginPath();
+      ctx.arc(cx, cy - s*0.15, s*0.2, 0, Math.PI * 2);
+      ctx.fill();
+      // Eyes
+      ctx.fillStyle = COL.gold;
+      ctx.beginPath(); ctx.arc(cx - s*0.08, cy - s*0.18, s*0.04, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + s*0.08, cy - s*0.18, s*0.04, 0, Math.PI*2); ctx.fill();
+      break;
+    case 'jawworm':
+      ctx.fillStyle = isHurt ? '#fff' : '#cc5533';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, s*0.45, s*0.3, 0, 0, Math.PI*2);
+      ctx.fill();
+      // Jaw
+      ctx.fillStyle = '#aa3322';
+      ctx.beginPath();
+      ctx.moveTo(cx + s*0.3, cy);
+      ctx.lineTo(cx + s*0.55, cy - s*0.15);
+      ctx.lineTo(cx + s*0.55, cy + s*0.15);
+      ctx.closePath();
+      ctx.fill();
+      // Eye
+      ctx.fillStyle = COL.gold;
+      ctx.beginPath(); ctx.arc(cx - s*0.1, cy - s*0.1, s*0.06, 0, Math.PI*2); ctx.fill();
+      break;
+    case 'chosen':
+      ctx.fillStyle = isHurt ? '#fff' : '#2244aa';
+      drawRoundRect(cx - s*0.25, cy - s*0.4, s*0.5, s*0.8, 8, ctx.fillStyle);
+      // Crown
+      ctx.fillStyle = COL.gold;
+      ctx.beginPath();
+      ctx.moveTo(cx - s*0.2, cy - s*0.35);
+      ctx.lineTo(cx - s*0.15, cy - s*0.5);
+      ctx.lineTo(cx, cy - s*0.4);
+      ctx.lineTo(cx + s*0.15, cy - s*0.5);
+      ctx.lineTo(cx + s*0.2, cy - s*0.35);
+      ctx.closePath();
+      ctx.fill();
+      // Eyes
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(cx - s*0.15, cy - s*0.15, s*0.1, s*0.06);
+      ctx.fillRect(cx + s*0.05, cy - s*0.15, s*0.1, s*0.06);
+      break;
+    case 'plant':
+      ctx.fillStyle = isHurt ? '#fff' : '#228833';
+      // Stem
+      ctx.fillRect(cx - s*0.05, cy - s*0.1, s*0.1, s*0.5);
+      // Head
+      ctx.beginPath();
+      ctx.arc(cx, cy - s*0.2, s*0.3, 0, Math.PI*2);
+      ctx.fill();
+      // Teeth
+      ctx.fillStyle = '#fff';
+      for (let i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.moveTo(cx + i*s*0.1, cy - s*0.2 + s*0.15);
+        ctx.lineTo(cx + i*s*0.1 + s*0.03, cy - s*0.2 + s*0.25);
+        ctx.lineTo(cx + i*s*0.1 - s*0.03, cy - s*0.2 + s*0.25);
+        ctx.closePath();
+        ctx.fill();
+      }
+      break;
+    default:
+      // Generic enemy
+      ctx.fillStyle = isHurt ? '#fff' : '#aa4444';
+      drawRoundRect(cx - s*0.3, cy - s*0.4, s*0.6, s*0.8, 6, ctx.fillStyle);
+      ctx.fillStyle = COL.gold;
+      ctx.beginPath(); ctx.arc(cx - s*0.1, cy - s*0.15, s*0.06, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + s*0.1, cy - s*0.15, s*0.06, 0, Math.PI*2); ctx.fill();
+      break;
+  }
+
+  // Boss/Elite indicator
+  if (enemy.boss || enemy.elite) {
+    ctx.strokeStyle = COL.gold;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, s*0.6, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawIntentIcon(intent, x, y) {
+  if (!intent) return;
+  const s = 18;
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+
+  if (intent.type === 'attack' || intent.type === 'mixed') {
+    // Sword
+    ctx.strokeStyle = COL.red;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x - s*0.4, y + s*0.4);
+    ctx.lineTo(x + s*0.4, y - s*0.4);
+    ctx.stroke();
+    let dmg = intent.damage;
+    if (intent.times > 1) drawText(`${dmg}x${intent.times}`, x, y + s + 5, 12, COL.red);
+    else drawText(dmg.toString(), x, y + s + 5, 12, COL.red);
+  } else if (intent.type === 'buff') {
+    // Up arrow
+    ctx.strokeStyle = COL.purple;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y - s*0.4);
+    ctx.lineTo(x, y + s*0.3);
+    ctx.moveTo(x - s*0.3, y - s*0.1);
+    ctx.lineTo(x, y - s*0.4);
+    ctx.lineTo(x + s*0.3, y - s*0.1);
+    ctx.stroke();
+    drawText('Buff', x, y + s + 5, 10, COL.purple);
+  } else if (intent.type === 'debuff') {
+    // Skull
+    ctx.strokeStyle = COL.green;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, s*0.35, 0, Math.PI * 2);
+    ctx.stroke();
+    drawText('Debuff', x, y + s + 5, 10, COL.green);
+  }
+
+  ctx.restore();
+}
+
+// ── SCREEN RENDERERS ──
+function drawTitleScreen() {
+  // Background
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Animated background particles
+  const t = Date.now() * 0.001;
+  ctx.globalAlpha = 0.1;
+  for (let i = 0; i < 30; i++) {
+    const px = (Math.sin(t * 0.3 + i * 1.7) * 0.5 + 0.5) * W;
+    const py = (Math.cos(t * 0.2 + i * 2.3) * 0.5 + 0.5) * H;
+    ctx.fillStyle = [COL.gold, COL.red, COL.purple][i % 3];
+    ctx.fillRect(px, py, 3, 3);
+  }
+  ctx.globalAlpha = 1;
+
+  // Title
+  const titleY = H * 0.3;
+  drawTextShadow('SPIRE OF', W/2, titleY - 30, 28, COL.grey);
+  drawTextShadow('SHADOWS', W/2, titleY + 15, 52, COL.gold);
+
+  // Subtitle
+  drawText('A Deckbuilding Adventure', W/2, titleY + 55, 14, COL.grey);
+
+  // Card fan decoration
+  const fanCX = W/2, fanCY = H * 0.55;
+  for (let i = -2; i <= 2; i++) {
+    ctx.save();
+    ctx.translate(fanCX, fanCY + 40);
+    ctx.rotate(i * 0.15);
+    drawRoundRect(-25, -60, 50, 70, 5, COL.cardBg, [COL.red, COL.blue, COL.gold, COL.purple, COL.green][i+2]);
+    ctx.restore();
+  }
+
+  // Play button
+  const btnW = 200, btnH = 50;
+  const pulse = Math.sin(t * 3) * 3;
+  drawRoundRect(W/2 - btnW/2, H * 0.73 - btnH/2 + pulse, btnW, btnH, 10, COL.gold);
+  drawText('TAP TO PLAY', W/2, H * 0.73 + pulse, 20, '#000');
+
+  // High score
+  if (game.highScore > 0) {
+    drawText(`High Score: ${game.highScore}`, W/2, H * 0.85, 14, COL.grey);
+  }
+
+  // Controls hint
+  drawText('Desktop: Click cards, then click enemies', W/2, H * 0.92, 11, COL.darkGrey);
+  drawText('Mobile: Tap cards, then tap enemies', W/2, H * 0.95, 11, COL.darkGrey);
+}
+
+function drawMapScreen() {
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  drawTextShadow(`Act ${game.act} — Floor ${game.floor + 1}`, W/2, 35, 22, COL.gold);
+
+  // Player stats bar
+  drawText(`HP: ${game.player.hp}/${game.player.maxHp}`, W * 0.2, 65, 14, COL.hp);
+  drawText(`Gold: ${game.player.gold}`, W * 0.5, 65, 14, COL.gold);
+  drawText(`Deck: ${game.deck.length}`, W * 0.8, 65, 14, COL.blue);
+
+  // Map nodes
+  const floor = game.map[game.floor];
+  if (!floor) return;
+
+  const nodeW = Math.min(160, (W - 40) / floor.length - 10);
+  const nodeH = 80;
+  const startX = (W - (floor.length * (nodeW + 10) - 10)) / 2;
+  const nodeY = H * 0.35;
+
+  game.buttons = [];
+
+  for (let i = 0; i < floor.length; i++) {
+    const node = floor[i];
+    const nx = startX + i * (nodeW + 10);
+    const ny = nodeY;
+
+    const typeColors = { combat: COL.red, elite: COL.gold, boss: COL.purple, shop: COL.green, rest: COL.blue, event: COL.grey };
+    const typeNames = { combat: 'FIGHT', elite: 'ELITE', boss: 'BOSS', shop: 'SHOP', rest: 'REST', event: 'EVENT' };
+    const typeIcons = { combat: '⚔', elite: '★', boss: '☠', shop: '$', rest: '♥', event: '?' };
+
+    const col = typeColors[node.type] || COL.grey;
+    const hovered = node === game._hoveredNode;
+
+    drawRoundRect(nx, ny, nodeW, nodeH, 8, hovered ? col + '44' : COL.panel, col);
+
+    drawText(typeIcons[node.type] || '?', nx + nodeW/2, ny + 25, 24, col);
+    drawText(typeNames[node.type] || '???', nx + nodeW/2, ny + 55, 12, col);
+
+    game.buttons.push({ x: nx, y: ny, w: nodeW, h: nodeH, action: () => {
+      game.prepareDeck();
+      game.enterNode(i);
+    }});
+  }
+
+  // Deck view hint
+  drawText('Choose your path', W/2, H * 0.6, 16, COL.grey);
+
+  // Deck display (small)
+  const deckY = H * 0.7;
+  drawText('Your Deck:', W/2, deckY - 15, 14, COL.gold);
+  const cw = 55, ch = 75;
+  const maxShow = Math.min(game.deck.length, Math.floor((W - 20) / (cw + 4)));
+  const deckStartX = (W - maxShow * (cw + 4)) / 2;
+  for (let i = 0; i < maxShow; i++) {
+    drawCard(game.deck[i], deckStartX + i * (cw + 4), deckY, cw, ch);
+  }
+  if (game.deck.length > maxShow) {
+    drawText(`+${game.deck.length - maxShow} more`, W/2, deckY + ch + 15, 11, COL.grey);
+  }
+}
+
+function drawCombatScreen() {
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Top bar
+  drawText(`Act ${game.act} — Floor ${game.floor + 1}`, W/2, 20, 14, COL.grey);
+
+  // Player area (left side)
+  const px = W * 0.12, py = H * 0.45;
+
+  // Player sprite (warrior)
+  ctx.fillStyle = COL.blue;
+  drawRoundRect(px - 25, py - 35, 50, 70, 6, '#2233aa', COL.blue);
+  // Helmet
+  ctx.fillStyle = '#334499';
+  ctx.beginPath();
+  ctx.arc(px, py - 25, 18, Math.PI, 0);
+  ctx.fill();
+  // Eyes
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(px - 8, py - 20, 5, 4);
+  ctx.fillRect(px + 3, py - 20, 5, 4);
+  // Sword in hand
+  ctx.strokeStyle = COL.grey;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(px + 25, py - 10);
+  ctx.lineTo(px + 40, py - 35);
+  ctx.stroke();
+
+  // Player stats
+  const statY = py + 50;
+  drawBar(px - 40, statY, 80, 10, game.player.hp / game.player.maxHp, COL.hp);
+  drawText(`${game.player.hp}/${game.player.maxHp}`, px, statY + 5, 10, COL.white);
+
+  if (game.player.block > 0) {
+    drawText(`🛡 ${game.player.block}`, px, statY + 22, 14, COL.blue);
+  }
+  if (game.player.strength > 0) {
+    drawText(`STR +${game.player.strength}`, px, statY + 38, 10, COL.red);
+  }
+
+  // Energy orb
+  const orbX = W * 0.04, orbY = H * 0.75;
+  ctx.beginPath();
+  ctx.arc(orbX + 25, orbY, 22, 0, Math.PI * 2);
+  ctx.fillStyle = '#332200';
+  ctx.fill();
+  ctx.strokeStyle = COL.energy;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  drawText(`${game.energy}/${game.maxEnergy}`, orbX + 25, orbY, 16, COL.energy);
+
+  // Draw/Discard piles
+  drawText(`Draw: ${game.drawPile.length}`, W * 0.04, H * 0.88, 11, COL.green);
+  drawText(`Disc: ${game.discardPile.length}`, W * 0.04, H * 0.92, 11, COL.grey);
+  drawText(`Exh: ${game.exhaustPile.length}`, W * 0.04, H * 0.96, 11, COL.darkGrey);
+
+  // Enemies
+  const enemyAlive = game.enemies.filter(e => e.hp > 0);
+  const enemyStartX = W * 0.5;
+  const enemySpacing = Math.min(180, (W * 0.45) / Math.max(1, enemyAlive.length));
+
+  game.buttons = [];
+
+  let eIdx = 0;
+  for (let i = 0; i < game.enemies.length; i++) {
+    const e = game.enemies[i];
+    if (e.hp <= 0) continue;
+
+    const ex = enemyStartX + eIdx * enemySpacing + enemySpacing / 2;
+    const ey = H * 0.35;
+    e._drawX = ex;
+    e._drawY = ey;
+
+    // Selection highlight
+    if (game.selectedCard >= 0 && game.hand[game.selectedCard] && game.hand[game.selectedCard].type === 'attack') {
+      drawRoundRect(ex - 50, ey - 55, 100, 140, 8, null, game.selectedEnemy === i ? COL.gold : COL.red + '44');
+    }
+
+    drawEnemySprite(e, ex, ey, 60);
+
+    // Intent
+    if (e.intent && game.turnPhase === 'player') {
+      drawIntentIcon(e.intent, ex, ey - 65);
+    }
+
+    // HP bar
+    drawBar(ex - 40, ey + 45, 80, 8, e.hp / e.maxHp, COL.hp);
+    drawText(`${e.hp}/${e.maxHp}`, ex, ey + 49, 9, COL.white);
+
+    // Name
+    drawText(e.name, ex, ey + 62, 10, COL.grey);
+
+    // Block
+    if (e.block > 0) drawText(`🛡${e.block}`, ex, ey + 75, 11, COL.blue);
+
+    // Weak
+    if (e.weak > 0) drawText(`Weak ${e.weak}`, ex + 30, ey + 75, 9, COL.green);
+
+    // Str
+    if (e.str > 0) drawText(`STR+${e.str}`, ex - 30, ey + 75, 9, COL.red);
+
+    // Clickable area
+    game.buttons.push({ x: ex - 50, y: ey - 55, w: 100, h: 140, action: () => {
+      if (game.selectedCard >= 0 && game.turnPhase === 'player') {
+        game.playCard(game.selectedCard, i);
+      } else {
+        game.selectedEnemy = i;
+      }
+    }});
+
+    eIdx++;
+  }
+
+  // Hand
+  const handY = H * 0.78;
+  const cardW = Math.min(90, (W * 0.75) / Math.max(1, game.hand.length) - 4);
+  const cardH = cardW * 1.35;
+  const handStartX = (W - game.hand.length * (cardW + 4)) / 2;
+
+  for (let i = 0; i < game.hand.length; i++) {
+    const card = game.hand[i];
+    const cx = handStartX + i * (cardW + 4);
+    const cy = handY;
+    const isSelected = game.selectedCard === i;
+    const isHovered = game.hoverCard === i;
+    const canPlay = card.cost >= 0 && card.cost <= game.energy && game.turnPhase === 'player';
+
+    ctx.globalAlpha = canPlay ? 1 : 0.5;
+    drawCard(card, cx, isSelected ? cy - 20 : cy, cardW, cardH, isSelected, isHovered);
+    ctx.globalAlpha = 1;
+
+    if (game.turnPhase === 'player') {
+      game.buttons.push({ x: cx, y: isSelected ? cy - 20 : cy, w: cardW, h: cardH, action: () => {
+        if (game.selectedCard === i) {
+          // If it's a non-targeted card, play it
+          if (card.type !== 'attack' && card.cost >= 0 && card.cost <= game.energy) {
+            game.playCard(i, 0);
+          } else {
+            game.selectedCard = -1;
+          }
+        } else {
+          game.selectedCard = i;
+          if (card.type !== 'attack' && card.cost >= 0 && card.cost <= game.energy) {
+            // Auto-play non-targeted cards on double-select
+          }
+        }
+      }});
+    }
+  }
+
+  // End Turn button
+  if (game.turnPhase === 'player') {
+    const btnX = W * 0.88, btnY = H * 0.65, btnW = W * 0.1, btnH = 40;
+    game.endTurnBtn = drawButton(btnX, btnY, btnW, btnH, 'END TURN', COL.gold);
+    game.buttons.push({ x: btnX, y: btnY, w: btnW, h: btnH, action: () => { game.endPlayerTurn(); }});
+  }
+
+  // Turn indicator
+  if (game.turnPhase === 'enemy') {
+    drawRoundRect(W/2 - 80, H/2 - 20, 160, 40, 8, COL.panel + 'dd', COL.red);
+    drawText('ENEMY TURN', W/2, H/2, 16, COL.red);
+  }
+
+  // Damage numbers
+  for (const dn of game.damageNumbers) {
+    const alpha = Math.min(1, dn.timer);
+    ctx.globalAlpha = alpha;
+    drawTextShadow(dn.value.toString(), dn.x, dn.y, 20, dn.color);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawRewardScreen() {
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  drawTextShadow('VICTORY!', W/2, H * 0.1, 36, COL.gold);
+
+  // Gold reward
+  let y = H * 0.2;
+  for (const r of game.rewards) {
+    drawText(`+${r.amount} Gold`, W/2, y, 18, COL.gold);
+    y += 30;
+  }
+
+  // Card rewards
+  drawText('Choose a card to add (or skip):', W/2, y + 10, 14, COL.grey);
+  y += 35;
+
+  game.buttons = [];
+  const cw = Math.min(120, (W - 40) / 3 - 10);
+  const ch = cw * 1.4;
+  const startX = (W - game.cardRewards.length * (cw + 10)) / 2;
+
+  for (let i = 0; i < game.cardRewards.length; i++) {
+    const card = CARD_DB[game.cardRewards[i]];
+    const cx = startX + i * (cw + 10);
+    drawCard(card, cx, y, cw, ch);
+    game.buttons.push({ x: cx, y: y, w: cw, h: ch, action: () => {
+      game.addCardToDeck(game.cardRewards[i]);
+      game.advanceFloor();
+    }});
+  }
+
+  // Skip button
+  const skipY = y + ch + 20;
+  const skipBtn = drawButton(W/2 - 60, skipY, 120, 36, 'SKIP', COL.grey);
+  game.buttons.push({ ...skipBtn, action: () => { game.advanceFloor(); }});
+}
+
+function drawShopScreen() {
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  drawTextShadow('SHOP', W/2, 40, 32, COL.gold);
+  drawText(`Gold: ${game.player.gold}`, W/2, 70, 16, COL.gold);
+
+  game.buttons = [];
+
+  const itemW = Math.min(130, (W - 40) / 4 - 10);
+  const itemH = itemW * 1.4;
+  let y = 100;
+
+  // Cards for sale
+  const cardItems = game.shopItems.filter(i => i.type === 'card' && !i.sold);
+  const startX = (W - cardItems.length * (itemW + 8)) / 2;
+
+  for (let i = 0; i < cardItems.length; i++) {
+    const item = cardItems[i];
+    const card = CARD_DB[item.id];
+    const cx = startX + i * (itemW + 8);
+
+    ctx.globalAlpha = game.player.gold >= item.price ? 1 : 0.4;
+    drawCard(card, cx, y, itemW, itemH);
+    drawText(`${item.price}g`, cx + itemW/2, y + itemH + 15, 14, COL.gold);
+    ctx.globalAlpha = 1;
+
+    if (game.player.gold >= item.price) {
+      game.buttons.push({ x: cx, y: y, w: itemW, h: itemH + 20, action: () => {
+        game.player.gold -= item.price;
+        game.addCardToDeck(item.id);
+        item.sold = true;
+      }});
+    }
+  }
+
+  // Services
+  y += itemH + 40;
+  const services = game.shopItems.filter(i => i.type !== 'card' && !i.sold);
+  for (let i = 0; i < services.length; i++) {
+    const s = services[i];
+    const sx = W/2 - 100;
+    const sy = y + i * 50;
+    const canBuy = game.player.gold >= s.price;
+
+    ctx.globalAlpha = canBuy ? 1 : 0.4;
+    if (s.type === 'remove') {
+      drawButton(sx, sy, 200, 40, `Remove Card — ${s.price}g`, COL.red);
+    } else if (s.type === 'heal') {
+      drawButton(sx, sy, 200, 40, `${s.desc} — ${s.price}g`, COL.green);
+    }
+    ctx.globalAlpha = 1;
+
+    if (canBuy) {
+      game.buttons.push({ x: sx, y: sy, w: 200, h: 40, action: () => {
+        game.player.gold -= s.price;
+        if (s.type === 'remove' && game.deck.length > 0) {
+          // Remove worst card (a status or the first one)
+          const statusIdx = game.deck.findIndex(c => c.type === 'status');
+          if (statusIdx >= 0) game.deck.splice(statusIdx, 1);
+          else game.deck.splice(Math.floor(Math.random() * game.deck.length), 1);
+        } else if (s.type === 'heal') {
+          game.player.hp = Math.min(game.player.maxHp, game.player.hp + Math.floor(game.player.maxHp * 0.25));
+        }
+        s.sold = true;
+        playSound('buy');
+      }});
+    }
+  }
+
+  // Leave button
+  const leaveBtn = drawButton(W/2 - 60, H - 70, 120, 40, 'LEAVE', COL.grey);
+  game.buttons.push({ ...leaveBtn, action: () => { game.advanceFloor(); }});
+}
+
+function drawRestScreen() {
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  drawTextShadow('REST SITE', W/2, H * 0.2, 32, COL.blue);
+
+  // Campfire animation
+  const t = Date.now() * 0.005;
+  ctx.fillStyle = '#442200';
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const fx = W/2 + Math.sin(t + i) * 15;
+    const fy = H * 0.45 - Math.abs(Math.sin(t * 2 + i * 0.7)) * 30 - i * 5;
+    ctx.moveTo(fx, fy);
+    ctx.arc(fx, fy, 8 + Math.sin(t + i) * 3, 0, Math.PI * 2);
+  }
+  ctx.fillStyle = '#ff6622';
+  ctx.fill();
+  // Logs
+  ctx.fillStyle = '#553311';
+  ctx.fillRect(W/2 - 30, H * 0.47, 60, 8);
+  ctx.fillRect(W/2 - 25, H * 0.46, 50, 8);
+
+  drawText(`HP: ${game.player.hp}/${game.player.maxHp}`, W/2, H * 0.55, 16, COL.hp);
+
+  game.buttons = [];
+
+  const healAmt = Math.floor(game.player.maxHp * 0.3);
+  const restBtn = drawButton(W/2 - 100, H * 0.65, 200, 45, `REST (Heal ${healAmt} HP)`, COL.green);
+  game.buttons.push({ ...restBtn, action: () => {
+    game.player.hp = Math.min(game.player.maxHp, game.player.hp + healAmt);
+    playSound('heal');
+    game.advanceFloor();
+  }});
+
+  const smithBtn = drawButton(W/2 - 100, H * 0.75, 200, 45, 'SMITH (+1 Max Energy)', COL.gold);
+  game.buttons.push({ ...smithBtn, action: () => {
+    game.maxEnergy++;
+    playSound('power');
+    game.advanceFloor();
+  }});
+}
+
+function drawEventScreen() {
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  if (!game.eventData) { game.advanceFloor(); return; }
+
+  drawTextShadow(game.eventData.name, W/2, H * 0.2, 28, COL.gold);
+  drawText(game.eventData.desc, W/2, H * 0.32, 14, COL.grey);
+
+  game.buttons = [];
+
+  for (let i = 0; i < game.eventData.options.length; i++) {
+    const opt = game.eventData.options[i];
+    const btnY = H * 0.45 + i * 55;
+    const btn = drawButton(W/2 - 150, btnY, 300, 42, opt.text, COL.gold);
+    game.buttons.push({ ...btn, action: () => {
+      opt.action(game);
+      playSound('click');
+      game.advanceFloor();
+    }});
+  }
+}
+
+function drawGameOverScreen() {
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  drawTextShadow('DEFEAT', W/2, H * 0.25, 48, COL.red);
+  drawText(`Score: ${game.score}`, W/2, H * 0.4, 22, COL.gold);
+  drawText(`Act ${game.act} — Floor ${game.floor + 1}`, W/2, H * 0.48, 16, COL.grey);
+  drawText(`High Score: ${game.highScore}`, W/2, H * 0.55, 16, COL.grey);
+
+  game.buttons = [];
+  const btn = drawButton(W/2 - 80, H * 0.65, 160, 45, 'PLAY AGAIN', COL.gold);
+  game.buttons.push({ ...btn, action: () => { game = new Game(); game.state = STATE.MAP; game.prepareDeck(); }});
+}
+
+function drawVictoryScreen() {
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const t = Date.now() * 0.003;
+  // Victory particles
+  ctx.globalAlpha = 0.3;
+  for (let i = 0; i < 40; i++) {
+    const px = (Math.sin(t + i * 0.8) * 0.5 + 0.5) * W;
+    const py = (Math.cos(t * 0.7 + i * 1.1) * 0.5 + 0.5) * H;
+    ctx.fillStyle = COL.gold;
+    ctx.fillRect(px, py, 4, 4);
+  }
+  ctx.globalAlpha = 1;
+
+  drawTextShadow('VICTORY!', W/2, H * 0.25, 52, COL.gold);
+  drawText('You conquered the Spire of Shadows!', W/2, H * 0.38, 16, COL.green);
+  drawText(`Final Score: ${game.score}`, W/2, H * 0.46, 22, COL.gold);
+  drawText(`High Score: ${game.highScore}`, W/2, H * 0.53, 16, COL.grey);
+
+  game.buttons = [];
+  const btn = drawButton(W/2 - 80, H * 0.65, 160, 45, 'PLAY AGAIN', COL.gold);
+  game.buttons.push({ ...btn, action: () => { game = new Game(); game.state = STATE.MAP; game.prepareDeck(); }});
+}
+
+// ── INPUT ──
+let mouseX = 0, mouseY = 0;
+let mouseDown = false;
+
+function handleClick(x, y) {
+  ensureAudio();
+
+  if (game.state === STATE.TITLE) {
+    game.state = STATE.MAP;
+    game.prepareDeck();
+    playSound('click');
+    return;
+  }
+
+  // Check buttons in reverse (top items first)
+  for (let i = game.buttons.length - 1; i >= 0; i--) {
+    const b = game.buttons[i];
+    if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) {
+      b.action();
+      return;
+    }
+  }
+
+  // In combat, clicking empty space deselects
+  if (game.state === STATE.COMBAT) {
+    game.selectedCard = -1;
+  }
+}
+
+canvas.addEventListener('mousedown', e => {
+  mouseDown = true;
+  mouseX = e.clientX; mouseY = e.clientY;
+});
+canvas.addEventListener('mouseup', e => {
+  mouseDown = false;
+  handleClick(e.clientX, e.clientY);
+});
+canvas.addEventListener('mousemove', e => {
+  mouseX = e.clientX; mouseY = e.clientY;
+});
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  mouseX = touch.clientX; mouseY = touch.clientY;
+}, { passive: false });
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  handleClick(mouseX, mouseY);
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  mouseX = touch.clientX; mouseY = touch.clientY;
+}, { passive: false });
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (game.state === STATE.TITLE) {
+    game.state = STATE.MAP;
+    game.prepareDeck();
+    playSound('click');
+    return;
+  }
+  if (game.state === STATE.COMBAT && game.turnPhase === 'player') {
+    const num = parseInt(e.key);
+    if (num >= 1 && num <= game.hand.length) {
+      const idx = num - 1;
+      if (game.selectedCard === idx) {
+        // Try to play if non-targeted
+        const card = game.hand[idx];
+        if (card.type !== 'attack' && card.cost >= 0 && card.cost <= game.energy) {
+          game.playCard(idx, 0);
+        }
+      } else {
+        game.selectedCard = idx;
+      }
+    }
+    if (e.key === 'e' || e.key === 'E' || e.key === ' ') {
+      game.endPlayerTurn();
+    }
+    if (e.key === 'Escape') {
+      game.selectedCard = -1;
+    }
+    // Target enemies with arrow keys or q/w
+    if (e.key === 'q' || e.key === 'ArrowLeft') {
+      const alive = game.enemies.map((en,i) => en.hp > 0 ? i : -1).filter(i => i >= 0);
+      if (alive.length && game.selectedCard >= 0) {
+        let ci = alive.indexOf(game.selectedEnemy);
+        ci = (ci - 1 + alive.length) % alive.length;
+        game.selectedEnemy = alive[ci];
+      }
+    }
+    if (e.key === 'w' || e.key === 'ArrowRight') {
+      const alive = game.enemies.map((en,i) => en.hp > 0 ? i : -1).filter(i => i >= 0);
+      if (alive.length && game.selectedCard >= 0) {
+        let ci = alive.indexOf(game.selectedEnemy);
+        ci = (ci + 1) % alive.length;
+        game.selectedEnemy = alive[ci];
+      }
+    }
+    if (e.key === 'Enter' && game.selectedCard >= 0) {
+      const card = game.hand[game.selectedCard];
+      if (card && card.cost >= 0 && card.cost <= game.energy) {
+        const targetIdx = game.selectedEnemy >= 0 ? game.selectedEnemy : game.enemies.findIndex(en => en.hp > 0);
+        game.playCard(game.selectedCard, targetIdx);
+      }
+    }
+  }
+});
+
+// ── GAME LOOP ──
+game = new Game();
+let lastTime = performance.now();
+
+function gameLoop(now) {
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+
+  resize();
+
+  ctx.save();
+  applyShake();
+
+  // Update
+  updateParticles(dt);
+
+  // Damage numbers
+  for (let i = game.damageNumbers.length - 1; i >= 0; i--) {
+    game.damageNumbers[i].timer -= dt;
+    game.damageNumbers[i].y -= 30 * dt;
+    if (game.damageNumbers[i].timer <= 0) game.damageNumbers.splice(i, 1);
+  }
+
+  if (flashTimer > 0) {
+    flashTimer -= dt;
+  }
+
+  // Enemy turn processing
+  if (game.state === STATE.COMBAT && game.turnPhase === 'enemy') {
+    game.processEnemyTurn(dt);
+  }
+
+  // Draw based on state
+  switch (game.state) {
+    case STATE.TITLE: drawTitleScreen(); break;
+    case STATE.MAP: drawMapScreen(); break;
+    case STATE.COMBAT: drawCombatScreen(); break;
+    case STATE.REWARD: drawRewardScreen(); break;
+    case STATE.SHOP: drawShopScreen(); break;
+    case STATE.REST: drawRestScreen(); break;
+    case STATE.EVENT: drawEventScreen(); break;
+    case STATE.GAMEOVER: drawGameOverScreen(); break;
+    case STATE.VICTORY: drawVictoryScreen(); break;
+  }
+
+  drawParticles();
+
+  // Flash overlay
+  if (flashTimer > 0 && flashColor) {
+    ctx.globalAlpha = flashTimer * 5;
+    ctx.fillStyle = flashColor;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+
+  requestAnimationFrame(gameLoop);
+}
+
+requestAnimationFrame(gameLoop);
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>

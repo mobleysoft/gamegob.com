@@ -1,0 +1,2117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta property="og:title" content="FORGE FIGHTING">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>FORGE FIGHTING</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas { display: block; margin: auto; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); image-rendering: pixelated; }
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+'use strict';
+
+// ─── CANVAS SETUP ───
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+const W = 640, H = 360;
+canvas.width = W;
+canvas.height = H;
+
+const resize = () => {
+  const s = Math.min(window.innerWidth / W, window.innerHeight / H);
+  canvas.style.width = `${W * s}px`;
+  canvas.style.height = `${H * s}px`;
+};
+window.addEventListener('resize', resize);
+resize();
+
+// ─── COLORS ───
+const COL = {
+  bg: '#0a0a0f', gold: '#f0b800', green: '#00ff88', red: '#ff3344',
+  blue: '#2299ff', white: '#eeeeff', dark: '#181828', gray: '#555570',
+  orange: '#ff8822', purple: '#bb44ff', cyan: '#00ddff', darkRed: '#991122',
+  darkBlue: '#113388', skin1: '#e8b87a', skin2: '#8b6542',
+  hair1: '#222', hair2: '#cc3300',
+  arena: '#1a1428', arenaDark: '#0f0d1a'
+};
+
+// ─── AUDIO ───
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+const masterGain = audioCtx.createGain();
+masterGain.gain.value = 0.3;
+masterGain.connect(audioCtx.destination);
+
+const playSound = (type) => {
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(masterGain);
+
+  switch (type) {
+    case 'punch': {
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
+      gain.gain.setValueAtTime(0.6, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.start(now); osc.stop(now + 0.1);
+      // noise burst
+      const buf = audioCtx.createBuffer(1, 1200, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < 1200; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / 1200);
+      const ns = audioCtx.createBufferSource();
+      ns.buffer = buf;
+      const ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(0.4, now);
+      ng.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      ns.connect(ng); ng.connect(masterGain);
+      ns.start(now); ns.stop(now + 0.06);
+      break;
+    }
+    case 'kick': {
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now);
+      osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+      gain.gain.setValueAtTime(0.7, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now); osc.stop(now + 0.15);
+      const buf = audioCtx.createBuffer(1, 2400, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < 2400; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / 2400);
+      const ns = audioCtx.createBufferSource();
+      ns.buffer = buf;
+      const ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(0.5, now);
+      ng.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      ns.connect(ng); ng.connect(masterGain);
+      ns.start(now); ns.stop(now + 0.1);
+      break;
+    }
+    case 'special': {
+      osc.type = 'square'; osc.frequency.setValueAtTime(800, now);
+      osc.frequency.exponentialRampToValueAtTime(200, now + 0.3);
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.start(now); osc.stop(now + 0.35);
+      const o2 = audioCtx.createOscillator();
+      const g2 = audioCtx.createGain();
+      o2.type = 'sawtooth'; o2.frequency.setValueAtTime(400, now);
+      o2.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+      g2.gain.setValueAtTime(0.3, now);
+      g2.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      o2.connect(g2); g2.connect(masterGain);
+      o2.start(now); o2.stop(now + 0.3);
+      break;
+    }
+    case 'block': {
+      osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      osc.start(now); osc.stop(now + 0.08);
+      break;
+    }
+    case 'ko': {
+      osc.type = 'sawtooth'; osc.frequency.setValueAtTime(600, now);
+      osc.frequency.exponentialRampToValueAtTime(30, now + 0.8);
+      gain.gain.setValueAtTime(0.5, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+      osc.start(now); osc.stop(now + 0.8);
+      break;
+    }
+    case 'hit': {
+      osc.type = 'square'; osc.frequency.setValueAtTime(250, now);
+      osc.frequency.exponentialRampToValueAtTime(100, now + 0.05);
+      gain.gain.setValueAtTime(0.5, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+      osc.start(now); osc.stop(now + 0.07);
+      break;
+    }
+    case 'round': {
+      const notes = [523, 659, 784, 1047];
+      notes.forEach((f, i) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'square';
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0.3, now + i * 0.12);
+        g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.15);
+        o.connect(g); g.connect(masterGain);
+        o.start(now + i * 0.12);
+        o.stop(now + i * 0.12 + 0.15);
+      });
+      break;
+    }
+    case 'select': {
+      osc.type = 'square'; osc.frequency.setValueAtTime(440, now);
+      osc.frequency.setValueAtTime(660, now + 0.05);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.start(now); osc.stop(now + 0.12);
+      break;
+    }
+    default: {
+      osc.type = 'sine'; osc.frequency.value = 440;
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.start(now); osc.stop(now + 0.1);
+    }
+  }
+};
+
+// ─── INPUT ───
+const keys = {};
+const keyMap = {
+  ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down',
+  a: 'left', d: 'right', w: 'up', s: 'down',
+  z: 'punch', x: 'kick', c: 'special',
+  j: 'punch', k: 'kick', l: 'special',
+  Enter: 'start', ' ': 'start'
+};
+
+document.addEventListener('keydown', (e) => {
+  const k = keyMap[e.key];
+  if (k) { keys[k] = true; e.preventDefault(); }
+});
+document.addEventListener('keyup', (e) => {
+  const k = keyMap[e.key];
+  if (k) { keys[k] = false; e.preventDefault(); }
+});
+
+// Touch controls
+const touches = {};
+const touchButtons = [
+  { id: 'left', x: 20, y: H - 80, w: 45, h: 45 },
+  { id: 'right', x: 110, y: H - 80, w: 45, h: 45 },
+  { id: 'up', x: 65, y: H - 125, w: 45, h: 45 },
+  { id: 'down', x: 65, y: H - 35, w: 45, h: 45 },
+  { id: 'punch', x: W - 150, y: H - 100, w: 50, h: 50, label: 'P', col: COL.red },
+  { id: 'kick', x: W - 85, y: H - 80, w: 50, h: 50, label: 'K', col: COL.blue },
+  { id: 'special', x: W - 120, y: H - 155, w: 50, h: 50, label: 'S', col: COL.gold },
+  { id: 'start', x: W / 2 - 30, y: H - 40, w: 60, h: 30, label: 'START', col: COL.gray }
+];
+
+const getTouchPos = (touch) => {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (touch.clientX - rect.left) * (W / rect.width),
+    y: (touch.clientY - rect.top) * (H / rect.height)
+  };
+};
+
+const handleTouch = (e, pressed) => {
+  e.preventDefault();
+  const touchList = pressed ? e.changedTouches : e.changedTouches;
+  // Clear all touch-based inputs on touchend
+  if (!pressed) {
+    // Rebuild which buttons are still pressed from remaining touches
+    touchButtons.forEach(b => touches[b.id] = false);
+    for (let i = 0; i < e.touches.length; i++) {
+      const pos = getTouchPos(e.touches[i]);
+      touchButtons.forEach(b => {
+        if (pos.x >= b.x && pos.x <= b.x + b.w && pos.y >= b.y && pos.y <= b.y + b.h) {
+          touches[b.id] = true;
+        }
+      });
+    }
+  } else {
+    for (let i = 0; i < touchList.length; i++) {
+      const pos = getTouchPos(touchList[i]);
+      touchButtons.forEach(b => {
+        if (pos.x >= b.x && pos.x <= b.x + b.w && pos.y >= b.y && pos.y <= b.y + b.h) {
+          touches[b.id] = true;
+        }
+      });
+    }
+  }
+};
+
+canvas.addEventListener('touchstart', (e) => handleTouch(e, true), { passive: false });
+canvas.addEventListener('touchmove', (e) => handleTouch(e, true), { passive: false });
+canvas.addEventListener('touchend', (e) => handleTouch(e, false), { passive: false });
+canvas.addEventListener('touchcancel', (e) => handleTouch(e, false), { passive: false });
+
+const input = (key) => keys[key] || touches[key];
+const inputPressed = (() => {
+  const prev = {};
+  return (key) => {
+    const now = input(key);
+    const was = prev[key];
+    prev[key] = now;
+    return now && !was;
+  };
+})();
+
+// ─── PARTICLES ───
+const particles = [];
+
+const spawnParticles = (x, y, count, color, speed = 3, life = 0.4) => {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = (0.5 + Math.random()) * speed;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd - 1,
+      life,
+      maxLife: life,
+      color,
+      size: 2 + Math.random() * 3
+    });
+  }
+};
+
+const updateParticles = (dt) => {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx * dt * 60;
+    p.y += p.vy * dt * 60;
+    p.vy += 0.15 * dt * 60;
+    p.life -= dt;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+};
+
+const drawParticles = () => {
+  particles.forEach(p => {
+    const a = p.life / p.maxLife;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size * a, p.size * a);
+  });
+  ctx.globalAlpha = 1;
+};
+
+// ─── SCREEN SHAKE ───
+let shakeAmount = 0;
+let shakeDuration = 0;
+const triggerShake = (amount, duration) => {
+  shakeAmount = amount;
+  shakeDuration = duration;
+};
+
+// ─── FLASH ───
+let flashColor = null;
+let flashDuration = 0;
+const triggerFlash = (color, duration) => {
+  flashColor = color;
+  flashDuration = duration;
+};
+
+// ─── CHARACTER DEFINITIONS ───
+const CHARS = {
+  ryu: {
+    name: 'RYUKEN',
+    colors: { gi: '#eee', belt: '#222', skin: COL.skin1, hair: '#333', pants: '#eee', headband: '#cc2200' },
+    stats: { speed: 180, jumpPower: -420, weight: 1.0 },
+    moves: {
+      punch: { damage: 8, range: 55, startup: 3, active: 3, recovery: 8, pushback: 60, hitstun: 12, type: 'mid' },
+      kick: { damage: 12, range: 65, startup: 5, active: 4, recovery: 12, pushback: 80, hitstun: 15, type: 'mid' },
+      crouch_punch: { damage: 6, range: 45, startup: 2, active: 3, recovery: 6, pushback: 30, hitstun: 10, type: 'low' },
+      crouch_kick: { damage: 10, range: 60, startup: 4, active: 3, recovery: 10, pushback: 40, hitstun: 18, type: 'low', knockdown: true },
+      jump_punch: { damage: 10, range: 45, startup: 3, active: 5, recovery: 4, pushback: 40, hitstun: 14, type: 'overhead' },
+      jump_kick: { damage: 14, range: 55, startup: 4, active: 6, recovery: 4, pushback: 60, hitstun: 16, type: 'overhead' },
+      special1: { name: 'HADOUKEN', damage: 18, type: 'projectile', speed: 250, startup: 10, recovery: 20, input: 'qcf_p', color: COL.cyan },
+      special2: { name: 'SHORYUKEN', damage: 22, type: 'dp', startup: 3, active: 8, recovery: 24, pushback: 100, hitstun: 25, invincible: 5, color: COL.gold }
+    }
+  },
+  ken: {
+    name: 'BLAZER',
+    colors: { gi: '#cc2200', belt: '#222', skin: COL.skin1, hair: COL.hair2, pants: '#cc2200', headband: null },
+    stats: { speed: 200, jumpPower: -400, weight: 0.95 },
+    moves: {
+      punch: { damage: 7, range: 50, startup: 2, active: 3, recovery: 7, pushback: 55, hitstun: 11, type: 'mid' },
+      kick: { damage: 14, range: 70, startup: 6, active: 4, recovery: 13, pushback: 90, hitstun: 16, type: 'mid' },
+      crouch_punch: { damage: 5, range: 40, startup: 2, active: 3, recovery: 5, pushback: 25, hitstun: 9, type: 'low' },
+      crouch_kick: { damage: 11, range: 55, startup: 4, active: 3, recovery: 9, pushback: 45, hitstun: 19, type: 'low', knockdown: true },
+      jump_punch: { damage: 9, range: 45, startup: 3, active: 5, recovery: 4, pushback: 35, hitstun: 13, type: 'overhead' },
+      jump_kick: { damage: 15, range: 60, startup: 4, active: 6, recovery: 4, pushback: 65, hitstun: 17, type: 'overhead' },
+      special1: { name: 'FLAME WAVE', damage: 16, type: 'projectile', speed: 300, startup: 8, recovery: 18, input: 'qcf_p', color: COL.orange },
+      special2: { name: 'BLAZING UPPERCUT', damage: 25, type: 'dp', startup: 2, active: 10, recovery: 28, pushback: 120, hitstun: 28, invincible: 3, color: '#ff4400', multihit: 3 }
+    }
+  }
+};
+
+// ─── FIGHTER CLASS ───
+const GROUND_Y = H - 65;
+const GRAVITY = 1200;
+const STAGE_LEFT = 30;
+const STAGE_RIGHT = W - 30;
+
+class Fighter {
+  constructor(charId, x, facing, isAI = false) {
+    const charDef = CHARS[charId];
+    this.charId = charId;
+    this.name = charDef.name;
+    this.colors = { ...charDef.colors };
+    this.stats = { ...charDef.stats };
+    this.moves = charDef.moves;
+    this.isAI = isAI;
+
+    this.x = x;
+    this.y = GROUND_Y;
+    this.vx = 0;
+    this.vy = 0;
+    this.facing = facing; // 1 = right, -1 = left
+    this.width = 40;
+    this.height = 80;
+
+    this.hp = 100;
+    this.maxHp = 100;
+    this.meter = 0; // super meter 0-100
+
+    this.state = 'idle'; // idle, walk, jump, crouch, attack, hitstun, blockstun, knockdown, getup, special, win, ko
+    this.stateTimer = 0;
+    this.attackFrame = 0;
+    this.currentAttack = null;
+    this.hitConnected = false;
+    this.comboCount = 0;
+    this.comboTimer = 0;
+    this.blocking = false;
+    this.crouching = false;
+    this.invincible = 0;
+
+    this.animFrame = 0;
+    this.animTimer = 0;
+
+    // input buffer for specials
+    this.inputHistory = [];
+    this.inputTimer = 0;
+
+    // AI
+    this.aiTimer = 0;
+    this.aiAction = null;
+    this.aiDifficulty = 1; // 1-5
+    this.aiReactionTime = 0.3;
+    this.aiReactionTimer = 0;
+
+    // visual
+    this.flashTimer = 0;
+    this.hitEffect = { active: false, x: 0, y: 0, timer: 0 };
+
+    // projectile
+    this.projectile = null;
+
+    // rounds won
+    this.roundsWon = 0;
+  }
+
+  get grounded() { return this.y >= GROUND_Y - 1; }
+
+  get hurtbox() {
+    const h = this.crouching ? 50 : this.height;
+    const yOff = this.crouching ? 30 : 0;
+    return { x: this.x - this.width / 2, y: this.y - h + yOff, w: this.width, h };
+  }
+
+  get hitbox() {
+    if (!this.currentAttack || this.state !== 'attack' && this.state !== 'special') return null;
+    const atk = this.currentAttack;
+    if (this.attackFrame < atk.startup || this.attackFrame >= atk.startup + (atk.active || 4)) return null;
+
+    const range = atk.range || 60;
+    const h = this.crouching ? 25 : 35;
+    const yOff = this.crouching ? -25 : -50;
+
+    if (atk.type === 'dp') {
+      // uppercut hitbox goes up
+      const rise = Math.min(this.attackFrame * 8, 50);
+      return {
+        x: this.x + (this.facing === 1 ? 10 : -range - 10),
+        y: this.y - 60 - rise,
+        w: range,
+        h: 40
+      };
+    }
+
+    return {
+      x: this.x + (this.facing === 1 ? 10 : -range - 10),
+      y: this.y + yOff,
+      w: range,
+      h
+    };
+  }
+
+  reset(x) {
+    this.x = x;
+    this.y = GROUND_Y;
+    this.vx = 0;
+    this.vy = 0;
+    this.hp = this.maxHp;
+    this.meter = 0;
+    this.state = 'idle';
+    this.stateTimer = 0;
+    this.attackFrame = 0;
+    this.currentAttack = null;
+    this.hitConnected = false;
+    this.comboCount = 0;
+    this.comboTimer = 0;
+    this.blocking = false;
+    this.crouching = false;
+    this.invincible = 0;
+    this.projectile = null;
+    this.inputHistory = [];
+    this.flashTimer = 0;
+  }
+
+  takeDamage(damage, pushback, hitstun, knockdown, attackerX) {
+    const dir = attackerX < this.x ? 1 : -1;
+
+    // Check blocking
+    const holdBack = (dir === 1 && this.facing === -1 && input('left')) ||
+                     (dir === -1 && this.facing === 1 && input('right')) ||
+                     (this.isAI && this.blocking);
+
+    if (holdBack && this.grounded && this.state !== 'attack' && this.state !== 'special') {
+      // Blocked
+      const chipDamage = Math.floor(damage * 0.1);
+      this.hp = Math.max(0, this.hp - chipDamage);
+      this.state = 'blockstun';
+      this.stateTimer = hitstun * 0.6 / 60;
+      this.vx = dir * pushback * 0.3;
+      playSound('block');
+      spawnParticles(this.x + dir * -15, this.y - 50, 3, COL.white, 2, 0.2);
+      return false;
+    }
+
+    this.hp = Math.max(0, this.hp - damage);
+    this.vx = dir * pushback;
+
+    if (knockdown || !this.grounded) {
+      this.state = 'knockdown';
+      this.stateTimer = 0.8;
+      this.vy = -200;
+    } else {
+      this.state = 'hitstun';
+      this.stateTimer = hitstun / 60;
+    }
+
+    this.flashTimer = 0.1;
+    this.comboCount = 0;
+    this.currentAttack = null;
+
+    return true;
+  }
+
+  checkSpecialInput() {
+    // QCF + punch (↓↘→+P) = Hadouken / Flame Wave
+    const hist = this.inputHistory;
+    if (hist.length >= 3) {
+      const last3 = hist.slice(-4);
+      let hasDown = false, hasDF = false, hasForward = false;
+      const fwd = this.facing === 1 ? 'right' : 'left';
+      for (const h of last3) {
+        if (h.dir === 'down') hasDown = true;
+        if (hasDown && (h.dir === 'down' || h.dir === fwd)) hasDF = true;
+        if (hasDF && h.dir === fwd) hasForward = true;
+      }
+      if (hasForward && inputPressed('punch')) {
+        this.inputHistory = [];
+        return 'special1';
+      }
+    }
+
+    // DP motion (→↓↘+P) = Shoryuken / Blazing Uppercut
+    if (hist.length >= 2) {
+      const last3 = hist.slice(-4);
+      const fwd = this.facing === 1 ? 'right' : 'left';
+      let hasFwd = false, hasDown = false;
+      for (const h of last3) {
+        if (h.dir === fwd) hasFwd = true;
+        if (hasFwd && h.dir === 'down') hasDown = true;
+      }
+      if (hasDown && inputPressed('special')) {
+        this.inputHistory = [];
+        return 'special2';
+      }
+    }
+
+    // Simple special button
+    if (inputPressed('special') && this.grounded) {
+      return 'special1';
+    }
+
+    return null;
+  }
+
+  startAttack(moveId) {
+    const move = this.moves[moveId];
+    if (!move) return;
+
+    if (move.type === 'projectile') {
+      if (this.projectile) return; // only one at a time
+      this.state = 'special';
+      this.currentAttack = move;
+      this.attackFrame = 0;
+      this.hitConnected = false;
+      this.stateTimer = (move.startup + move.recovery) / 60;
+      return;
+    }
+
+    if (move.type === 'dp') {
+      this.state = 'special';
+      this.currentAttack = move;
+      this.attackFrame = 0;
+      this.hitConnected = false;
+      this.stateTimer = (move.startup + (move.active || 8) + move.recovery) / 60;
+      this.vy = -350;
+      this.vx = this.facing * 80;
+      if (move.invincible) this.invincible = move.invincible / 60;
+      playSound('special');
+      return;
+    }
+
+    this.state = 'attack';
+    this.currentAttack = move;
+    this.attackFrame = 0;
+    this.hitConnected = false;
+    this.stateTimer = (move.startup + (move.active || 4) + move.recovery) / 60;
+  }
+
+  spawnProjectile() {
+    const move = this.currentAttack;
+    this.projectile = {
+      x: this.x + this.facing * 30,
+      y: this.y - 45,
+      vx: this.facing * move.speed,
+      vy: 0,
+      damage: move.damage,
+      color: move.color,
+      life: 2.0,
+      width: 25,
+      height: 18,
+      hit: false
+    };
+    playSound('special');
+  }
+
+  updateProjectile(dt, opponent) {
+    if (!this.projectile) return;
+    const p = this.projectile;
+    p.x += p.vx * dt;
+    p.life -= dt;
+
+    // Check collision with opponent
+    if (!p.hit) {
+      const ob = opponent.hurtbox;
+      if (p.x + p.width / 2 > ob.x && p.x - p.width / 2 < ob.x + ob.w &&
+          p.y + p.height / 2 > ob.y && p.y - p.height / 2 < ob.y + ob.h) {
+        if (opponent.invincible <= 0) {
+          const didHit = opponent.takeDamage(p.damage, 100, 18, false, this.x);
+          if (didHit) {
+            this.meter = Math.min(100, this.meter + 8);
+            this.comboCount++;
+            this.comboTimer = 1.5;
+            triggerShake(4, 0.1);
+            triggerFlash(p.color, 0.05);
+            spawnParticles(p.x, p.y, 12, p.color, 4, 0.4);
+            playSound('hit');
+          }
+          p.hit = true;
+          p.life = 0;
+        }
+      }
+    }
+
+    // Check projectile vs projectile
+    if (opponent.projectile && !p.hit && !opponent.projectile.hit) {
+      const op = opponent.projectile;
+      if (Math.abs(p.x - op.x) < 20 && Math.abs(p.y - op.y) < 20) {
+        p.life = 0;
+        op.life = 0;
+        spawnParticles((p.x + op.x) / 2, (p.y + op.y) / 2, 20, COL.white, 5, 0.5);
+        playSound('block');
+      }
+    }
+
+    if (p.life <= 0 || p.x < -50 || p.x > W + 50) {
+      this.projectile = null;
+    }
+  }
+
+  drawProjectile() {
+    if (!this.projectile) return;
+    const p = this.projectile;
+    const t = performance.now() / 100;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+
+    // Glow
+    ctx.globalAlpha = 0.3 + Math.sin(t) * 0.1;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Core
+    ctx.globalAlpha = 0.8;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(0, 0, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Trail particles
+    for (let i = 0; i < 3; i++) {
+      ctx.globalAlpha = 0.3 - i * 0.1;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(-p.vx * 0.02 * (i + 1) + Math.random() * 4 - 2,
+              Math.random() * 8 - 4, 5 - i, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  update(dt, opponent) {
+    // Timers
+    if (this.invincible > 0) this.invincible -= dt;
+    if (this.flashTimer > 0) this.flashTimer -= dt;
+    if (this.comboTimer > 0) { this.comboTimer -= dt; if (this.comboTimer <= 0) this.comboCount = 0; }
+    this.animTimer += dt;
+    if (this.animTimer > 0.1) { this.animTimer = 0; this.animFrame = (this.animFrame + 1) % 8; }
+
+    // Input history timer
+    this.inputTimer += dt;
+    if (this.inputHistory.length > 0 && this.inputTimer > 0.5) {
+      this.inputHistory = [];
+    }
+
+    // Face opponent
+    if (this.state !== 'attack' && this.state !== 'special' && this.state !== 'hitstun' &&
+        this.state !== 'blockstun' && this.state !== 'knockdown') {
+      this.facing = opponent.x > this.x ? 1 : -1;
+    }
+
+    // Update projectile
+    this.updateProjectile(dt, opponent);
+
+    // State machine
+    switch (this.state) {
+      case 'idle':
+      case 'walk': {
+        this.crouching = false;
+        if (!this.isAI) {
+          // Check for special moves first
+          if (input('down') || input('left') || input('right') || input('up')) {
+            const dir = input('down') ? 'down' : input('up') ? 'up' :
+                        input('left') ? 'left' : 'right';
+            if (this.inputHistory.length === 0 || this.inputHistory[this.inputHistory.length - 1].dir !== dir) {
+              this.inputHistory.push({ dir, time: this.inputTimer });
+              this.inputTimer = 0;
+            }
+          }
+
+          const special = this.checkSpecialInput();
+          if (special) {
+            this.startAttack(special);
+            break;
+          }
+
+          if (input('down')) {
+            this.crouching = true;
+            this.state = 'crouch';
+            break;
+          }
+
+          if (inputPressed('punch')) {
+            this.startAttack('punch');
+            playSound('punch');
+            break;
+          }
+          if (inputPressed('kick')) {
+            this.startAttack('kick');
+            playSound('kick');
+            break;
+          }
+
+          if (input('up') && this.grounded) {
+            this.vy = this.stats.jumpPower;
+            this.state = 'jump';
+            break;
+          }
+
+          let moveDir = 0;
+          if (input('left')) moveDir = -1;
+          if (input('right')) moveDir = 1;
+
+          if (moveDir !== 0) {
+            this.vx = moveDir * this.stats.speed;
+            this.state = 'walk';
+          } else {
+            this.vx = 0;
+            this.state = 'idle';
+          }
+        }
+        break;
+      }
+
+      case 'crouch': {
+        this.crouching = true;
+        if (!this.isAI) {
+          if (!input('down')) {
+            this.crouching = false;
+            this.state = 'idle';
+            break;
+          }
+
+          if (inputPressed('punch')) {
+            this.startAttack('crouch_punch');
+            playSound('punch');
+            break;
+          }
+          if (inputPressed('kick')) {
+            this.startAttack('crouch_kick');
+            playSound('kick');
+            break;
+          }
+
+          this.vx = 0;
+        }
+        break;
+      }
+
+      case 'jump': {
+        if (!this.isAI) {
+          let moveDir = 0;
+          if (input('left')) moveDir = -1;
+          if (input('right')) moveDir = 1;
+          this.vx = moveDir * this.stats.speed * 0.8;
+
+          if (inputPressed('punch') && !this.currentAttack) {
+            this.startAttack('jump_punch');
+            playSound('punch');
+          }
+          if (inputPressed('kick') && !this.currentAttack) {
+            this.startAttack('jump_kick');
+            playSound('kick');
+          }
+        }
+
+        if (this.grounded && this.vy >= 0) {
+          this.y = GROUND_Y;
+          this.vy = 0;
+          this.state = 'idle';
+          this.currentAttack = null;
+          this.crouching = false;
+        }
+        break;
+      }
+
+      case 'attack': {
+        this.attackFrame += dt * 60;
+        this.stateTimer -= dt;
+        this.vx *= 0.85;
+
+        if (this.stateTimer <= 0) {
+          this.state = this.grounded ? 'idle' : 'jump';
+          this.currentAttack = null;
+          this.crouching = false;
+        }
+        break;
+      }
+
+      case 'special': {
+        this.attackFrame += dt * 60;
+        this.stateTimer -= dt;
+
+        // Spawn projectile at right frame
+        if (this.currentAttack && this.currentAttack.type === 'projectile' &&
+            this.attackFrame >= this.currentAttack.startup && !this.projectile && !this.hitConnected) {
+          this.spawnProjectile();
+          this.hitConnected = true;
+        }
+
+        // DP physics
+        if (this.currentAttack && this.currentAttack.type === 'dp') {
+          // let gravity handle it
+        } else {
+          this.vx *= 0.9;
+        }
+
+        if (this.stateTimer <= 0) {
+          this.state = this.grounded ? 'idle' : 'jump';
+          this.currentAttack = null;
+          this.crouching = false;
+        }
+        break;
+      }
+
+      case 'hitstun': {
+        this.stateTimer -= dt;
+        this.vx *= 0.9;
+        if (this.stateTimer <= 0) {
+          this.state = 'idle';
+          this.crouching = false;
+        }
+        break;
+      }
+
+      case 'blockstun': {
+        this.stateTimer -= dt;
+        this.vx *= 0.9;
+        if (this.stateTimer <= 0) {
+          this.state = 'idle';
+          this.crouching = false;
+        }
+        break;
+      }
+
+      case 'knockdown': {
+        this.stateTimer -= dt;
+        if (this.grounded && this.vy >= 0 && this.stateTimer < 0.4) {
+          this.vy = 0;
+          this.y = GROUND_Y;
+          this.vx = 0;
+          if (this.stateTimer <= 0) {
+            this.state = this.hp > 0 ? 'getup' : 'ko';
+            this.stateTimer = this.hp > 0 ? 0.4 : 99;
+            this.crouching = false;
+          }
+        }
+        break;
+      }
+
+      case 'getup': {
+        this.stateTimer -= dt;
+        this.vx = 0;
+        if (this.stateTimer <= 0) {
+          this.state = 'idle';
+        }
+        break;
+      }
+
+      case 'ko': {
+        this.vx *= 0.95;
+        break;
+      }
+
+      case 'win': {
+        this.vx = 0;
+        break;
+      }
+    }
+
+    // Physics
+    if (!this.grounded) {
+      this.vy += GRAVITY * dt;
+    }
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+
+    // Ground
+    if (this.y > GROUND_Y) {
+      this.y = GROUND_Y;
+      this.vy = 0;
+    }
+
+    // Stage bounds
+    this.x = Math.max(STAGE_LEFT + this.width / 2, Math.min(STAGE_RIGHT - this.width / 2, this.x));
+
+    // Push apart (no overlap)
+    const dx = this.x - opponent.x;
+    const dist = Math.abs(dx);
+    if (dist < this.width && this.state !== 'knockdown' && opponent.state !== 'knockdown') {
+      const push = (this.width - dist) / 2;
+      const dir = dx > 0 ? 1 : -1;
+      this.x += dir * push;
+      opponent.x -= dir * push;
+    }
+  }
+
+  // ─── AI ───
+  updateAI(dt, opponent) {
+    this.aiTimer -= dt;
+    this.aiReactionTimer -= dt;
+
+    if (this.state === 'hitstun' || this.state === 'blockstun' || this.state === 'knockdown' ||
+        this.state === 'getup' || this.state === 'ko' || this.state === 'win') {
+      return;
+    }
+
+    if (this.state === 'attack' || this.state === 'special') return;
+
+    if (this.aiTimer > 0) return;
+
+    const dist = Math.abs(this.x - opponent.x);
+    const facingOpponent = (opponent.x > this.x && this.facing === 1) ||
+                           (opponent.x < this.x && this.facing === -1);
+
+    // reaction time based on difficulty, scaled by GobAdapt
+    const aiMod = GobAdapt.getAIMod();
+    const reactionDelay = Math.max(0.05, (0.5 - this.aiDifficulty * 0.08) / aiMod);
+
+    // Decision making
+    const rand = Math.random();
+    const aggressiveness = (0.3 + this.aiDifficulty * 0.12) * aiMod;
+
+    // Block if opponent is attacking and close
+    if (opponent.state === 'attack' || opponent.state === 'special') {
+      if (dist < 100 && rand < 0.3 + this.aiDifficulty * 0.1) {
+        this.blocking = true;
+        this.crouching = opponent.currentAttack && opponent.currentAttack.type === 'low';
+        const backDir = opponent.x > this.x ? -1 : 1;
+        this.vx = backDir * this.stats.speed * 0.5;
+        this.state = this.crouching ? 'crouch' : 'walk';
+        this.aiTimer = reactionDelay;
+        return;
+      }
+    }
+
+    // Block incoming projectile
+    if (opponent.projectile) {
+      const projDist = Math.abs(opponent.projectile.x - this.x);
+      if (projDist < 150) {
+        this.blocking = true;
+        this.state = 'idle';
+        this.vx = 0;
+        this.aiTimer = reactionDelay;
+        // Jump over projectile sometimes
+        if (rand < 0.3 * this.aiDifficulty && this.grounded) {
+          this.vy = this.stats.jumpPower;
+          this.state = 'jump';
+          this.blocking = false;
+          const dir = opponent.x > this.x ? 1 : -1;
+          this.vx = dir * this.stats.speed * 0.6;
+        }
+        return;
+      }
+    }
+
+    this.blocking = false;
+
+    // Close range
+    if (dist < 80) {
+      if (rand < aggressiveness) {
+        // Attack!
+        const atkRand = Math.random();
+        if (atkRand < 0.3) {
+          this.startAttack('punch'); playSound('punch');
+        } else if (atkRand < 0.55) {
+          this.startAttack('kick'); playSound('kick');
+        } else if (atkRand < 0.7) {
+          this.crouching = true;
+          this.state = 'crouch';
+          this.startAttack('crouch_kick'); playSound('kick');
+        } else if (atkRand < 0.85) {
+          this.crouching = true;
+          this.state = 'crouch';
+          this.startAttack('crouch_punch'); playSound('punch');
+        } else {
+          // DP!
+          this.startAttack('special2');
+        }
+        this.aiTimer = reactionDelay * 1.5;
+      } else {
+        // Back away or block
+        const backDir = opponent.x > this.x ? -1 : 1;
+        this.vx = backDir * this.stats.speed;
+        this.state = 'walk';
+        this.aiTimer = reactionDelay;
+      }
+    }
+    // Medium range
+    else if (dist < 200) {
+      if (rand < aggressiveness * 0.7) {
+        // Approach
+        const dir = opponent.x > this.x ? 1 : -1;
+        this.vx = dir * this.stats.speed;
+        this.state = 'walk';
+
+        // Jump in sometimes
+        if (Math.random() < 0.15 * this.aiDifficulty && this.grounded) {
+          this.vy = this.stats.jumpPower;
+          this.state = 'jump';
+          this.vx = dir * this.stats.speed * 0.8;
+          // Air attack
+          if (Math.random() < 0.5) {
+            setTimeout(() => {
+              if (this.state === 'jump' && !this.currentAttack) {
+                this.startAttack(Math.random() < 0.5 ? 'jump_punch' : 'jump_kick');
+                playSound(Math.random() < 0.5 ? 'punch' : 'kick');
+              }
+            }, 200 + Math.random() * 200);
+          }
+        }
+
+        this.aiTimer = reactionDelay * 0.8;
+      } else if (rand < aggressiveness * 0.7 + 0.2) {
+        // Fireball
+        if (!this.projectile) {
+          this.startAttack('special1');
+          this.aiTimer = reactionDelay * 2;
+        }
+      } else {
+        this.vx = 0;
+        this.state = 'idle';
+        this.aiTimer = reactionDelay;
+      }
+    }
+    // Far range
+    else {
+      if (rand < 0.4) {
+        // Fireball
+        if (!this.projectile) {
+          this.startAttack('special1');
+          this.aiTimer = reactionDelay * 2;
+        } else {
+          const dir = opponent.x > this.x ? 1 : -1;
+          this.vx = dir * this.stats.speed;
+          this.state = 'walk';
+          this.aiTimer = reactionDelay;
+        }
+      } else {
+        // Approach
+        const dir = opponent.x > this.x ? 1 : -1;
+        this.vx = dir * this.stats.speed;
+        this.state = 'walk';
+        this.aiTimer = reactionDelay;
+      }
+    }
+  }
+
+  // ─── DRAW FIGHTER ───
+  draw() {
+    ctx.save();
+    const flashActive = this.flashTimer > 0;
+    const isHurt = this.state === 'hitstun' || this.state === 'knockdown';
+
+    // Position
+    let drawX = this.x;
+    let drawY = this.y;
+
+    // Knockdown rotation
+    let rotation = 0;
+    if (this.state === 'knockdown' && !this.grounded) {
+      rotation = this.facing * -0.3;
+    }
+    if (this.state === 'ko') {
+      rotation = this.facing * -Math.PI / 2 * 0.5;
+      drawY = GROUND_Y + 10;
+    }
+
+    ctx.translate(drawX, drawY);
+    if (rotation) ctx.rotate(rotation);
+    ctx.scale(this.facing, 1);
+
+    const c = this.colors;
+
+    // Flash white on hit
+    if (flashActive) {
+      ctx.globalAlpha = 0.5 + Math.sin(performance.now() / 30) * 0.3;
+    }
+
+    // Invincible flash
+    if (this.invincible > 0) {
+      ctx.globalAlpha = 0.4 + Math.sin(performance.now() / 40) * 0.3;
+    }
+
+    // ─── BODY ───
+    const bobY = this.state === 'idle' ? Math.sin(performance.now() / 300) * 2 : 0;
+    const walkCycle = this.state === 'walk' ? Math.sin(performance.now() / 100) * 0.15 : 0;
+
+    const crouching = this.crouching || this.state === 'crouch';
+    const crouchOff = crouching ? 20 : 0;
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0, 0.65)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 22, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Attack arm extension
+    let armExtend = 0;
+    let legExtend = 0;
+    let upperArmAngle = 0;
+    if (this.state === 'attack' || (this.state === 'special' && this.currentAttack?.type !== 'projectile')) {
+      const atk = this.currentAttack;
+      if (atk) {
+        const prog = this.attackFrame / ((atk.startup || 3) + (atk.active || 4));
+        const swing = Math.sin(Math.min(prog * 2, 1) * Math.PI);
+        const moveKey = Object.keys(this.moves).find(k => this.moves[k] === atk);
+        if (moveKey && moveKey.includes('kick')) {
+          legExtend = swing * 30;
+        } else {
+          armExtend = swing * 25;
+          upperArmAngle = swing * 0.5;
+        }
+      }
+    }
+
+    // Special move effects
+    if (this.state === 'special' && this.currentAttack?.type === 'dp') {
+      const atkColor = this.currentAttack.color || COL.gold;
+      ctx.fillStyle = atkColor;
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath();
+      ctx.arc(5, -50 + bobY, 30, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = flashActive ? 0.5 : 1;
+    }
+
+    if (this.state === 'special' && this.currentAttack?.type === 'projectile') {
+      // Hands forward pose
+      armExtend = 15;
+    }
+
+    // Legs
+    ctx.fillStyle = c.pants || c.gi;
+    if (crouching) {
+      // Crouching legs
+      ctx.fillRect(-12, -25 + crouchOff, 10, 25);
+      ctx.fillRect(2, -25 + crouchOff, 10, 25);
+    } else {
+      // Standing legs
+      const legAngle1 = walkCycle;
+      const legAngle2 = -walkCycle;
+
+      ctx.save();
+      ctx.translate(-6, -40 + bobY);
+      ctx.rotate(legAngle1);
+      ctx.fillRect(-5, 0, 10, 38 + legExtend * 0.3);
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(6, -40 + bobY);
+      ctx.rotate(legAngle2);
+      ctx.fillRect(-5, 0, 10, 38);
+
+      // Front leg kick extension
+      if (legExtend > 0) {
+        ctx.fillRect(0, 25, legExtend, 8);
+      }
+      ctx.restore();
+    }
+
+    // Shoes
+    ctx.fillStyle = '#333';
+    if (!crouching) {
+      ctx.fillRect(-14 + Math.sin(walkCycle) * 5, -4, 12, 5);
+      ctx.fillRect(2 - Math.sin(walkCycle) * 5 + (legExtend > 0 ? legExtend * 0.7 : 0), -4, 12, 5);
+    } else {
+      ctx.fillRect(-12, -2, 10, 4);
+      ctx.fillRect(5, -2, 10, 4);
+    }
+
+    // Torso
+    ctx.fillStyle = c.gi;
+    const torsoY = -72 + bobY + crouchOff;
+    ctx.fillRect(-13, torsoY, 26, 35);
+
+    // Belt
+    ctx.fillStyle = c.belt;
+    ctx.fillRect(-14, torsoY + 30, 28, 5);
+
+    // Arms
+    ctx.fillStyle = c.skin;
+
+    // Back arm
+    ctx.save();
+    ctx.translate(-12, torsoY + 8);
+    ctx.rotate(-0.2 + walkCycle * 0.5);
+    ctx.fillStyle = c.gi;
+    ctx.fillRect(-4, 0, 8, 16);
+    ctx.fillStyle = c.skin;
+    ctx.fillRect(-3, 16, 7, 12);
+    // Fist
+    ctx.fillRect(-3, 27, 8, 6);
+    ctx.restore();
+
+    // Front arm (attack arm)
+    ctx.save();
+    ctx.translate(12, torsoY + 8);
+    ctx.rotate(upperArmAngle + walkCycle * -0.3);
+    ctx.fillStyle = c.gi;
+    ctx.fillRect(-4, 0, 8, 16);
+    ctx.fillStyle = c.skin;
+    ctx.fillRect(-3, 16, 7, 12 + armExtend);
+    // Fist
+    ctx.fillStyle = flashActive && isHurt ? '#fff' : c.skin;
+    ctx.fillRect(-4, 27 + armExtend, 9, 7);
+    ctx.restore();
+
+    // Head
+    const headY = torsoY - 18;
+    ctx.fillStyle = c.skin;
+    ctx.beginPath();
+    ctx.arc(0, headY, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hair
+    ctx.fillStyle = c.hair;
+    ctx.beginPath();
+    ctx.arc(0, headY - 4, 13, -Math.PI, 0);
+    ctx.fill();
+
+    // Headband
+    if (c.headband) {
+      ctx.fillStyle = c.headband;
+      ctx.fillRect(-14, headY - 5, 28, 4);
+      // Headband tails
+      ctx.fillRect(-14, headY - 5, 3, 12);
+    }
+
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(3, headY - 3, 5, 4);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(5, headY - 2, 3, 3);
+
+    // Mouth
+    if (isHurt) {
+      ctx.fillStyle = '#c33';
+      ctx.fillRect(4, headY + 5, 5, 3);
+    }
+
+    // Blocking indicator
+    if (this.blocking || this.state === 'blockstun') {
+      ctx.strokeStyle = COL.cyan;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath();
+      ctx.arc(0, -45 + crouchOff, 25, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+
+    // Combo counter
+    if (this.comboCount > 1 && this.comboTimer > 0) {
+      const alpha = Math.min(1, this.comboTimer);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = COL.gold;
+      ctx.font = 'bold 16px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${this.comboCount} HIT COMBO!`, this.x, this.y - 100 - (1 - alpha) * 20);
+      ctx.globalAlpha = 1;
+    }
+
+    // Draw projectile
+    this.drawProjectile();
+
+    // Hit effect
+    if (this.hitEffect.active) {
+      this.hitEffect.timer -= 0.016;
+      if (this.hitEffect.timer <= 0) {
+        this.hitEffect.active = false;
+      } else {
+        const alpha = this.hitEffect.timer / 0.15;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = COL.gold;
+        // Starburst
+        const hx = this.hitEffect.x;
+        const hy = this.hitEffect.y;
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2 + performance.now() / 200;
+          const len = 12 * alpha;
+          ctx.fillRect(hx + Math.cos(angle) * 5, hy + Math.sin(angle) * 5,
+                       Math.cos(angle) * len, Math.sin(angle) * len);
+        }
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+}
+
+// ─── GAME STATE ───
+const STATE = { TITLE: 0, SELECT: 1, ROUND_START: 2, FIGHT: 3, ROUND_END: 4, MATCH_END: 5, GAME_OVER: 6 };
+
+let gameState = STATE.TITLE;
+let stateTimer = 0;
+let player1, player2;
+let roundNum = 1;
+let maxRounds = 3;
+let roundsToWin = 2;
+let timer = 99;
+let timerPaused = false;
+let selectedChar = 0;
+let matchesWon = 0;
+let aiLevel = 1;
+let highScore = parseInt(localStorage.getItem('forgeFighting_highScore') || '0');
+
+// ─── GOBADAPT ADAPTIVE DIFFICULTY ───
+const GobAdapt = (() => {
+  const KEY = 'gg_fighting_adapt';
+  let data;
+  const load = () => { try { data = JSON.parse(localStorage.getItem(KEY)); } catch(e) {} if (!data) data = { games: 0, wins: 0, recentResults: [] }; };
+  const save = () => localStorage.setItem(KEY, JSON.stringify(data));
+  load();
+  const TARGET_WINRATE = 0.5;
+  const getAIMod = () => {
+    if (data.games < 2) return 0.8;
+    const recent = data.recentResults.slice(-10);
+    const winRate = recent.length ? recent.filter(r => r).length / recent.length : TARGET_WINRATE;
+    if (winRate < 0.2) return 0.6;
+    if (winRate < TARGET_WINRATE) return 0.6 + winRate * 0.8;
+    if (winRate > 0.8) return 1.15;
+    return 1.0;
+  };
+  const record = (won) => {
+    data.games++; if (won) data.wins++;
+    data.recentResults.push(won);
+    if (data.recentResults.length > 10) data.recentResults.shift();
+    save();
+  };
+  return { getAIMod, record };
+})();
+
+// ─── TITLE SCREEN ───
+const drawTitle = () => {
+  // Background
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Arena floor hint
+  ctx.fillStyle = '#111';
+  for (let i = 0; i < W; i += 40) {
+    ctx.fillRect(i, H - 60, 38, 2);
+  }
+
+  // Title
+  const t = performance.now() / 1000;
+  const titleY = 80 + Math.sin(t * 2) * 5;
+
+  // Title glow
+  ctx.shadowColor = COL.gold;
+  ctx.shadowBlur = 20;
+  ctx.fillStyle = COL.gold;
+  ctx.font = 'bold 48px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('FORGE', W / 2, titleY);
+  ctx.fillStyle = COL.red;
+  ctx.fillText('FIGHTING', W / 2, titleY + 48);
+  ctx.shadowBlur = 0;
+
+  // Subtitle
+  ctx.fillStyle = COL.white;
+  ctx.font = '12px monospace';
+  ctx.fillText('A GAMEGOB PRODUCTION', W / 2, titleY + 72);
+
+  // Silhouettes
+  const bob = Math.sin(t * 3) * 3;
+  // Fighter 1 silhouette
+  ctx.fillStyle = COL.gold;
+  ctx.globalAlpha = 0.3;
+  ctx.fillRect(120, H - 140 + bob, 30, 70);
+  ctx.fillRect(115, H - 155 + bob, 40, 20);
+  ctx.beginPath();
+  ctx.arc(135, H - 168 + bob, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(150, H - 130 + bob, 30, 8); // punch
+
+  // Fighter 2 silhouette
+  ctx.fillStyle = COL.red;
+  ctx.fillRect(W - 150, H - 140 - bob, 30, 70);
+  ctx.fillRect(W - 155, H - 155 - bob, 40, 20);
+  ctx.beginPath();
+  ctx.arc(W - 135, H - 168 - bob, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(W - 180, H - 130 - bob, 30, 8);
+  ctx.globalAlpha = 1;
+
+  // Start prompt
+  ctx.fillStyle = Math.sin(t * 4) > 0 ? COL.gold : COL.white;
+  ctx.font = '16px monospace';
+  ctx.fillText('PRESS START / TAP TO PLAY', W / 2, H - 40);
+
+  // High score
+  ctx.fillStyle = COL.gray;
+  ctx.font = '11px monospace';
+  ctx.fillText(`HIGH SCORE: ${highScore} WINS`, W / 2, H - 15);
+
+  // Controls
+  ctx.fillStyle = COL.gray;
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('ARROWS/WASD: Move  Z/J: Punch  X/K: Kick  C/L: Special', 20, 20);
+  ctx.fillText('Special: ↓↘→+PUNCH or press C/L for quick special', 20, 34);
+};
+
+// ─── CHARACTER SELECT ───
+const drawSelect = () => {
+  ctx.fillStyle = COL.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = COL.gold;
+  ctx.font = 'bold 24px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('CHOOSE YOUR FIGHTER', W / 2, 40);
+
+  const chars = Object.keys(CHARS);
+  chars.forEach((id, i) => {
+    const ch = CHARS[id];
+    const x = W / 2 - 100 + i * 200;
+    const y = 120;
+    const selected = i === selectedChar;
+
+    // Selection box
+    ctx.strokeStyle = selected ? COL.gold : COL.gray;
+    ctx.lineWidth = selected ? 3 : 1;
+    ctx.strokeRect(x - 60, y - 30, 120, 160);
+
+    if (selected) {
+      ctx.fillStyle = 'rgba(240,184,0, 0.65)';
+      ctx.fillRect(x - 60, y - 30, 120, 160);
+    }
+
+    // Character preview
+    ctx.save();
+    ctx.translate(x, y + 50);
+
+    // Simple character preview
+    ctx.fillStyle = ch.colors.skin;
+    ctx.beginPath();
+    ctx.arc(0, -30, 15, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = ch.colors.hair;
+    ctx.beginPath();
+    ctx.arc(0, -35, 16, -Math.PI, 0);
+    ctx.fill();
+
+    if (ch.colors.headband) {
+      ctx.fillStyle = ch.colors.headband;
+      ctx.fillRect(-17, -33, 34, 4);
+    }
+
+    ctx.fillStyle = ch.colors.gi;
+    ctx.fillRect(-16, -15, 32, 40);
+    ctx.fillRect(-18, -10, 10, 30);
+    ctx.fillRect(8, -10, 10, 30);
+    ctx.fillStyle = ch.colors.belt;
+    ctx.fillRect(-17, 20, 34, 5);
+    ctx.fillRect(-10, 25, 8, 35);
+    ctx.fillRect(2, 25, 8, 35);
+
+    ctx.restore();
+
+    // Name
+    ctx.fillStyle = selected ? COL.gold : COL.white;
+    ctx.font = 'bold 14px monospace';
+    ctx.fillText(ch.name, x, y + 110);
+
+    // Stats
+    ctx.fillStyle = COL.gray;
+    ctx.font = '10px monospace';
+    ctx.fillText(`SPD: ${'█'.repeat(Math.round(ch.stats.speed / 50))}`, x, y + 125);
+    ctx.fillText(`PWR: ${'█'.repeat(Math.round(5 - ch.stats.weight * 2))}`, x, y + 137);
+  });
+
+  // Controls
+  ctx.fillStyle = Math.sin(performance.now() / 300) > 0 ? COL.gold : COL.white;
+  ctx.font = '14px monospace';
+  ctx.fillText('← → TO SELECT, ENTER/START TO CONFIRM', W / 2, H - 30);
+
+  // AI Level
+  ctx.fillStyle = COL.gray;
+  ctx.font = '11px monospace';
+  ctx.fillText(`AI LEVEL: ${aiLevel}/5 (Wins: ${matchesWon})`, W / 2, H - 10);
+};
+
+// ─── HUD ───
+const drawHUD = () => {
+  const barW = 200;
+  const barH = 18;
+  const barY = 15;
+
+  // P1 Health bar
+  const p1Pct = player1.hp / player1.maxHp;
+  ctx.fillStyle = '#222';
+  ctx.fillRect(20, barY, barW, barH);
+  const p1Color = p1Pct > 0.5 ? COL.green : p1Pct > 0.25 ? COL.gold : COL.red;
+  ctx.fillStyle = p1Color;
+  ctx.fillRect(20, barY, barW * p1Pct, barH);
+  ctx.strokeStyle = COL.white;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(20, barY, barW, barH);
+
+  // P2 Health bar (reversed)
+  const p2Pct = player2.hp / player2.maxHp;
+  ctx.fillStyle = '#222';
+  ctx.fillRect(W - 20 - barW, barY, barW, barH);
+  const p2Color = p2Pct > 0.5 ? COL.green : p2Pct > 0.25 ? COL.gold : COL.red;
+  ctx.fillStyle = p2Color;
+  ctx.fillRect(W - 20 - barW * p2Pct, barY, barW * p2Pct, barH);
+  ctx.strokeStyle = COL.white;
+  ctx.strokeRect(W - 20 - barW, barY, barW, barH);
+
+  // Names
+  ctx.fillStyle = COL.white;
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(player1.name, 22, barY + 14);
+  ctx.textAlign = 'right';
+  ctx.fillText(player2.name, W - 22, barY + 14);
+
+  // Timer
+  ctx.fillStyle = COL.gold;
+  ctx.font = 'bold 22px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(Math.ceil(timer).toString().padStart(2, '0'), W / 2, barY + 18);
+
+  // Round indicators
+  ctx.textAlign = 'left';
+  for (let i = 0; i < roundsToWin; i++) {
+    ctx.fillStyle = i < player1.roundsWon ? COL.gold : '#333';
+    ctx.beginPath();
+    ctx.arc(22 + i * 18, barY + barH + 12, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.textAlign = 'right';
+  for (let i = 0; i < roundsToWin; i++) {
+    ctx.fillStyle = i < player2.roundsWon ? COL.gold : '#333';
+    ctx.beginPath();
+    ctx.arc(W - 22 - i * 18, barY + barH + 12, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Meter bars
+  const meterW = 100;
+  const meterH = 6;
+  const meterY = barY + barH + 22;
+
+  ctx.fillStyle = '#222';
+  ctx.fillRect(22, meterY, meterW, meterH);
+  ctx.fillStyle = COL.cyan;
+  ctx.fillRect(22, meterY, meterW * (player1.meter / 100), meterH);
+
+  ctx.fillStyle = '#222';
+  ctx.fillRect(W - 22 - meterW, meterY, meterW, meterH);
+  ctx.fillStyle = COL.cyan;
+  ctx.fillRect(W - 22 - meterW * (player2.meter / 100), meterY, meterW * (player2.meter / 100), meterH);
+};
+
+// ─── ARENA ───
+const drawArena = () => {
+  // Sky gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#080818');
+  grad.addColorStop(0.7, '#121228');
+  grad.addColorStop(1, COL.arenaDark);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  ctx.fillStyle = '#ffffff';
+  for (let i = 0; i < 30; i++) {
+    const sx = (i * 97 + 13) % W;
+    const sy = (i * 53 + 7) % (H * 0.5);
+    const bright = 0.3 + Math.sin(performance.now() / 1000 + i) * 0.3;
+    ctx.globalAlpha = bright;
+    ctx.fillRect(sx, sy, 1, 1);
+  }
+  ctx.globalAlpha = 1;
+
+  // Mountains
+  ctx.fillStyle = '#0d0d20';
+  ctx.beginPath();
+  ctx.moveTo(0, H - 100);
+  for (let x = 0; x <= W; x += 40) {
+    ctx.lineTo(x, H - 100 - Math.sin(x * 0.01) * 40 - Math.cos(x * 0.02) * 20);
+  }
+  ctx.lineTo(W, H);
+  ctx.lineTo(0, H);
+  ctx.fill();
+
+  // Floor
+  ctx.fillStyle = '#151525';
+  ctx.fillRect(0, GROUND_Y + 1, W, H - GROUND_Y);
+
+  // Floor lines
+  ctx.strokeStyle = '#222240';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 30) {
+    ctx.beginPath();
+    ctx.moveTo(x, GROUND_Y + 1);
+    ctx.lineTo(x - 10, H);
+    ctx.stroke();
+  }
+
+  // Ground line
+  ctx.strokeStyle = COL.gold;
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.4;
+  ctx.beginPath();
+  ctx.moveTo(STAGE_LEFT, GROUND_Y + 1);
+  ctx.lineTo(STAGE_RIGHT, GROUND_Y + 1);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Stage bounds
+  ctx.fillStyle = COL.gold;
+  ctx.globalAlpha = 0.2;
+  ctx.fillRect(STAGE_LEFT - 3, GROUND_Y - 100, 3, 101);
+  ctx.fillRect(STAGE_RIGHT, GROUND_Y - 100, 3, 101);
+  ctx.globalAlpha = 1;
+
+  // Torches / pillars
+  const torchGlow = 0.3 + Math.sin(performance.now() / 200) * 0.1;
+  [STAGE_LEFT - 1, STAGE_RIGHT + 1].forEach(tx => {
+    ctx.fillStyle = '#444';
+    ctx.fillRect(tx - 4, GROUND_Y - 80, 8, 80);
+    ctx.fillStyle = COL.orange;
+    ctx.globalAlpha = torchGlow;
+    ctx.beginPath();
+    ctx.arc(tx, GROUND_Y - 85, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = torchGlow * 0.3;
+    ctx.beginPath();
+    ctx.arc(tx, GROUND_Y - 85, 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  });
+};
+
+// ─── TOUCH CONTROLS ───
+const drawTouchControls = () => {
+  // Only draw on touch devices (or always for mobile layout)
+  if (!('ontouchstart' in window)) return;
+
+  ctx.globalAlpha = 0.35;
+  touchButtons.forEach(b => {
+    const pressed = touches[b.id];
+    ctx.fillStyle = pressed ? (b.col || COL.gold) : (b.col || COL.gray);
+    ctx.globalAlpha = pressed ? 0.5 : 0.25;
+
+    if (b.id === 'start') {
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.fillStyle = COL.white;
+      ctx.font = '8px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 3);
+    } else if (['punch', 'kick', 'special'].includes(b.id)) {
+      ctx.beginPath();
+      ctx.arc(b.x + b.w / 2, b.y + b.h / 2, b.w / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = COL.white;
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 5);
+    } else {
+      // D-pad
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+      ctx.fillStyle = COL.white;
+      ctx.font = '16px monospace';
+      ctx.textAlign = 'center';
+      const arrows = { left: '◄', right: '►', up: '▲', down: '▼' };
+      ctx.fillText(arrows[b.id] || '', b.x + b.w / 2, b.y + b.h / 2 + 6);
+    }
+  });
+  ctx.globalAlpha = 1;
+};
+
+// ─── HIT DETECTION ───
+const checkHits = (attacker, defender) => {
+  if (attacker.hitConnected) return;
+  const hb = attacker.hitbox;
+  if (!hb) return;
+  const db = defender.hurtbox;
+
+  if (hb.x < db.x + db.w && hb.x + hb.w > db.x &&
+      hb.y < db.y + db.h && hb.y + hb.h > db.y) {
+    if (defender.invincible > 0) return;
+
+    const atk = attacker.currentAttack;
+    const didHit = defender.takeDamage(
+      atk.damage,
+      atk.pushback || 60,
+      atk.hitstun || 12,
+      atk.knockdown || false,
+      attacker.x
+    );
+
+    attacker.hitConnected = true;
+
+    if (didHit) {
+      attacker.comboCount++;
+      attacker.comboTimer = 1.5;
+      attacker.meter = Math.min(100, attacker.meter + atk.damage * 0.5);
+
+      // Hit effect
+      const hitX = (hb.x + hb.w / 2 + db.x + db.w / 2) / 2;
+      const hitY = (hb.y + hb.h / 2 + db.y + db.h / 2) / 2;
+      attacker.hitEffect = { active: true, x: hitX, y: hitY, timer: 0.15 };
+
+      // Particles
+      const color = atk.type === 'dp' ? (atk.color || COL.gold) : COL.gold;
+      spawnParticles(hitX, hitY, 8, color, 3, 0.3);
+      spawnParticles(hitX, hitY, 4, COL.red, 2, 0.2);
+
+      // Screen shake
+      triggerShake(atk.damage > 15 ? 6 : 3, 0.1);
+      triggerFlash(COL.white, 0.03);
+
+      playSound(atk.type === 'dp' ? 'special' : 'hit');
+    }
+  }
+};
+
+// ─── INIT MATCH ───
+const initMatch = (p1Char, p2Char) => {
+  player1 = new Fighter(p1Char, 180, 1, false);
+  player2 = new Fighter(p2Char, W - 180, -1, true);
+  player2.aiDifficulty = aiLevel;
+  player1.roundsWon = 0;
+  player2.roundsWon = 0;
+  roundNum = 1;
+  startRound();
+};
+
+const startRound = () => {
+  player1.reset(180);
+  player2.reset(W - 180);
+  timer = 99;
+  timerPaused = true;
+  gameState = STATE.ROUND_START;
+  stateTimer = 2.0;
+  particles.length = 0;
+  playSound('round');
+};
+
+// ─── MAIN GAME LOOP ───
+let lastTime = 0;
+
+const gameLoop = (timestamp) => {
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+
+  // Update input pressed states
+  inputPressed('start');
+  inputPressed('punch');
+  inputPressed('kick');
+  inputPressed('special');
+
+  // Apply screen shake
+  ctx.save();
+  if (shakeDuration > 0) {
+    shakeDuration -= dt;
+    const sx = (Math.random() - 0.5) * shakeAmount * 2;
+    const sy = (Math.random() - 0.5) * shakeAmount * 2;
+    ctx.translate(sx, sy);
+    shakeAmount *= 0.9;
+  }
+
+  switch (gameState) {
+    case STATE.TITLE: {
+      drawTitle();
+      drawTouchControls();
+      if (input('start') || input('punch') || input('kick')) {
+        gameState = STATE.SELECT;
+        stateTimer = 0.3;
+        playSound('select');
+      }
+      break;
+    }
+
+    case STATE.SELECT: {
+      stateTimer -= dt;
+      drawSelect();
+      drawTouchControls();
+
+      if (stateTimer <= 0) {
+        if (inputPressed('left')) {
+          selectedChar = (selectedChar + Object.keys(CHARS).length - 1) % Object.keys(CHARS).length;
+          playSound('select');
+        }
+        if (inputPressed('right')) {
+          selectedChar = (selectedChar + 1) % Object.keys(CHARS).length;
+          playSound('select');
+        }
+        if (input('start') || input('punch')) {
+          const chars = Object.keys(CHARS);
+          const p1Char = chars[selectedChar];
+          const p2Char = chars[(selectedChar + 1) % chars.length];
+          initMatch(p1Char, p2Char);
+          playSound('round');
+        }
+      }
+      break;
+    }
+
+    case STATE.ROUND_START: {
+      stateTimer -= dt;
+      drawArena();
+      player1.draw();
+      player2.draw();
+      drawHUD();
+      drawTouchControls();
+
+      // Round announcement
+      ctx.fillStyle = COL.gold;
+      ctx.font = 'bold 28px monospace';
+      ctx.textAlign = 'center';
+
+      if (stateTimer > 1.0) {
+        ctx.fillText(`ROUND ${roundNum}`, W / 2, H / 2 - 20);
+      } else {
+        ctx.fillStyle = COL.red;
+        ctx.font = 'bold 36px monospace';
+        ctx.fillText('FIGHT!', W / 2, H / 2 - 20);
+      }
+
+      if (stateTimer <= 0) {
+        gameState = STATE.FIGHT;
+        timerPaused = false;
+      }
+      break;
+    }
+
+    case STATE.FIGHT: {
+      // Timer
+      if (!timerPaused) {
+        timer -= dt;
+        if (timer <= 0) {
+          timer = 0;
+          // Time's up - whoever has more HP wins
+          if (player1.hp > player2.hp) {
+            player2.hp = 0;
+          } else if (player2.hp > player1.hp) {
+            player1.hp = 0;
+          } else {
+            // Draw - both lose
+            player1.hp = 0;
+            player2.hp = 0;
+          }
+        }
+      }
+
+      // Update fighters
+      player1.update(dt, player2);
+      player2.updateAI(dt, player1);
+      player2.update(dt, player1);
+
+      // Hit detection
+      checkHits(player1, player2);
+      checkHits(player2, player1);
+
+      // Check round end
+      if (player1.hp <= 0 || player2.hp <= 0) {
+        gameState = STATE.ROUND_END;
+        stateTimer = 2.5;
+        timerPaused = true;
+
+        if (player1.hp <= 0 && player2.hp <= 0) {
+          // Double KO - no winner
+        } else if (player1.hp <= 0) {
+          player2.roundsWon++;
+          player2.state = 'win';
+          player1.state = 'ko';
+        } else {
+          player1.roundsWon++;
+          player1.state = 'win';
+          player2.state = 'ko';
+        }
+
+        playSound('ko');
+        triggerShake(8, 0.3);
+      }
+
+      // Update particles
+      updateParticles(dt);
+
+      // Draw
+      drawArena();
+      player1.draw();
+      player2.draw();
+      drawParticles();
+      drawHUD();
+      drawTouchControls();
+      break;
+    }
+
+    case STATE.ROUND_END: {
+      stateTimer -= dt;
+
+      player1.update(dt, player2);
+      player2.update(dt, player1);
+      updateParticles(dt);
+
+      drawArena();
+      player1.draw();
+      player2.draw();
+      drawParticles();
+      drawHUD();
+      drawTouchControls();
+
+      // KO text
+      ctx.fillStyle = COL.red;
+      ctx.font = 'bold 40px monospace';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = COL.red;
+      ctx.shadowBlur = 15;
+      ctx.fillText('K.O.!', W / 2, H / 2 - 30);
+      ctx.shadowBlur = 0;
+
+      // Winner name
+      if (stateTimer < 1.5) {
+        const winner = player1.hp > 0 ? player1 : player2;
+        ctx.fillStyle = COL.gold;
+        ctx.font = 'bold 20px monospace';
+        ctx.fillText(`${winner.name} WINS`, W / 2, H / 2 + 10);
+      }
+
+      if (stateTimer <= 0) {
+        // Check match end
+        if (player1.roundsWon >= roundsToWin || player2.roundsWon >= roundsToWin) {
+          gameState = STATE.MATCH_END;
+          stateTimer = 3.0;
+
+          const p1Won = player1.roundsWon >= roundsToWin;
+          GobAdapt.record(p1Won);
+
+          if (p1Won) {
+            matchesWon++;
+            aiLevel = Math.min(5, 1 + Math.floor(matchesWon / 2));
+            if (matchesWon > highScore) {
+              highScore = matchesWon;
+              localStorage.setItem('forgeFighting_highScore', highScore.toString());
+            }
+          }
+        } else {
+          roundNum++;
+          startRound();
+        }
+      }
+      break;
+    }
+
+    case STATE.MATCH_END: {
+      stateTimer -= dt;
+      updateParticles(dt);
+
+      drawArena();
+      player1.draw();
+      player2.draw();
+      drawParticles();
+      drawHUD();
+      drawTouchControls();
+
+      const p1Won = player1.roundsWon >= roundsToWin;
+
+      ctx.fillStyle = p1Won ? COL.gold : COL.red;
+      ctx.font = 'bold 32px monospace';
+      ctx.textAlign = 'center';
+      ctx.shadowColor = p1Won ? COL.gold : COL.red;
+      ctx.shadowBlur = 20;
+      ctx.fillText(p1Won ? 'VICTORY!' : 'DEFEAT!', W / 2, H / 2 - 30);
+      ctx.shadowBlur = 0;
+
+      if (p1Won) {
+        ctx.fillStyle = COL.white;
+        ctx.font = '14px monospace';
+        ctx.fillText(`WINS: ${matchesWon}  |  AI LEVEL: ${aiLevel}/5`, W / 2, H / 2 + 10);
+      }
+
+      ctx.fillStyle = Math.sin(performance.now() / 300) > 0 ? COL.gold : COL.white;
+      ctx.font = '14px monospace';
+      ctx.fillText(p1Won ? 'PRESS START FOR NEXT FIGHT' : 'PRESS START TO RETRY', W / 2, H / 2 + 40);
+
+      if (stateTimer <= 0 && (input('start') || input('punch'))) {
+        if (p1Won) {
+          // Next fight with harder AI
+          const chars = Object.keys(CHARS);
+          const p2Char = chars[Math.floor(Math.random() * chars.length)];
+          initMatch(chars[selectedChar], p2Char);
+        } else {
+          gameState = STATE.GAME_OVER;
+          stateTimer = 0.5;
+        }
+      }
+      break;
+    }
+
+    case STATE.GAME_OVER: {
+      stateTimer -= dt;
+
+      ctx.fillStyle = COL.bg;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.fillStyle = COL.red;
+      ctx.font = 'bold 36px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('GAME OVER', W / 2, H / 2 - 40);
+
+      ctx.fillStyle = COL.white;
+      ctx.font = '16px monospace';
+      ctx.fillText(`TOTAL WINS: ${matchesWon}`, W / 2, H / 2);
+      ctx.fillText(`BEST: ${highScore}`, W / 2, H / 2 + 25);
+
+      ctx.fillStyle = COL.gold;
+      ctx.font = '14px monospace';
+      const blink = Math.sin(performance.now() / 300) > 0;
+      if (blink) ctx.fillText('PRESS START TO PLAY AGAIN', W / 2, H / 2 + 65);
+
+      drawTouchControls();
+
+      if (stateTimer <= 0 && (input('start') || input('punch'))) {
+        matchesWon = 0;
+        aiLevel = 1;
+        gameState = STATE.TITLE;
+        playSound('select');
+      }
+      break;
+    }
+  }
+
+  // Flash overlay
+  if (flashDuration > 0) {
+    flashDuration -= dt;
+    ctx.fillStyle = flashColor || COL.white;
+    ctx.globalAlpha = flashDuration * 10;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+
+  requestAnimationFrame(gameLoop);
+};
+
+// ─── START ───
+requestAnimationFrame((t) => {
+  lastTime = t;
+  requestAnimationFrame(gameLoop);
+});
+
+// Prevent default touch on document
+document.addEventListener('touchstart', (e) => {
+  if (e.target === canvas) e.preventDefault();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}, { passive: false });
+
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
+</body>
+</html>
