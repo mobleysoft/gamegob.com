@@ -341,7 +341,7 @@
 
         function pollCombatState() {
             const apiUrl = (location.protocol === 'file:')
-                ? 'http://localhost:8420' : location.origin;
+                ? '' : location.origin;
             fetch(apiUrl + '/api/combat/state')
                 .then(r => r.json())
                 .then(data => { if (data && data.player) combatState = data; })
@@ -350,7 +350,7 @@
 
         function sendCombatAction(action) {
             const apiUrl = (location.protocol === 'file:')
-                ? 'http://localhost:8420' : location.origin;
+                ? '' : location.origin;
             action.player_x = player.x;
             action.player_y = player.y;
             action.direction = player.direction;
@@ -1205,7 +1205,7 @@
 
                 // Call conversation API — send being context for the LLM
                 const apiUrl = (location.protocol === 'file:')
-                    ? 'http://localhost:8420/api/talk'
+                    ? '/api/talk'
                     : 'https://gamegob.com/api/talk';
                 const tv = villagers.find(vl => vl.id === talkingTo);
                 fetch(apiUrl, {
@@ -1365,7 +1365,7 @@
         function enterArena() {
             // Navigate to arena (start a bot match)
             const apiUrl = (location.protocol === 'file:')
-                ? 'http://localhost:8420'
+                ? ''
                 : location.origin;
             fetch(apiUrl + '/api/moba/start', {
                 method: 'POST',
@@ -1476,7 +1476,7 @@
         function useItem(itemId) {
             // Try to equip or use item via API
             const apiUrl = (location.protocol === 'file:')
-                ? 'http://localhost:8420/api/use_item'
+                ? '/api/use_item'
                 : 'https://gamegob.com/api/use_item';
             fetch(apiUrl, {
                 method: 'POST',
@@ -1518,7 +1518,7 @@
 
         function buyItem(itemId) {
             const apiUrl = (location.protocol === 'file:')
-                ? 'http://localhost:8420/api/shop/buy'
+                ? '/api/shop/buy'
                 : 'https://gamegob.com/api/shop/buy';
             fetch(apiUrl, {
                 method: 'POST',
@@ -1564,7 +1564,7 @@
 
         function craftItem(recipeId) {
             const apiUrl = (location.protocol === 'file:')
-                ? 'http://localhost:8420/api/craft'
+                ? '/api/craft'
                 : 'https://gamegob.com/api/craft';
             fetch(apiUrl, {
                 method: 'POST',
@@ -1606,7 +1606,7 @@
         function giveGift(itemId) {
             if (!talkingTo) return;
             const apiUrl = (location.protocol === 'file:')
-                ? 'http://localhost:8420/api/gift'
+                ? '/api/gift'
                 : 'https://gamegob.com/api/gift';
             fetch(apiUrl, {
                 method: 'POST',
