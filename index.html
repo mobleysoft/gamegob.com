@@ -1,1306 +1,945 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>gamegob.com | Mobleysoft Sovereign SPA</title>
-
-  <style>
-    /* ===== UNIVERSAL DESIGN TOKENS ===== */
-    :root {
-      --void: #04040a;
-      --gold: #c9a227;
-      --cream: #f0ead6;
-      --bone: #e8e0d5;
-      --cyan: #00d4ff;
-      --accent: #00ff00;
-      --muted: #888;
-      --line: rgba(255,255,255,0.15);
-
-      --font-serif: Georgia, serif;
-      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      --font-mono: "Courier New", monospace;
-
-      --spacing-xs: 0.25rem;
-      --spacing-sm: 0.5rem;
-      --spacing-md: 1rem;
-      --spacing-lg: 2rem;
-      --spacing-xl: 3rem;
-      --spacing-2xl: 4rem;
-
-      --shadow-sm: 0 1px 4px rgba(0,0,0,0.3);
-      --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-      --shadow-lg: 0 12px 24px rgba(0,0,0,0.5);
-    }
-
-    /* ===== BASE STYLES ===== */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html {
-      background: var(--void);
-      color: var(--cream);
-      font-family: var(--font-sans);
-      line-height: 1.6;
-      font-size: 16px;
-    }
-
-    body {
-      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
-      min-height: 100vh;
-    }
-
-    a { color: var(--gold); text-decoration: none; }
-    a:hover { color: var(--cyan); }
-
-    /* ===== FEATURE TOGGLES (33 features) ===== */
-    .feature-ai { display: none; }
-    .feature-analytics { display: none; }
-    .feature-auth { display: none; }
-    .feature-badge { display: none; }
-    .feature-blog { display: none; }
-    .feature-calendar { display: none; }
-    .feature-card { display: none; }
-    .feature-checkout { display: none; }
-    .feature-ecommerce { display: none; }
-    .feature-form { display: none; }
-    .feature-gallery { display: none; }
-    .feature-game { display: none; }
-    .feature-grid { display: none; }
-    .feature-live-chat { display: none; }
-    .feature-map { display: none; }
-    .feature-marketplace { display: none; }
-    .feature-messaging { display: none; }
-    .feature-modal-dialog { display: none; }
-    .feature-pagination { display: none; }
-    .feature-portfolio { display: none; }
-    .feature-pricing { display: none; }
-    .feature-product { display: none; }
-    .feature-profile { display: none; }
-    .feature-rating-review { display: none; }
-    .feature-search { display: none; }
-    .feature-social { display: none; }
-    .feature-table { display: none; }
-    .feature-tabs { display: none; }
-    .feature-user-profile { display: none; }
-    .feature-video-player { display: none; }
-
-    /* Enable features based on venture's feature set */
-    .feature-enabled.fs-ai .feature-ai { display: block; }
-    .feature-enabled.fs-analytics .feature-analytics { display: block; }
-    .feature-enabled.fs-auth .feature-auth { display: block; }
-    .feature-enabled.fs-badge .feature-badge { display: block; }
-    .feature-enabled.fs-blog .feature-blog { display: block; }
-    .feature-enabled.fs-calendar .feature-calendar { display: block; }
-    .feature-enabled.fs-card .feature-card { display: block; }
-    .feature-enabled.fs-checkout .feature-checkout { display: block; }
-    .feature-enabled.fs-ecommerce .feature-ecommerce { display: block; }
-    .feature-enabled.fs-form .feature-form { display: block; }
-    .feature-enabled.fs-gallery .feature-gallery { display: block; }
-    .feature-enabled.fs-game .feature-game { display: block; }
-    .feature-enabled.fs-grid .feature-grid { display: block; }
-    .feature-enabled.fs-live-chat .feature-live-chat { display: block; }
-    .feature-enabled.fs-map .feature-map { display: block; }
-    .feature-enabled.fs-marketplace .feature-marketplace { display: block; }
-    .feature-enabled.fs-messaging .feature-messaging { display: block; }
-    .feature-enabled.fs-modal-dialog .feature-modal-dialog { display: block; }
-    .feature-enabled.fs-pagination .feature-pagination { display: block; }
-    .feature-enabled.fs-portfolio .feature-portfolio { display: block; }
-    .feature-enabled.fs-pricing .feature-pricing { display: block; }
-    .feature-enabled.fs-product .feature-product { display: block; }
-    .feature-enabled.fs-profile .feature-profile { display: block; }
-    .feature-enabled.fs-rating-review .feature-rating-review { display: block; }
-    .feature-enabled.fs-search .feature-search { display: block; }
-    .feature-enabled.fs-social .feature-social { display: block; }
-    .feature-enabled.fs-table .feature-table { display: block; }
-    .feature-enabled.fs-tabs .feature-tabs { display: block; }
-    .feature-enabled.fs-user-profile .feature-user-profile { display: block; }
-    .feature-enabled.fs-video-player .feature-video-player { display: block; }
-
-    /* ===== UNIVERSAL COMPONENTS ===== */
-
-    header {
-      background: rgba(0,0,0,0.7);
-      border-bottom: 1px solid var(--line);
-      padding: var(--spacing-lg);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    header .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .logo {
-      font-size: 1.5rem;
-      font-weight: bold;
-      color: var(--gold);
-      letter-spacing: 0.05em;
-    }
-
-    nav a {
-      margin: 0 var(--spacing-lg);
-      font-size: 0.9rem;
-      transition: color 0.2s;
-    }
-
-    main {
-      min-height: calc(100vh - 200px);
-      padding: var(--spacing-xl) 0;
-    }
-
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 0 var(--spacing-lg);
-    }
-
-    h1, h2, h3, h4, h5, h6 {
-      margin-bottom: var(--spacing-md);
-      font-weight: bold;
-    }
-
-    h1 { font-size: 2.5rem; color: var(--gold); }
-    h2 { font-size: 2rem; color: var(--gold); }
-    h3 { font-size: 1.5rem; }
-
-    /* ===== FEATURE: AI ===== */
-    .ai-interface {
-      background: rgba(20, 20, 40, 0.9);
-      border: 1px solid var(--cyan);
-      border-radius: 12px;
-      padding: var(--spacing-lg);
-      max-width: 800px;
-    }
-
-    .ai-interface h2 { color: var(--cyan); }
-
-    .ai-chat {
-      background: rgba(0,0,0,0.5);
-      border-radius: 8px;
-      padding: var(--spacing-md);
-      height: 300px;
-      overflow-y: auto;
-      margin-bottom: var(--spacing-md);
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      border: 1px solid var(--line);
-    }
-
-    .ai-message {
-      margin: var(--spacing-sm) 0;
-      padding: var(--spacing-sm);
-      background: rgba(0, 212, 255, 0.1);
-      border-left: 3px solid var(--cyan);
-      border-radius: 4px;
-    }
-
-    .ai-input-group {
-      display: flex;
-      gap: var(--spacing-sm);
-    }
-
-    .ai-input-group input {
-      flex: 1;
-      padding: var(--spacing-sm);
-      background: rgba(0,0,0,0.3);
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      color: var(--cream);
-    }
-
-    .ai-input-group button {
-      padding: var(--spacing-sm) var(--spacing-md);
-      background: var(--cyan);
-      color: var(--void);
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    /* ===== FEATURE: ANALYTICS ===== */
-    .analytics-dashboard {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: var(--spacing-lg);
-      margin-top: var(--spacing-lg);
-    }
-
-    .metric-card {
-      background: rgba(20, 20, 40, 0.8);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: var(--spacing-lg);
-      text-align: center;
-    }
-
-    .metric-value {
-      font-size: 2.5rem;
-      color: var(--gold);
-      font-weight: bold;
-      margin: var(--spacing-md) 0;
-    }
-
-    .metric-label {
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-
-    /* ===== FEATURE: AUTH ===== */
-    .auth-form {
-      background: rgba(20, 20, 40, 0.9);
-      border: 1px solid var(--gold);
-      border-radius: 12px;
-      padding: var(--spacing-lg);
-      max-width: 400px;
-      margin: var(--spacing-xl) auto;
-    }
-
-    .auth-form h2 {
-      text-align: center;
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .form-group {
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .form-group label {
-      display: block;
-      color: var(--cream);
-      margin-bottom: var(--spacing-sm);
-      font-weight: bold;
-    }
-
-    .form-group input {
-      width: 100%;
-      padding: var(--spacing-md);
-      background: rgba(0,0,0,0.3);
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      color: var(--cream);
-    }
-
-    .submit-btn {
-      width: 100%;
-      padding: var(--spacing-md);
-      background: var(--gold);
-      color: var(--void);
-      border: none;
-      border-radius: 4px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    /* ===== FEATURE: BLOG ===== */
-    .blog-post {
-      background: rgba(20, 20, 40, 0.8);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: var(--spacing-lg);
-      margin-bottom: var(--spacing-lg);
-      max-width: 800px;
-    }
-
-    .blog-post h2 { margin-bottom: var(--spacing-sm); font-size: 1.5rem; }
-    .blog-meta { color: var(--muted); font-size: 0.85rem; margin-bottom: var(--spacing-md); }
-    .blog-content { line-height: 1.8; }
-
-    /* ===== FEATURE: GAMES ===== */
-    .game-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: var(--spacing-lg);
-      margin-top: var(--spacing-lg);
-    }
-
-    .game-card {
-      background: rgba(20, 20, 40, 0.8);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: var(--spacing-md);
-      cursor: pointer;
-      transition: all 0.3s;
-      text-align: center;
-    }
-
-    .game-card:hover {
-      border-color: var(--gold);
-      box-shadow: 0 0 16px rgba(201, 162, 39, 0.2);
-      transform: translateY(-4px);
-    }
-
-    .game-card h3 { color: var(--gold); margin-bottom: var(--spacing-sm); }
-    .game-card p { color: var(--muted); font-size: 0.85rem; }
-
-    /* ===== FEATURE: PRICING ===== */
-    .pricing-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: var(--spacing-lg);
-      margin-top: var(--spacing-lg);
-    }
-
-    .pricing-card {
-      background: rgba(20, 20, 40, 0.8);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: var(--spacing-lg);
-      text-align: center;
-      transition: all 0.3s;
-    }
-
-    .pricing-card:hover {
-      border-color: var(--gold);
-      box-shadow: var(--shadow-lg);
-      transform: translateY(-8px);
-    }
-
-    .pricing-card h3 { color: var(--gold); margin-bottom: var(--spacing-md); }
-    .pricing-card .price { font-size: 2rem; color: var(--gold); font-weight: bold; }
-
-    /* ===== FEATURE: PORTFOLIO ===== */
-    .portfolio-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: var(--spacing-lg);
-      margin-top: var(--spacing-lg);
-    }
-
-    .portfolio-item {
-      background: rgba(20, 20, 40, 0.8);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .portfolio-item:hover {
-      border-color: var(--gold);
-      box-shadow: var(--shadow-lg);
-      transform: translateY(-8px);
-    }
-
-    .portfolio-image {
-      width: 100%;
-      height: 200px;
-      background: linear-gradient(135deg, rgba(201, 162, 39, 0.1), rgba(0, 212, 255, 0.1));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 3rem;
-    }
-
-    .portfolio-content {
-      padding: var(--spacing-md);
-    }
-
-    /* ===== FEATURE: PROFILE ===== */
-    .user-details {
-      background: rgba(20, 20, 40, 0.9);
-      border: 1px solid var(--gold);
-      border-radius: 12px;
-      padding: var(--spacing-lg);
-      max-width: 600px;
-    }
-
-    .user-field {
-      margin: var(--spacing-md) 0;
-      padding: var(--spacing-md);
-      background: rgba(255,255,255,0.05);
-      border-left: 3px solid var(--gold);
-      border-radius: 4px;
-    }
-
-    /* ===== FEATURE: GALLERY ===== */
-    .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: var(--spacing-lg);
-      margin-top: var(--spacing-lg);
-    }
-
-    .gallery-item {
-      aspect-ratio: 1;
-      background: rgba(20, 20, 40, 0.8);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 4rem;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .gallery-item:hover {
-      border-color: var(--gold);
-      transform: scale(1.05);
-    }
-
-    /* ===== FEATURE: TABLE ===== */
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: var(--spacing-lg);
-      background: rgba(20, 20, 40, 0.8);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .data-table th {
-      background: rgba(201, 162, 39, 0.1);
-      border-bottom: 1px solid var(--line);
-      padding: var(--spacing-md);
-      text-align: left;
-      color: var(--gold);
-      font-weight: bold;
-    }
-
-    .data-table td {
-      border-bottom: 1px solid var(--line);
-      padding: var(--spacing-md);
-    }
-
-    /* ===== FEATURE: SEARCH ===== */
-    .search-box {
-      background: rgba(20, 20, 40, 0.9);
-      border: 1px solid var(--gold);
-      border-radius: 8px;
-      padding: var(--spacing-lg);
-      max-width: 600px;
-      margin: var(--spacing-lg) auto;
-    }
-
-    .search-input {
-      width: 100%;
-      padding: var(--spacing-md);
-      background: rgba(0,0,0,0.3);
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      color: var(--cream);
-      font-size: 1rem;
-    }
-
-    /* ===== FEATURE: BADGE ===== */
-    .badge-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: var(--spacing-md);
-      margin-top: var(--spacing-lg);
-    }
-
-    .badge {
-      display: inline-block;
-      background: rgba(201, 162, 39, 0.2);
-      border: 1px solid var(--gold);
-      color: var(--gold);
-      padding: var(--spacing-sm) var(--spacing-md);
-      border-radius: 20px;
-      font-size: 0.85rem;
-    }
-
-    /* ===== FEATURE: CARD ===== */
-    .card-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: var(--spacing-lg);
-      margin-top: var(--spacing-lg);
-    }
-
-    .card {
-      background: rgba(20, 20, 40, 0.8);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: var(--spacing-lg);
-      transition: all 0.3s;
-    }
-
-    .card:hover {
-      border-color: var(--gold);
-      box-shadow: var(--shadow-lg);
-    }
-
-    /* ===== FEATURE: CHECKOUT ===== */
-    .checkout-form {
-      background: rgba(20, 20, 40, 0.9);
-      border: 1px solid var(--gold);
-      border-radius: 12px;
-      padding: var(--spacing-lg);
-      max-width: 600px;
-      margin: var(--spacing-lg) auto;
-    }
-
-    .checkout-step {
-      margin-bottom: var(--spacing-lg);
-      padding-bottom: var(--spacing-lg);
-      border-bottom: 1px solid var(--line);
-    }
-
-    /* ===== FEATURE: GRID ===== */
-    .grid-layout {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: var(--spacing-lg);
-      margin-top: var(--spacing-lg);
-    }
-
-    .grid-item {
-      background: rgba(20, 20, 40, 0.8);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: var(--spacing-md);
-      text-align: center;
-    }
-
-    /* ===== FEATURE: LIVE CHAT ===== */
-    .live-chat-widget {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 350px;
-      background: rgba(20, 20, 40, 0.95);
-      border: 1px solid var(--cyan);
-      border-radius: 12px;
-      box-shadow: var(--shadow-lg);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .chat-header {
-      background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(201, 162, 39, 0.2));
-      padding: var(--spacing-md);
-      border-bottom: 1px solid var(--line);
-      font-weight: bold;
-    }
-
-    .chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: var(--spacing-md);
-      height: 300px;
-    }
-
-    .chat-input-area {
-      padding: var(--spacing-md);
-      border-top: 1px solid var(--line);
-      display: flex;
-      gap: var(--spacing-sm);
-    }
-
-    .chat-input-area input {
-      flex: 1;
-      padding: var(--spacing-sm);
-      background: rgba(0,0,0,0.3);
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      color: var(--cream);
-    }
-
-    /* ===== FEATURE: MODAL DIALOG ===== */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.7);
-      z-index: 1000;
-    }
-
-    .modal-content {
-      background: rgba(20, 20, 40, 0.95);
-      border: 1px solid var(--gold);
-      border-radius: 12px;
-      padding: var(--spacing-lg);
-      max-width: 500px;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-    }
-
-    /* ===== FEATURE: PAGINATION ===== */
-    .pagination {
-      display: flex;
-      justify-content: center;
-      gap: var(--spacing-sm);
-      margin-top: var(--spacing-lg);
-    }
-
-    .pagination a, .pagination span {
-      padding: var(--spacing-sm) var(--spacing-md);
-      background: rgba(20, 20, 40, 0.8);
-      border: 1px solid var(--line);
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .pagination a:hover {
-      background: rgba(201, 162, 39, 0.2);
-      border-color: var(--gold);
-    }
-
-    /* ===== FEATURE: PRODUCT ===== */
-    .product-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: var(--spacing-lg);
-      margin-top: var(--spacing-lg);
-    }
-
-    .product-card {
-      background: rgba(20, 20, 40, 0.8);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      overflow: hidden;
-      transition: all 0.3s;
-    }
-
-    .product-card:hover {
-      border-color: var(--gold);
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .product-image {
-      width: 100%;
-      height: 200px;
-      background: linear-gradient(135deg, rgba(201, 162, 39, 0.1), rgba(0, 212, 255, 0.1));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 3rem;
-    }
-
-    .product-info {
-      padding: var(--spacing-md);
-    }
-
-    /* ===== FEATURE: RATING & REVIEW ===== */
-    .rating-container {
-      margin-top: var(--spacing-lg);
-    }
-
-    .rating-stars {
-      font-size: 1.5rem;
-      color: var(--gold);
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .review-item {
-      background: rgba(255,255,255,0.05);
-      border-left: 3px solid var(--gold);
-      padding: var(--spacing-md);
-      margin-bottom: var(--spacing-md);
-      border-radius: 4px;
-    }
-
-    /* ===== FEATURE: TABS ===== */
-    .tab-navigation {
-      display: flex;
-      border-bottom: 1px solid var(--line);
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .tab-button {
-      background: none;
-      border: none;
-      color: var(--muted);
-      padding: var(--spacing-md) var(--spacing-lg);
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: all 0.2s;
-    }
-
-    .tab-button.active {
-      color: var(--gold);
-      border-bottom-color: var(--gold);
-    }
-
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    /* ===== FEATURE: USER PROFILE ===== */
-    .user-profile-card {
-      background: rgba(20, 20, 40, 0.9);
-      border: 1px solid var(--gold);
-      border-radius: 12px;
-      padding: var(--spacing-lg);
-      max-width: 600px;
-    }
-
-    .user-avatar {
-      width: 120px;
-      height: 120px;
-      background: rgba(201, 162, 39, 0.2);
-      border: 2px solid var(--gold);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 4rem;
-      margin-bottom: var(--spacing-lg);
-    }
-
-    /* ===== FEATURE: VIDEO PLAYER ===== */
-    .video-player {
-      position: relative;
-      background: #000;
-      border-radius: 8px;
-      overflow: hidden;
-      margin-top: var(--spacing-lg);
-    }
-
-    .video-frame {
-      width: 100%;
-      aspect-ratio: 16/9;
-      background: rgba(20, 20, 40, 0.8);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 3rem;
-    }
-
-    .video-controls {
-      background: rgba(0,0,0,0.8);
-      padding: var(--spacing-md);
-      display: flex;
-      gap: var(--spacing-md);
-      align-items: center;
-    }
-
-    .video-controls button {
-      background: var(--gold);
-      color: var(--void);
-      border: none;
-      padding: var(--spacing-sm) var(--spacing-md);
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    /* ===== FOOTER ===== */
-    footer {
-      background: rgba(0,0,0,0.7);
-      border-top: 1px solid var(--line);
-      padding: var(--spacing-lg);
-      margin-top: var(--spacing-2xl);
-    }
-
-    footer .container {
-      text-align: center;
-      color: var(--muted);
-      font-size: 0.85rem;
-    }
-
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Realm — GameGob by Mobleysoft</title>
+<meta name="description" content="GameGob: The AGI Gaming Company. Free browser games, instant play.">
+<meta name="keywords" content="free browser games, 3D arcade, online games, HTML5 games, GameGob, Realm, Mobleysoft">
+<meta name="robots" content="index, follow">
+<meta property="og:title" content="GameGob: The AGI Gaming Company">
+<meta property="og:description" content="GameGob: The AGI Gaming Company. Free browser games, instant play.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob.com">
+<meta property="og:image" content="https://gamegob.com/og-image.png">
+<meta property="og:site_name" content="GameGob">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"GameGob Realm by Mobleysoft","url":"https://gamegob.com","description":"3D arcade world with 55+ free browser games."}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Segoe UI',system-ui,sans-serif}
+canvas{display:block;width:100%;height:100%}
+
+/* Loading screen */
+#loading{position:fixed;inset:0;background:#050510;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000;transition:opacity 0.8s}
+#loading.fade{opacity:0;pointer-events:none}
+#loading h1{font-size:clamp(2rem,6vw,4rem);color:#88CC88;text-shadow:0 0 40px rgba(136,204,136,0.6);margin-bottom:1rem;letter-spacing:0.1em}
+#loading h2{font-size:clamp(0.8rem,2vw,1.2rem);color:#555;letter-spacing:0.3em;text-transform:uppercase;margin-bottom:2rem}
+#load-bar-outer{width:min(300px,70vw);height:4px;background:#111;border-radius:2px;overflow:hidden}
+#load-bar{width:0%;height:100%;background:linear-gradient(90deg,#88CC88,#CC88FF);transition:width 0.3s}
+#loading .hint{position:absolute;bottom:2rem;color:#444;font-size:0.75rem}
+
+/* HUD */
+#hud{position:fixed;top:0;left:0;right:0;pointer-events:none;z-index:100;padding:1rem}
+#hud .top-bar{display:flex;justify-content:space-between;align-items:flex-start}
+#hud .logo{font-size:1.4rem;color:#88CC88;text-shadow:0 0 20px rgba(136,204,136,0.4);letter-spacing:0.15em;font-weight:700}
+#hud .logo span{color:#CC88FF}
+#hud .zone-name{font-size:0.7rem;color:#666;letter-spacing:0.3em;text-transform:uppercase;margin-top:0.2rem}
+#hud .nav-hint{font-size:0.65rem;color:#444;text-align:right;line-height:1.8}
+#hud .nav-hint kbd{background:#1a1a2e;color:#888;padding:0.1em 0.4em;border-radius:3px;border:1px solid #333;font-size:0.6rem}
+
+/* Crosshair */
+#crosshair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:101;pointer-events:none;opacity:0.4}
+#crosshair::before,#crosshair::after{content:'';position:absolute;background:#88CC88}
+#crosshair::before{width:16px;height:2px;top:-1px;left:-8px}
+#crosshair::after{width:2px;height:16px;top:-8px;left:-1px}
+
+/* Game preview overlay */
+#preview{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:none;align-items:center;justify-content:center;flex-direction:column;cursor:pointer}
+#preview.show{display:flex}
+#preview .card{background:#0c0c1e;border:1px solid #1a1a3a;border-radius:12px;padding:2rem 3rem;text-align:center;max-width:400px;box-shadow:0 0 60px rgba(136,204,136, 0.65)}
+#preview .card h2{font-size:1.6rem;margin-bottom:0.5rem}
+#preview .card p{color:#888;font-size:0.85rem;margin-bottom:1.5rem;line-height:1.6}
+#preview .card .play-btn{display:inline-block;padding:0.8rem 2.5rem;background:linear-gradient(135deg,#88CC88,#66AA66);color:#000;font-weight:700;font-size:1rem;border-radius:8px;text-decoration:none;pointer-events:auto;transition:transform 0.2s,box-shadow 0.2s;cursor:pointer}
+#preview .card .play-btn:hover{transform:scale(1.05);box-shadow:0 0 30px rgba(136,204,136,0.4)}
+#preview .card .play-btn.forge{background:linear-gradient(135deg,#CC88FF,#AA66DD)}
+#preview .close-hint{color:#555;font-size:0.7rem;margin-top:1rem;pointer-events:auto}
+
+/* Click to enter prompt */
+#enter-prompt{position:fixed;inset:0;background:rgba(5,5,16,0.7);z-index:150;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity 0.5s}
+#enter-prompt.hide{opacity:0;pointer-events:none}
+#enter-prompt span{font-size:clamp(1rem,3vw,1.5rem);color:#88CC88;text-shadow:0 0 20px rgba(136,204,136, 0.65);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:0.6}50%{opacity:1}}
+
+/* Minimap */
+#minimap{position:fixed;bottom:1rem;right:1rem;width:140px;height:140px;z-index:100;pointer-events:none;opacity:0.6}
+#minimap canvas{width:100%;height:100%;border-radius:8px;border:1px solid #1a1a3a}
+
+/* Mobile controls */
+#mobile-controls{display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;padding:1rem;pointer-events:none}
+@media(hover:none)and(pointer:coarse){
+  #mobile-controls{display:flex;justify-content:space-between;align-items:flex-end}
+  #hud .nav-hint{display:none}
+}
+.touch-zone{pointer-events:auto;opacity:0.3}
+#touch-move{width:120px;height:120px;border-radius:50%;border:2px solid #88CC88;position:relative}
+#touch-move::after{content:'';position:absolute;top:50%;left:50%;width:40px;height:40px;transform:translate(-50%,-50%);background:rgba(136,204,136, 0.65);border-radius:50%}
+#touch-interact{width:70px;height:70px;border-radius:50%;border:2px solid #CC88FF;display:flex;align-items:center;justify-content:center;color:#CC88FF;font-size:0.7rem;font-weight:700}
+</style>
+<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
 </head>
 <body>
-  <!-- HEADER -->
-  <header>
-    <div class="container">
-      <div class="logo">gamegob.com</div>
-      <nav>
-        <a href="#features">Features</a>
-        <a href="#contact">Contact</a>
-      </nav>
+
+<!-- Loading -->
+<div id="loading">
+  <h1>REALM</h1>
+  <h2>GameGob by Mobleysoft</h2>
+  <div id="load-bar-outer"><div id="load-bar"></div></div>
+  <div class="hint">A Mobley Helms LP Company</div>
+</div>
+
+<!-- Enter prompt (after loading, before pointer lock) -->
+<div id="enter-prompt" class="hide">
+  <span>Click to Enter Realm</span>
+</div>
+
+<!-- HUD -->
+<div id="hud" style="display:none">
+  <div class="top-bar">
+    <div>
+      <div class="logo">RE<span>ALM</span></div>
+      <div class="zone-name" id="zone-label">Central Hub</div>
     </div>
-  </header>
-
-  <!-- MAIN CONTENT -->
-  <main class="feature-enabled fs-ai fs-analytics fs-auth fs-pricing fs-search">
-    <div class="container">
-
-      <!-- FEATURE: AI -->
-      <section class="feature-ai">
-        <div class="ai-interface">
-          <h2>AI Assistant</h2>
-          <p>Chat with our intelligent system.</p>
-          <div class="ai-chat" id="ai-chat">
-            <div class="ai-message">AI: Hello! How can I help?</div>
-          </div>
-          <div class="ai-input-group">
-            <input type="text" id="ai-input" placeholder="Ask me anything..." />
-            <button onclick="sendAIMessage()">Send</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- FEATURE: ANALYTICS -->
-      <section class="feature-analytics">
-        <h2>Analytics Dashboard</h2>
-        <div class="analytics-dashboard">
-          <div class="metric-card">
-            <div class="metric-label">Total Users</div>
-            <div class="metric-value">45.2K</div>
-          </div>
-          <div class="metric-card">
-            <div class="metric-label">Engagement</div>
-            <div class="metric-value">87%</div>
-          </div>
-          <div class="metric-card">
-            <div class="metric-label">Revenue</div>
-            <div class="metric-value">$127K</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- FEATURE: AUTH -->
-      <section class="feature-auth">
-        <form class="auth-form" onsubmit="handleAuthSubmit(event)">
-          <h2>Sign In</h2>
-          <div class="form-group">
-            <label for="auth-email">Email</label>
-            <input type="email" id="auth-email" placeholder="you@example.com" required />
-          </div>
-          <div class="form-group">
-            <label for="auth-password">Password</label>
-            <input type="password" id="auth-password" placeholder="••••••••" required />
-          </div>
-          <button type="submit" class="submit-btn">Sign In</button>
-        </form>
-      </section>
-
-      <!-- FEATURE: BLOG -->
-      <section class="feature-blog">
-        <h2>Blog</h2>
-        <div class="blog-post">
-          <h2>Getting Started</h2>
-          <div class="blog-meta">Published 2026-08-24</div>
-          <div class="blog-content">
-            <p>Welcome to our blog. Share your thoughts and ideas here.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- FEATURE: GAMES -->
-      <section class="feature-games">
-        <h2>Game Catalog</h2>
-        <div class="game-grid">
-          <div class="game-card">
-            <h3>Game 1</h3>
-            <p>Interactive experience</p>
-          </div>
-          <div class="game-card">
-            <h3>Game 2</h3>
-            <p>Interactive experience</p>
-          </div>
-          <div class="game-card">
-            <h3>Game 3</h3>
-            <p>Interactive experience</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- FEATURE: PRICING -->
-      <section class="feature-pricing">
-        <h2>Pricing Plans</h2>
-        <div class="pricing-grid">
-          <div class="pricing-card">
-            <h3>Starter</h3>
-            <div class="price">$29/mo</div>
-            <p>Perfect for getting started</p>
-          </div>
-          <div class="pricing-card">
-            <h3>Professional</h3>
-            <div class="price">$99/mo</div>
-            <p>For growing businesses</p>
-          </div>
-          <div class="pricing-card">
-            <h3>Enterprise</h3>
-            <div class="price">Custom</div>
-            <p>For large organizations</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- FEATURE: PORTFOLIO -->
-      <section class="feature-portfolio">
-        <h2>Portfolio</h2>
-        <div class="portfolio-grid">
-          <div class="portfolio-item">
-            <div class="portfolio-image">🎨</div>
-            <div class="portfolio-content">
-              <h3>Project Alpha</h3>
-            </div>
-          </div>
-          <div class="portfolio-item">
-            <div class="portfolio-image">🚀</div>
-            <div class="portfolio-content">
-              <h3>Project Beta</h3>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- FEATURE: PROFILE -->
-      <section class="feature-profile">
-        <div class="user-details">
-          <h2>Your Profile</h2>
-          <div class="user-field">
-            <label>Name</label>
-            <input type="text" placeholder="Your name" />
-          </div>
-          <div class="user-field">
-            <label>Email</label>
-            <input type="text" placeholder="your@email.com" />
-          </div>
-        </div>
-      </section>
-
-      <!-- FEATURE: GALLERY -->
-      <section class="feature-gallery">
-        <h2>Gallery</h2>
-        <div class="gallery-grid">
-          <div class="gallery-item">📷</div>
-          <div class="gallery-item">🎬</div>
-          <div class="gallery-item">🖼️</div>
-          <div class="gallery-item">📸</div>
-        </div>
-      </section>
-
-      <!-- FEATURE: TABLE -->
-      <section class="feature-table">
-        <h2>Data</h2>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Value</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Item 1</td>
-              <td>100</td>
-              <td>✓ Active</td>
-            </tr>
-            <tr>
-              <td>Item 2</td>
-              <td>200</td>
-              <td>✓ Active</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-
-      <!-- FEATURE: SEARCH -->
-      <section class="feature-search">
-        <div class="search-box">
-          <h2>Search</h2>
-          <input type="text" class="search-input" placeholder="Search..." />
-        </div>
-      </section>
-
-      <!-- PLACEHOLDER FEATURES (will be populated by feature-attractor) -->
-      <!-- FEATURE: CALENDAR -->
-      <section class="feature-calendar">
-        <h2>Calendar</h2>
-        <p>Events and scheduling</p>
-      </section>
-
-      <!-- FEATURE: ECOMMERCE -->
-      <section class="feature-ecommerce">
-        <h2>Shop</h2>
-        <p>Products and checkout</p>
-      </section>
-
-      <!-- FEATURE: MAP -->
-      <section class="feature-map">
-        <h2>Map</h2>
-        <p>Location and geography</p>
-      </section>
-
-      <!-- FEATURE: MARKETPLACE -->
-      <section class="feature-marketplace">
-        <h2>Marketplace</h2>
-        <p>Vendors and listings</p>
-      </section>
-
-      <!-- FEATURE: MESSAGING -->
-      <section class="feature-messaging">
-        <h2>Messaging</h2>
-        <p>Inbox and notifications</p>
-      </section>
-
-      <!-- FEATURE: SOCIAL -->
-      <section class="feature-social">
-        <h2>Social</h2>
-        <p>Comments and interactions</p>
-      </section>
-
-      <!-- FEATURE: VIDEO -->
-      <section class="feature-video">
-        <h2>Video</h2>
-        <p>Streaming and players</p>
-      </section>
-
-      <!-- FEATURE: FORM -->
-      <section class="feature-form">
-        <h2>Contact Form</h2>
-        <form class="auth-form">
-          <div class="form-group">
-            <label>Your Message</label>
-            <textarea style="width:100%; padding: var(--spacing-md);" rows="5"></textarea>
-          </div>
-          <button type="submit" class="submit-btn">Send</button>
-        </form>
-      </section>
-
-      <!-- ===== NEW FEATURES (Expansion 2026-08-24) ===== -->
-
-      <!-- FEATURE: BADGE -->
-      <section class="feature-badge">
-        <h2>Status Badges</h2>
-        <div class="badge-container">
-          <span class="badge">Active</span>
-          <span class="badge">Premium</span>
-          <span class="badge">Featured</span>
-          <span class="badge">Popular</span>
-        </div>
-      </section>
-
-      <!-- FEATURE: CARD -->
-      <section class="feature-card">
-        <h2>Card Components</h2>
-        <div class="card-container">
-          <div class="card">
-            <h3>Card 1</h3>
-            <p>Content goes here</p>
-          </div>
-          <div class="card">
-            <h3>Card 2</h3>
-            <p>Content goes here</p>
-          </div>
-          <div class="card">
-            <h3>Card 3</h3>
-            <p>Content goes here</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- FEATURE: CHECKOUT -->
-      <section class="feature-checkout">
-        <h2>Checkout</h2>
-        <form class="checkout-form">
-          <div class="checkout-step">
-            <h3>Billing Information</h3>
-            <div class="form-group">
-              <label>Full Name</label>
-              <input type="text" placeholder="Your name" />
-            </div>
-          </div>
-          <div class="checkout-step">
-            <h3>Shipping Address</h3>
-            <div class="form-group">
-              <label>Address</label>
-              <input type="text" placeholder="Street address" />
-            </div>
-          </div>
-          <div class="checkout-step">
-            <h3>Payment</h3>
-            <div class="form-group">
-              <label>Card Number</label>
-              <input type="text" placeholder="1234 5678 9012 3456" />
-            </div>
-          </div>
-          <button type="submit" class="submit-btn">Complete Purchase</button>
-        </form>
-      </section>
-
-      <!-- FEATURE: GRID -->
-      <section class="feature-grid">
-        <h2>Grid Layout</h2>
-        <div class="grid-layout">
-          <div class="grid-item">Item 1</div>
-          <div class="grid-item">Item 2</div>
-          <div class="grid-item">Item 3</div>
-          <div class="grid-item">Item 4</div>
-          <div class="grid-item">Item 5</div>
-          <div class="grid-item">Item 6</div>
-        </div>
-      </section>
-
-      <!-- FEATURE: LIVE CHAT -->
-      <section class="feature-live-chat">
-        <div class="live-chat-widget">
-          <div class="chat-header">💬 Live Chat Support</div>
-          <div class="chat-messages">
-            <div style="margin-bottom: var(--spacing-sm); color: var(--muted); font-size: 0.85rem;">
-              Support: Hello! How can we help?
-            </div>
-          </div>
-          <div class="chat-input-area">
-            <input type="text" placeholder="Type message..." />
-            <button style="background: var(--gold); color: var(--void); border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer;">Send</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- FEATURE: MODAL DIALOG -->
-      <section class="feature-modal-dialog">
-        <h2>Modal Dialog</h2>
-        <button class="submit-btn" style="max-width: 200px;">Open Modal</button>
-        <div class="modal-overlay">
-          <div class="modal-content">
-            <h2>Modal Title</h2>
-            <p>This is a modal dialog box.</p>
-            <button class="submit-btn">Close</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- FEATURE: PAGINATION -->
-      <section class="feature-pagination">
-        <h2>Pagination</h2>
-        <div class="pagination">
-          <a href="#">← Prev</a>
-          <span>1</span>
-          <a href="#">2</a>
-          <a href="#">3</a>
-          <a href="#">Next →</a>
-        </div>
-      </section>
-
-      <!-- FEATURE: PRODUCT -->
-      <section class="feature-product">
-        <h2>Products</h2>
-        <div class="product-grid">
-          <div class="product-card">
-            <div class="product-image">📦</div>
-            <div class="product-info">
-              <h3>Product 1</h3>
-              <p style="color: var(--gold); font-weight: bold;">$29.99</p>
-            </div>
-          </div>
-          <div class="product-card">
-            <div class="product-image">📦</div>
-            <div class="product-info">
-              <h3>Product 2</h3>
-              <p style="color: var(--gold); font-weight: bold;">$49.99</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- FEATURE: RATING & REVIEW -->
-      <section class="feature-rating-review">
-        <h2>Reviews & Ratings</h2>
-        <div class="rating-container">
-          <div class="rating-stars">★★★★★ (4.8)</div>
-          <div class="review-item">
-            <strong>Great product!</strong>
-            <p>Really happy with this purchase. Fast shipping too!</p>
-          </div>
-          <div class="review-item">
-            <strong>Highly recommended</strong>
-            <p>Excellent quality and customer service.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- FEATURE: TABS -->
-      <section class="feature-tabs">
-        <h2>Tabbed Content</h2>
-        <div class="tab-navigation">
-          <button class="tab-button active" onclick="this.classList.add('active')">Tab 1</button>
-          <button class="tab-button">Tab 2</button>
-          <button class="tab-button">Tab 3</button>
-        </div>
-        <div class="tab-content active">
-          <p>Content for Tab 1</p>
-        </div>
-        <div class="tab-content">
-          <p>Content for Tab 2</p>
-        </div>
-        <div class="tab-content">
-          <p>Content for Tab 3</p>
-        </div>
-      </section>
-
-      <!-- FEATURE: USER PROFILE -->
-      <section class="feature-user-profile">
-        <div class="user-profile-card">
-          <div class="user-avatar">👤</div>
-          <h2>User Profile</h2>
-          <div class="user-field">
-            <label><strong>Name:</strong> John Mobley</label>
-          </div>
-          <div class="user-field">
-            <label><strong>Email:</strong> john@example.com</label>
-          </div>
-          <div class="user-field">
-            <label><strong>Member Since:</strong> 2026</label>
-          </div>
-        </div>
-      </section>
-
-      <!-- FEATURE: VIDEO PLAYER -->
-      <section class="feature-video-player">
-        <h2>Video Player</h2>
-        <div class="video-player">
-          <div class="video-frame">▶️ Video</div>
-          <div class="video-controls">
-            <button>Play</button>
-            <button>Pause</button>
-            <div style="flex: 1; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px;"></div>
-            <button>Fullscreen</button>
-          </div>
-        </div>
-      </section>
-
+    <div class="nav-hint">
+      <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move<br>
+      <kbd>Mouse</kbd> Look<br>
+      <kbd>Click</kbd> Play Game<br>
+      <kbd>ESC</kbd> Release cursor<br>
+      <kbd>TAB</kbd> Portal View
     </div>
-  </main>
+  </div>
+</div>
 
-  <!-- FOOTER -->
-  <footer>
-    <div class="container">
-      <p>&copy; 2026 gamegob.com | Part of Mobleysoft Conglomerate</p>
-    </div>
-  </footer>
+<!-- Crosshair -->
+<div id="crosshair" style="display:none"></div>
 
-  <!-- SCRIPTS -->
-  <script>
-    function sendAIMessage() {
-      const input = document.getElementById('ai-input');
-      const chat = document.getElementById('ai-chat');
-      if (input.value.trim()) {
-        const userMsg = document.createElement('div');
-        userMsg.className = 'ai-message';
-        userMsg.textContent = 'You: ' + input.value;
-        chat.appendChild(userMsg);
-        input.value = '';
-        chat.scrollTop = chat.scrollHeight;
-      }
+<!-- Game preview -->
+<div id="preview">
+  <div class="card">
+    <h2 id="prev-title"></h2>
+    <p id="prev-desc"></p>
+    <a id="prev-play" class="play-btn" href="#">PLAY</a>
+  </div>
+  <div class="close-hint">Click outside or press ESC to close</div>
+</div>
+
+<!-- Minimap -->
+<div id="minimap" style="display:none"><canvas id="minimap-canvas" width="140" height="140"></canvas></div>
+
+<!-- Mobile -->
+<div id="mobile-controls">
+  <div id="touch-move" class="touch-zone"></div>
+  <div id="touch-interact" class="touch-zone">PLAY</div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ============================================================
+//  GAME CATALOG — every cabinet in the realm
+// ============================================================
+const GAMES = [
+  // === HAVEN (Flagships) ===
+  { id:'survivors',     name:'Dreadtide',            file:'survivors.html',      zone:'haven', desc:'Horde survival with evolution mechanics. Endless waves, endless dread.', color:0x88CC88 },
+  { id:'fps',           name:'Purgefire',            file:'fps.html',            zone:'haven', desc:'Raycaster dungeon crawler. Clear floors, fight beings, find loot.', color:0x88CC88 },
+  { id:'moba',          name:'Canticle of Champions', file:'moba.html',          zone:'haven', desc:'5v5 MOBA with AI loss absorption. Every player wins more than they lose.', color:0x88CC88 },
+  { id:'battle_royale', name:'Crown Fall',            file:'battle_royale.html', zone:'haven', desc:'Last mind standing. 100-player shrinking arena.', color:0x88CC88 },
+  { id:'battle_chess',  name:'Throne Wars',           file:'battle_chess.html',  zone:'haven', desc:'Chess with animated combat. 16 beings, one board.', color:0x88CC88 },
+  { id:'card_game',     name:'Grimoire',              file:'card_game.html',     zone:'haven', desc:'Deck-building card battler. Summon, sacrifice, conquer.', color:0x88CC88 },
+  { id:'smash_arena',   name:'Brawl Sanctum',         file:'smash_arena.html',   zone:'haven', desc:'Platform fighter brawler. Knock them off the edge.', color:0x88CC88 },
+  { id:'auto_battler',  name:'War Council',           file:'auto_battler.html',  zone:'haven', desc:'Strategic auto-combat. Draft your army, watch them fight.', color:0x88CC88 },
+  { id:'bullet_hell',   name:'Dreamweaver',           file:'bullet_hell.html',   zone:'haven', desc:'Dance through thousands of projectiles in psychedelic boss fights.', color:0x88CC88 },
+  { id:'platformer',    name:'Ascent',                file:'platformer.html',    zone:'haven', desc:'Precision platforming. Jump, climb, never look down.', color:0x88CC88 },
+  { id:'racer',         name:'Burnline',              file:'racer.html',         zone:'haven', desc:'High-speed neural circuit racing. Drift or die.', color:0x88CC88 },
+  { id:'being_arena',   name:'Being Arena',            file:'being_arena.html',   zone:'haven', desc:'1v1 fighter with 16 beings. Neurochemistry shapes combat style.', color:0xFF6655 },
+
+  // === FORGE (Community) ===
+  { id:'f_block',       name:'Block Cascade',      file:'forge_tetris.html',         zone:'forge', desc:'The classic block-stacking puzzle, reforged with adaptive difficulty.', color:0xCC88FF },
+  { id:'f_chomp',       name:'Gob Chomp',          file:'forge_pac_man.html',        zone:'forge', desc:'Chomp dots, dodge ghosts. Maze pursuit perfected.', color:0xCC88FF },
+  { id:'f_snake',       name:'Serpent\'s Coil',    file:'forge_snake.html',          zone:'forge', desc:'Grow your serpent, avoid your tail. The timeless classic reforged.', color:0xCC88FF },
+  { id:'f_match3',      name:'Crystal Match',      file:'forge_match_three.html',    zone:'forge', desc:'Match-three gem puzzler with upgrade paths.', color:0xCC88FF },
+  { id:'f_cosmic',      name:'Cosmic Barrage',     file:'forge_space_invaders.html', zone:'forge', desc:'Defend Earth from descending alien waves.', color:0xCC88FF },
+  { id:'f_breakout',    name:'Break Shaper',       file:'forge_breakout.html',       zone:'forge', desc:'Shatter bricks with precision rebounds.', color:0xCC88FF },
+  { id:'f_idle',        name:'Idle Empire',         file:'forge_idle.html',          zone:'forge', desc:'Build your empire while AFK. Numbers go up.', color:0xCC88FF },
+  { id:'f_td',          name:'Tower Defense',       file:'forge_tower_defense.html', zone:'forge', desc:'Place towers, stop the creeps. Strategic lane defense.', color:0xCC88FF },
+  { id:'f_fight',       name:'Fight Club',          file:'forge_fighting.html',      zone:'forge', desc:'1v1 fighting game with combo mechanics.', color:0xCC88FF },
+  { id:'f_rogue',       name:'Roguelike',           file:'forge_roguelike.html',     zone:'forge', desc:'Permadeath dungeon crawling. Every run is different.', color:0xCC88FF },
+  { id:'f_ghost',       name:'Ghost Eater',         file:'forge_ghost_eater.html',   zone:'forge', desc:'Hunt ghosts with gadget loadouts and meta-progression.', color:0xCC88FF },
+  { id:'f_star',        name:'Star Shield',         file:'forge_star_shield.html',   zone:'forge', desc:'Space defense with shield mechanics and upgrades.', color:0xCC88FF },
+  { id:'f_hero',        name:'Hero\'s Journey',     file:'forge_heros_journey.html', zone:'forge', desc:'Epic RPG adventure through mythic lands.', color:0xCC88FF },
+  { id:'f_plat',        name:'Power Jump Run',      file:'forge_power_jump_run.html',zone:'forge', desc:'Fast platformer with power-ups and speed runs.', color:0xCC88FF },
+  { id:'f_bullet',      name:'Bullet Storm',        file:'forge_bullet_hell.html',   zone:'forge', desc:'Dodge curtains of projectiles in stylish patterns.', color:0xCC88FF },
+  { id:'f_auto',        name:'Auto Battle',         file:'forge_auto_battler.html',  zone:'forge', desc:'Draft units, watch them fight. Pocket auto-chess.', color:0xCC88FF },
+  { id:'f_race',        name:'Nitro Dash',          file:'forge_racing.html',        zone:'forge', desc:'Arcade racing with boost pads and tight turns.', color:0xCC88FF },
+  { id:'f_card',        name:'Creature Cards',      file:'forge_card_game.html',     zone:'forge', desc:'Collect creatures, build decks, duel opponents.', color:0xCC88FF },
+  { id:'f_survive',     name:'Survival',             file:'forge_survival.html',     zone:'forge', desc:'Gather, craft, survive against the elements.', color:0xCC88FF },
+  { id:'f_ttt',         name:'Tic Tac Titans',      file:'forge_tic_tac_titans.html',zone:'forge', desc:'Tic-tac-toe with titan powers and board control.', color:0xCC88FF },
+  { id:'f_word',        name:'Word Cascade',         file:'forge_word_cascade.html', zone:'forge', desc:'Words fall like rain. Type fast to survive.', color:0xCC88FF },
+  { id:'f_hangman',     name:'Hangman Heroes',       file:'forge_hangman_heroes.html',zone:'forge', desc:'Word guessing with hero abilities and lifelines.', color:0xCC88FF },
+  { id:'f_hex',         name:'Hex Checkers',         file:'forge_hex_checkers.html', zone:'forge', desc:'Checkers reimagined on a hexagonal board.', color:0xCC88FF },
+  { id:'f_mine',        name:'Mineshafted',          file:'forge_mineshafted.html',  zone:'forge', desc:'Clear the mines. Logic puzzle with a twist.', color:0xCC88FF },
+  { id:'f_domino',      name:'Domino Champions',     file:'forge_domino_champions.html', zone:'forge', desc:'Strategic domino placement and chain reactions.', color:0xCC88FF },
+  { id:'f_grav',        name:'Gravity Well',         file:'forge_gravity_well.html', zone:'forge', desc:'Orbital physics puzzler. Bend gravity to your will.', color:0xCC88FF },
+  { id:'f_astro',       name:'Asteroid Miner',       file:'forge_asteroid_miner.html',zone:'forge', desc:'Mine asteroids in deep space. Upgrade your drill ship.', color:0xCC88FF },
+  { id:'f_color',       name:'Color Flood',           file:'forge_color_flood.html', zone:'forge', desc:'Flood the board with color. Minimal moves wins.', color:0xCC88FF },
+  { id:'f_rocket',      name:'Rocket Apprentice',     file:'forge_rocket_apprentice.html', zone:'forge', desc:'Learn to fly. Physics-based rocket piloting.', color:0xCC88FF },
+  { id:'f_rps',         name:'RPS Wands',             file:'forge_rps_wands.html',   zone:'forge', desc:'Rock-paper-scissors with magical wand combat.', color:0xCC88FF },
+  { id:'f_bird',        name:'End Bird',              file:'forge_end_bird.html',    zone:'forge', desc:'Fly through obstacles. One-tap endless runner.', color:0xCC88FF },
+  { id:'f_dungeon',     name:'Dungeon Solitaire',     file:'forge_dungeon_solitaire.html', zone:'forge', desc:'Solitaire meets dungeon crawling. Clear the crypt.', color:0xCC88FF },
+  { id:'f_serpent',     name:'Serpent\'s Coil II',    file:'forge_serpents_coil.html', zone:'forge', desc:'Advanced serpent game with evolution mechanics.', color:0xCC88FF },
+  { id:'f_rpg',         name:'Pocket RPG',            file:'forge_rpg.html',         zone:'forge', desc:'Bite-sized RPG adventure. Level up, slay monsters.', color:0xCC88FF },
+  { id:'f_moba',        name:'Mini MOBA',             file:'forge_moba.html',        zone:'forge', desc:'Quick MOBA matches in compact arenas.', color:0xCC88FF },
+  { id:'f_fps',         name:'Quick Shot',            file:'forge_fps.html',         zone:'forge', desc:'Fast arcade FPS. Aim, shoot, survive.', color:0xCC88FF },
+];
+
+// ============================================================
+//  SCENE SETUP
+// ============================================================
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.8;
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x030308);
+scene.fog = new THREE.FogExp2(0x030308, 0.018);
+
+// Starfield dome
+const starGeo = new THREE.BufferGeometry();
+const starCount = 2000;
+const starPos = new Float32Array(starCount * 3);
+for (let i = 0; i < starCount; i++) {
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.acos(Math.random() * 2 - 1);
+  const r = 80 + Math.random() * 10;
+  starPos[i*3] = r * Math.sin(phi) * Math.cos(theta);
+  starPos[i*3+1] = Math.abs(r * Math.cos(phi)); // only upper hemisphere
+  starPos[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.3, transparent: true, opacity: 0.6 });
+scene.add(new THREE.Points(starGeo, starMat));
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 200);
+camera.position.set(0, 1.7, 0);
+
+const clock = new THREE.Clock();
+
+// ============================================================
+//  LIGHTING
+// ============================================================
+const ambientLight = new THREE.AmbientLight(0x111122, 0.4);
+scene.add(ambientLight);
+
+// Central chandelier light
+const centerLight = new THREE.PointLight(0x88CC88, 2, 40);
+centerLight.position.set(0, 8, 0);
+centerLight.castShadow = true;
+scene.add(centerLight);
+
+// Haven zone accent
+const havenLight = new THREE.PointLight(0x88CC88, 1.5, 30);
+havenLight.position.set(0, 5, -25);
+scene.add(havenLight);
+
+// Forge zone accent
+const forgeLight = new THREE.PointLight(0xCC88FF, 1.5, 30);
+forgeLight.position.set(0, 5, 25);
+scene.add(forgeLight);
+
+// Rim lights along corridors
+for (let i = -3; i <= 3; i++) {
+  if (i === 0) continue;
+  const l = new THREE.PointLight(i < 0 ? 0x88CC88 : 0xCC88FF, 0.4, 12);
+  l.position.set(i * 5, 3.5, i < 0 ? -15 : 15);
+  scene.add(l);
+}
+
+// ============================================================
+//  GROUND + CEILING
+// ============================================================
+const floorGeo = new THREE.PlaneGeometry(80, 80);
+const floorMat = new THREE.MeshStandardMaterial({
+  color: 0x080812,
+  roughness: 0.6,
+  metalness: 0.4,
+});
+const floor = new THREE.Mesh(floorGeo, floorMat);
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+
+// Grid lines on floor
+const gridHelper = new THREE.GridHelper(80, 80, 0x111133, 0x0a0a1e);
+gridHelper.position.y = 0.01;
+scene.add(gridHelper);
+
+// Ceiling
+const ceilGeo = new THREE.PlaneGeometry(80, 80);
+const ceilMat = new THREE.MeshStandardMaterial({ color: 0x050510, roughness: 1 });
+const ceiling = new THREE.Mesh(ceilGeo, ceilMat);
+ceiling.rotation.x = Math.PI / 2;
+ceiling.position.y = 10;
+scene.add(ceiling);
+
+// ============================================================
+//  WALLS (bounding box for the arcade)
+// ============================================================
+function makeWall(w, h, x, y, z, ry) {
+  const geo = new THREE.PlaneGeometry(w, h);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x0a0a1a, roughness: 0.9, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, y, z);
+  mesh.rotation.y = ry || 0;
+  scene.add(mesh);
+  return mesh;
+}
+// Four walls
+makeWall(80, 10, 0, 5, -40, 0);
+makeWall(80, 10, 0, 5, 40, 0);
+makeWall(80, 10, -40, 5, 0, Math.PI / 2);
+makeWall(80, 10, 40, 5, 0, Math.PI / 2);
+
+// ============================================================
+//  ZONE MARKERS — neon signs
+// ============================================================
+function makeNeonSign(text, x, y, z, color, ry) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, 512, 128);
+  ctx.font = 'bold 56px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
+  ctx.shadowColor = ctx.fillStyle;
+  ctx.shadowBlur = 20;
+  ctx.fillText(text, 256, 64);
+  ctx.shadowBlur = 40;
+  ctx.fillText(text, 256, 64);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  const geo = new THREE.PlaneGeometry(6, 1.5);
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, y, z);
+  if (ry) mesh.rotation.y = ry;
+  scene.add(mesh);
+
+  // Glow light behind sign
+  const glow = new THREE.PointLight(color, 0.8, 10);
+  glow.position.set(x, y - 0.5, z);
+  scene.add(glow);
+}
+
+makeNeonSign('H A V E N', 0, 7, -18, 0x88CC88);
+makeNeonSign('F O R G E', 0, 7, 18, 0xCC88FF);
+makeNeonSign('R E A L M', 0, 8.5, 0, 0xffffff);
+
+// ============================================================
+//  CENTRAL HUB — decorative pillar + orb
+// ============================================================
+const pillarGeo = new THREE.CylinderGeometry(0.4, 0.5, 6, 8);
+const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1a1a3a, metalness: 0.6, roughness: 0.3 });
+const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+pillar.position.set(0, 3, 0);
+pillar.castShadow = true;
+scene.add(pillar);
+
+const orbGeo = new THREE.SphereGeometry(0.6, 32, 32);
+const orbMat = new THREE.MeshStandardMaterial({ color: 0x88CC88, emissive: 0x88CC88, emissiveIntensity: 0.5, metalness: 0.8, roughness: 0.1 });
+const orb = new THREE.Mesh(orbGeo, orbMat);
+orb.position.set(0, 6.5, 0);
+scene.add(orb);
+
+// Archway at spawn
+const archGeo = new THREE.TorusGeometry(2, 0.15, 8, 16, Math.PI);
+const archMat = new THREE.MeshStandardMaterial({ color: 0x88CC88, emissive: 0x88CC88, emissiveIntensity: 0.3, metalness: 0.7, roughness: 0.3 });
+const arch = new THREE.Mesh(archGeo, archMat);
+arch.position.set(0, 2, 2);
+arch.rotation.z = Math.PI;
+scene.add(arch);
+
+// ============================================================
+//  ARCADE CABINETS
+// ============================================================
+const cabinetGroup = new THREE.Group();
+scene.add(cabinetGroup);
+
+const cabinets = []; // {mesh, game, bbox}
+const cabinetStrips = []; // for screen glow animation
+const raycaster = new THREE.Raycaster();
+raycaster.far = 12;
+const rayCenter = new THREE.Vector2(0, 0);
+
+function createCabinet(game, x, z, ry) {
+  const group = new THREE.Group();
+  const isHaven = game.zone === 'haven';
+  const accentColor = isHaven ? 0x88CC88 : 0xCC88FF;
+
+  // Cabinet body
+  const bodyGeo = new THREE.BoxGeometry(1.2, 2.2, 0.8);
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x111128, metalness: 0.3, roughness: 0.7 });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = 1.1;
+  body.castShadow = true;
+  group.add(body);
+
+  // Screen (front face, angled)
+  const screenGeo = new THREE.PlaneGeometry(0.9, 0.7);
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 192;
+  const ctx = canvas.getContext('2d');
+
+  // Screen background — gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, 192);
+  grad.addColorStop(0, isHaven ? '#0a1a0a' : '#0a0a1a');
+  grad.addColorStop(1, '#000');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 256, 192);
+
+  // Game title
+  ctx.font = 'bold 22px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#' + accentColor.toString(16).padStart(6, '0');
+  ctx.shadowColor = ctx.fillStyle;
+  ctx.shadowBlur = 10;
+  // Word wrap for long names
+  const words = game.name.split(' ');
+  let lines = [''];
+  for (const w of words) {
+    const test = lines[lines.length - 1] + (lines[lines.length - 1] ? ' ' : '') + w;
+    if (ctx.measureText(test).width > 220) lines.push(w);
+    else lines[lines.length - 1] = test;
+  }
+  const startY = 70 - (lines.length - 1) * 14;
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], 128, startY + i * 28);
+  }
+
+  // Zone badge
+  ctx.shadowBlur = 0;
+  ctx.font = '12px "Segoe UI", system-ui, sans-serif';
+  ctx.fillStyle = '#555';
+  ctx.fillText(isHaven ? 'HAVEN' : 'FORGE', 128, 150);
+
+  // Decorative border
+  ctx.strokeStyle = '#' + accentColor.toString(16).padStart(6, '0');
+  ctx.globalAlpha = 0.3;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(8, 8, 240, 176);
+  ctx.globalAlpha = 1;
+
+  // Scanlines
+  ctx.fillStyle = 'rgba(0,0,0, 0.65)';
+  for (let sy = 0; sy < 192; sy += 3) ctx.fillRect(0, sy, 256, 1);
+
+  const screenTex = new THREE.CanvasTexture(canvas);
+  const screenMat = new THREE.MeshBasicMaterial({ map: screenTex });
+  const screen = new THREE.Mesh(screenGeo, screenMat);
+  screen.position.set(0, 1.6, 0.41);
+  group.add(screen);
+
+  // Glow strip at bottom of screen
+  const stripGeo = new THREE.BoxGeometry(1.0, 0.05, 0.05);
+  const stripMat = new THREE.MeshStandardMaterial({ color: accentColor, emissive: accentColor, emissiveIntensity: 0.5 });
+  const strip = new THREE.Mesh(stripGeo, stripMat);
+  strip.position.set(0, 1.15, 0.41);
+  group.add(strip);
+  cabinetStrips.push(strip);
+
+  // Top light
+  const cabinetLight = new THREE.PointLight(accentColor, 0.3, 4);
+  cabinetLight.position.set(0, 2.5, 0.5);
+  group.add(cabinetLight);
+
+  // Position in world
+  group.position.set(x, 0, z);
+  group.rotation.y = ry || 0;
+  cabinetGroup.add(group);
+
+  // For raycasting, use the body mesh
+  body.userData = { game };
+  cabinets.push({ mesh: body, game, group });
+}
+
+// Layout: Haven cabinets in the negative-Z half, Forge in positive-Z
+const havenGames = GAMES.filter(g => g.zone === 'haven');
+const forgeGames = GAMES.filter(g => g.zone === 'forge');
+
+// Haven — two rows along a central corridor
+havenGames.forEach((g, i) => {
+  const side = i % 2 === 0 ? -1 : 1;
+  const row = Math.floor(i / 2);
+  const x = side * 5;
+  const z = -8 - row * 4;
+  const ry = side === -1 ? Math.PI / 2 : -Math.PI / 2;
+  createCabinet(g, x, z, ry);
+});
+
+// Forge — two rows in positive-Z corridor
+forgeGames.forEach((g, i) => {
+  const side = i % 2 === 0 ? -1 : 1;
+  const row = Math.floor(i / 2);
+  const x = side * 5;
+  const z = 8 + row * 4;
+  const ry = side === -1 ? Math.PI / 2 : -Math.PI / 2;
+  createCabinet(g, x, z, ry);
+});
+
+// ============================================================
+//  DECORATIVE PILLARS along corridors
+// ============================================================
+for (let z = -6; z >= -36; z -= 6) {
+  for (const sx of [-8, 8]) {
+    const pg = new THREE.CylinderGeometry(0.25, 0.3, 10, 6);
+    const pm = new THREE.MeshStandardMaterial({ color: 0x0f0f24, metalness: 0.4, roughness: 0.5 });
+    const p = new THREE.Mesh(pg, pm);
+    p.position.set(sx, 5, z);
+    scene.add(p);
+  }
+}
+for (let z = 6; z <= 36; z += 6) {
+  for (const sx of [-8, 8]) {
+    const pg = new THREE.CylinderGeometry(0.25, 0.3, 10, 6);
+    const pm = new THREE.MeshStandardMaterial({ color: 0x0f0f24, metalness: 0.4, roughness: 0.5 });
+    const p = new THREE.Mesh(pg, pm);
+    p.position.set(sx, 5, z);
+    scene.add(p);
+  }
+}
+
+// ============================================================
+//  PARTICLES — floating motes
+// ============================================================
+const particleCount = 600;
+const particleGeo = new THREE.BufferGeometry();
+const pPositions = new Float32Array(particleCount * 3);
+const pColors = new Float32Array(particleCount * 3);
+const pSpeeds = new Float32Array(particleCount);
+
+for (let i = 0; i < particleCount; i++) {
+  pPositions[i * 3] = (Math.random() - 0.5) * 70;
+  pPositions[i * 3 + 1] = Math.random() * 9 + 0.5;
+  pPositions[i * 3 + 2] = (Math.random() - 0.5) * 70;
+  pSpeeds[i] = 0.1 + Math.random() * 0.3;
+  // Green in haven side, purple in forge side
+  const inForge = pPositions[i * 3 + 2] > 0;
+  pColors[i * 3] = inForge ? 0.8 : 0.53;
+  pColors[i * 3 + 1] = inForge ? 0.53 : 0.8;
+  pColors[i * 3 + 2] = inForge ? 1.0 : 0.53;
+}
+particleGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+particleGeo.setAttribute('color', new THREE.BufferAttribute(pColors, 3));
+
+const particleMat = new THREE.PointsMaterial({ size: 0.08, vertexColors: true, transparent: true, opacity: 0.6, sizeAttenuation: true });
+const particles = new THREE.Points(particleGeo, particleMat);
+scene.add(particles);
+
+// ============================================================
+//  FIRST-PERSON CONTROLS
+// ============================================================
+const velocity = new THREE.Vector3();
+const direction = new THREE.Vector3();
+let euler = { x: 0, y: 0 };
+const keys = {};
+let pointerLocked = false;
+let previewOpen = false;
+
+document.addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Tab') e.preventDefault(); });
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+document.addEventListener('pointerlockchange', () => {
+  pointerLocked = !!document.pointerLockElement;
+  document.getElementById('enter-prompt').classList.toggle('hide', pointerLocked);
+  if (pointerLocked) {
+    document.getElementById('hud').style.display = '';
+    document.getElementById('crosshair').style.display = '';
+    document.getElementById('minimap').style.display = '';
+    startAmbient();
+  }
+});
+
+document.addEventListener('mousemove', e => {
+  if (!pointerLocked || previewOpen) return;
+  euler.y -= e.movementX * 0.002;
+  euler.x -= e.movementY * 0.002;
+  euler.x = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, euler.x));
+  camera.rotation.order = 'YXZ';
+  camera.rotation.set(euler.x, euler.y, 0);
+});
+
+// Click to lock pointer, or interact with cabinet
+document.addEventListener('click', () => {
+  if (previewOpen) return;
+  if (!pointerLocked) {
+    renderer.domElement.requestPointerLock();
+    return;
+  }
+  // Raycast for cabinet interaction
+  raycaster.setFromCamera(rayCenter, camera);
+  const hits = raycaster.intersectObjects(cabinets.map(c => c.mesh));
+  if (hits.length > 0) {
+    const game = hits[0].object.userData.game;
+    showPreview(game);
+  }
+});
+
+// ESC closes preview
+document.addEventListener('keydown', e => {
+  if (e.code === 'Escape' && previewOpen) {
+    e.preventDefault();
+    closePreview();
+  }
+  // TAB opens portal view
+  if (e.code === 'Tab') {
+    window.open('portal.html', '_self');
+  }
+});
+
+// Preview overlay
+const prevEl = document.getElementById('preview');
+const prevTitle = document.getElementById('prev-title');
+const prevDesc = document.getElementById('prev-desc');
+const prevPlay = document.getElementById('prev-play');
+
+function showPreview(game) {
+  previewOpen = true;
+  prevTitle.textContent = game.name;
+  prevTitle.style.color = game.zone === 'haven' ? '#88CC88' : '#CC88FF';
+  prevDesc.textContent = game.desc;
+  prevPlay.href = game.file;
+  prevPlay.className = 'play-btn' + (game.zone === 'forge' ? ' forge' : '');
+  prevEl.classList.add('show');
+  document.exitPointerLock();
+}
+
+function closePreview() {
+  previewOpen = false;
+  prevEl.classList.remove('show');
+  renderer.domElement.requestPointerLock();
+}
+
+prevEl.addEventListener('click', e => {
+  if (e.target === prevEl || e.target.classList.contains('close-hint')) closePreview();
+});
+
+// ============================================================
+//  MOBILE TOUCH CONTROLS
+// ============================================================
+let touchMoveActive = false, touchStartX = 0, touchStartY = 0, touchDX = 0, touchDY = 0;
+let lastTouchX = 0, lastTouchY = 0;
+const touchMove = document.getElementById('touch-move');
+const touchInteract = document.getElementById('touch-interact');
+
+touchMove.addEventListener('touchstart', e => {
+  e.preventDefault();
+  touchMoveActive = true;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: false });
+
+document.addEventListener('touchmove', e => {
+  if (touchMoveActive) {
+    touchDX = (e.touches[0].clientX - touchStartX) / 60;
+    touchDY = (e.touches[0].clientY - touchStartY) / 60;
+  } else if (pointerLocked || true) {
+    // Look around with right side of screen
+    const dx = e.touches[0].clientX - lastTouchX;
+    const dy = e.touches[0].clientY - lastTouchY;
+    euler.y -= dx * 0.005;
+    euler.x -= dy * 0.005;
+    euler.x = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, euler.x));
+    camera.rotation.order = 'YXZ';
+    camera.rotation.set(euler.x, euler.y, 0);
+  }
+  lastTouchX = e.touches[0].clientX;
+  lastTouchY = e.touches[0].clientY;
+}, { passive: false });
+
+document.addEventListener('touchend', e => {
+  touchMoveActive = false; touchDX = 0; touchDY = 0;
+});
+
+touchInteract.addEventListener('touchstart', e => {
+  e.preventDefault();
+  raycaster.setFromCamera(rayCenter, camera);
+  const hits = raycaster.intersectObjects(cabinets.map(c => c.mesh));
+  if (hits.length > 0) showPreview(hits[0].object.userData.game);
+}, { passive: false });
+
+// On mobile, auto-show HUD
+if ('ontouchstart' in window) {
+  document.getElementById('hud').style.display = '';
+  document.getElementById('crosshair').style.display = '';
+}
+
+// ============================================================
+//  COLLISION DETECTION
+// ============================================================
+function collides(pos) {
+  // Wall bounds
+  if (Math.abs(pos.x) > 39 || Math.abs(pos.z) > 39) return true;
+  // Central pillar
+  if (pos.x * pos.x + pos.z * pos.z < 1.2) return true;
+  // Cabinets (simple AABB)
+  for (const cab of cabinets) {
+    const cp = cab.group.position;
+    const dx = Math.abs(pos.x - cp.x);
+    const dz = Math.abs(pos.z - cp.z);
+    if (dx < 1.0 && dz < 0.8) return true;
+  }
+  // Pillars
+  // Simplified — just check corridor pillars
+  for (let z = -6; z >= -36; z -= 6) {
+    for (const sx of [-8, 8]) {
+      if (Math.abs(pos.x - sx) < 0.5 && Math.abs(pos.z - z) < 0.5) return true;
     }
-
-    function handleAuthSubmit(e) {
-      e.preventDefault();
-      alert('Sign in functionality coming soon');
+  }
+  for (let z = 6; z <= 36; z += 6) {
+    for (const sx of [-8, 8]) {
+      if (Math.abs(pos.x - sx) < 0.5 && Math.abs(pos.z - z) < 0.5) return true;
     }
+  }
+  return false;
+}
 
-    document.addEventListener('keypress', (e) => {
-      if (e.target.id === 'ai-input' && e.key === 'Enter') {
-        sendAIMessage();
-      }
-    });
-  </script>
+// ============================================================
+//  ZONE DETECTION
+// ============================================================
+const zoneLabel = document.getElementById('zone-label');
+function updateZone() {
+  const z = camera.position.z;
+  if (z < -5) zoneLabel.textContent = 'Haven District';
+  else if (z > 5) zoneLabel.textContent = 'Forge District';
+  else zoneLabel.textContent = 'Central Hub';
+}
+
+// ============================================================
+//  MINIMAP
+// ============================================================
+const minimapCanvas = document.getElementById('minimap-canvas');
+const mctx = minimapCanvas.getContext('2d');
+function drawMinimap() {
+  mctx.fillStyle = 'rgba(5,5,16,0.85)';
+  mctx.fillRect(0, 0, 140, 140);
+
+  const scale = 1.6;
+  const cx = 70, cy = 70;
+  const px = camera.position.x * scale + cx;
+  const py = camera.position.z * scale + cy;
+
+  // Draw cabinets
+  for (const cab of cabinets) {
+    const x = cab.group.position.x * scale + cx;
+    const y = cab.group.position.z * scale + cy;
+    mctx.fillStyle = cab.game.zone === 'haven' ? '#88CC8844' : '#CC88FF44';
+    mctx.fillRect(x - 2, y - 2, 4, 4);
+  }
+
+  // Player dot
+  mctx.fillStyle = '#fff';
+  mctx.beginPath();
+  mctx.arc(px, py, 3, 0, Math.PI * 2);
+  mctx.fill();
+
+  // Direction indicator
+  const dirX = px + Math.sin(euler.y) * -8;
+  const dirY = py + Math.cos(euler.y) * -8;
+  mctx.strokeStyle = '#88CC88';
+  mctx.lineWidth = 1.5;
+  mctx.beginPath();
+  mctx.moveTo(px, py);
+  mctx.lineTo(dirX, dirY);
+  mctx.stroke();
+
+  // Zone divider line
+  mctx.strokeStyle = '#333';
+  mctx.lineWidth = 0.5;
+  mctx.beginPath();
+  mctx.moveTo(0, cy);
+  mctx.lineTo(140, cy);
+  mctx.stroke();
+}
+
+// ============================================================
+//  HIGHLIGHT (cabinet glow on aim)
+// ============================================================
+let highlightedCab = null;
+function updateHighlight() {
+  raycaster.setFromCamera(rayCenter, camera);
+  const hits = raycaster.intersectObjects(cabinets.map(c => c.mesh));
+
+  // Reset previous
+  if (highlightedCab) {
+    highlightedCab.mesh.material.emissive.setHex(0x000000);
+    highlightedCab = null;
+  }
+
+  if (hits.length > 0 && !previewOpen) {
+    const cab = cabinets.find(c => c.mesh === hits[0].object);
+    if (cab) {
+      cab.mesh.material.emissive.setHex(cab.game.zone === 'haven' ? 0x224422 : 0x221144);
+      highlightedCab = cab;
+      renderer.domElement.style.cursor = 'pointer';
+    }
+  } else {
+    renderer.domElement.style.cursor = pointerLocked ? 'none' : 'default';
+  }
+}
+
+// ============================================================
+//  AMBIENT SOUND
+// ============================================================
+let audioStarted = false;
+function startAmbient() {
+  if (audioStarted) return;
+  audioStarted = true;
+  const actx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = actx.createOscillator();
+  const gain = actx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = 55; // deep bass hum
+  gain.gain.value = 0.03; // very quiet
+  osc.connect(gain);
+  gain.connect(actx.destination);
+  osc.start();
+  // Second harmonic
+  const osc2 = actx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = 82.5; // fifth above
+  const gain2 = actx.createGain();
+  gain2.gain.value = 0.015;
+  osc2.connect(gain2);
+  gain2.connect(actx.destination);
+  osc2.start();
+}
+
+// ============================================================
+//  ANIMATION LOOP
+// ============================================================
+let loadProgress = 0;
+const loadBar = document.getElementById('load-bar');
+const loadingEl = document.getElementById('loading');
+const enterPrompt = document.getElementById('enter-prompt');
+let loaded = false;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const delta = Math.min(clock.getDelta(), 0.1);
+
+  // Loading phase
+  if (!loaded) {
+    loadProgress = Math.min(loadProgress + delta * 40, 100);
+    loadBar.style.width = loadProgress + '%';
+    if (loadProgress >= 100) {
+      loaded = true;
+      loadingEl.classList.add('fade');
+      enterPrompt.classList.remove('hide');
+      setTimeout(() => loadingEl.style.display = 'none', 800);
+    }
+    renderer.render(scene, camera);
+    return;
+  }
+
+  // Movement
+  const speed = 6;
+  const moveForward = (keys['KeyW'] || keys['ArrowUp'] || touchDY < -0.3) ? 1 : (keys['KeyS'] || keys['ArrowDown'] || touchDY > 0.3) ? -1 : 0;
+  const moveRight = (keys['KeyD'] || keys['ArrowRight'] || touchDX > 0.3) ? 1 : (keys['KeyA'] || keys['ArrowLeft'] || touchDX < -0.3) ? -1 : 0;
+
+  if (moveForward || moveRight) {
+    direction.set(0, 0, 0);
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    forward.y = 0;
+    forward.normalize();
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+    right.y = 0;
+    right.normalize();
+
+    direction.addScaledVector(forward, moveForward);
+    direction.addScaledVector(right, moveRight);
+    direction.normalize();
+
+    const newPos = camera.position.clone().addScaledVector(direction, speed * delta);
+    newPos.y = 1.7;
+
+    // Check collision separately on each axis
+    const testX = new THREE.Vector3(newPos.x, 1.7, camera.position.z);
+    const testZ = new THREE.Vector3(camera.position.x, 1.7, newPos.z);
+
+    if (!collides(testX)) camera.position.x = newPos.x;
+    if (!collides(testZ)) camera.position.z = newPos.z;
+  }
+
+  // Animate particles
+  const pos = particleGeo.attributes.position;
+  for (let i = 0; i < particleCount; i++) {
+    pos.array[i * 3 + 1] += pSpeeds[i] * delta * 0.3;
+    if (pos.array[i * 3 + 1] > 9.5) pos.array[i * 3 + 1] = 0.5;
+    // Gentle sway
+    pos.array[i * 3] += Math.sin(clock.elapsedTime * 0.3 + i) * delta * 0.05;
+  }
+  pos.needsUpdate = true;
+
+  // Animate orb
+  orb.position.y = 6.5 + Math.sin(clock.elapsedTime * 1.5) * 0.2;
+  orb.rotation.y += delta * 0.5;
+
+  // Animate cabinet screen glow strips
+  for (let i = 0; i < cabinetStrips.length; i++) {
+    cabinetStrips[i].material.emissiveIntensity = 0.5 + Math.sin(clock.elapsedTime * 2 + i * 0.5) * 0.3;
+  }
+
+  // Update systems
+  updateHighlight();
+  updateZone();
+  drawMinimap();
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+// ============================================================
+//  RESIZE
+// ============================================================
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+<!-- MASCOM Conglomerate Nav -->
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
+<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
+<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
+<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
+<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
+<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
+<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
+<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
+<span style="flex:1"></span>
+<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
+</div>
+<!-- HelmCorp Analytics -->
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<!-- VentureForge:collated -->
 </body>
 </html>
