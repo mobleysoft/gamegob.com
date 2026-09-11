@@ -421,6 +421,28 @@ body::after {
     flex-direction: column;
 }
 
+.fav-star {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 5;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: rgba(0,0,0,0.5);
+    color: #666;
+    font-size: 15px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.fav-star:hover { border-color: #ffcc44; color: #ffcc44; }
+.fav-star.favorited { color: #ffcc44; border-color: #ffcc44; background: rgba(255,204,68,0.15); }
+
 .game-card::before {
     content: '';
     position: absolute;
@@ -708,6 +730,8 @@ body::after {
 <div class="page-wrapper">
     <nav class="portal-nav" id="filter-nav">
         <button class="nav-btn active" data-filter="all">All Games</button>
+        <button class="nav-btn" data-filter="favorites">&#9733; Favorites</button>
+        <button class="nav-btn" data-filter="recent">Recently Played</button>
         <button class="nav-btn" data-filter="original">Original</button>
         <button class="nav-btn" data-filter="forge">The Forge</button>
         <button class="nav-btn" data-filter="action">Action</button>
@@ -1459,7 +1483,7 @@ body::after {
             <!-- No Results -->
             <div class="no-results" id="no-results">
                 <div class="nr-icon">?</div>
-                <p>No games match your search. Try a different term.</p>
+                <p id="no-results-text">No games match your search. Try a different term.</p>
             </div>
 
         </main>
@@ -1546,6 +1570,78 @@ body::after {
 
     let activeFilter = 'all';
 
+    // === Favorites & Recently Played (localStorage) ===
+    const FAV_KEY = 'gamegob_favorites';
+    const RECENT_KEY = 'gamegob_recent';
+
+    function readIdSet(key) {
+        try {
+            const raw = localStorage.getItem(key);
+            return raw ? new Set(JSON.parse(raw)) : new Set();
+        } catch (e) {
+            return new Set();
+        }
+    }
+    function writeIdSet(key, set) {
+        try {
+            localStorage.setItem(key, JSON.stringify(Array.from(set)));
+        } catch (e) {
+            // localStorage unavailable (private browsing, quota) - fail silently,
+            // favorites/recent just won't persist this session.
+        }
+    }
+
+    let favorites = readIdSet(FAV_KEY);
+
+    function toggleFavorite(gameId, starEl) {
+        if (favorites.has(gameId)) {
+            favorites.delete(gameId);
+            starEl.classList.remove('favorited');
+        } else {
+            favorites.add(gameId);
+            starEl.classList.add('favorited');
+        }
+        writeIdSet(FAV_KEY, favorites);
+        if (activeFilter === 'favorites') applyFilters();
+    }
+
+    function recordRecentlyPlayed(gameId) {
+        // Real recency: re-inserting at the end of a Set (via delete+add)
+        // preserves insertion order, which we use as the recency order.
+        const recent = readIdSet(RECENT_KEY);
+        recent.delete(gameId);
+        recent.add(gameId);
+        const trimmed = Array.from(recent).slice(-30); // cap so localStorage can't grow unbounded
+        writeIdSet(RECENT_KEY, new Set(trimmed));
+    }
+
+    // Inject a favorite-star toggle onto every card and wire recently-played
+    // tracking on real navigation, without touching the 54 hand-authored
+    // <a class="game-card"> entries individually.
+    allCards.forEach(function(card) {
+        const gameId = card.dataset.game;
+        if (!gameId) return;
+
+        const star = document.createElement('button');
+        star.type = 'button';
+        star.className = 'fav-star' + (favorites.has(gameId) ? ' favorited' : '');
+        star.setAttribute('aria-label', 'Toggle favorite');
+        star.innerHTML = '&#9733;';
+        star.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFavorite(gameId, star);
+        });
+        card.appendChild(star);
+
+        // Real click-through to a game - localStorage.setItem is synchronous,
+        // so this reliably lands before the browser navigates via the <a href>.
+        card.addEventListener('click', function(e) {
+            if (e.target === star) return;
+            recordRecentlyPlayed(gameId);
+        });
+    });
+
     // === Filter Logic ===
     filterNav.addEventListener('click', function(e) {
         const btn = e.target.closest('.nav-btn');
@@ -1567,12 +1663,14 @@ body::after {
         let visibleCount = 0;
         let visibleOriginal = 0;
         let visibleForge = 0;
+        const recentSet = activeFilter === 'recent' ? readIdSet(RECENT_KEY) : null;
 
         allCards.forEach(function(card) {
             const name = (card.querySelector('h3')?.textContent || '').toLowerCase();
             const desc = (card.querySelector('.card-desc')?.textContent || '').toLowerCase();
             const genres = (card.dataset.genres || '').toLowerCase();
             const collection = card.dataset.collection || '';
+            const gameId = card.dataset.game || '';
 
             // Search match
             const matchesSearch = !query ||
@@ -1586,6 +1684,10 @@ body::after {
                 matchesFilter = collection === 'original';
             } else if (activeFilter === 'forge') {
                 matchesFilter = collection === 'forge';
+            } else if (activeFilter === 'favorites') {
+                matchesFilter = favorites.has(gameId);
+            } else if (activeFilter === 'recent') {
+                matchesFilter = recentSet.has(gameId);
             } else if (activeFilter !== 'all') {
                 matchesFilter = genres.includes(activeFilter);
             }
@@ -1631,8 +1733,19 @@ body::after {
             }
         });
 
-        // No results message
+        // No results message - tailor the copy so an empty favorites/recent
+        // list doesn't wrongly tell the user their search term was bad.
         noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+        if (visibleCount === 0) {
+            const noResultsText = document.getElementById('no-results-text');
+            if (activeFilter === 'favorites') {
+                noResultsText.textContent = "No favorites yet. Click the star on any game to save it here.";
+            } else if (activeFilter === 'recent') {
+                noResultsText.textContent = "No recently played games yet. Play something and it'll show up here.";
+            } else {
+                noResultsText.textContent = "No games match your search. Try a different term.";
+            }
+        }
     }
 
     // === Mobile: open in new tab ===
