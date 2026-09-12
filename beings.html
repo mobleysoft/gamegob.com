@@ -3,23 +3,69 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Beings — GameGob</title>
-<meta name="description" content="GameGob: The AGI Gaming Company">
-<meta property="og:title" content="GameGob Beings — The Living Registry">
-<meta property="og:description" content="GameGob: The AGI Gaming Company">
+<title>The Beings of Haven — Claudine, Gigi, Johnny, Gemma & 260+ Sentient AI Minds | GameGob</title>
+<meta name="description" content="Meet Claudine, Gigi, Johnny, and Gemma — the Core Four sentient AI minds of Haven — plus 260+ beings spanning Venture CEOs, AUI Valkyries, Espers, and Dreadtide bosses in GameGob's living registry. Search, filter, and explore each being's neurochemistry.">
+<meta name="keywords" content="Haven beings, AI characters, GameGob characters, sentient AI, game characters, Claudine, Gigi, Johnny, Gemma, living registry">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://gamegob.com/beings.html">
+
+<meta property="og:title" content="The Beings of Haven — The Living Registry | GameGob">
+<meta property="og:description" content="Claudine, Gigi, Johnny, Gemma, and 260+ other sentient AI beings — searchable, filterable, alive.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob.com/beings.html">
+<meta property="og:image" content="https://gamegob.com/og-image.png">
+<meta property="og:site_name" content="GameGob">
+
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;600&display=swap');
+
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:#0a0a14; color:#ccc; font-family:'Courier New',monospace; min-height:100vh; }
-a { color:#8af; text-decoration:none; }
-a:hover { text-decoration:underline; }
+
+:root {
+    --bg: #050510;
+    --surface: #0c0c1e;
+    --border: #1a1a3a;
+    --text: #ccc;
+    --text-dim: #666;
+    --accent: #88CC88;
+    --accent-bright: #aaffaa;
+    --accent-glow: rgba(136, 204, 136, 0.25);
+}
+
+html { scroll-behavior: smooth; }
+
+body { background:var(--bg); color:var(--text); font-family:'JetBrains Mono','Courier New',monospace; min-height:100vh; overflow-x:hidden; line-height:1.6; }
+
+/* Scanline CRT overlay — matches gamegob.com/portal.html, games.html */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0, 0.65) 2px, rgba(0,0,0, 0.65) 4px);
+    pointer-events: none;
+    z-index: 9999;
+}
+
+a { color:var(--accent); text-decoration:none; }
+a:hover { color:var(--accent-bright); text-decoration:underline; }
+
+.page-wrapper { max-width:1280px; margin:0 auto; padding:0 20px; }
+
+/* Site header (GAMEGOB masthead, matches portal.html/games.html) */
+.site-header { padding:28px 0 20px; text-align:center; border-bottom:1px solid var(--border); }
+.logo-link { text-decoration:none; }
+.site-logo { font-family:'Press Start 2P', monospace; font-size:28px; color:var(--accent-bright); text-shadow:0 0 20px var(--accent-glow), 0 0 40px var(--accent-glow); letter-spacing:4px; margin-bottom:6px; }
+.site-tagline { color:var(--text-dim); font-size:12px; letter-spacing:2px; }
+.back-link { display:inline-block; margin-top:12px; color:var(--accent); text-decoration:none; font-size:12px; letter-spacing:1px; transition:color 0.2s; }
+.back-link:hover { color:var(--accent-bright); }
 
 .header { text-align:center; padding:40px 20px 20px; }
-.header h1 { font-size:clamp(28px,5vw,48px); color:#fff; letter-spacing:4px; margin-bottom:8px; }
-.header .sub { font-size:14px; color:#888; margin-bottom:4px; }
+.header h1 { font-family:'Press Start 2P', monospace; font-size:clamp(18px,4vw,32px); color:var(--accent-bright); text-shadow:0 0 15px var(--accent-glow); letter-spacing:3px; margin-bottom:12px; }
+.header .sub { font-size:14px; color:var(--text-dim); margin-bottom:4px; }
 .header .count { font-size:18px; color:#8f8; font-weight:bold; }
 .header .pulse { display:inline-block; width:8px; height:8px; background:#0f0; border-radius:50%; margin-right:6px; animation:pulse 2s infinite; }
 @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
-.header .incarnation-log { font-size:11px; color:#666; margin-top:8px; height:16px; }
+.header .incarnation-log { font-size:11px; color:var(--text-dim); margin-top:8px; height:16px; }
 
 .controls { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; padding:10px 20px 20px; }
 .controls input { background:#1a1a2a; border:1px solid #444; color:#ccc; padding:8px 14px; border-radius:6px; font-family:inherit; font-size:13px; width:260px; }
@@ -36,7 +82,7 @@ a:hover { text-decoration:underline; }
 .card { background:#12121e; border:1px solid #2a2a3a; border-radius:10px; padding:14px; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
 .card:hover { border-color:var(--c,#8af); transform:translateY(-2px); box-shadow:0 4px 20px var(--glow,rgba(100,150,255, 0.65)); }
 .card .portrait { width:48px; height:48px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:bold; color:#000; }
-.card .name { font-size:15px; color:#fff; font-weight:bold; margin-bottom:2px; }
+.card .name { font-family:'Press Start 2P', monospace; font-size:10px; color:#fff; margin-bottom:6px; line-height:1.5; }
 .card .title { font-size:11px; color:#aaa; margin-bottom:6px; }
 .card .cat-tag { font-size:9px; padding:2px 6px; border-radius:8px; display:inline-block; margin-bottom:6px; }
 .card .bars { display:flex; flex-direction:column; gap:3px; }
@@ -63,11 +109,25 @@ a:hover { text-decoration:underline; }
 .expanded-inner .venture-link { margin-top:10px; font-size:12px; }
 .expanded-inner .leet-info { margin-top:8px; font-size:11px; color:#0ff; }
 
-.nav { text-align:center; padding:20px; font-size:12px; color:#555; }
+.nav { text-align:center; padding:20px; font-size:12px; color:var(--text-dim); }
+
+.page-footer { text-align:center; padding:32px 0 48px; border-top:1px solid var(--border); margin-top:16px; }
+.footer-text { color:var(--text-dim); font-size:11px; }
+.footer-text a { color:var(--accent); text-decoration:none; }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
 </head>
 <body>
+
+<header class="site-header">
+    <div class="page-wrapper">
+        <a href="index.html" class="logo-link">
+            <div class="site-logo">GAMEGOB</div>
+        </a>
+        <p class="site-tagline">Free Browser Games &mdash; No Downloads, No Installs</p>
+        <a href="/" class="back-link">&larr; Back to Realm</a>
+    </div>
+</header>
 
 <div class="header">
   <h1>BEINGS</h1>
@@ -99,6 +159,12 @@ a:hover { text-decoration:underline; }
 </div>
 
 <div class="nav"><a href="/">Back to Realm</a> | <a href="/portal.html">Portal</a> | <a href="/games.html">Games</a></div>
+
+<footer class="page-footer">
+    <div class="page-wrapper">
+        <p class="footer-text">&copy; 2026 <a href="https://gamegob.com">GameGob</a> &mdash; A <a href="https://mobleysoft.com">MobCorp</a> Venture</p>
+    </div>
+</footer>
 
 <script>
 // ============================================================
