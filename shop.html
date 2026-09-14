@@ -3,9 +3,11 @@
 <head>
 <meta property="og:title" content="Q Shop — GameGob">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://gamegob">
+<meta property="og:url" content="https://gamegob.com/shop.html">
+<meta property="og:image" content="https://gamegob.com/og-image.png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="/favicon.png">
 <title>Q Shop — GameGob</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -50,7 +52,7 @@ h1{color:#6ac8e8;font-size:1.6rem;margin-bottom:0.25rem}
 <body>
 <a href="/" style="font-size:0.8rem;color:#4a7090;display:block;margin-bottom:1.5rem">← Back to GameGob</a>
 <h1>Q Shop</h1>
-<p class="sub">Spend Q Credits to unlock beings, cosmetics, and power-ups.</p>
+<p class="sub">Spend Q Credits to unlock beings, cosmetics, and power-ups. New players get a 10Q welcome grant; everyone can claim a free daily bonus. Q Credits are never purchased with real money.</p>
 
 <div id="player-field">
   <input type="text" id="pid" placeholder="Your Player ID" autocomplete="off">
@@ -62,7 +64,7 @@ h1{color:#6ac8e8;font-size:1.6rem;margin-bottom:0.25rem}
     <div class="q-amt" id="balance-amt">0</div>
     <div class="q-label">Q Credits</div>
   </div>
-  <a class="buy-link" href="/credits">Buy Credits</a>
+  <button class="buy-link" id="earn-btn" onclick="claimDaily()">Claim Daily Q</button>
 </div>
 
 <div id="shop-root"></div>
@@ -129,6 +131,30 @@ async function refresh() {
     render();
   } catch(e) {
     toast('Failed to load player data', true);
+  }
+}
+
+async function claimDaily() {
+  if (!playerId) { toast('Enter your Player ID first', true); return; }
+  try {
+    const res = await fetch(`${API}/api/credits/earn`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ player_id: playerId }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      balance = data.new_balance;
+      document.getElementById('balance-amt').textContent = balance;
+      toast(`+${data.awarded}Q daily bonus claimed!`);
+      render();
+    } else if (data.error === 'already_claimed') {
+      toast('Already claimed today — come back tomorrow', true);
+    } else {
+      toast(data.error || 'Claim failed', true);
+    }
+  } catch(e) {
+    toast('Claim failed', true);
   }
 }
 
