@@ -205,7 +205,7 @@ button:hover {
             </div>
             <div class="status-card">
                 <div class="label">Active Games</div>
-                <div class="value">13</div>
+                <div class="value">57</div>
             </div>
             <div class="status-card">
                 <div class="label">Deployment</div>
@@ -228,16 +228,16 @@ button:hover {
             <li>
                 <div>
                     <span class="status-indicator status-loading" id="status-api"></span>
-                    API Worker
+                    API Worker (Q Credits)
                 </div>
-                <div class="url">gamegob.com</div>
+                <div class="url">gamegob-api.johnmobley99.workers.dev</div>
             </li>
             <li>
                 <div>
                     <span class="status-indicator status-loading" id="status-health"></span>
                     Health Check
                 </div>
-                <div class="url">/api/health</div>
+                <div class="url">gamegob-api.johnmobley99.workers.dev/api/health</div>
             </li>
         </ul>
     </div>
@@ -330,7 +330,7 @@ async function checkStatus() {
 
     // Check API health
     try {
-        const apiRes = await fetch('https://gamegob.com/api/health');
+        const apiRes = await fetch('https://gamegob-api.johnmobley99.workers.dev/api/health');
         const healthData = await apiRes.json();
 
         const latency = Date.now() - startTime;
