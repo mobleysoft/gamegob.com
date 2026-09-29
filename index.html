@@ -78,7 +78,11 @@ body {
     line-height: 1.6;
 }
 
-/* Scanline CRT overlay */
+/* Scanline CRT overlay - kept subtle on purpose: at 0.65 alpha this
+   covered the ENTIRE page (z-index 9999, fixed, pointer-events:none) in
+   2px-on/2px-off black stripes, which read as a hazy filter over every
+   line of text on the site, not just a retro accent. Dropped to 0.06 so
+   the CRT texture is still visible without fighting readability. */
 body::after {
     content: '';
     position: fixed;
@@ -87,8 +91,8 @@ body::after {
         0deg,
         transparent,
         transparent 2px,
-        rgba(0,0,0, 0.65) 2px,
-        rgba(0,0,0, 0.65) 4px
+        rgba(0,0,0, 0.06) 2px,
+        rgba(0,0,0, 0.06) 4px
     );
     pointer-events: none;
     z-index: 9999;
@@ -114,7 +118,11 @@ body::after {
     align-items: center;
     gap: 16px;
     padding: 14px 24px;
-    background: linear-gradient(135deg, rgba(136,204,136, 0.65), rgba(204,136,255, 0.65));
+    /* Was rgba(...,0.65) light green-to-purple over --text-dim (#555570)
+       body copy - dark gray text on a light pastel gradient, unreadable.
+       Solid dark surface + the same gradient as a low-alpha wash keeps
+       the color identity without breaking contrast. */
+    background: linear-gradient(135deg, rgba(136,204,136, 0.14), rgba(204,136,255, 0.14)), var(--surface);
     border: 1px solid var(--border);
     border-radius: 8px;
     text-decoration: none;
