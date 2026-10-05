@@ -1466,6 +1466,9 @@ body.text-small .move-entry { font-size: 10px; }
     z-index: 15;
     display: none;
 }
+
+/* phone (2026-10-05): the touch pad covered the mode-select cards; it only shows during a match */
+body:has(#modeSelectScreen.visible) .mctl-overlay, body:has(#settingsScreen.visible) .mctl-overlay { display: none !important; }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
 <link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100506">
