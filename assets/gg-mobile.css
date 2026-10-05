@@ -76,6 +76,9 @@ html.gg-native:not([data-gg-game]) body { padding-top: var(--gg-safe-top) !impor
     #leaderboardPanel, #leaderboardOverlay, #statsScreen, #myStatsScreen, #shopPanel, #scorePanel, #pauseMenu,
     #deathScreen, #splashScreen, #tutorialOverlay, #augmentPicker, #challengeWin) { z-index: 10000 !important; }
   html[data-gg-game] :is(#nameEntryModal, #sharePanel, #sharePanelInner, #scoreSubmitBox, #settingsScreen, #lbNameEntry) { z-index: 10010 !important; }
+  /* moba's tutorial dimmer goes "solid" on the "move your champion" step,
+     which on a phone also swallowed the pad the step asks you to use. */
+  html[data-gg-game] #tutorialDimmer { pointer-events: none !important; }
 }
 
 /* 8. Shared touch pad: respect the home-indicator / notch insets. */

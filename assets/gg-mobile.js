@@ -131,6 +131,49 @@
     try { if (document.fonts) { document.fonts.load("12px 'JetBrains Mono'"); document.fonts.load("bold 12px 'JetBrains Mono'"); } } catch (e) {}
   })();
 
+  // ---- 4c. Touch copy (2026-10-05) -------------------------------------------
+  // 35 games tell the player to "Press ENTER", use "Arrow Keys / WASD" or
+  // "Click to Start" in canvas text and overlays. On a coarse pointer those
+  // phrases are rewritten at draw time to their touch equivalents. Only
+  // phrases with a known-true touch counterpart are touched: an "or Tap"
+  // alternative already in the string, click->tap, and the direction keys
+  // (every pad-driven game maps its pad to those keys).
+  var COPY = [
+    [/Press (?:ENTER|Enter|SPACE|Space|Any Key|any key|START|Start)(?:\s*\/\s*\w+)?,? or Tap to (\w+)/g, 'Tap to $1'],
+    [/Press (?:ENTER|Enter|SPACE|Space|ESC|Esc|P)(?:\s*\/\s*\w+)? or Tap to (\w+)/g, 'Tap to $1'],
+    [/Press Any Key \/ Tap to (\w+)/g, 'Tap to $1'],
+    [/Click to Start/g, 'Tap to Start'], [/Click or Tap/gi, 'Tap'], [/Click a card/g, 'Tap a card'], [/Click anywhere/gi, 'Tap anywhere'],
+    [/Arrow Keys \/ WASD/g, 'D-pad'], [/ARROW KEYS \/ WASD/g, 'D-PAD'], [/ARROWS\s*\/\s*WASD/g, 'D-PAD'], [/WASD\s*\/\s*Arrows/gi, 'D-pad'], [/WASD\/ARROWS/g, 'D-PAD'],
+    [/\[Arrow Keys\]/g, '[D-pad]'], [/Arrow Keys/g, 'D-pad'], [/ARROW KEYS/g, 'D-PAD'],
+  ];
+  function fixCopy(t) {
+    if (typeof t !== 'string' || t.length < 6) return t;
+    var hit = fixCopy.cache.get(t);
+    if (hit !== undefined) return hit;
+    var out = t;
+    for (var i = 0; i < COPY.length; i++) out = out.replace(COPY[i][0], COPY[i][1]);
+    if (fixCopy.cache.size > 2000) fixCopy.cache.clear();
+    fixCopy.cache.set(t, out);
+    return out;
+  }
+  fixCopy.cache = new Map();
+  if (coarse && window.CanvasRenderingContext2D) {
+    ['fillText', 'strokeText', 'measureText'].forEach(function (name) {
+      var orig = CanvasRenderingContext2D.prototype[name];
+      if (!orig) return;
+      CanvasRenderingContext2D.prototype[name] = function (t) { arguments[0] = fixCopy(t); return orig.apply(this, arguments); };
+    });
+    var fixDom = function () {
+      var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      var n; while ((n = w.nextNode())) {
+        var pn = n.parentNode && n.parentNode.nodeName;
+        if (pn === 'SCRIPT' || pn === 'STYLE' || pn === 'TEXTAREA') continue;
+        if (n.nodeValue && n.nodeValue.length > 5 && /Press |Arrow|WASD|Click /.test(n.nodeValue)) { var v = fixCopy(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; }
+      }
+    };
+    document.addEventListener('DOMContentLoaded', function () { fixDom(); setTimeout(fixDom, 1500); });
+  }
+
   // ---- 5. Fit: fixed-size canvas games -------------------------------------
   // <html data-gg-fit="#selector [WxH]"> scales that element (a canvas, or a
   // wrapper holding several) to fit the viewport with a CSS transform, and

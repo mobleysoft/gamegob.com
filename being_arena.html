@@ -29,11 +29,12 @@ canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
 #load-bar-outer{width:300px;height:16px;border:2px solid #88CC88;border-radius:2px;overflow:hidden}
 #load-bar-inner{height:100%;width:0%;background:linear-gradient(90deg,#88CC88,#CC88FF);transition:width 0.15s}
 #load-text{font-size:11px;margin-top:12px;color:#666}
-@media(pointer:coarse){#touch-controls{display:flex!important}}
+@media(pointer:coarse){#touch-controls{display:flex!important}
+@media (max-width:430px){.touch-btn{width:44px;height:44px;font-size:7px}.touch-group{gap:5px}#touch-controls{padding:0 6px}} /* the right-hand group ran 44px past a 390px phone */}
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
-<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100505">
-<script src="/assets/gg-mobile.js?v=2026100505"></script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100506">
+<script src="/assets/gg-mobile.js?v=2026100506"></script>
 </head>
 <body>
 <canvas id="game"></canvas>
