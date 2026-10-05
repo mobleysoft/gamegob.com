@@ -1412,39 +1412,33 @@ const drawHUD = () => {
 const drawTouchControls = () => {
   if (!('ontouchstart' in window)) return;
 
-  ctx.globalAlpha = 0.3;
+  // shared GameGob pad look: dark glass, gold line
+  ctx.globalAlpha = 1;
   for (const area of touchAreas) {
-    ctx.fillStyle = area.id === 'jump' ? COL.gold : COL.white;
-    ctx.strokeStyle = area.id === 'jump' ? COL.gold : COL.white;
-    ctx.lineWidth = 2;
+    ctx.fillStyle = 'rgba(14,16,24,0.62)';
+    ctx.strokeStyle = 'rgba(240,184,0,0.42)';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
 
     if (area.id === 'jump') {
       ctx.arc(area.x + area.w/2, area.y + area.h/2, area.w/2, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = 0.15;
       ctx.fill();
-      ctx.globalAlpha = 0.3;
-      // A label
-      ctx.fillStyle = COL.gold;
-      ctx.font = 'bold 20px monospace';
+      ctx.strokeStyle = '#f0b800';
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,236,170,0.9)';
+      ctx.font = 'bold 13px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.globalAlpha = 0.5;
-      ctx.fillText('A', area.x + area.w/2, area.y + area.h/2);
-      ctx.globalAlpha = 0.3;
+      ctx.fillText('JUMP', area.x + area.w/2, area.y + area.h/2);
     } else {
-      ctx.strokeRect(area.x, area.y, area.w, area.h);
-      ctx.globalAlpha = 0.1;
       ctx.fillRect(area.x, area.y, area.w, area.h);
-      ctx.globalAlpha = 0.5;
-      ctx.fillStyle = COL.white;
+      ctx.strokeRect(area.x, area.y, area.w, area.h);
+      ctx.fillStyle = 'rgba(255,236,170,0.9)';
       ctx.font = 'bold 20px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const arrow = area.id === 'left' ? '\u25C0' : '\u25B6';
       ctx.fillText(arrow, area.x + area.w/2, area.y + area.h/2);
-      ctx.globalAlpha = 0.3;
     }
   }
   ctx.globalAlpha = 1;

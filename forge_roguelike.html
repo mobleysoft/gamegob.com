@@ -965,9 +965,9 @@ const setupTouchButtons = () => {
   touchDpad = { x: dpadX, y: dpadY, r: DPAD_RADIUS };
 
   touchButtons = [
-    { x: cw - 70, y: ch - 130, r: BTN_RADIUS, label: 'A', key: 'e' },
-    { x: cw - 130, y: ch - 80, r: BTN_RADIUS, label: 'B', key: 'i' },
-    { x: cw - 70, y: ch - 60, r: BTN_RADIUS, label: 'W', key: ' ' },
+    { x: cw - 70, y: ch - 130, r: BTN_RADIUS, label: 'USE', key: 'e' },
+    { x: cw - 130, y: ch - 80, r: BTN_RADIUS, label: 'INV', key: 'i' },
+    { x: cw - 70, y: ch - 60, r: BTN_RADIUS, label: 'WAIT', key: ' ' },
   ];
 };
 
@@ -1414,7 +1414,7 @@ const startNewRun = () => {
   state = STATE.PLAY;
   generateLevel(1);
   addMessage('Welcome to the Crypts of Chaos!');
-  addMessage('WASD/Arrows to move, I=inventory, E=interact, ?=help');
+  addMessage(isMobile ? 'D-pad to move, USE=interact, INV=inventory' : 'WASD/Arrows to move, I=inventory, E=interact, ?=help');
 };
 
 // --- RESIZE ---
@@ -1628,16 +1628,17 @@ const drawMinimap = () => {
 const drawTouchControls = () => {
   if (!isMobile) return;
 
-  // D-pad
-  ctx.globalAlpha = 0.3;
-  ctx.fillStyle = '#333355';
+  // D-pad (shared GameGob pad look: dark glass, gold line)
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 1.5;
+  ctx.fillStyle = 'rgba(14,16,24,0.62)';
+  ctx.strokeStyle = 'rgba(240,184,0,0.42)';
   ctx.beginPath();
   ctx.arc(touchDpad.x, touchDpad.y, DPAD_RADIUS, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.fill(); ctx.stroke();
 
   // D-pad arrows
-  ctx.globalAlpha = 0.6;
-  ctx.fillStyle = C.white;
+  ctx.fillStyle = 'rgba(255,236,170,0.9)';
   ctx.font = '20px monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -1648,14 +1649,13 @@ const drawTouchControls = () => {
 
   // Buttons
   for (const btn of touchButtons) {
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = '#335555';
+    ctx.fillStyle = 'rgba(14,16,24,0.62)';
+    ctx.strokeStyle = 'rgba(240,184,0,0.42)';
     ctx.beginPath();
     ctx.arc(btn.x, btn.y, btn.r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 0.7;
-    ctx.fillStyle = C.gold;
-    ctx.font = '14px monospace';
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,236,170,0.9)';
+    ctx.font = 'bold ' + (btn.label.length > 2 ? 10 : 14) + 'px monospace';
     ctx.fillText(btn.label, btn.x, btn.y);
   }
 

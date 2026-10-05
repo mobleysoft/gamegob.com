@@ -192,13 +192,13 @@ document.addEventListener('keyup', (e) => {
 // Touch controls
 const touches = {};
 const touchButtons = [
-  { id: 'left', x: 20, y: H - 80, w: 45, h: 45 },
-  { id: 'right', x: 110, y: H - 80, w: 45, h: 45 },
-  { id: 'up', x: 65, y: H - 125, w: 45, h: 45 },
-  { id: 'down', x: 65, y: H - 35, w: 45, h: 45 },
-  { id: 'punch', x: W - 150, y: H - 100, w: 50, h: 50, label: 'P', col: COL.red },
-  { id: 'kick', x: W - 85, y: H - 80, w: 50, h: 50, label: 'K', col: COL.blue },
-  { id: 'special', x: W - 120, y: H - 155, w: 50, h: 50, label: 'S', col: COL.gold },
+  { id: 'left', x: 20, y: H - 100, w: 45, h: 45 },
+  { id: 'right', x: 110, y: H - 100, w: 45, h: 45 },
+  { id: 'up', x: 65, y: H - 145, w: 45, h: 45 },
+  { id: 'down', x: 65, y: H - 55, w: 45, h: 45 },   // was H-35: ran 10px off the bottom
+  { id: 'punch', x: W - 150, y: H - 100, w: 50, h: 50, label: 'PCH', col: COL.red },
+  { id: 'kick', x: W - 85, y: H - 80, w: 50, h: 50, label: 'KCK', col: COL.blue },
+  { id: 'special', x: W - 120, y: H - 155, w: 50, h: 50, label: 'SPC', col: COL.gold },
   { id: 'start', x: W / 2 - 30, y: H - 40, w: 60, h: 30, label: 'START', col: COL.gray }
 ];
 
@@ -1686,30 +1686,32 @@ const drawTouchControls = () => {
   // Only draw on touch devices (or always for mobile layout)
   if (!('ontouchstart' in window)) return;
 
-  ctx.globalAlpha = 0.35;
+  // shared GameGob pad look: dark glass, gold line, gold when pressed
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 1.5;
   touchButtons.forEach(b => {
     const pressed = touches[b.id];
-    ctx.fillStyle = pressed ? (b.col || COL.gold) : (b.col || COL.gray);
-    ctx.globalAlpha = pressed ? 0.5 : 0.25;
+    ctx.fillStyle = pressed ? 'rgba(240,184,0,0.42)' : 'rgba(14,16,24,0.62)';
+    ctx.strokeStyle = pressed ? '#f0b800' : 'rgba(240,184,0,0.42)';
 
     if (b.id === 'start') {
-      ctx.fillRect(b.x, b.y, b.w, b.h);
-      ctx.fillStyle = COL.white;
-      ctx.font = '8px monospace';
+      ctx.fillRect(b.x, b.y, b.w, b.h); ctx.strokeRect(b.x, b.y, b.w, b.h);
+      ctx.fillStyle = 'rgba(255,236,170,0.9)';
+      ctx.font = 'bold 8px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 3);
     } else if (['punch', 'kick', 'special'].includes(b.id)) {
       ctx.beginPath();
       ctx.arc(b.x + b.w / 2, b.y + b.h / 2, b.w / 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = COL.white;
-      ctx.font = 'bold 14px monospace';
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = pressed ? '#0b0c10' : 'rgba(255,236,170,0.9)';
+      ctx.font = 'bold 11px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 5);
+      ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 4);
     } else {
       // D-pad
-      ctx.fillRect(b.x, b.y, b.w, b.h);
-      ctx.fillStyle = COL.white;
+      ctx.fillRect(b.x, b.y, b.w, b.h); ctx.strokeRect(b.x, b.y, b.w, b.h);
+      ctx.fillStyle = pressed ? '#0b0c10' : 'rgba(255,236,170,0.9)';
       ctx.font = '16px monospace';
       ctx.textAlign = 'center';
       const arrows = { left: '◄', right: '►', up: '▲', down: '▼' };
