@@ -55,7 +55,7 @@ const MAP_H = 30;
 const COLORS = {
   bg: '#0a0a0f', gold: '#f0b800', green: '#00ff88', red: '#ff3344',
   blue: '#4488ff', purple: '#bb44ff', white: '#eeeeff', grey: '#555566',
-  darkgrey: '#222233', wall: '#1a1a2f', floor: '#111122', door: '#886622',
+  darkgrey: '#222233', wall: '#2a2a4a', floor: '#1b1b36', door: '#886622',   // lifted 2026-10-05: #1a1a2f/#111122 read as black on a phone
   npcColor: '#44ddff', bossRed: '#ff2200', loot: '#ffdd00',
 };
 
@@ -153,13 +153,18 @@ let titlePulse = 0;
 let runStats = { kills: 0, gold: 0, floorsCleared: 0 };
 
 // --- Resize ---
+// The canvas is a viewport the camera centres on the player (render() already
+// translates by camera), not the whole 40x30 map: drawing the full map and
+// shrinking it to the screen left 13px tiles on a phone. Tiles now land at
+// ~34 CSS px everywhere; the viewport is capped at the map size on big screens.
+const VIEW_TILE_PX = 34;
 const resize = () => {
-  const s = Math.min(window.innerWidth, window.innerHeight);
-  canvas.width = MAP_W * TILE;
-  canvas.height = MAP_H * TILE;
-  const scale = Math.min(window.innerWidth / canvas.width, window.innerHeight / canvas.height);
-  canvas.style.width = `${canvas.width * scale}px`;
-  canvas.style.height = `${canvas.height * scale}px`;
+  const scale = VIEW_TILE_PX / TILE;
+  canvas.width = Math.min(MAP_W * TILE, Math.ceil(window.innerWidth / scale));
+  canvas.height = Math.min(MAP_H * TILE, Math.ceil(window.innerHeight / scale));
+  const fit = Math.min(scale, window.innerWidth / canvas.width, window.innerHeight / canvas.height);
+  canvas.style.width = `${canvas.width * fit}px`;
+  canvas.style.height = `${canvas.height * fit}px`;
 };
 window.addEventListener('resize', resize);
 resize();
@@ -1331,14 +1336,14 @@ const renderMap = () => {
         ctx.fillStyle = COLORS.wall;
         ctx.fillRect(px, py, TILE, TILE);
         // Wall detail
-        ctx.fillStyle = '#252540';
+        ctx.fillStyle = '#3a3a62';
         ctx.fillRect(px + 1, py + 1, TILE - 2, 2);
       } else if (cell === CELL.FLOOR) {
         ctx.fillStyle = COLORS.floor;
         ctx.fillRect(px, py, TILE, TILE);
         // Floor detail
         if ((x + y) % 7 === 0) {
-          ctx.fillStyle = '#161630';
+          ctx.fillStyle = '#2a2a52';
           ctx.fillRect(px + 8, py + 8, 3, 3);
         }
       } else if (cell === CELL.DOOR) {
@@ -1546,9 +1551,10 @@ const renderHUD = () => {
     const cdMax = abilDef.cooldown * (1 - (player.cdReduction || 0));
     const cdRatio = Math.max(0, player.abilityCooldown / cdMax);
     ctx.fillStyle = cdRatio > 0 ? '#555' : COLORS.gold;
-    ctx.textAlign = 'center';
+    ctx.textAlign = 'left';
     ctx.font = '10px monospace';
-    ctx.fillText(`[SPACE] ${abilDef.name} ${cdRatio > 0 ? Math.ceil(player.abilityCooldown * 10) / 10 + 's' : 'READY'}`, w / 2, 16);
+    const abilKey = ('ontouchstart' in window) ? '[ABL]' : '[SPACE]';
+    ctx.fillText(`${abilKey} ${abilDef.name} ${cdRatio > 0 ? Math.ceil(player.abilityCooldown * 10) / 10 + 's' : 'READY'}`, 170, 17);
   }
 
   // Legacy power indicator
@@ -1556,12 +1562,13 @@ const renderHUD = () => {
     ctx.fillStyle = COLORS.purple;
     ctx.font = '10px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(`Legacy Power: ${legacy.legacyPower}`, w / 2, 32);
+    ctx.textAlign = 'left';
+    ctx.fillText(`Legacy Power: ${legacy.legacyPower}`, 170, 32);
   }
 
   // Minimap
-  const mmSize = 3;
-  const mmX = w - MAP_W * mmSize - 8;
+  const mmSize = 2;
+  const mmX = 8;
   const mmY = 46;
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
   ctx.fillRect(mmX - 2, mmY - 2, MAP_W * mmSize + 4, MAP_H * mmSize + 4);
@@ -1605,18 +1612,19 @@ const renderMobileControls = () => {
   // Only show on touch devices
   if (!('ontouchstart' in window)) return;
 
-  ctx.globalAlpha = 0.3;
-
-  // D-pad (left side)
-  const dpadX = 70, dpadY = canvas.height - 100, dpadR = 40;
-  ctx.strokeStyle = COLORS.white;
-  ctx.lineWidth = 2;
+  // shared GameGob pad look: dark glass, gold line. The left two fifths are a
+  // drag joystick (starts wherever the thumb lands); this circle is its hint.
+  ctx.globalAlpha = 1;
+  const dpadX = 70, dpadY = canvas.height - 70, dpadR = 40;
+  ctx.fillStyle = 'rgba(14,16,24,0.62)';
+  ctx.strokeStyle = 'rgba(240,184,0,0.42)';
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.arc(dpadX, dpadY, dpadR, 0, Math.PI * 2);
-  ctx.stroke();
+  ctx.fill(); ctx.stroke();
 
   // Arrows
-  ctx.fillStyle = COLORS.white;
+  ctx.fillStyle = 'rgba(255,236,170,0.9)';
   ctx.font = '16px monospace';
   ctx.textAlign = 'center';
   ctx.fillText('^', dpadX, dpadY - 18);
@@ -1624,34 +1632,22 @@ const renderMobileControls = () => {
   ctx.fillText('<', dpadX - 22, dpadY + 5);
   ctx.fillText('>', dpadX + 22, dpadY + 5);
 
-  // Action buttons (right side)
-  const btnX = canvas.width - 60;
-  const btnR = 24;
-
-  // Attack
-  ctx.fillStyle = COLORS.red;
-  ctx.beginPath();
-  ctx.arc(btnX, canvas.height - 60, btnR, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#fff';
-  ctx.font = '10px monospace';
-  ctx.fillText('ATK', btnX, canvas.height - 57);
-
-  // Ability
-  ctx.fillStyle = COLORS.blue;
-  ctx.beginPath();
-  ctx.arc(btnX, canvas.height - 120, btnR, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#fff';
-  ctx.fillText('ABL', btnX, canvas.height - 117);
-
-  // Interact
-  ctx.fillStyle = COLORS.green;
-  ctx.beginPath();
-  ctx.arc(btnX, canvas.height - 180, btnR, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#fff';
-  ctx.fillText('NPC', btnX, canvas.height - 177);
+  // Action buttons (right side): hit bands are startY > 0.7 attack,
+  // 0.5-0.7 ability, 0.3-0.5 talk, so each button sits at its band's centre
+  const btnX = canvas.width - 50;
+  const btnR = 22;
+  const h = canvas.height;
+  for (const [label, cy] of [['ATK', h * 0.85], ['ABL', h * 0.6], ['NPC', h * 0.4]]) {
+    ctx.fillStyle = 'rgba(14,16,24,0.62)';
+    ctx.strokeStyle = 'rgba(240,184,0,0.42)';
+    ctx.beginPath();
+    ctx.arc(btnX, cy, btnR, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,236,170,0.9)';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, btnX, cy + 4);
+  }
 
   ctx.globalAlpha = 1;
 };

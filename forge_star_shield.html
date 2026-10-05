@@ -1315,7 +1315,7 @@ const gameOver = () => {
   save.totalKills += killsThisRun;
   save.totalCredits += credits;
   save.bestWave = Math.max(save.bestWave, wave);
-  save.bestScore = Math.max(save.bestScore, score);
+  save.bestScore = Math.max(save.bestScore, Math.floor(score));
   save._fusionCount = (save._fusionCount || 0) + fusionCountThisRun;
 
   // Check achievements
@@ -1346,6 +1346,15 @@ let touchLeft = false, touchRight = false, touchAction = false, touchAction2 = f
 let touchStartX = 0, touchStartY = 0;
 let touchMoveX = 0;
 let tapX = 0, tapY = 0, tapped = false;
+// touch-only Shop / Fuse buttons (drawn and hit-tested from the same geometry)
+const shopFuseBoxes = () => {
+  // under the HP bar (left) and the score block (right); the bottom centre is the ship's lane
+  const w = Math.min(W * 0.2, 92), h = 30, y = 44;
+  return [
+    { label: 'SHOP', x: 8, y, w, h },
+    { label: 'FUSE', x: W - 8 - w, y, w, h },
+  ];
+};
 
 const getTouchZone = (tx, ty) => {
   // Bottom left = movement, bottom right = action
@@ -1720,7 +1729,7 @@ const drawHUD = () => {
   }
 
   // Score & Credits
-  drawText(`Score: ${score}`, W - 15*SCALE, 15*SCALE, 14, COL.gold, 'right');
+  drawText(`Score: ${Math.floor(score)}`, W - 15*SCALE, 15*SCALE, 14, COL.gold, 'right');
   drawText(`Credits: ${credits}$`, W - 15*SCALE, 35*SCALE, 12, COL.gold, 'right');
   drawText(`Wave ${wave}`, W - 15*SCALE, 55*SCALE, 11, COL.dim, 'right');
 
@@ -1751,7 +1760,7 @@ const drawHUD = () => {
 
   // Controls hint
   const hintY = H - 12 * SCALE;
-  drawText('[S]hop  [F]use  [P]ause', W/2, hintY, 9, 'rgba(255,255,255, 0.65)');
+  if (!('ontouchstart' in window)) drawText('[S]hop  [F]use  [P]ause', W/2, hintY, 9, 'rgba(255,255,255,0.65)');
 };
 
 const drawPlayer = () => {
@@ -2071,7 +2080,7 @@ const drawGameOver = () => {
   drawTextOutline('GAME OVER', W/2, cy, 36, COL.red);
 
   const lines = [
-    [`Score: ${score}`, COL.gold],
+    [`Score: ${Math.floor(score)}`, COL.gold],
     [`Wave: ${wave}`, COL.cyan],
     [`Kills: ${killsThisRun}`, COL.green],
     [`Credits Earned: ${credits}$`, COL.gold],
@@ -2371,37 +2380,35 @@ const render = () => {
 
   // Touch controls overlay
   if ('ontouchstart' in window && (gameState === STATE.PLAYING || gameState === STATE.BOSS)) {
-    ctx.globalAlpha = 0.12;
-    // Left zone
-    ctx.fillStyle = COL.cyan;
-    ctx.fillRect(0, H*0.7, W*0.35, H*0.3);
-    ctx.fillStyle = COL.gold;
-    ctx.fillRect(W*0.65, H*0.7, W*0.35, H*0.3);
-    ctx.globalAlpha = 0.3;
-    drawText('◀', W*0.175, H*0.85, 24, COL.white);
-    drawText('▶', W*0.825, H*0.85, 24, COL.white);
+    // shared GameGob pad look: the steer zones are shown as two glass
+    // buttons on the gold line, not tinted thirds of the screen
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.5;
+    const zr = Math.min(W*0.09, 44);
+    for (const [zx, glyph] of [[W*0.175, '◀'], [W*0.825, '▶']]) {
+      ctx.fillStyle = 'rgba(14,16,24,0.62)';
+      ctx.strokeStyle = 'rgba(240,184,0,0.42)';
+      ctx.beginPath(); ctx.arc(zx, H*0.85, zr, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      drawText(glyph, zx, H*0.85 + 8, 22, 'rgba(255,236,170,0.9)');
+    }
 
-    // Top touch zones for shop/fuse
-    ctx.globalAlpha = 0.15;
-    ctx.fillStyle = COL.gold;
-    ctx.fillRect(0, 0, W*0.25, 35*SCALE);
-    ctx.fillStyle = COL.purple;
-    ctx.fillRect(W*0.75, 0, W*0.25, 35*SCALE);
-    ctx.globalAlpha = 0.4;
-    drawText('SHOP', W*0.125, 18*SCALE, 9, COL.gold);
-    drawText('FUSE', W*0.875, 18*SCALE, 9, COL.purple);
+    // Shop / Fuse buttons: bottom centre, where the keyboard hint sits on
+    // desktop (the old top strips were 35*SCALE = 14px tall in landscape)
+    for (const b of shopFuseBoxes()) {
+      ctx.fillStyle = 'rgba(14,16,24,0.62)';
+      ctx.strokeStyle = 'rgba(240,184,0,0.42)';
+      ctx.fillRect(b.x, b.y, b.w, b.h); ctx.strokeRect(b.x, b.y, b.w, b.h);
+      drawText(b.label, b.x + b.w/2, b.y + b.h/2 + 4, 10, 'rgba(255,236,170,0.9)');
+    }
     ctx.globalAlpha = 1;
   }
 
   // Touch for shop/fuse buttons
   if (tapped && (gameState === STATE.PLAYING || gameState === STATE.BOSS)) {
-    if (tapY < 35*SCALE) {
-      if (tapX < W*0.25) {
-        generateShop();
-        gameState = STATE.SHOP;
-      } else if (tapX > W*0.75) {
-        fuseSlotA = null; fuseSlotB = null;
-        gameState = STATE.FUSE;
+    for (const b of shopFuseBoxes()) {
+      if (tapX >= b.x && tapX <= b.x + b.w && tapY >= b.y && tapY <= b.y + b.h) {
+        if (b.label === 'SHOP') { generateShop(); gameState = STATE.SHOP; }
+        else { fuseSlotA = null; fuseSlotB = null; gameState = STATE.FUSE; }
       }
     }
     tapped = false;
