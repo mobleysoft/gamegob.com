@@ -1825,7 +1825,7 @@ function loadGameAssets() {
         img.onload = () => { GAME_ASSETS.characters['claudine'] = img; resolve(); };
         img.onerror = reject;
         img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAQACAYAAAB/HSuDAAEQmWNhQlgAARCZanVtYgAAAB5qdW1kYz...'; // truncated
-        img.src = `/assets/inline/survivors/8b4dd6d33026a605.png`;
+        img.src = `/assets/inline/survivors/8b4dd6d33026a605.webp`;
     }));
 
     // Character: gigi
@@ -1834,7 +1834,7 @@ function loadGameAssets() {
         img.onload = () => { GAME_ASSETS.characters['gigi'] = img; resolve(); };
         img.onerror = reject;
         img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAQACAYAAAB/HSuDAAEljmNhQlgAASWOanVtYgAAAB5qdW1kYz...'; // truncated
-        img.src = `/assets/inline/survivors/5315c6ff8011c2bc.png`;
+        img.src = `/assets/inline/survivors/5315c6ff8011c2bc.webp`;
     }));
 
     // Character: johnny
@@ -1843,7 +1843,7 @@ function loadGameAssets() {
         img.onload = () => { GAME_ASSETS.characters['johnny'] = img; resolve(); };
         img.onerror = reject;
         img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAQACAYAAAB/HSuDAAEZmmNhQlgAARmaanVtYgAAAB5qdW1kYz...'; // truncated
-        img.src = `/assets/inline/survivors/c547141c805be55d.png`;
+        img.src = `/assets/inline/survivors/c547141c805be55d.webp`;
     }));
 
     // Character: gemma
@@ -1852,7 +1852,7 @@ function loadGameAssets() {
         img.onload = () => { GAME_ASSETS.characters['gemma'] = img; resolve(); };
         img.onerror = reject;
         img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAQACAYAAAB/HSuDAAEw6mNhQlgAATDqanVtYgAAAB5qdW1kYz...'; // truncated
-        img.src = `/assets/inline/survivors/74a91817ca00da8f.png`;
+        img.src = `/assets/inline/survivors/74a91817ca00da8f.webp`;
     }));
 
     // Enemy: demon_types
@@ -1860,7 +1860,7 @@ function loadGameAssets() {
         const img = new Image();
         img.onload = () => { GAME_ASSETS.enemies['demon_types'] = img; resolve(); };
         img.onerror = reject;
-        img.src = `/assets/inline/survivors/b56b64f47d501a00.png`;
+        img.src = `/assets/inline/survivors/b56b64f47d501a00.webp`;
     }));
 
     // Enemy: skeleton_horde
@@ -1868,7 +1868,7 @@ function loadGameAssets() {
         const img = new Image();
         img.onload = () => { GAME_ASSETS.enemies['skeleton_horde'] = img; resolve(); };
         img.onerror = reject;
-        img.src = `/assets/inline/survivors/42cb1d6dc44e27ea.png`;
+        img.src = `/assets/inline/survivors/42cb1d6dc44e27ea.webp`;
     }));
 
     // Enemy: slime_variants
@@ -1876,7 +1876,7 @@ function loadGameAssets() {
         const img = new Image();
         img.onload = () => { GAME_ASSETS.enemies['slime_variants'] = img; resolve(); };
         img.onerror = reject;
-        img.src = `/assets/inline/survivors/6cafdec20eb40e2f.png`;
+        img.src = `/assets/inline/survivors/6cafdec20eb40e2f.webp`;
     }));
 
     // Weapon: projectiles
@@ -1884,7 +1884,7 @@ function loadGameAssets() {
         const img = new Image();
         img.onload = () => { GAME_ASSETS.weapons['projectiles'] = img; resolve(); };
         img.onerror = reject;
-        img.src = `/assets/inline/survivors/1e7ef45bb928f778.png`;
+        img.src = `/assets/inline/survivors/1e7ef45bb928f778.webp`;
     }));
 
     // Background: grass_set
@@ -1892,7 +1892,7 @@ function loadGameAssets() {
         const img = new Image();
         img.onload = () => { GAME_ASSETS.backgrounds['grass_set'] = img; resolve(); };
         img.onerror = reject;
-        img.src = `/assets/inline/survivors/3f7c669541b0c867.png`;
+        img.src = `/assets/inline/survivors/3f7c669541b0c867.webp`;
     }));
 
     // Background: dungeon_set
@@ -1900,7 +1900,7 @@ function loadGameAssets() {
         const img = new Image();
         img.onload = () => { GAME_ASSETS.backgrounds['dungeon_set'] = img; resolve(); };
         img.onerror = reject;
-        img.src = `/assets/inline/survivors/153cbaf4e59bb2b2.png`;
+        img.src = `/assets/inline/survivors/153cbaf4e59bb2b2.webp`;
     }));
 
     // Item: powerups
@@ -1908,7 +1908,7 @@ function loadGameAssets() {
         const img = new Image();
         img.onload = () => { GAME_ASSETS.items['powerups'] = img; resolve(); };
         img.onerror = reject;
-        img.src = `/assets/inline/survivors/c220f64cd3858fb2.png`;
+        img.src = `/assets/inline/survivors/c220f64cd3858fb2.webp`;
     }));
 
     GAME_ASSETS.loadPromise = Promise.all(promises).then(() => {
