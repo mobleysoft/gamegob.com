@@ -432,6 +432,9 @@ body.text-large #pauseScreen h2 { font-size: 40px; }
 body.text-large #pauseScreen p { font-size: 16px; }
 body.text-small #titleScreen h1 { font-size: 26px; }
 body.text-small .controls { font-size: 10px; }
+
+/* phone (2026-10-05): the pad covered the title screen's character cards; it only appears once a run starts */
+body:not(.in-run) .mctl-overlay { display: none !important; }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
 <link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100506">
@@ -5824,7 +5827,7 @@ function startGame(forceTutorial) {
   _startWithTutorial = forceTutorial || tutShouldShow();
 
   fadeIn(() => {
-    titleEl.style.display = "none";
+    titleEl.style.display = "none"; document.body.classList.add("in-run");
     endEl.style.display = "none";
     pauseEl.style.display = "none";
     LeaderboardUI.hide();
@@ -6442,7 +6445,7 @@ document.getElementById("dailyBtn").addEventListener("click", function(e) {
     Sound.resume();
     Sound.startBgm();
     fadeIn(function() {
-        titleEl.style.display = "none";
+        titleEl.style.display = "none"; document.body.classList.add("in-run");
         endEl.style.display = "none";
         pauseEl.style.display = "none";
         LeaderboardUI.hide();

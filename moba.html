@@ -693,6 +693,15 @@ body.text-medium { /* default, no overrides needed */ }
     border-right: 5px solid transparent; border-bottom: 8px solid currentColor;
     background: none !important;
 }
+
+/* phone (2026-10-05): the touch pad's Q/W/E/R buttons replace the ability bar, so the
+   80px HUD strip under the pad shrinks to its vitals and the readouts move up with it */
+@media (pointer: coarse) and (max-width: 760px) {
+  #hud { height: 44px !important; }
+  #abilityBar { display: none !important; }
+  #goldDisplay, #levelDisplay, #minimap { bottom: 50px !important; }
+  #minimap { transform: scale(.7); transform-origin: bottom right; }
+}
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
 <link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100506">
