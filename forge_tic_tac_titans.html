@@ -14,8 +14,9 @@ canvas { display: block; margin: 0 auto; }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
 <script>/* gg: web display ads only on the web, never inside a native shell */if(!(window.Capacitor||navigator.standalone||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))){var ggAd=document.createElement("script");ggAd.async=true;ggAd.crossOrigin="anonymous";ggAd.src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419";document.head.appendChild(ggAd);}</script>
-<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100519">
-<script src="/assets/gg-mobile.js?v=2026100519"></script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100520">
+<script src="/assets/gg-mobile.js?v=2026100520"></script>
+<meta name="description" content="Play Tic Tac Titans free in your browser on GameGob. Works on phones, no install.">
 </head>
 <body>
 <canvas id="c"></canvas>
@@ -1722,7 +1723,7 @@ requestAnimationFrame(gameLoop);
 <a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
 </div>
 <!-- HelmCorp Analytics -->
-<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<script>(function(){var v='gamegob';(function(u,b){try{if(navigator.sendBeacon){navigator.sendBeacon(u,b)}else{fetch(u,{method:'POST',mode:'no-cors',keepalive:true,body:b}).catch(function(){})}}catch(e){}})('https://helmcorp.cc/api/beacon',JSON.stringify({v:v,p:location.pathname,t:Date.now()}))})()</script>
 <!-- VentureForge:collated -->
 </body>
 </html>

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Give every storefront card a real gameplay capture (assets/thumbs/<page>.jpg,
+"""Give every storefront card a real gameplay capture (assets/thumbs/<page>.webp,
 made by a headless run of the game itself) and move the favourite star and
 featured badge off the title row. Idempotent; run from the repo root."""
 import os, re
@@ -18,7 +18,7 @@ def process(name):
     orig = s
     def card(m):
         href = m.group(1)
-        thumb = href.replace('.html', '.jpg')
+        thumb = href.replace('.html', '.webp')
         if not os.path.exists(os.path.join(ROOT, 'assets', 'thumbs', thumb)):
             return m.group(0)
         return m.group(0) + '\n                        <img class="card-shot" src="/assets/thumbs/%s" alt="" loading="lazy" width="800" height="450">' % thumb

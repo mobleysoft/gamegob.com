@@ -17,7 +17,7 @@ Run from the repo root. Prints a per-file change summary; nothing else.
 import hashlib, os, re, sys, base64
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VERSION = '2026100519'
+VERSION = '2026100520'
 SKIP = {'og-image.html'}
 KEYPAD = {
     'photonic_forge_breakout.html': 'arrows space',
@@ -95,6 +95,19 @@ def mobilize(name):
     if name not in NOT_GAMES and 'data-gg-game' not in s:
         s = re.sub(r'<html(\s[^>]*)?>', lambda m: '<html' + (m.group(1) or '') + ' data-gg-game', s, count=1)
         notes.append('game')
+    # 8. storefront pages: the runtime is not render-critical there (no canvas
+    #    font hook to install before game scripts), so defer it (Lighthouse:
+    #    550 ms render-blocking on index.html)
+    if name in NOT_GAMES and '<script src="/assets/gg-mobile.js' in s:
+        s = s.replace('<script src="/assets/gg-mobile.js', '<script defer src="/assets/gg-mobile.js', 1)
+        notes.append('defer runtime')
+    # 9. game pages: a meta description from the title (SEO audit on every game)
+    if name not in NOT_GAMES and not re.search(r'<meta[^>]+name=["\']description["\']', s, re.I):
+        tm = re.search(r'<title>([^<]{3,80})</title>', s)
+        if tm:
+            desc = 'Play %s free in your browser on GameGob. Works on phones, no install.' % re.sub(r'\s+', ' ', tm.group(1)).strip().replace('"', '')
+            s = s.replace('</head>', '<meta name="description" content="%s">\n</head>' % desc, 1)
+            notes.append('meta description')
     # 7. fit
     if name in FIT and 'data-gg-fit' not in s:
         s = re.sub(r'<html(\s[^>]*)?>', lambda m: '<html' + (m.group(1) or '') + ' data-gg-fit="%s"' % FIT[name], s, count=1)
