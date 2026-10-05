@@ -65,7 +65,10 @@ html.gg-native #mascom-nav { display: none !important; }
 /* 7. Modals above the shared .mctl-overlay touch pad (z 9999) so the pad
    never covers a Start / Continue button; secondary dialogs one step higher. */
 @media (pointer: coarse) {
-  html[data-gg-game] :is(#charSelect, #endScreen, #pauseScreen, #titleScreen, #gameOver, #progressionScreen,
+  /* #titleScreen is deliberately not lifted: in bullet_hell it sits under
+     #progScreen (z 22) and lifting it put the title text through the
+     progression panel. Title buttons are centred, away from the pad. */
+  html[data-gg-game] :is(#charSelect, #endScreen, #pauseScreen, #gameOver, #progressionScreen, #progScreen,
     #leaderboardPanel, #leaderboardOverlay, #statsScreen, #myStatsScreen, #shopPanel, #scorePanel, #pauseMenu,
     #deathScreen, #splashScreen, #tutorialOverlay, #augmentPicker, #challengeWin) { z-index: 10000 !important; }
   html[data-gg-game] :is(#nameEntryModal, #sharePanel, #sharePanelInner, #scoreSubmitBox, #settingsScreen, #lbNameEntry) { z-index: 10010 !important; }
