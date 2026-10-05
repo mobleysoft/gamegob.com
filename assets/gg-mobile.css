@@ -45,6 +45,11 @@ canvas { touch-action: none; -webkit-user-select: none; user-select: none; -webk
    inside a native shell (outbound links would trap the user in-app). */
 @media (pointer: coarse), (max-width: 760px) { html[data-gg-game] #mascom-nav { display: none !important; } }
 html.gg-native #mascom-nav { display: none !important; }
+/* App Store guideline 3.1.1: no links to purchases outside the app. The
+   native shell hides the PublicOS / Corvus cross-sell cards, the quarters
+   shop entry and the "add credits" link in the quarter overlay. */
+html.gg-native .promo-banner, html.gg-native .promo-card, html.gg-native .nav-btn[href="shop.html"], html.gg-native .qmLink { display: none !important; }
+html.gg-native #creditBadge { display: none !important; } /* credits are meaningless in the shell */
 /* Native shell: the web view runs edge to edge, so scrolling pages (the
    storefront, catalogues) keep clear of the status bar and home indicator.
    Games stay full-bleed; their controls already carry the inset vars. */

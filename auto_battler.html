@@ -354,8 +354,8 @@ body.colorblind .cb-shape { display: inline; }
 #splashDailyBtn .dailyStreak { font-size:10px; color:#fc0; display:block; margin-top:2px; }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
-<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100520">
-<script src="/assets/gg-mobile.js?v=2026100520"></script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100521">
+<script src="/assets/gg-mobile.js?v=2026100521"></script>
 <meta name="description" content="Play War Council — Arena of Minds free in your browser on GameGob. Works on phones, no install.">
 </head>
 <body>
@@ -579,6 +579,7 @@ const QuarterMachine = (function() {
     let timerInterval = null;
 
     function getCredits() {
+        if (window.GG && GG.native) return 99; // native shell: no credit sales, no dead end
         return parseInt(localStorage.getItem(CREDIT_KEY) || '0', 10);
     }
     function setCredits(n) {
