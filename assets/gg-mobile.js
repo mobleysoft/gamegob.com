@@ -168,7 +168,15 @@
     setTimeout(apply, 250); setTimeout(apply, 1200);
   }
   function boot() {
-    if (native) document.documentElement.classList.add('gg-native');
+    if (native) {
+      document.documentElement.classList.add('gg-native');
+      // Storefront copy written for the web ("no installs") reads wrong inside
+      // the installed app; the bundle is local, so "play offline" is true.
+      document.querySelectorAll('p, h2, div, span').forEach(function (el) {
+        if (el.children.length === 0 && /^Free Browser Games/.test(el.textContent.trim())) el.textContent = 'Free games. Play offline.';
+      });
+      document.querySelectorAll('.header-stat').forEach(function (st) { if (/installs needed/i.test(st.textContent)) st.style.display = 'none'; });
+    }
     var spec = document.documentElement.getAttribute('data-gg-keypad');
     if (spec) mountKeypad(spec);
     var fit = document.documentElement.getAttribute('data-gg-fit');
