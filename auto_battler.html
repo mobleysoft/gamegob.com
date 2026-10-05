@@ -354,8 +354,8 @@ body.colorblind .cb-shape { display: inline; }
 #splashDailyBtn .dailyStreak { font-size:10px; color:#fc0; display:block; margin-top:2px; }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
-<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100516">
-<script src="/assets/gg-mobile.js?v=2026100516"></script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100518">
+<script src="/assets/gg-mobile.js?v=2026100518"></script>
 </head>
 <body>
 <div id="quarterOverlay">
@@ -5318,6 +5318,8 @@ draw();
     -webkit-user-select: none;
     -webkit-touch-callout: none;
 }
+/* phone: the 26-row synergies panel covered the board; show only active synergies, compact */
+@media (pointer: coarse) and (max-width: 760px) { #synergies { min-width: 0; max-width: 150px; padding: 6px 8px; } #synergies .synergy.inactive { display: none; } }
 </style>
 
 <div class="mctl-overlay" id="mctlOverlay">

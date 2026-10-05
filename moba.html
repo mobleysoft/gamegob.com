@@ -704,8 +704,8 @@ body.text-medium { /* default, no overrides needed */ }
 }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
-<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100516">
-<script src="/assets/gg-mobile.js?v=2026100516"></script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100518">
+<script src="/assets/gg-mobile.js?v=2026100518"></script>
 </head>
 <body>
 <div id="loadingScreen">
@@ -6832,6 +6832,12 @@ QuarterMachine.playAgain = function() {
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
+}
+/* portrait phone (2026-10-05): the bottom HUD corners are the pad's; minimap, gold and level move to the top */
+@media (pointer: coarse) and (orientation: portrait) {
+  #minimap { top: 52px !important; bottom: auto !important; right: 8px !important; transform: scale(.6) !important; transform-origin: top right !important; }
+  #goldDisplay { top: 8px !important; bottom: auto !important; }
+  #levelDisplay { top: 8px !important; bottom: auto !important; left: 8px !important; }
 }
 </style>
 

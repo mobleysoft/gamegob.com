@@ -400,8 +400,8 @@ body.text-small #abilityBar { font-size:9px; }
 body.text-small .killMsg { font-size:8px; }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
-<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100516">
-<script src="/assets/gg-mobile.js?v=2026100516"></script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100518">
+<script src="/assets/gg-mobile.js?v=2026100518"></script>
 </head>
 <body>
 <div id="splashScreen" onclick="Sound.init();document.getElementById('splashScreen').classList.add('hidden')">
@@ -5791,6 +5791,9 @@ const _origDrawFlash = Juice.drawFlash;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
 }
+/* phone: the weapon slots sat under the pad's START button (bottom centre) */
+@media (pointer: coarse) { #inventory { bottom: 58px !important; } }
+@media (pointer: coarse) { #abilityBar { bottom: 114px !important; } }
 </style>
 
 <div class="mctl-overlay" id="mctlOverlay">

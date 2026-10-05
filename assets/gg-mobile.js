@@ -223,7 +223,7 @@
     var fixBadges = function () {
       if (!padMap) padMap = buildPadMap();
       if (!Object.keys(padMap).length) return;
-      document.querySelectorAll('kbd, .tut-key, .key, .keycap, .tut-keys span, .controls span').forEach(function (el) {
+      document.querySelectorAll('kbd, .tut-key, .tutKey, .key, .keycap, .tut-keys span, .controls span').forEach(function (el) {
         if (el.children.length || el.getAttribute('data-gg-badged')) return;
         var t = el.textContent.trim(), k = t.toLowerCase();
         if (k === 'space' || k === 'spc') k = ' ';

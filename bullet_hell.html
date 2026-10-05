@@ -346,10 +346,12 @@ body.text-large #pauseScreen p { font-size: 14px; }
 /* Keyboard focus indicators for menus */
 button:focus-visible, .cs-card:focus-visible, .diff-btn:focus-visible { outline: 2px solid #fc0; outline-offset: 2px; }
 .set-row:focus-within { background: rgba(136,170,255,0.14); border-radius: 4px; }
+/* portrait phone: the 4-column roster clipped its last column; 3 columns under 480px (2026-10-05) */
+@media (max-width: 480px) { #charSelect .cs-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; } #charSelect .cs-inner { padding: 12px; } }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
-<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100516">
-<script src="/assets/gg-mobile.js?v=2026100516"></script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100518">
+<script src="/assets/gg-mobile.js?v=2026100518"></script>
 </head>
 <body>
 <div id="wrapper">
