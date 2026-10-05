@@ -293,7 +293,15 @@ const resize = () => {
     let availW = window.innerWidth;
     if (isMobile) {
         touchControls.style.display = 'flex';
-        availH -= 160;
+        if (window.innerWidth > window.innerHeight) {
+            // landscape phone (2026-10-05): the pads sit in the bottom corners,
+            // so give the maze the height and keep the width clear of them;
+            // reserving 160px of height left 8px tiles that overflowed the screen
+            availW -= 300;
+            availH -= 16;
+        } else {
+            availH -= 160;
+        }
     } else {
         touchControls.style.display = 'none';
     }

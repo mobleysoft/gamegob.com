@@ -411,8 +411,11 @@ const resize = () => {
   tileSize = Math.floor(Math.min(w / (MAZE_W + 2), (h - 120) / (MAZE_H + 2)));
   if (tileSize < 10) tileSize = 10;
   offsetX = Math.floor((w - MAZE_W * tileSize) / 2);
-  offsetY = Math.floor((h - MAZE_H * tileSize) / 2) + 30;
   isMobile = 'ontouchstart' in window || w < 800;
+  const centredY = Math.floor((h - MAZE_H * tileSize) / 2) + 30;
+  // portrait phone: keep the maze under the HUD so the band below it (where
+  // the touch pads go, see touchLayout) is as tall as possible
+  offsetY = (isMobile && h > w) ? Math.min(centredY, 110) : centredY;
 };
 window.addEventListener('resize', resize);
 resize();
@@ -521,6 +524,17 @@ canvas.addEventListener('touchstart', (e) => {
 
   const cw = canvas.width;
   const ch = canvas.height;
+
+  // Buttons in the band layout are hit by distance (they are not in the side zones)
+  const L = touchLayout();
+  if (L.band) {
+    const near = (x, y, r) => (tx - x) * (tx - x) + (ty - y) * (ty - y) <= r * r;
+    if (near(L.switchX, L.switchY, L.btnR * 1.8)) { cycleGadget(); return; }
+    if (near(L.useX, L.useY, L.btnR * 2.0)) { useGadget(); return; }
+    if (ty > offsetY + MAZE_H * tileSize && tx < cw * 0.4) {
+      touchStartX = tx; touchStartY = ty; touchDPad.active = true; touchId = touch.identifier; return;
+    }
+  }
 
   // Right side: action button area
   if (tx > cw * 0.75) {
@@ -1790,15 +1804,36 @@ const drawHUD = (time) => {
   ctx.fillText(`Lv${saveData.level}`, xpBarX + xpBarW + 5, xpBarY + xpBarH);
 };
 
+// Touch layout shared by drawTouchControls and the touchstart handler.
+// Portrait phones: the maze is width-bound and ends well above the gadget
+// bar, so the swipe hint and the two buttons sit in that band rather than
+// on top of the maze. Otherwise the original side zones apply.
+const touchLayout = () => {
+  const cw = canvas.width, ch = canvas.height;
+  const mazeBottom = offsetY + MAZE_H * tileSize;
+  const barTop = ch - 50 - (isMobile ? 10 : 5);
+  const band = barTop - mazeBottom;
+  if (ch > cw && band >= 64) {
+    const cy = mazeBottom + band / 2;
+    const r = Math.min(cw * 0.075, 30, band * 0.3);
+    return { band: true, padCX: cw * 0.17, padCY: cy, padR: Math.min(cw * 0.11, band * 0.42),
+             switchX: cw * 0.66, switchY: cy, useX: cw * 0.87, useY: cy, btnR: r };
+  }
+  return { band: false, padCX: cw * 0.15, padCY: ch * 0.7, padR: Math.min(cw * 0.12, 60),
+           switchX: cw * 0.85, switchY: ch * 0.55, useX: cw * 0.85, useY: ch * 0.75, btnR: Math.min(cw * 0.08, 35) };
+};
+
+const L0alpha = () => touchLayout().band ? 0.6 : 0.15;
 const drawTouchControls = (time) => {
   const cw = canvas.width;
   const ch = canvas.height;
-  const alpha = 0.15;
+  const alpha = L0alpha();
+  const L = touchLayout();
 
   // D-Pad (left side)
-  const padCX = cw * 0.15;
-  const padCY = ch * 0.7;
-  const padR = Math.min(cw * 0.12, 60);
+  const padCX = L.padCX;
+  const padCY = L.padCY;
+  const padR = L.padR;
 
   ctx.globalAlpha = alpha;
   ctx.strokeStyle = '#fff';
@@ -1850,11 +1885,11 @@ const drawTouchControls = (time) => {
   ctx.fillText('SWIPE', padCX, padCY + 4);
 
   // Action buttons (right side)
-  const btnR = Math.min(cw * 0.08, 35);
+  const btnR = L.btnR;
 
   // Switch gadget button (top right)
-  const switchX = cw * 0.85;
-  const switchY = ch * 0.55;
+  const switchX = L.switchX;
+  const switchY = L.switchY;
   ctx.beginPath();
   ctx.arc(switchX, switchY, btnR, 0, Math.PI * 2);
   ctx.stroke();
@@ -1864,8 +1899,8 @@ const drawTouchControls = (time) => {
   ctx.fillText('SWITCH', switchX, switchY + btnR + 12);
 
   // Use gadget button (bottom right)
-  const useX = cw * 0.85;
-  const useY = ch * 0.75;
+  const useX = L.useX;
+  const useY = L.useY;
   ctx.strokeStyle = GADGET_INFO[selectedGadget].color;
   ctx.beginPath();
   ctx.arc(useX, useY, btnR * 1.2, 0, Math.PI * 2);
