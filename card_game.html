@@ -893,8 +893,8 @@ body.reduce-motion .juice-particle, body.reduce-motion .juice-text { display: no
 }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
-<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100510">
-<script src="/assets/gg-mobile.js?v=2026100510"></script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100512">
+<script src="/assets/gg-mobile.js?v=2026100512"></script>
 </head>
 <body>
 <div id="quarterOverlay">
@@ -6432,6 +6432,8 @@ A11ySettings.init();
     -webkit-user-select: none;
     -webkit-touch-callout: none;
 }
+/* splash menu covers the table: no pads until it fades out */
+body:has(#splash:not(.fade-out)) .mctl-overlay { display: none !important; }
 </style>
 
 <div class="mctl-overlay" id="mctlOverlay">

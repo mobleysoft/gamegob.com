@@ -152,6 +152,7 @@
     if (hit !== undefined) return hit;
     var out = t;
     for (var i = 0; i < COPY.length; i++) out = out.replace(COPY[i][0], COPY[i][1]);
+    if (fixCopy.pad) out = fixCopy.pad(out);
     if (fixCopy.cache.size > 2000) fixCopy.cache.clear();
     fixCopy.cache.set(t, out);
     return out;
@@ -168,7 +169,7 @@
       var n; while ((n = w.nextNode())) {
         var pn = n.parentNode && n.parentNode.nodeName;
         if (pn === 'SCRIPT' || pn === 'STYLE' || pn === 'TEXTAREA') continue;
-        if (n.nodeValue && n.nodeValue.length > 5 && /Press |Arrow|WASD|Click /.test(n.nodeValue)) { var v = fixCopy(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; }
+        if (n.nodeValue && n.nodeValue.length > 5 && /Press |Arrow|WASD|Click |\[[A-Za-z]\]|\b[A-Z]: |\bSpace\b|\bSPACE\b/.test(n.nodeValue)) { var v = fixCopy(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; }
       }
     };
     // tutorials and tips are injected while playing, so keep watching (debounced)
@@ -202,7 +203,19 @@
           if (k && !map[k]) map[k] = label.toUpperCase();
         });
       }
-      if (document.querySelector('.mctl-dpad')) ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', '←', '→', '↑', '↓', '← →', 'a d', 'w a s d', 'wasd'].forEach(function (k) { map[k] = 'D-PAD'; });
+      if (document.querySelector('.mctl-dpad')) ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', '←', '→', '↑', '↓', '← →', 'a d', 'w a s d', 'wasd'].forEach(function (k) { if (!map[k]) map[k] = 'D-PAD'; });
+      // legend text: "[Z] Attack", "Z: Attack", "LMB / Space — Shoot" -> pad labels
+      var keyed = Object.keys(map).filter(function (k) { return k.length === 1 && k !== ' ' || k === 'shift'; });
+      if (keyed.length) {
+        var alts = keyed.map(function (k) { return k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'); }).join('|');
+        var reBr = new RegExp('\\[(' + alts + ')\\]', 'gi'), reCol = new RegExp('(^|[|\\s])(' + alts + '):(?=\\s)', 'gi');
+        var reSp = map[' '] ? /\b(?:Space|SPACE)\b/g : null;
+        fixCopy.pad = function (t) {
+          if (reSp) t = t.replace(reSp, map[' ']); // first, so an inserted label is never re-matched
+          return t.replace(reBr, function (_, k) { return '[' + map[k.toLowerCase()] + ']'; }).replace(reCol, function (_, pre, k) { return pre + map[k.toLowerCase()] + ':'; });
+        };
+        fixCopy.cache.clear();
+      }
       return map;
     }
     var fixBadges = function () {
@@ -214,6 +227,11 @@
         if (k === 'space' || k === 'spc') k = ' ';
         if (k === 'enter' || k === 'esc' || k === 'escape') return;
         var label = padMap[k];
+        if (!label && k.indexOf('/') > -1) {
+          var parts = [];
+          k.split('/').forEach(function (part) { part = part.trim(); if (part === 'space' || part === 'spc') part = ' '; var l = padMap[part]; if (l && parts.indexOf(l) < 0) parts.push(l); });
+          if (parts.length) label = parts.join(' / ');
+        }
         if (label && label !== t) {
           el.setAttribute('data-gg-badged', t); el.textContent = label;
           // "W A S D" / "← →" rows collapse to one D-PAD badge
@@ -254,9 +272,13 @@
       if (!w || !h) return;
       // Chrome on Android widens the layout viewport to overflowing content
       // before any script runs, so innerWidth can already be the canvas width;
-      // the physical screen size (CSS px) is the honest bound on a phone.
-      var vw = Math.min(window.innerWidth, (screen && screen.width) || window.innerWidth);
-      var vh = Math.min(window.innerHeight, (screen && screen.height) || window.innerHeight);
+      // bound it by the visual viewport and the device's longer screen edge.
+      // (iOS keeps screen.width at the portrait value in landscape, so the
+      // shorter edge would shrink a landscape game to ~60%.)
+      var edge = Math.max((screen && screen.width) || 0, (screen && screen.height) || 0) || Infinity;
+      var vv = window.visualViewport;
+      var vw = Math.min(window.innerWidth, (vv && vv.width) || Infinity, edge);
+      var vh = Math.min(window.innerHeight, (vv && vv.height) || Infinity, edge);
       var s = Math.min(vw / w, vh / h, 1);
       GG.fit = { el: el, scale: s, w: w, h: h, vw: vw, vh: vh };
       if (s > 0.999) return;

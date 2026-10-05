@@ -1471,8 +1471,8 @@ body.text-small .move-entry { font-size: 10px; }
 body:has(#modeSelectScreen.visible) .mctl-overlay, body:has(#settingsScreen.visible) .mctl-overlay { display: none !important; }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
-<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100510">
-<script src="/assets/gg-mobile.js?v=2026100510"></script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100512">
+<script src="/assets/gg-mobile.js?v=2026100512"></script>
 </head>
 <body>
 
@@ -8168,6 +8168,8 @@ setTimeout(() => {
     -webkit-user-select: none;
     -webkit-touch-callout: none;
 }
+/* roster (title) screen covers the board: no pads until the game is active */
+body:has(#rosterScreen.fade-in:not(.fade-out)) .mctl-overlay { display: none !important; }
 </style>
 
 <div class="mctl-overlay" id="mctlOverlay">

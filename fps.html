@@ -437,8 +437,8 @@ body.text-small .controls { font-size: 10px; }
 body:not(.in-run) .mctl-overlay { display: none !important; }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
-<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100510">
-<script src="/assets/gg-mobile.js?v=2026100510"></script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100512">
+<script src="/assets/gg-mobile.js?v=2026100512"></script>
 </head>
 <body>
 <div id="wrapper">
@@ -448,11 +448,14 @@ body:not(.in-run) .mctl-overlay { display: none !important; }
     <h1>PURGEFIRE</h1>
     <h2>Purgefire</h2>
     <div class="controls">
-      WASD / Arrows — Move &amp; Turn<br>
+      <span class="kb-only">WASD / Arrows — Move &amp; Turn<br>
       Mouse — Look (after click)<br>
       LMB / Space — Shoot<br>
       1-8 / Scroll — Switch Weapon<br>
-      E — Open Doors / Pick Up<br>
+      E — Open Doors / Pick Up<br></span>
+      <span class="touch-only">D-pad — Move &amp; Turn<br>
+      FIRE — Shoot<br>
+      USE — Open Doors / Pick Up<br></span>
       <span style="color:#fa0;">20 Floors | 15 Weapons | 10 Bosses</span>
     </div>
     <div class="portrait-section">
@@ -481,9 +484,9 @@ body:not(.in-run) .mctl-overlay { display: none !important; }
   <div id="pauseScreen">
     <h2>PAUSED</h2>
     <p>Press ESC to resume</p>
-    <p style="font-size: 11px; color: #666;">WASD/Arrows - Move &amp; Turn<br>
+    <p style="font-size: 11px; color: #666;"><span class="kb-only">WASD/Arrows - Move &amp; Turn<br>
        Mouse - Look | LMB/Space - Shoot<br>
-       1-4 - Switch Weapon | E - Interact</p>
+       1-4 - Switch Weapon | E - Interact</span><span class="touch-only">D-pad - Move &amp; Turn | FIRE - Shoot | USE - Interact</span></p>
     <button id="resumeBtn">RESUME</button>
     <button id="pauseSettingsBtn">SETTINGS</button>
   </div>
@@ -6993,6 +6996,8 @@ ctx.fillRect(0, 0, CW, CH);
     -webkit-user-select: none;
     -webkit-touch-callout: none;
 }
+.touch-only { display: none; }
+@media (pointer: coarse) { .kb-only { display: none; } .touch-only { display: inline; } }
 </style>
 
 <div class="mctl-overlay" id="mctlOverlay">
