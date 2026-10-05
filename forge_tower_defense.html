@@ -65,7 +65,7 @@ const COLORS = {
   darkGold: '#8a6800', path: '#1a1a2a', pathBorder: '#2a2a3f',
   panelBg: '#0d0d14', panelBorder: '#222233', healthBar: '#00cc66',
   healthBg: '#331111', towerRange: 'rgba(240,184,0, 0.65)',
-  enemyGlow: 'rgba(255,51,68, 0.65)', uiShadow: 'rgba(0,0,0,0.7)'
+  enemyGlow: 'rgba(255,51,68,0.38)', uiShadow: 'rgba(0,0,0,0.7)'
 };
 
 const TOWER_TYPES = {
@@ -1012,7 +1012,7 @@ const drawPath = () => {
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(angle);
-      ctx.fillStyle = 'rgba(240,184,0, 0.65)';
+      ctx.fillStyle = 'rgba(240,184,0,0.14)';
       ctx.beginPath();
       ctx.moveTo(cellSize * 0.2, 0);
       ctx.lineTo(-cellSize * 0.1, -cellSize * 0.1);
@@ -1128,7 +1128,7 @@ const drawPlacementPreview = () => {
   const data = TOWER_TYPES[selectedTowerType];
   const affordable = gold >= data.cost;
 
-  ctx.fillStyle = valid && affordable ? 'rgba(0,255,136, 0.65)' : 'rgba(255,51,68, 0.65)';
+  ctx.fillStyle = valid && affordable ? 'rgba(0,255,136,0.14)' : 'rgba(255,51,68, 0.65)';
   ctx.fillRect(px, py, cellSize, cellSize);
 
   ctx.strokeStyle = valid && affordable ? COLORS.green : COLORS.red;
@@ -1141,7 +1141,7 @@ const drawPlacementPreview = () => {
     const cy = py + cellSize / 2;
     ctx.beginPath();
     ctx.arc(cx, cy, data.range, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(240,184,0, 0.65)';
+    ctx.fillStyle = 'rgba(240,184,0,0.14)';
     ctx.fill();
     ctx.strokeStyle = `${data.color}44`;
     ctx.lineWidth = 1;
@@ -1167,7 +1167,7 @@ const drawEnemies = () => {
     if (e.type === 'boss') {
       ctx.beginPath();
       ctx.arc(x, y, r + 5, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,34,34, 0.65)';
+      ctx.fillStyle = 'rgba(255,34,34,0.14)';
       ctx.fill();
     }
 
@@ -1792,7 +1792,7 @@ requestAnimationFrame(gameLoop);
 
 </script>
 <!-- MASCOM Conglomerate Nav -->
-<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180,0.32);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
 <span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
 <a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
 <a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>

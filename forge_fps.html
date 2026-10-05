@@ -15,8 +15,8 @@ canvas{display:block;position:absolute;top:0;left:0}
 .touch-zone{position:absolute;pointer-events:all}
 #zone-left{left:0;bottom:0;width:45%;height:100%}
 #zone-right{right:0;bottom:0;width:45%;height:100%}
-.touch-btn{position:absolute;border-radius:50%;background:rgba(240,184,0, 0.65);border:2px solid rgba(240,184,0, 0.65);display:flex;align-items:center;justify-content:center;color:rgba(240,184,0,0.5);font-size:16px;font-weight:bold;pointer-events:all}
-.touch-btn:active{background:rgba(240,184,0, 0.65)}
+.touch-btn{position:absolute;border-radius:50%;background:rgba(240,184,0,0.14);border:2px solid rgba(240,184,0,0.32);display:flex;align-items:center;justify-content:center;color:rgba(240,184,0,0.5);font-size:16px;font-weight:bold;pointer-events:all}
+.touch-btn:active{background:rgba(240,184,0,0.14)}
 #dpad{position:absolute;bottom:10px;left:10px;width:170px;height:170px;pointer-events:none}
 #dpad .touch-btn{width:52px;height:52px;pointer-events:all}
 #btn-up{left:59px;top:0}
@@ -26,8 +26,8 @@ canvas{display:block;position:absolute;top:0;left:0}
 #btn-sl{left:0;top:0;font-size:11px}
 #btn-sr{right:0;top:0;font-size:11px}
 #action-btns{position:absolute;bottom:10px;right:10px;width:180px;height:180px;pointer-events:none}
-#btn-fire{position:absolute;width:80px;height:80px;right:0;bottom:0;background:rgba(255,50,50, 0.65);border-color:rgba(255,50,50, 0.65);color:rgba(255,50,50,0.6);font-size:13px;pointer-events:all}
-#btn-use{position:absolute;width:56px;height:56px;right:90px;bottom:10px;background:rgba(0,255,136, 0.65);border-color:rgba(0,255,136, 0.65);color:rgba(0,255,136,0.5);font-size:11px;pointer-events:all}
+#btn-fire{position:absolute;width:80px;height:80px;right:0;bottom:0;background:rgba(255,50,50,0.14);border-color:rgba(255,50,50,0.32);color:rgba(255,50,50,0.6);font-size:13px;pointer-events:all}
+#btn-use{position:absolute;width:56px;height:56px;right:90px;bottom:10px;background:rgba(0,255,136,0.14);border-color:rgba(0,255,136,0.32);color:rgba(0,255,136,0.5);font-size:11px;pointer-events:all}
 #btn-wpn{position:absolute;width:52px;height:52px;right:20px;bottom:90px;font-size:10px;pointer-events:all}
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
@@ -1105,7 +1105,7 @@ const renderMinimap = () => {
   const vr=8;
 
   X.fillStyle='rgba(0,0,0,0.65)';X.fillRect(mx-2,my-2,sz+4,sz+4);
-  X.strokeStyle='rgba(240,184,0, 0.65)';X.lineWidth=1;X.strokeRect(mx-2,my-2,sz+4,sz+4);
+  X.strokeStyle='rgba(240,184,0,0.32)';X.lineWidth=1;X.strokeRect(mx-2,my-2,sz+4,sz+4);
 
   const sx=Math.floor(P.x)-vr, sy=Math.floor(P.y)-vr;
   for(let dy=0;dy<vr*2;dy++)for(let dx=0;dx<vr*2;dx++){
@@ -1202,23 +1202,23 @@ const renderTitle = () => {
   const t=performance.now()/1000;
 
   // Animated scan lines
-  X.strokeStyle='rgba(240,184,0, 0.65)';X.lineWidth=1;
+  X.strokeStyle='rgba(240,184,0,0.32)';X.lineWidth=1;
   for(let i=0;i<40;i++){
     const y=(i*H/40+t*25)%H;
     X.beginPath();X.moveTo(0,y);X.lineTo(W,y);X.stroke();
   }
 
   // Decorative border
-  X.strokeStyle='rgba(240,184,0, 0.65)';X.lineWidth=2;
+  X.strokeStyle='rgba(240,184,0,0.32)';X.lineWidth=2;
   X.strokeRect(20,20,W-40,H-40);
-  X.strokeStyle='rgba(240,184,0, 0.65)';
+  X.strokeStyle='rgba(240,184,0,0.32)';
   X.strokeRect(25,25,W-50,H-50);
 
   const ts=Math.min(72,W*0.11);
 
   // Title shadow
   X.font=`bold ${ts}px 'Courier New'`;X.textAlign='center';
-  X.fillStyle='rgba(180,30,30, 0.65)';
+  X.fillStyle='rgba(180,30,30,0.14)';
   X.fillText('FORGE: DESCENT',W/2+3,H*0.28+3);
 
   // Title
@@ -1231,7 +1231,7 @@ const renderTitle = () => {
   X.fillText('▼  INTO THE ABYSS  ▼',W/2,H*0.28+ts*0.55);
 
   // Divider
-  X.strokeStyle='rgba(240,184,0, 0.65)';X.lineWidth=1;
+  X.strokeStyle='rgba(240,184,0,0.32)';X.lineWidth=1;
   X.beginPath();X.moveTo(W*0.25,H*0.38);X.lineTo(W*0.75,H*0.38);X.stroke();
 
   // Features
@@ -1361,7 +1361,7 @@ lt=performance.now();
 requestAnimationFrame(loop);
 </script>
 <!-- MASCOM Conglomerate Nav -->
-<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180,0.32);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
 <span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
 <a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
 <a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>

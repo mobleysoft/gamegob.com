@@ -146,7 +146,7 @@ canvas { display: block; image-rendering: pixelated; }
     font-family: 'Courier New', monospace; font-size: 18px;
     cursor: pointer; border-radius: 6px;
     transition: all 0.2s;
-    box-shadow: 0 4px 15px rgba(255,215,0, 0.65);
+    box-shadow: 0 4px 15px rgba(255,215,0,0.38);
 }
 #gameOver button:hover {
     background: #FFD700;
@@ -182,7 +182,7 @@ canvas { display: block; image-rendering: pixelated; }
 }
 .tutorial-key {
     display: inline-block;
-    background: rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
     border: 1px solid #888;
     border-radius: 4px;
     padding: 2px 8px;
@@ -194,7 +194,7 @@ canvas { display: block; image-rendering: pixelated; }
 }
 @keyframes keyPulse {
     0%, 100% { border-color: #888; box-shadow: none; }
-    50% { border-color: #FFD700; box-shadow: 0 0 8px rgba(255,215,0, 0.65); }
+    50% { border-color: #FFD700; box-shadow: 0 0 8px rgba(255,215,0,0.38); }
 }
 .tutorial-keys-grid {
     display: inline-grid;
@@ -268,7 +268,7 @@ canvas { display: block; image-rendering: pixelated; }
 }
 .tip-step {
     display: inline-block;
-    background: rgba(255,215,0, 0.65);
+    background: rgba(255,215,0,0.14);
     border: 1px solid rgba(255,215,0,0.4);
     border-radius: 3px;
     padding: 1px 6px;
@@ -305,8 +305,8 @@ canvas { display: block; image-rendering: pixelated; }
 }
 /* UI highlight pulse during tutorial */
 @keyframes tutHighlight {
-    0%, 100% { box-shadow: 0 0 4px rgba(187,134,252, 0.65); }
-    50% { box-shadow: 0 0 12px rgba(187,134,252,0.8), 0 0 20px rgba(187,134,252, 0.65); }
+    0%, 100% { box-shadow: 0 0 4px rgba(187,134,252,0.38); }
+    50% { box-shadow: 0 0 12px rgba(187,134,252,0.8), 0 0 20px rgba(187,134,252,0.38); }
 }
 #xpBar.tut-highlight {
     animation: tutHighlight 1.2s ease-in-out infinite;
@@ -335,7 +335,7 @@ canvas { display: block; image-rendering: pixelated; }
     margin: 0 auto;
 }
 .dpad-visual .dpad-btn {
-    background: rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
     border: 1px solid #888;
     border-radius: 4px;
     display: flex;
@@ -361,7 +361,7 @@ canvas { display: block; image-rendering: pixelated; }
     color: #e0e0e0;
     font-family: 'Courier New', monospace;
     font-size: 13px;
-    box-shadow: 0 4px 20px rgba(255,215,0, 0.65);
+    box-shadow: 0 4px 20px rgba(255,215,0,0.38);
     animation: toastIn 0.4s ease, toastOut 0.4s ease 3.6s forwards;
     display: flex; align-items: center; gap: 10px;
     max-width: 320px;
@@ -603,7 +603,7 @@ canvas { display: block; image-rendering: pixelated; }
 }
 @keyframes glow {
     0%, 100% { text-shadow: 0 0 20px rgba(255,215,0,0.4); }
-    50% { text-shadow: 0 0 30px rgba(255,215,0,0.7), 0 0 40px rgba(255,215,0, 0.65); }
+    50% { text-shadow: 0 0 30px rgba(255,215,0,0.7), 0 0 40px rgba(255,215,0,0.38); }
 }
 #charSelect .subtitle {
     color: #888; font-size: 13px; margin-bottom: 8px;
@@ -650,7 +650,7 @@ canvas { display: block; image-rendering: pixelated; }
 .char-card:hover {
     border-color: #FFD700;
     transform: translateY(-3px);
-    box-shadow: 0 4px 20px rgba(255,215,0, 0.65);
+    box-shadow: 0 4px 20px rgba(255,215,0,0.38);
 }
 .char-portrait {
     width: 72px; height: 72px;
@@ -732,7 +732,7 @@ canvas { display: block; image-rendering: pixelated; }
 .lb-tab:hover { color: #FFD700; }
 .lb-tab.active {
     color: #FFD700; border-bottom-color: #FFD700;
-    text-shadow: 0 0 8px rgba(255,215,0, 0.65);
+    text-shadow: 0 0 8px rgba(255,215,0,0.38);
 }
 .lb-list {
     background: rgba(15,15,40,0.8);
@@ -743,15 +743,15 @@ canvas { display: block; image-rendering: pixelated; }
     display: grid;
     grid-template-columns: 40px 1fr 100px 80px;
     padding: 10px 14px;
-    border-bottom: 1px solid rgba(255,255,255, 0.65);
+    border-bottom: 1px solid rgba(255,255,255,0.32);
     align-items: center;
     gap: 8px;
     transition: background 0.15s;
 }
 .lb-row:last-child { border-bottom: none; }
-.lb-row:hover { background: rgba(255,215,0, 0.65); }
+.lb-row:hover { background: rgba(255,215,0,0.14); }
 .lb-row.lb-highlight {
-    background: rgba(255,215,0, 0.65);
+    background: rgba(255,215,0,0.14);
     border-left: 3px solid #FFD700;
 }
 .lb-row-head {
@@ -949,7 +949,7 @@ canvas { display: block; image-rendering: pixelated; }
 /* Challenge banner */
 #challengeBanner {
     position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-    background: rgba(255,102,51, 0.65);
+    background: rgba(255,102,51,0.14);
     border: 2px solid #FF6633;
     border-radius: 8px;
     padding: 8px 20px;
@@ -973,12 +973,12 @@ canvas { display: block; image-rendering: pixelated; }
     animation: challengeWin 0.5s ease 3;
     border-color: #4CAF50 !important;
     color: #4CAF50 !important;
-    background: rgba(76,175,80, 0.65) !important;
+    background: rgba(76,175,80,0.14) !important;
 }
 /* Daily challenge indicator */
 #dailyBadge {
     position: fixed; top: 8px; left: 12px;
-    background: rgba(187,134,252, 0.65);
+    background: rgba(187,134,252,0.14);
     border: 1px solid #BB86FC;
     border-radius: 6px;
     padding: 4px 10px;
@@ -1160,7 +1160,7 @@ canvas { display: block; image-rendering: pixelated; }
     cursor: pointer;
     border-radius: 6px;
     transition: all 0.2s;
-    box-shadow: 0 4px 15px rgba(255,215,0, 0.65);
+    box-shadow: 0 4px 15px rgba(255,215,0,0.38);
     animation: pulse 1.5s infinite;
 }
 .continue-btn:hover {
@@ -1177,7 +1177,7 @@ canvas { display: block; image-rendering: pixelated; }
 .char-card .premium-lock {
     position: absolute;
     top: 4px; right: 4px;
-    background: rgba(255,215,0, 0.65);
+    background: rgba(255,215,0,0.14);
     border: 1px solid #FFD700;
     border-radius: 4px;
     padding: 1px 5px;
@@ -1238,7 +1238,7 @@ canvas { display: block; image-rendering: pixelated; }
     display: flex; justify-content: space-between;
     color: #ccc; font-size: 13px; margin: 5px 0;
     padding: 3px 0;
-    border-bottom: 1px solid rgba(255,255,255, 0.65);
+    border-bottom: 1px solid rgba(255,255,255,0.32);
 }
 .stat-row:last-child { border-bottom: none; }
 .stat-row .stat-val { color: #FFD700; font-weight: bold; }
@@ -1286,7 +1286,7 @@ canvas { display: block; image-rendering: pixelated; }
 }
 .settings-group {
     margin-bottom: 14px;
-    border-bottom: 1px solid rgba(255,255,255, 0.65);
+    border-bottom: 1px solid rgba(255,255,255,0.32);
     padding-bottom: 12px;
 }
 .settings-group:last-of-type { border-bottom: none; }
@@ -1314,7 +1314,7 @@ canvas { display: block; image-rendering: pixelated; }
 .settings-opt:hover { border-color: #FFD700; color: #FFD700; }
 .settings-opt.active {
     border-color: #FFD700; color: #FFD700;
-    background: rgba(255,215,0, 0.65);
+    background: rgba(255,215,0,0.14);
 }
 .settings-opt:focus {
     outline: 2px solid #FFD700;
@@ -1330,7 +1330,7 @@ canvas { display: block; image-rendering: pixelated; }
     position: relative; transition: background 0.2s;
     border: 1px solid #555;
 }
-.toggle-track.on { background: rgba(255,215,0, 0.65); border-color: #FFD700; }
+.toggle-track.on { background: rgba(255,215,0,0.14); border-color: #FFD700; }
 .toggle-knob {
     width: 18px; height: 18px;
     background: #888; border-radius: 50%;
@@ -6555,7 +6555,7 @@ const Social = (function() {
         c.strokeRect(4, 4, W - 8, H - 8);
 
         // Inner glow lines
-        c.strokeStyle = 'rgba(255,215,0, 0.65)';
+        c.strokeStyle = 'rgba(255,215,0,0.32)';
         c.lineWidth = 1;
         c.strokeRect(10, 10, W - 20, H - 20);
 
@@ -6669,7 +6669,7 @@ const Social = (function() {
         c.fillText('Play free at gamegob.com/dreadtide', W - 20, H - 38);
 
         // Decorative corner dots
-        c.fillStyle = 'rgba(255,215,0, 0.65)';
+        c.fillStyle = 'rgba(255,215,0,0.14)';
         for (let corner of [[15,15],[W-15,15],[15,H-15],[W-15,H-15]]) {
             c.beginPath();
             c.arc(corner[0], corner[1], 3, 0, Math.PI * 2);
@@ -7048,21 +7048,21 @@ buildCharSelect();
     transform: translate(-50%, -50%);
     width: 44px; height: 44px;
     border-radius: 50%;
-    background: rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
 }
 .mctl-dpad-btn {
     position: absolute;
     width: 48px; height: 48px;
     border-radius: 12px;
-    background: rgba(255,255,255, 0.65);
-    border: 2px solid rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
+    border: 2px solid rgba(255,255,255,0.32);
     display: flex; align-items: center; justify-content: center;
     font-size: 22px; color: rgba(255,255,255,0.6);
     transition: background 0.05s;
     -webkit-tap-highlight-color: transparent;
 }
 .mctl-dpad-btn.active {
-    background: rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
     border-color: rgba(255,255,255,0.6);
 }
 .mctl-dpad-up    { top: 0; left: 50%; transform: translateX(-50%); }
@@ -7075,8 +7075,8 @@ buildCharSelect();
     position: fixed;
     width: 56px; height: 56px;
     border-radius: 50%;
-    background: rgba(255,255,255, 0.65);
-    border: 2px solid rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
+    border: 2px solid rgba(255,255,255,0.32);
     display: flex; align-items: center; justify-content: center;
     font-size: 16px; font-weight: bold; color: rgba(255,255,255,0.7);
     font-family: 'Courier New', monospace;
@@ -7084,12 +7084,12 @@ buildCharSelect();
     -webkit-tap-highlight-color: transparent;
 }
 .mctl-btn.active {
-    background: rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
     border-color: rgba(255,255,255,0.6);
 }
 .mctl-btn-a {
     bottom: 50px; right: 20px;
-    background: rgba(80,200,120, 0.65);
+    background: rgba(80,200,120,0.14);
     border-color: rgba(80,200,120,0.4);
 }
 .mctl-btn-a.active {
@@ -7097,7 +7097,7 @@ buildCharSelect();
 }
 .mctl-btn-b {
     bottom: 110px; right: 75px;
-    background: rgba(200,80,80, 0.65);
+    background: rgba(200,80,80,0.14);
     border-color: rgba(200,80,80,0.4);
 }
 .mctl-btn-b.active {
@@ -7247,7 +7247,7 @@ buildCharSelect();
 </script>
 
 <!-- MASCOM Conglomerate Nav -->
-<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180,0.32);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
 <span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
 <a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
 <a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>

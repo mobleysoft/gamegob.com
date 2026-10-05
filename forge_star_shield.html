@@ -53,11 +53,11 @@ const COL = {
   white: '#ffffff',
   dim: '#334455',
   panel: 'rgba(10,10,20,0.92)',
-  panelBorder: 'rgba(240,184,0, 0.65)',
-  slotEmpty: 'rgba(240,184,0, 0.65)',
-  slotFill: 'rgba(240,184,0, 0.65)',
+  panelBorder: 'rgba(240,184,0,0.32)',
+  slotEmpty: 'rgba(240,184,0,0.28)',
+  slotFill: 'rgba(240,184,0,0.28)',
   hpBar: '#00ff88',
-  hpBg: 'rgba(255,255,255, 0.65)',
+  hpBg: 'rgba(255,255,255,0.28)',
   shieldCol: 'rgba(0,204,255, 0.65)',
 };
 
@@ -1704,7 +1704,7 @@ const drawHUD = () => {
   const hpRatio = player.hp / player.maxHp;
   ctx.fillStyle = hpRatio > 0.5 ? COL.hpBar : hpRatio > 0.25 ? '#ffaa00' : COL.red;
   ctx.fillRect(barX, barY, barW * hpRatio, barH);
-  ctx.strokeStyle = 'rgba(255,255,255, 0.65)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.32)';
   ctx.lineWidth = 1;
   ctx.strokeRect(barX, barY, barW, barH);
   drawText(`HP ${Math.ceil(player.hp)}/${player.maxHp}`, barX + barW/2, barY + barH/2, 9, COL.white);
@@ -1712,7 +1712,7 @@ const drawHUD = () => {
   // Shield bar
   if (player.shieldMax > 0) {
     const sy = barY + barH + 4*SCALE;
-    ctx.fillStyle = 'rgba(0,204,255, 0.65)';
+    ctx.fillStyle = 'rgba(0,204,255,0.14)';
     ctx.fillRect(barX, sy, barW * 0.6, barH * 0.7);
     ctx.fillStyle = COL.cyan;
     ctx.fillRect(barX, sy, barW * 0.6 * (player.shieldHp / player.shieldMax), barH * 0.7);
@@ -1891,7 +1891,7 @@ const drawBoss = () => {
   ctx.fillRect(barX, barY, barW, barH);
   ctx.fillStyle = b.type.color;
   ctx.fillRect(barX, barY, barW * (b.hp / b.maxHp), barH);
-  ctx.strokeStyle = 'rgba(255,255,255, 0.65)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.32)';
   ctx.lineWidth = 1;
   ctx.strokeRect(barX, barY, barW, barH);
   drawText(b.type.name, W/2, barY + barH + 10*SCALE, 10, b.type.color);
@@ -2214,9 +2214,9 @@ const drawShop = () => {
     const affordable = credits >= item.cost;
 
     // Item box
-    ctx.fillStyle = affordable ? 'rgba(240,184,0, 0.65)' : 'rgba(255,50,50, 0.65)';
+    ctx.fillStyle = affordable ? 'rgba(240,184,0,0.14)' : 'rgba(255,50,50, 0.65)';
     ctx.fillRect(W*0.1, y - itemH*0.4, W*0.8, itemH*0.8);
-    ctx.strokeStyle = affordable ? COL.panelBorder : 'rgba(255,50,50, 0.65)';
+    ctx.strokeStyle = affordable ? COL.panelBorder : 'rgba(255,50,50,0.32)';
     ctx.lineWidth = 1;
     ctx.strokeRect(W*0.1, y - itemH*0.4, W*0.8, itemH*0.8);
 
@@ -2265,7 +2265,7 @@ const drawFuse = () => {
     const y = startY + i * itemH;
     const selected = i === fuseSlotA || i === fuseSlotB;
 
-    ctx.fillStyle = selected ? 'rgba(204,68,255, 0.65)' : 'rgba(240,184,0, 0.65)';
+    ctx.fillStyle = selected ? 'rgba(204,68,255,0.14)' : 'rgba(240,184,0, 0.65)';
     ctx.fillRect(W*0.1, y - itemH*0.35, W*0.8, itemH*0.7);
     ctx.strokeStyle = selected ? COL.purple : COL.panelBorder;
     ctx.lineWidth = selected ? 2 : 1;
@@ -2428,7 +2428,7 @@ requestAnimationFrame(loop);
 
 </script>
 <!-- MASCOM Conglomerate Nav -->
-<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180,0.32);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
 <span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
 <a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
 <a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>

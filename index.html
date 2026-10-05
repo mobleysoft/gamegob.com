@@ -222,7 +222,7 @@ body::after {
     position: absolute;
     top: -50%; left: -25%;
     width: 150%; height: 200%;
-    background: radial-gradient(ellipse at 50% 100%, rgba(136,204,136, 0.65) 0%, transparent 50%);
+    background: radial-gradient(ellipse at 50% 100%, rgba(136,204,136,0.14) 0%, transparent 50%);
     pointer-events: none;
 }
 
@@ -307,14 +307,14 @@ body::after {
 .nav-btn:hover, .nav-btn.active {
     border-color: var(--accent);
     color: var(--accent);
-    background: rgba(136,204,136, 0.65);
+    background: rgba(136,204,136,0.14);
     box-shadow: 0 0 12px var(--accent-glow);
 }
 
 .nav-btn[data-filter="forge"]:hover, .nav-btn[data-filter="forge"].active {
     border-color: var(--forge-accent);
     color: var(--forge-accent);
-    background: rgba(204,136,255, 0.65);
+    background: rgba(204,136,255,0.14);
     box-shadow: 0 0 12px var(--forge-glow);
 }
 
@@ -497,21 +497,21 @@ body::after {
 }
 
 /* Genre color coding */
-.genre-rpg { color: #88CC88; border-color: rgba(136,204,136, 0.65); background: rgba(136,204,136, 0.65); }
-.genre-action { color: #FF6655; border-color: rgba(255,102,85, 0.65); background: rgba(255,102,85, 0.65); }
-.genre-strategy { color: #CCCC44; border-color: rgba(204,204,68, 0.65); background: rgba(204,204,68, 0.65); }
-.genre-shooter { color: #44FF88; border-color: rgba(68,255,136, 0.65); background: rgba(68,255,136, 0.65); }
-.genre-racing { color: #FFAA22; border-color: rgba(255,170,34, 0.65); background: rgba(255,170,34, 0.65); }
-.genre-puzzle { color: #44CCFF; border-color: rgba(68,204,255, 0.65); background: rgba(68,204,255, 0.65); }
-.genre-card { color: #CC88CC; border-color: rgba(204,136,204, 0.65); background: rgba(204,136,204, 0.65); }
-.genre-fighting { color: #FFCC00; border-color: rgba(255,204,0, 0.65); background: rgba(255,204,0, 0.65); }
-.genre-survival { color: #CC4488; border-color: rgba(204,68,136, 0.65); background: rgba(204,68,136, 0.65); }
-.genre-moba { color: #FF44AA; border-color: rgba(255,68,170, 0.65); background: rgba(255,68,170, 0.65); }
-.genre-arcade { color: #88BBFF; border-color: rgba(136,187,255, 0.65); background: rgba(136,187,255, 0.65); }
-.genre-idle { color: #FFDD88; border-color: rgba(255,221,136, 0.65); background: rgba(255,221,136, 0.65); }
-.genre-roguelike { color: #AA88FF; border-color: rgba(170,136,255, 0.65); background: rgba(170,136,255, 0.65); }
-.genre-word { color: #88DDBB; border-color: rgba(136,221,187, 0.65); background: rgba(136,221,187, 0.65); }
-.genre-board { color: #DDAA77; border-color: rgba(221,170,119, 0.65); background: rgba(221,170,119, 0.65); }
+.genre-rpg { color: #88CC88; border-color: rgba(136,204,136,0.32); background: rgba(136,204,136,0.14); }
+.genre-action { color: #FF6655; border-color: rgba(255,102,85,0.32); background: rgba(255,102,85,0.14); }
+.genre-strategy { color: #CCCC44; border-color: rgba(204,204,68,0.32); background: rgba(204,204,68,0.14); }
+.genre-shooter { color: #44FF88; border-color: rgba(68,255,136,0.32); background: rgba(68,255,136,0.14); }
+.genre-racing { color: #FFAA22; border-color: rgba(255,170,34,0.32); background: rgba(255,170,34,0.14); }
+.genre-puzzle { color: #44CCFF; border-color: rgba(68,204,255,0.32); background: rgba(68,204,255,0.14); }
+.genre-card { color: #CC88CC; border-color: rgba(204,136,204,0.32); background: rgba(204,136,204,0.14); }
+.genre-fighting { color: #FFCC00; border-color: rgba(255,204,0,0.32); background: rgba(255,204,0,0.14); }
+.genre-survival { color: #CC4488; border-color: rgba(204,68,136,0.32); background: rgba(204,68,136,0.14); }
+.genre-moba { color: #FF44AA; border-color: rgba(255,68,170,0.32); background: rgba(255,68,170,0.14); }
+.genre-arcade { color: #88BBFF; border-color: rgba(136,187,255,0.32); background: rgba(136,187,255,0.14); }
+.genre-idle { color: #FFDD88; border-color: rgba(255,221,136,0.32); background: rgba(255,221,136,0.14); }
+.genre-roguelike { color: #AA88FF; border-color: rgba(170,136,255,0.32); background: rgba(170,136,255,0.14); }
+.genre-word { color: #88DDBB; border-color: rgba(136,221,187,0.32); background: rgba(136,221,187,0.14); }
+.genre-board { color: #DDAA77; border-color: rgba(221,170,119,0.32); background: rgba(221,170,119,0.14); }
 
 .game-card .card-desc {
     font-size: 10px;
@@ -547,8 +547,8 @@ body::after {
     right: 10px;
     font-size: 7px;
     padding: 3px 8px;
-    background: rgba(136,204,136, 0.65);
-    border: 1px solid rgba(136,204,136, 0.65);
+    background: rgba(136,204,136,0.14);
+    border: 1px solid rgba(136,204,136,0.32);
     border-radius: 4px;
     color: var(--accent);
     text-transform: uppercase;
@@ -561,8 +561,8 @@ body::after {
     right: 10px;
     font-size: 7px;
     padding: 3px 8px;
-    background: rgba(204,136,255, 0.65);
-    border: 1px solid rgba(204,136,255, 0.65);
+    background: rgba(204,136,255,0.14);
+    border: 1px solid rgba(204,136,255,0.32);
     border-radius: 4px;
     color: var(--forge-accent);
     text-transform: uppercase;
@@ -785,7 +785,7 @@ body::after {
 
                     <!-- Haven RPG -->
                     <a href="haven.html" class="game-card" data-game="haven-rpg" data-genres="rpg" data-collection="original"
-                       style="--card-color:#88CC88;--card-glow:rgba(136,204,136, 0.65);">
+                       style="--card-color:#88CC88;--card-glow:rgba(136,204,136,0.38);">
                         <img class="card-shot" src="/assets/thumbs/haven.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-featured">MAIN GAME</span>
                         <div class="card-header">
@@ -798,7 +798,7 @@ body::after {
 
                     <!-- Dreadtide (survivors) -->
                     <a href="survivors.html" class="game-card" data-game="dreadtide" data-genres="action,survival" data-collection="original"
-                       style="--card-color:#CC4488;--card-glow:rgba(204,68,136, 0.65);">
+                       style="--card-color:#CC4488;--card-glow:rgba(204,68,136,0.38);">
                         <img class="card-shot" src="/assets/thumbs/survivors.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Dreadtide</h3>
@@ -810,7 +810,7 @@ body::after {
 
                     <!-- Throne Wars (battle_chess) -->
                     <a href="battle_chess.html" class="game-card" data-game="throne-wars" data-genres="strategy" data-collection="original"
-                       style="--card-color:#CCCC44;--card-glow:rgba(204,204,68, 0.65);">
+                       style="--card-color:#CCCC44;--card-glow:rgba(204,204,68,0.38);">
                         <img class="card-shot" src="/assets/thumbs/battle_chess.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Throne Wars</h3>
@@ -822,7 +822,7 @@ body::after {
 
                     <!-- Purgefire (fps) -->
                     <a href="fps.html" class="game-card" data-game="purgefire" data-genres="shooter" data-collection="original"
-                       style="--card-color:#44FF88;--card-glow:rgba(68,255,136, 0.65);">
+                       style="--card-color:#44FF88;--card-glow:rgba(68,255,136,0.38);">
                         <img class="card-shot" src="/assets/thumbs/fps.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Purgefire</h3>
@@ -834,7 +834,7 @@ body::after {
 
                     <!-- Ascent (platformer) -->
                     <a href="platformer.html" class="game-card" data-game="ascent" data-genres="action" data-collection="original"
-                       style="--card-color:#44CCCC;--card-glow:rgba(68,204,204, 0.65);">
+                       style="--card-color:#44CCCC;--card-glow:rgba(68,204,204,0.38);">
                         <img class="card-shot" src="/assets/thumbs/platformer.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Ascent</h3>
@@ -846,7 +846,7 @@ body::after {
 
                     <!-- Dreamweaver (bullet_hell) -->
                     <a href="bullet_hell.html" class="game-card" data-game="dreamweaver" data-genres="shooter,action" data-collection="original"
-                       style="--card-color:#8888FF;--card-glow:rgba(136,136,255, 0.65);">
+                       style="--card-color:#8888FF;--card-glow:rgba(136,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/bullet_hell.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Dreamweaver</h3>
@@ -858,7 +858,7 @@ body::after {
 
                     <!-- Being Arena -->
                     <a href="being_arena.html" class="game-card" data-game="being-arena" data-genres="fighting,action" data-collection="original"
-                       style="--card-color:#FF6655;--card-glow:rgba(255,102,85, 0.65);">
+                       style="--card-color:#FF6655;--card-glow:rgba(255,102,85,0.38);">
                         <img class="card-shot" src="/assets/thumbs/being_arena.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-featured">NEW</span>
                         <div class="card-header">
@@ -884,7 +884,7 @@ body::after {
 
                     <!-- Crown Fall (battle_royale) -->
                     <a href="battle_royale.html" class="game-card" data-game="crown-fall" data-genres="action,shooter" data-collection="original"
-                       style="--card-color:#FF5555;--card-glow:rgba(255,85,85, 0.65);">
+                       style="--card-color:#FF5555;--card-glow:rgba(255,85,85,0.38);">
                         <img class="card-shot" src="/assets/thumbs/battle_royale.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Crown Fall</h3>
@@ -896,7 +896,7 @@ body::after {
 
                     <!-- Grimoire (card_game) -->
                     <a href="card_game.html" class="game-card" data-game="grimoire" data-genres="card,strategy" data-collection="original"
-                       style="--card-color:#CC88CC;--card-glow:rgba(204,136,204, 0.65);">
+                       style="--card-color:#CC88CC;--card-glow:rgba(204,136,204,0.38);">
                         <img class="card-shot" src="/assets/thumbs/card_game.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Grimoire</h3>
@@ -908,7 +908,7 @@ body::after {
 
                     <!-- Brawl Sanctum (smash_arena) -->
                     <a href="smash_arena.html" class="game-card" data-game="brawl-sanctum" data-genres="fighting,action" data-collection="original"
-                       style="--card-color:#FFCC00;--card-glow:rgba(255,204,0, 0.65);">
+                       style="--card-color:#FFCC00;--card-glow:rgba(255,204,0,0.38);">
                         <img class="card-shot" src="/assets/thumbs/smash_arena.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Brawl Sanctum</h3>
@@ -920,7 +920,7 @@ body::after {
 
                     <!-- Canticle of Champions (moba) -->
                     <a href="moba.html" class="game-card" data-game="canticle-of-champions" data-genres="moba,strategy" data-collection="original"
-                       style="--card-color:#FF44AA;--card-glow:rgba(255,68,170, 0.65);">
+                       style="--card-color:#FF44AA;--card-glow:rgba(255,68,170,0.38);">
                         <img class="card-shot" src="/assets/thumbs/moba.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Canticle of Champions</h3>
@@ -932,7 +932,7 @@ body::after {
 
                     <!-- Burnline (racer) -->
                     <a href="racer.html" class="game-card" data-game="burnline" data-genres="racing" data-collection="original"
-                       style="--card-color:#FFAA22;--card-glow:rgba(255,170,34, 0.65);">
+                       style="--card-color:#FFAA22;--card-glow:rgba(255,170,34,0.38);">
                         <img class="card-shot" src="/assets/thumbs/racer.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Burnline</h3>
@@ -944,7 +944,7 @@ body::after {
 
                     <!-- War Council (auto_battler) -->
                     <a href="auto_battler.html" class="game-card" data-game="war-council" data-genres="strategy" data-collection="original"
-                       style="--card-color:#8844CC;--card-glow:rgba(136,68,204, 0.65);">
+                       style="--card-color:#8844CC;--card-glow:rgba(136,68,204,0.38);">
                         <img class="card-shot" src="/assets/thumbs/auto_battler.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>War Council</h3>
@@ -956,7 +956,7 @@ body::after {
 
                     <!-- Game Selector (games) -->
                     <a href="games.html" class="game-card" data-game="game-selector" data-genres="arcade" data-collection="original"
-                       style="--card-color:#88BBFF;--card-glow:rgba(136,187,255, 0.65);">
+                       style="--card-color:#88BBFF;--card-glow:rgba(136,187,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/games.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Game Selector</h3>
@@ -981,7 +981,7 @@ body::after {
 
                     <!-- Forge Breakout -->
                     <a href="forge_breakout.html" class="game-card" data-game="forge-breakout" data-genres="arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_breakout.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Breakout</h3>
@@ -993,7 +993,7 @@ body::after {
 
                     <!-- Forge Snake -->
                     <a href="forge_snake.html" class="game-card" data-game="forge-snake" data-genres="arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_snake.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Snake</h3>
@@ -1005,7 +1005,7 @@ body::after {
 
                     <!-- Forge Tic-Tac-Toe -->
                     <a href="forge_tic_tac_toe.html" class="game-card" data-game="forge-tic-tac-toe" data-genres="puzzle,board" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_tic_tac_toe.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Tic-Tac-Toe</h3>
@@ -1017,7 +1017,7 @@ body::after {
 
                     <!-- Forge Block Cascade -->
                     <a href="forge_tetris.html" class="game-card" data-game="forge-block-cascade" data-genres="puzzle,arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_tetris.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Block Cascade</h3>
@@ -1029,7 +1029,7 @@ body::after {
 
                     <!-- Forge Gob Chomp -->
                     <a href="forge_pac_man.html" class="game-card" data-game="forge-gob-chomp" data-genres="arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_pac_man.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Gob Chomp</h3>
@@ -1041,7 +1041,7 @@ body::after {
 
                     <!-- Forge Cosmic Barrage -->
                     <a href="forge_space_invaders.html" class="game-card" data-game="forge-cosmic-barrage" data-genres="shooter,arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_space_invaders.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Cosmic Barrage</h3>
@@ -1066,7 +1066,7 @@ body::after {
 
                     <!-- Forge Idle -->
                     <a href="forge_idle.html" class="game-card" data-game="forge-idle" data-genres="idle" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_idle.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Idle / Clicker</h3>
@@ -1078,7 +1078,7 @@ body::after {
 
                     <!-- Forge Match-3 -->
                     <a href="forge_match_three.html" class="game-card" data-game="forge-match-three" data-genres="puzzle" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_match_three.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Match-3 Puzzle</h3>
@@ -1090,7 +1090,7 @@ body::after {
 
                     <!-- Forge Tower Defense -->
                     <a href="forge_tower_defense.html" class="game-card" data-game="forge-tower-defense" data-genres="strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_tower_defense.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Tower Defense</h3>
@@ -1102,7 +1102,7 @@ body::after {
 
                     <!-- Forge Platformer -->
                     <a href="forge_platformer.html" class="game-card" data-game="forge-platformer" data-genres="action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_platformer.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Platformer</h3>
@@ -1114,7 +1114,7 @@ body::after {
 
                     <!-- Forge Fighting -->
                     <a href="forge_fighting.html" class="game-card" data-game="forge-fighting" data-genres="fighting" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_fighting.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Fighting Game</h3>
@@ -1126,7 +1126,7 @@ body::after {
 
                     <!-- Forge Bullet Hell -->
                     <a href="forge_bullet_hell.html" class="game-card" data-game="forge-bullet-hell" data-genres="shooter,action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_bullet_hell.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Bullet Hell</h3>
@@ -1151,7 +1151,7 @@ body::after {
 
                     <!-- Forge Auto-Battler -->
                     <a href="forge_auto_battler.html" class="game-card" data-game="forge-auto-battler" data-genres="strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_auto_battler.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Auto-Battler</h3>
@@ -1163,7 +1163,7 @@ body::after {
 
                     <!-- Forge Racing -->
                     <a href="forge_racing.html" class="game-card" data-game="forge-racing" data-genres="racing" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_racing.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Racing Game</h3>
@@ -1175,7 +1175,7 @@ body::after {
 
                     <!-- Forge Survival -->
                     <a href="forge_survival.html" class="game-card" data-game="forge-survival" data-genres="survival,action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_survival.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Survival</h3>
@@ -1187,7 +1187,7 @@ body::after {
 
                     <!-- Forge Card Game -->
                     <a href="forge_card_game.html" class="game-card" data-game="forge-card-game" data-genres="card,strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_card_game.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Card Game / Deckbuilder</h3>
@@ -1199,7 +1199,7 @@ body::after {
 
                     <!-- Forge FPS -->
                     <a href="forge_fps.html" class="game-card" data-game="forge-fps" data-genres="shooter" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_fps.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>First-Person Shooter</h3>
@@ -1211,7 +1211,7 @@ body::after {
 
                     <!-- Forge Roguelike -->
                     <a href="forge_roguelike.html" class="game-card" data-game="forge-roguelike" data-genres="roguelike,rpg" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_roguelike.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>Roguelike</h3>
@@ -1236,7 +1236,7 @@ body::after {
 
                     <!-- Forge MOBA -->
                     <a href="forge_moba.html" class="game-card" data-game="forge-moba" data-genres="moba,strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_moba.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>MOBA / Arena</h3>
@@ -1248,7 +1248,7 @@ body::after {
 
                     <!-- Forge RPG -->
                     <a href="forge_rpg.html" class="game-card" data-game="forge-rpg" data-genres="rpg" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_rpg.jpg" alt="" loading="lazy" width="800" height="450">
                         <div class="card-header">
                             <h3>RPG</h3>
@@ -1266,7 +1266,7 @@ body::after {
 
                     <!-- BreakShaper -->
                     <a href="forge_break_shaper.html" class="game-card" data-game="forge-break-shaper" data-genres="puzzle,arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_break_shaper.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">REMIX</span>
                         <div class="card-header">
@@ -1279,7 +1279,7 @@ body::after {
 
                     <!-- DominoChampions -->
                     <a href="forge_domino_champions.html" class="game-card" data-game="forge-domino-champions" data-genres="board,strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_domino_champions.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">REMIX</span>
                         <div class="card-header">
@@ -1292,7 +1292,7 @@ body::after {
 
                     <!-- EndBird -->
                     <a href="forge_end_bird.html" class="game-card" data-game="forge-end-bird" data-genres="arcade,action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_end_bird.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">REMIX</span>
                         <div class="card-header">
@@ -1305,7 +1305,7 @@ body::after {
 
                     <!-- Ghost Eater -->
                     <a href="forge_ghost_eater.html" class="game-card" data-game="forge-ghost-eater" data-genres="arcade,action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_ghost_eater.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">REMIX</span>
                         <div class="card-header">
@@ -1318,7 +1318,7 @@ body::after {
 
                     <!-- Hangman Heroes -->
                     <a href="forge_hangman_heroes.html" class="game-card" data-game="forge-hangman-heroes" data-genres="word,puzzle" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_hangman_heroes.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">REMIX</span>
                         <div class="card-header">
@@ -1331,7 +1331,7 @@ body::after {
 
                     <!-- Hero's Journey -->
                     <a href="forge_heros_journey.html" class="game-card" data-game="forge-heros-journey" data-genres="rpg,action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_heros_journey.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">REMIX</span>
                         <div class="card-header">
@@ -1357,7 +1357,7 @@ body::after {
 
                     <!-- HexCheckers -->
                     <a href="forge_hex_checkers.html" class="game-card" data-game="forge-hex-checkers" data-genres="board,strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_hex_checkers.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">REMIX</span>
                         <div class="card-header">
@@ -1370,7 +1370,7 @@ body::after {
 
                     <!-- Mineshafted -->
                     <a href="forge_mineshafted.html" class="game-card" data-game="forge-mineshafted" data-genres="puzzle,strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_mineshafted.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">REMIX</span>
                         <div class="card-header">
@@ -1383,7 +1383,7 @@ body::after {
 
                     <!-- PowerJumpRun -->
                     <a href="forge_power_jump_run.html" class="game-card" data-game="forge-power-jump-run" data-genres="action,arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_power_jump_run.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">REMIX</span>
                         <div class="card-header">
@@ -1396,7 +1396,7 @@ body::after {
 
                     <!-- Rocket Apprentice -->
                     <a href="forge_rocket_apprentice.html" class="game-card" data-game="forge-rocket-apprentice" data-genres="arcade,action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_rocket_apprentice.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">REMIX</span>
                         <div class="card-header">
@@ -1409,7 +1409,7 @@ body::after {
 
                     <!-- RPS Wands -->
                     <a href="forge_rps_wands.html" class="game-card" data-game="forge-rps-wands" data-genres="strategy,card" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_rps_wands.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">REMIX</span>
                         <div class="card-header">
@@ -1422,7 +1422,7 @@ body::after {
 
                     <!-- Serpent's Coil -->
                     <a href="forge_serpents_coil.html" class="game-card" data-game="forge-serpents-coil" data-genres="arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_serpents_coil.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">REMIX</span>
                         <div class="card-header">
@@ -1448,7 +1448,7 @@ body::after {
 
                     <!-- StarShield -->
                     <a href="forge_star_shield.html" class="game-card" data-game="forge-star-shield" data-genres="shooter,arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_star_shield.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">REMIX</span>
                         <div class="card-header">
@@ -1461,7 +1461,7 @@ body::after {
 
                     <!-- Tic Tac Titans -->
                     <a href="forge_tic_tac_titans.html" class="game-card" data-game="forge-tic-tac-titans" data-genres="board,strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_tic_tac_titans.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">REMIX</span>
                         <div class="card-header">
@@ -1474,7 +1474,7 @@ body::after {
 
                     <!-- Gravity Well -->
                     <a href="forge_gravity_well.html" class="game-card" data-game="forge-gravity-well" data-genres="puzzle" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_gravity_well.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">NEW</span>
                         <div class="card-header">
@@ -1487,7 +1487,7 @@ body::after {
 
                     <!-- Word Cascade -->
                     <a href="forge_word_cascade.html" class="game-card" data-game="forge-word-cascade" data-genres="word,action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_word_cascade.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">NEW</span>
                         <div class="card-header">
@@ -1500,7 +1500,7 @@ body::after {
 
                     <!-- Dungeon Solitaire -->
                     <a href="forge_dungeon_solitaire.html" class="game-card" data-game="forge-dungeon-solitaire" data-genres="card,roguelike" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_dungeon_solitaire.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">NEW</span>
                         <div class="card-header">
@@ -1513,7 +1513,7 @@ body::after {
 
                     <!-- Asteroid Miner -->
                     <a href="forge_asteroid_miner.html" class="game-card" data-game="forge-asteroid-miner" data-genres="action,shooter" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_asteroid_miner.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">NEW</span>
                         <div class="card-header">
@@ -1526,7 +1526,7 @@ body::after {
 
                     <!-- Color Flood -->
                     <a href="forge_color_flood.html" class="game-card" data-game="forge-color-flood" data-genres="puzzle,strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/forge_color_flood.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">NEW</span>
                         <div class="card-header">
@@ -1539,7 +1539,7 @@ body::after {
 
                     <!-- Genesis -->
                     <a href="genesis.html" class="game-card" data-game="genesis" data-genres="arcade,sandbox" data-collection="forge"
-                       style="--card-color:#c9a227;--card-glow:rgba(201,162,39, 0.65);">
+                       style="--card-color:#c9a227;--card-glow:rgba(201,162,39,0.38);">
                         <img class="card-shot" src="/assets/thumbs/genesis.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">NEW</span>
                         <div class="card-header">
@@ -1552,7 +1552,7 @@ body::after {
 
                     <!-- Photonic Forge Breakout -->
                     <a href="photonic_forge_breakout.html" class="game-card" data-game="photonic-forge-breakout" data-genres="arcade,puzzle" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255, 0.65);">
+                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
                         <img class="card-shot" src="/assets/thumbs/photonic_forge_breakout.jpg" alt="" loading="lazy" width="800" height="450">
                         <span class="badge-new">REMIX</span>
                         <div class="card-header">
@@ -1874,7 +1874,7 @@ body::after {
 </script>
 
 <!-- MASCOM Conglomerate Nav -->
-<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180,0.32);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
 <span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
 <a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
 <a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>

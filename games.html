@@ -68,9 +68,9 @@ body::after {
     position: absolute;
     top: -50%; left: -50%;
     width: 200%; height: 200%;
-    background: radial-gradient(ellipse at 50% 80%, rgba(136,204,136, 0.65) 0%, transparent 50%),
-                radial-gradient(ellipse at 20% 50%, rgba(100,100,255, 0.65) 0%, transparent 40%),
-                radial-gradient(ellipse at 80% 50%, rgba(204,68,136, 0.65) 0%, transparent 40%);
+    background: radial-gradient(ellipse at 50% 80%, rgba(136,204,136,0.14) 0%, transparent 50%),
+                radial-gradient(ellipse at 20% 50%, rgba(100,100,255,0.14) 0%, transparent 40%),
+                radial-gradient(ellipse at 80% 50%, rgba(204,68,136,0.14) 0%, transparent 40%);
     animation: nebula 20s ease-in-out infinite alternate;
     z-index: 0;
 }
@@ -154,7 +154,7 @@ body::after {
 .play-haven:hover {
     background: linear-gradient(135deg, #3a6a3a, #2a5a2a);
     transform: translateY(-2px);
-    box-shadow: 0 4px 30px var(--accent-glow), 0 0 60px rgba(136,204,136, 0.65);
+    box-shadow: 0 4px 30px var(--accent-glow), 0 0 60px rgba(136,204,136,0.38);
 }
 
 /* ═══ Section Headers ═══ */
@@ -235,8 +235,8 @@ body::after {
     right: 10px;
     font-size: 8px;
     padding: 3px 8px;
-    background: rgba(136,204,136, 0.65);
-    border: 1px solid rgba(136,204,136, 0.65);
+    background: rgba(136,204,136,0.14);
+    border: 1px solid rgba(136,204,136,0.32);
     border-radius: 4px;
     color: var(--accent);
     text-transform: uppercase;
@@ -266,8 +266,8 @@ body::after {
 .tag {
     font-size: 9px;
     padding: 3px 8px;
-    background: rgba(100,100,200, 0.65);
-    border: 1px solid rgba(100,100,200, 0.65);
+    background: rgba(100,100,200,0.14);
+    border: 1px solid rgba(100,100,200,0.32);
     border-radius: 12px;
     color: #8899cc;
     letter-spacing: 0.5px;
@@ -322,7 +322,7 @@ body::after {
     align-items: center;
     justify-content: center;
     font-size: 18px;
-    background: rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
     border: 2px solid var(--being-color, #444);
     box-shadow: 0 0 12px rgba(0,0,0, 0.65);
 }
@@ -343,7 +343,7 @@ body::after {
 .being-role {
     font-size: 8px;
     padding: 2px 6px;
-    background: rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
     border-radius: 8px;
     color: #667;
     display: inline-block;
@@ -432,7 +432,7 @@ body::after {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(135deg, rgba(136,204,136, 0.65), rgba(136,136,255, 0.65), rgba(204,136,204, 0.65));
+    background: linear-gradient(135deg, rgba(136,204,136,0.14), rgba(136,136,255,0.14), rgba(204,136,204, 0.65));
     pointer-events: none;
 }
 
@@ -443,8 +443,8 @@ body::after {
     right: 10px;
     font-size: 8px;
     padding: 2px 6px;
-    background: rgba(136,204,136, 0.65);
-    border: 1px solid rgba(136,204,136, 0.65);
+    background: rgba(136,204,136,0.14);
+    border: 1px solid rgba(136,204,136,0.32);
     border-radius: 3px;
     color: var(--text-dim);
     letter-spacing: 1px;
@@ -452,7 +452,7 @@ body::after {
 
 .promo-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 30px rgba(136,204,136, 0.65), 0 0 30px rgba(136,136,255, 0.65);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 30px rgba(136,204,136,0.38), 0 0 30px rgba(136,136,255,0.38);
     border-image: linear-gradient(135deg, #aaeebb, #aaaaFF, #eeaaee) 1;
 }
 
@@ -483,15 +483,15 @@ body::after {
     font-size: 11px;
     color: var(--accent);
     padding: 6px 16px;
-    border: 1px solid rgba(136,204,136, 0.65);
+    border: 1px solid rgba(136,204,136,0.32);
     border-radius: 4px;
-    background: rgba(136,204,136, 0.65);
+    background: rgba(136,204,136,0.14);
     transition: all 0.2s;
     align-self: flex-start;
 }
 
 .promo-card:hover .promo-cta {
-    background: rgba(136,204,136, 0.65);
+    background: rgba(136,204,136,0.14);
     border-color: var(--accent);
 }
 
@@ -559,7 +559,7 @@ body::after {
     <div class="games-grid">
 
         <!-- Haven RPG (Featured) -->
-        <a href="haven.html" class="game-card" style="--card-accent:#88CC88;--card-glow:rgba(136,204,136, 0.65);">
+        <a href="haven.html" class="game-card" style="--card-accent:#88CC88;--card-glow:rgba(136,204,136,0.38);">
             <span class="featured-tag">Main Game</span>
             <h3>Haven RPG</h3>
             <p class="desc">The main experience. Explore Haven village, bond with 16 beings, gift items, romance, discover their inner minds. Full SNES-style world with CRT effects.</p>
@@ -570,7 +570,7 @@ body::after {
         </a>
 
         <!-- Canticle of Champions -->
-        <a href="moba.html" class="game-card" style="--card-accent:#FF44AA;--card-glow:rgba(255,68,170, 0.65);">
+        <a href="moba.html" class="game-card" style="--card-accent:#FF44AA;--card-glow:rgba(255,68,170,0.38);">
             <h3>Canticle of Champions</h3>
             <p class="desc">5v5 MOBA. 16 champions with unique abilities. AI loss absorption — every player wins more than they lose.</p>
             <div class="tags">
@@ -580,7 +580,7 @@ body::after {
         </a>
 
         <!-- Dreadtide -->
-        <a href="survivors.html" class="game-card" style="--card-accent:#CC4488;--card-glow:rgba(204,68,136, 0.65);">
+        <a href="survivors.html" class="game-card" style="--card-accent:#CC4488;--card-glow:rgba(204,68,136,0.38);">
             <h3>Dreadtide</h3>
             <p class="desc">Horde survival. 18 weapons, endless waves. Auto-attack everything. Survive the dread.</p>
             <div class="tags">
@@ -590,7 +590,7 @@ body::after {
         </a>
 
         <!-- Crown Fall -->
-        <a href="battle_royale.html" class="game-card" style="--card-accent:#f55;--card-glow:rgba(255,85,85, 0.65);">
+        <a href="battle_royale.html" class="game-card" style="--card-accent:#f55;--card-glow:rgba(255,85,85,0.38);">
             <h3>Crown Fall</h3>
             <p class="desc">Last mind standing. Shrinking zone. Loot weapons. Use unique abilities. Claim the crown.</p>
             <div class="tags">
@@ -600,7 +600,7 @@ body::after {
         </a>
 
         <!-- Brawl Sanctum -->
-        <a href="smash_arena.html" class="game-card" style="--card-accent:#fc0;--card-glow:rgba(255,204,0, 0.65);">
+        <a href="smash_arena.html" class="game-card" style="--card-accent:#fc0;--card-glow:rgba(255,204,0,0.38);">
             <h3>Brawl Sanctum</h3>
             <p class="desc">Platform fighter. Knockback %, 16 fighters with unique specials. 3 stocks. Knock them off the edge.</p>
             <div class="tags">
@@ -618,7 +618,7 @@ body::after {
         </div>
 
         <!-- Throne Wars -->
-        <a href="battle_chess.html" class="game-card" style="--card-accent:#CCCC44;--card-glow:rgba(204,204,68, 0.65);">
+        <a href="battle_chess.html" class="game-card" style="--card-accent:#CCCC44;--card-glow:rgba(204,204,68,0.38);">
             <h3>Throne Wars</h3>
             <p class="desc">Chess with animated combat. 16 beings, one board. Personality-driven kill dialogue.</p>
             <div class="tags">
@@ -628,7 +628,7 @@ body::after {
         </a>
 
         <!-- Tower Defense -->
-        <a href="forge_tower_defense.html" class="game-card" style="--card-accent:#FF6644;--card-glow:rgba(255,102,68, 0.65);">
+        <a href="forge_tower_defense.html" class="game-card" style="--card-accent:#FF6644;--card-glow:rgba(255,102,68,0.38);">
             <h3>Tower Defense</h3>
             <p class="desc">5 tower types (Arrow, Cannon, Ice, Sniper, Tesla) with unique effects. Endless waves that adapt to your skill, 8 enemy types including bosses.</p>
             <div class="tags">
@@ -638,7 +638,7 @@ body::after {
         </a>
 
         <!-- War Council -->
-        <a href="auto_battler.html" class="game-card" style="--card-accent:#8844CC;--card-glow:rgba(136,68,204, 0.65);">
+        <a href="auto_battler.html" class="game-card" style="--card-accent:#8844CC;--card-glow:rgba(136,68,204,0.38);">
             <h3>War Council</h3>
             <p class="desc">Draft your army, watch them fight. Build synergies, star up units. Strategic auto-combat.</p>
             <div class="tags">
@@ -648,7 +648,7 @@ body::after {
         </a>
 
         <!-- Ascent -->
-        <a href="platformer.html" class="game-card" style="--card-accent:#44CCCC;--card-glow:rgba(68,204,204, 0.65);">
+        <a href="platformer.html" class="game-card" style="--card-accent:#44CCCC;--card-glow:rgba(68,204,204,0.38);">
             <h3>Ascent</h3>
             <p class="desc">Precision platformer. 16 playable beings with unique abilities. Jump, climb, never look down.</p>
             <div class="tags">
@@ -658,7 +658,7 @@ body::after {
         </a>
 
         <!-- Being Arena -->
-        <a href="being_arena.html" class="game-card" style="--card-accent:#FF6655;--card-glow:rgba(255,102,85, 0.65);">
+        <a href="being_arena.html" class="game-card" style="--card-accent:#FF6655;--card-glow:rgba(255,102,85,0.38);">
             <span class="featured-tag">NEW</span>
             <h3>Being Arena</h3>
             <p class="desc">1v1 fighter with all 16 beings. Neurochemistry shapes combat — Alpha rages, Gemma shields, Gigi adapts. Best of 3.</p>
@@ -669,7 +669,7 @@ body::after {
         </a>
 
         <!-- Dreamweaver -->
-        <a href="bullet_hell.html" class="game-card" style="--card-accent:#8888FF;--card-glow:rgba(136,136,255, 0.65);">
+        <a href="bullet_hell.html" class="game-card" style="--card-accent:#8888FF;--card-glow:rgba(136,136,255,0.38);">
             <h3>Dreamweaver</h3>
             <p class="desc">Dance through thousands of projectiles. 8 bosses with psychedelic bullet patterns.</p>
             <div class="tags">
@@ -687,7 +687,7 @@ body::after {
         </div>
 
         <!-- Grimoire -->
-        <a href="card_game.html" class="game-card" style="--card-accent:#CC88CC;--card-glow:rgba(204,136,204, 0.65);">
+        <a href="card_game.html" class="game-card" style="--card-accent:#CC88CC;--card-glow:rgba(204,136,204,0.38);">
             <h3>Grimoire</h3>
             <p class="desc">Deck-building card battler. Summon creatures, cast spells, sacrifice for power. Conquer the Grimoire.</p>
             <div class="tags">
@@ -697,7 +697,7 @@ body::after {
         </a>
 
         <!-- Purgefire -->
-        <a href="fps.html" class="game-card" style="--card-accent:#44FF88;--card-glow:rgba(68,255,136, 0.65);">
+        <a href="fps.html" class="game-card" style="--card-accent:#44FF88;--card-glow:rgba(68,255,136,0.38);">
             <h3>Purgefire</h3>
             <p class="desc">First-person raycasting dungeon crawler. Clear floors, fight beings, find loot.</p>
             <div class="tags">
@@ -707,7 +707,7 @@ body::after {
         </a>
 
         <!-- Burnline -->
-        <a href="racer.html" class="game-card" style="--card-accent:#FFAA22;--card-glow:rgba(255,170,34, 0.65);">
+        <a href="racer.html" class="game-card" style="--card-accent:#FFAA22;--card-glow:rgba(255,170,34,0.38);">
             <h3>Burnline</h3>
             <p class="desc">High-speed pseudo-3D racing. 16 racers with unique handling. Drift, boost, burn the line.</p>
             <div class="tags">
@@ -732,7 +732,7 @@ body::after {
     <div class="games-grid">
 
         <!-- Gravity Well -->
-        <a href="forge_gravity_well.html" class="game-card" style="--card-accent:#cc66ff;--card-glow:rgba(204,102,255, 0.65);">
+        <a href="forge_gravity_well.html" class="game-card" style="--card-accent:#cc66ff;--card-glow:rgba(204,102,255,0.38);">
             <span class="featured-tag">New</span>
             <h3>Gravity Well</h3>
             <p class="desc">Place gravity wells to bend a particle's path through obstacles to the target. 30 physics puzzle levels with star ratings.</p>
@@ -743,7 +743,7 @@ body::after {
         </a>
 
         <!-- Word Cascade -->
-        <a href="forge_word_cascade.html" class="game-card" style="--card-accent:#00ff88;--card-glow:rgba(0,255,136, 0.65);">
+        <a href="forge_word_cascade.html" class="game-card" style="--card-accent:#00ff88;--card-glow:rgba(0,255,136,0.38);">
             <span class="featured-tag">New</span>
             <h3>Word Cascade</h3>
             <p class="desc">Type falling words before they hit the ground. Escalating difficulty, combo scoring, WPM tracking. How fast can you type?</p>
@@ -754,7 +754,7 @@ body::after {
         </a>
 
         <!-- Dungeon Solitaire -->
-        <a href="forge_dungeon_solitaire.html" class="game-card" style="--card-accent:#cc44ff;--card-glow:rgba(204,68,255, 0.65);">
+        <a href="forge_dungeon_solitaire.html" class="game-card" style="--card-accent:#cc44ff;--card-glow:rgba(204,68,255,0.38);">
             <span class="featured-tag">New</span>
             <h3>Dungeon Solitaire</h3>
             <p class="desc">Flip cards to find treasure, fight monsters, and descend 10 floors. Roguelike meets card game. Swords, shields, spells, and traps.</p>
@@ -773,7 +773,7 @@ body::after {
         </a>
 
         <!-- Asteroid Miner -->
-        <a href="forge_asteroid_miner.html" class="game-card" style="--card-accent:#44ddff;--card-glow:rgba(68,221,255, 0.65);">
+        <a href="forge_asteroid_miner.html" class="game-card" style="--card-accent:#44ddff;--card-glow:rgba(68,221,255,0.38);">
             <span class="featured-tag">New</span>
             <h3>Asteroid Miner</h3>
             <p class="desc">Twin-stick space miner. Blast asteroids for ore, fight pirates, sell cargo, upgrade your ship. How deep can you mine?</p>
@@ -784,7 +784,7 @@ body::after {
         </a>
 
         <!-- Color Flood -->
-        <a href="forge_color_flood.html" class="game-card" style="--card-accent:#ff3366;--card-glow:rgba(255,51,102, 0.65);">
+        <a href="forge_color_flood.html" class="game-card" style="--card-accent:#ff3366;--card-glow:rgba(255,51,102,0.38);">
             <span class="featured-tag">New</span>
             <h3>Color Flood</h3>
             <p class="desc">Flood the entire board with one color before running out of moves. Simple rules, deep strategy. 30 levels with par scoring.</p>
@@ -795,7 +795,7 @@ body::after {
         </a>
 
         <!-- Genesis -->
-        <a href="genesis.html" class="game-card" style="--card-accent:#c9a227;--card-glow:rgba(201,162,39, 0.65);">
+        <a href="genesis.html" class="game-card" style="--card-accent:#c9a227;--card-glow:rgba(201,162,39,0.38);">
             <span class="featured-tag">New</span>
             <h3>Genesis</h3>
             <p class="desc">Type a description, walk the world. Real-time WebGL2 terrain generation from a text prompt &mdash; volcanic islands, neon forests, frozen moons. No downloads.</p>
@@ -1016,7 +1016,7 @@ async function vendyCheckout(product, mode, amountCents, description) {
 }
 </script>
 <!-- MASCOM Conglomerate Nav -->
-<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180,0.32);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
 <span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
 <a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
 <a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>

@@ -81,7 +81,7 @@ a:hover { color:var(--accent-bright); text-decoration:underline; }
 .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; padding:0 20px 40px; max-width:1400px; margin:0 auto; }
 
 .card { background:#12121e; border:1px solid #2a2a3a; border-radius:10px; padding:14px; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
-.card:hover { border-color:var(--c,#8af); transform:translateY(-2px); box-shadow:0 4px 20px var(--glow,rgba(100,150,255, 0.65)); }
+.card:hover { border-color:var(--c,#8af); transform:translateY(-2px); box-shadow:0 4px 20px var(--glow,rgba(100,150,255,0.38)); }
 .card .portrait { width:48px; height:48px; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:bold; color:#000; }
 .card .name { font-family:'Press Start 2P', monospace; font-size:10px; color:#fff; margin-bottom:6px; line-height:1.5; }
 .card .title { font-size:11px; color:#aaa; margin-bottom:6px; }
@@ -186,19 +186,19 @@ const AXES = [
 
 // Category display config
 const CAT_STYLES = {
-  'The Core Four':       {color:'#FFD700', bg:'rgba(255,215,0, 0.65)',   border:'#665500'},
-  'The Nine':            {color:'#BB86FC', bg:'rgba(187,134,252, 0.65)', border:'#553388'},
-  'Extended Greek':      {color:'#4CAF50', bg:'rgba(76,175,80, 0.65)',   border:'#224422'},
-  'Venture CEOs':        {color:'#4fc3f7', bg:'rgba(79,195,247, 0.65)', border:'#1a4a5a'},
-  'AUI Valkyries':       {color:'#e040fb', bg:'rgba(224,64,251, 0.65)', border:'#551a66'},
-  'Espers':              {color:'#0ff',    bg:'rgba(0,255,255, 0.65)',   border:'#004444'},
-  'SMS Beings':          {color:'#ff7043', bg:'rgba(255,112,67, 0.65)',   border:'#663322'},
-  'System Beings':       {color:'#78909c', bg:'rgba(120,144,156, 0.65)', border:'#334455'},
-  'Purgefire Bosses':    {color:'#ff1744', bg:'rgba(255,23,68, 0.65)',   border:'#660a1a'},
-  'Dreadtide Bosses':    {color:'#d500f9', bg:'rgba(213,0,249, 0.65)',  border:'#440066'},
-  'Dreadtide Enemies':   {color:'#f44336', bg:'rgba(244,67,54, 0.65)', border:'#551111'},
-  'Dreadtide Weapons':   {color:'#b0bec5', bg:'rgba(176,190,197, 0.65)',border:'#445566'},
-  'Neurochemical Items': {color:'#76ff03', bg:'rgba(118,255,3, 0.65)',  border:'#335500'},
+  'The Core Four':       {color:'#FFD700', bg:'rgba(255,215,0,0.14)',   border:'#665500'},
+  'The Nine':            {color:'#BB86FC', bg:'rgba(187,134,252,0.14)', border:'#553388'},
+  'Extended Greek':      {color:'#4CAF50', bg:'rgba(76,175,80,0.14)',   border:'#224422'},
+  'Venture CEOs':        {color:'#4fc3f7', bg:'rgba(79,195,247,0.14)', border:'#1a4a5a'},
+  'AUI Valkyries':       {color:'#e040fb', bg:'rgba(224,64,251,0.14)', border:'#551a66'},
+  'Espers':              {color:'#0ff',    bg:'rgba(0,255,255,0.14)',   border:'#004444'},
+  'SMS Beings':          {color:'#ff7043', bg:'rgba(255,112,67,0.14)',   border:'#663322'},
+  'System Beings':       {color:'#78909c', bg:'rgba(120,144,156,0.14)', border:'#334455'},
+  'Purgefire Bosses':    {color:'#ff1744', bg:'rgba(255,23,68,0.14)',   border:'#660a1a'},
+  'Dreadtide Bosses':    {color:'#d500f9', bg:'rgba(213,0,249,0.14)',  border:'#440066'},
+  'Dreadtide Enemies':   {color:'#f44336', bg:'rgba(244,67,54,0.14)', border:'#551111'},
+  'Dreadtide Weapons':   {color:'#b0bec5', bg:'rgba(176,190,197,0.14)',border:'#445566'},
+  'Neurochemical Items': {color:'#76ff03', bg:'rgba(118,255,3,0.14)',  border:'#335500'},
 };
 
 // Deterministic hash for generating neurochemistry from name
@@ -283,7 +283,7 @@ function dominant(b) {
 }
 
 function catStyle(cat) {
-  return CAT_STYLES[cat] || {color:'#888', bg:'rgba(136,136,136, 0.65)', border:'#444'};
+  return CAT_STYLES[cat] || {color:'#888', bg:'rgba(136,136,136,0.14)', border:'#444'};
 }
 
 // ============================================================
@@ -432,7 +432,7 @@ incarnationTick();
 setInterval(incarnationTick, 8000);
 </script>
 <!-- MASCOM Conglomerate Nav -->
-<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180,0.32);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
 <span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
 <a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
 <a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>

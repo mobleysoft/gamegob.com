@@ -34,7 +34,7 @@ canvas { display: block; image-rendering: pixelated; cursor: none; }
 .portrait-card { display: flex; flex-direction: column; align-items: center; background: #1a0808;
                   border: 1px solid #422; border-radius: 4px; padding: 4px 2px 3px;
                   transition: border-color 0.2s, box-shadow 0.2s; }
-.portrait-card:hover { border-color: #f44; box-shadow: 0 0 8px rgba(255,68,68, 0.65); }
+.portrait-card:hover { border-color: #f44; box-shadow: 0 0 8px rgba(255,68,68,0.38); }
 .portrait-img { width: 48px; height: 48px; border-radius: 3px; object-fit: cover;
                  image-rendering: pixelated; background: #111; }
 .portrait-name { font-size: 7px; color: #aaa; margin-top: 2px; white-space: nowrap;
@@ -230,7 +230,7 @@ canvas { display: block; image-rendering: pixelated; cursor: none; }
 #nameEntryModal input { background: #111; color: #fff; border: 1px solid #fa0; border-radius: 4px;
     padding: 8px 12px; font-family: inherit; font-size: 16px; text-align: center;
     width: 200px; text-transform: uppercase; letter-spacing: 3px; outline: none; }
-#nameEntryModal input:focus { border-color: #f44; box-shadow: 0 0 8px rgba(255,68,68, 0.65); }
+#nameEntryModal input:focus { border-color: #f44; box-shadow: 0 0 8px rgba(255,68,68,0.38); }
 #nameEntryModal .ne-btns { margin-top: 12px; display: flex; gap: 8px; justify-content: center; }
 #nameEntryModal button { padding: 8px 20px; background: #2a0a0a; color: #fa0; border: 1px solid #fa0;
     border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 12px; }
@@ -268,7 +268,7 @@ canvas { display: block; image-rendering: pixelated; cursor: none; }
 #sharePanel .sp-url { font-size:9px; color:#555; margin-top:8px; word-break:break-all; }
 /* === CHALLENGE BANNER === */
 #challengeBanner { display:none; position:fixed; top:0; left:0; right:0; z-index:18;
-    background:linear-gradient(180deg,rgba(255,170,0, 0.65),transparent); padding:6px 12px;
+    background:linear-gradient(180deg,rgba(255,170,0,0.14),transparent); padding:6px 12px;
     text-align:center; font-family:'Courier New',monospace; pointer-events:none; }
 #challengeBanner .cb-text { color:#fa0; font-size:13px; letter-spacing:1px; }
 #challengeBanner .cb-score { color:#f44; font-weight:bold; font-size:15px; }
@@ -301,9 +301,9 @@ canvas { display: block; image-rendering: pixelated; cursor: none; }
 /* === QUARTER MACHINE === */
 #quarterOverlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.92); z-index:500; display:none; align-items:center; justify-content:center; flex-direction:column; font-family:'Courier New',monospace; }
 #quarterOverlay.active { display:flex; }
-#quarterOverlay .qmTitle { font-size:42px; color:#fc0; text-shadow:0 0 30px rgba(255,204,0,0.6),0 0 60px rgba(255,204,0, 0.65); letter-spacing:6px; margin-bottom:30px; animation:qmPulse 1.5s ease-in-out infinite; }
-@keyframes qmPulse { 0%,100%{ text-shadow:0 0 30px rgba(255,204,0,0.6),0 0 60px rgba(255,204,0, 0.65); } 50%{ text-shadow:0 0 50px rgba(255,204,0,0.9),0 0 80px rgba(255,204,0,0.5); } }
-.qmCoinSlot { width:80px; height:120px; border:3px solid #888; border-radius:8px; background:linear-gradient(180deg,#2a2a2a,#1a1a1a); position:relative; margin-bottom:30px; box-shadow:inset 0 0 20px rgba(0,0,0,0.5),0 0 20px rgba(255,204,0, 0.65); }
+#quarterOverlay .qmTitle { font-size:42px; color:#fc0; text-shadow:0 0 30px rgba(255,204,0,0.6),0 0 60px rgba(255,204,0,0.38); letter-spacing:6px; margin-bottom:30px; animation:qmPulse 1.5s ease-in-out infinite; }
+@keyframes qmPulse { 0%,100%{ text-shadow:0 0 30px rgba(255,204,0,0.6),0 0 60px rgba(255,204,0,0.38); } 50%{ text-shadow:0 0 50px rgba(255,204,0,0.9),0 0 80px rgba(255,204,0,0.5); } }
+.qmCoinSlot { width:80px; height:120px; border:3px solid #888; border-radius:8px; background:linear-gradient(180deg,#2a2a2a,#1a1a1a); position:relative; margin-bottom:30px; box-shadow:inset 0 0 20px rgba(0,0,0,0.5),0 0 20px rgba(255,204,0,0.38); }
 .qmSlotHole { position:absolute; top:40px; left:50%; transform:translateX(-50%); width:40px; height:6px; background:#000; border-radius:3px; border:1px solid #555; box-shadow:inset 0 2px 4px rgba(0,0,0,0.8); }
 .qmCoin { position:absolute; left:50%; transform:translateX(-50%); width:32px; height:32px; background:radial-gradient(circle at 40% 35%,#ffe066,#fc0,#c90); border-radius:50%; border:2px solid #a80; box-shadow:0 2px 8px rgba(255,204,0,0.5); animation:qmCoinDrop 2s ease-in infinite; }
 @keyframes qmCoinDrop { 0%{ top:-40px; opacity:1; } 40%{ top:36px; opacity:1; } 50%{ top:36px; opacity:0; } 100%{ top:-40px; opacity:0; } }
@@ -311,7 +311,7 @@ canvas { display: block; image-rendering: pixelated; cursor: none; }
 .qmInfo { text-align:center; max-width:350px; }
 .qmInfo .qmCredits { font-size:18px; color:#fc0; margin-bottom:12px; }
 .qmInfo .qmFreePlay { font-size:14px; color:#8f8; margin-bottom:12px; cursor:pointer; padding:8px 16px; border:1px solid #8f8; border-radius:6px; background:transparent; font-family:inherit; transition:all 0.2s; display:none; }
-.qmInfo .qmFreePlay:hover { background:rgba(136,255,136, 0.65); transform:scale(1.05); }
+.qmInfo .qmFreePlay:hover { background:rgba(136,255,136,0.14); transform:scale(1.05); }
 .qmInfo .qmFreePlay.disabled { color:#555; border-color:#333; cursor:default; }
 .qmInfo .qmFreePlay.disabled:hover { background:transparent; transform:none; }
 .qmInfo .qmLink { display:block; color:#8af; font-size:13px; margin-top:12px; text-decoration:none; transition:color 0.2s; }
@@ -6915,21 +6915,21 @@ ctx.fillRect(0, 0, CW, CH);
     transform: translate(-50%, -50%);
     width: 44px; height: 44px;
     border-radius: 50%;
-    background: rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
 }
 .mctl-dpad-btn {
     position: absolute;
     width: 48px; height: 48px;
     border-radius: 12px;
-    background: rgba(255,255,255, 0.65);
-    border: 2px solid rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
+    border: 2px solid rgba(255,255,255,0.32);
     display: flex; align-items: center; justify-content: center;
     font-size: 22px; color: rgba(255,255,255,0.6);
     transition: background 0.05s;
     -webkit-tap-highlight-color: transparent;
 }
 .mctl-dpad-btn.active {
-    background: rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
     border-color: rgba(255,255,255,0.6);
 }
 .mctl-dpad-up    { top: 0; left: 50%; transform: translateX(-50%); }
@@ -6942,8 +6942,8 @@ ctx.fillRect(0, 0, CW, CH);
     position: fixed;
     width: 56px; height: 56px;
     border-radius: 50%;
-    background: rgba(255,255,255, 0.65);
-    border: 2px solid rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
+    border: 2px solid rgba(255,255,255,0.32);
     display: flex; align-items: center; justify-content: center;
     font-size: 16px; font-weight: bold; color: rgba(255,255,255,0.7);
     font-family: 'Courier New', monospace;
@@ -6951,12 +6951,12 @@ ctx.fillRect(0, 0, CW, CH);
     -webkit-tap-highlight-color: transparent;
 }
 .mctl-btn.active {
-    background: rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
     border-color: rgba(255,255,255,0.6);
 }
 .mctl-btn-a {
     bottom: 50px; right: 20px;
-    background: rgba(80,200,120, 0.65);
+    background: rgba(80,200,120,0.14);
     border-color: rgba(80,200,120,0.4);
 }
 .mctl-btn-a.active {
@@ -6964,7 +6964,7 @@ ctx.fillRect(0, 0, CW, CH);
 }
 .mctl-btn-b {
     bottom: 110px; right: 75px;
-    background: rgba(200,80,80, 0.65);
+    background: rgba(200,80,80,0.14);
     border-color: rgba(200,80,80,0.4);
 }
 .mctl-btn-b.active {
@@ -7158,7 +7158,7 @@ ctx.fillRect(0, 0, CW, CH);
 </script>
 
 <!-- MASCOM Conglomerate Nav -->
-<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180,0.32);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
 <span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
 <a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
 <a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>

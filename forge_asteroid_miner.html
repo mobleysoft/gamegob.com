@@ -631,7 +631,7 @@ function draw() {
   }
 
   // Magnet range indicator (subtle)
-  ctx.strokeStyle = 'rgba(0,255,136, 0.65)';
+  ctx.strokeStyle = 'rgba(0,255,136,0.32)';
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 4]);
   ctx.beginPath(); ctx.arc(ship.x * s, ship.y * s, ship.magnetRange * s, 0, Math.PI * 2); ctx.stroke();
@@ -693,7 +693,7 @@ function draw() {
 
   // Touch controls hint
   if (touchL.active) {
-    ctx.strokeStyle = 'rgba(0,255,136, 0.65)';
+    ctx.strokeStyle = 'rgba(0,255,136,0.32)';
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(touchL.sx, touchL.sy, 40, 0, Math.PI * 2); ctx.stroke();
     ctx.beginPath(); ctx.arc(touchL.sx + touchL.x * 0.5, touchL.sy + touchL.y * 0.5, 15, 0, Math.PI * 2); ctx.stroke();
@@ -818,7 +818,7 @@ function gameLoop(ts) {
 requestAnimationFrame(gameLoop);
 </script>
 <!-- MASCOM Conglomerate Nav -->
-<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180,0.32);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
 <span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
 <a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
 <a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>

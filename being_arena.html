@@ -20,8 +20,8 @@ canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
 .touch-group{display:flex;gap:8px;align-items:flex-end}
 .touch-btn{width:56px;height:56px;border-radius:50%;border:2px solid rgba(136,204,136,0.5);background:rgba(5,5,16,0.7);color:#88CC88;font-family:'Press Start 2P',monospace;font-size:9px;display:flex;align-items:center;justify-content:center;pointer-events:auto;-webkit-tap-highlight-color:transparent;user-select:none;text-align:center;line-height:1.1}
 .touch-btn.special{border-color:rgba(204,136,255,0.6);color:#CC88FF}
-.touch-btn:active{background:rgba(136,204,136, 0.65);transform:scale(0.92)}
-.touch-btn.special:active{background:rgba(204,136,255, 0.65)}
+.touch-btn:active{background:rgba(136,204,136,0.14);transform:scale(0.92)}
+.touch-btn.special:active{background:rgba(204,136,255,0.14)}
 #dpad{display:grid;grid-template-columns:56px 56px 56px;grid-template-rows:56px 56px;gap:4px}
 #dpad .touch-btn{border-radius:8px}
 #loading{position:absolute;top:0;left:0;width:100%;height:100%;background:#050510;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100}
@@ -1081,12 +1081,12 @@ function drawHealthBar(fighter, x, y, w, align) {
     ctx.fillStyle = hpColor;
     ctx.fillRect(x + 2, y + 2, hpW - 4, 20);
     // Shine
-    ctx.fillStyle = 'rgba(255,255,255, 0.65)';
+    ctx.fillStyle = 'rgba(255,255,255,0.14)';
     ctx.fillRect(x + 2, y + 2, hpW - 4, 8);
   } else {
     ctx.fillStyle = hpColor;
     ctx.fillRect(x + w - hpW + 2, y + 2, hpW - 4, 20);
-    ctx.fillStyle = 'rgba(255,255,255, 0.65)';
+    ctx.fillStyle = 'rgba(255,255,255,0.14)';
     ctx.fillRect(x + w - hpW + 2, y + 2, hpW - 4, 8);
   }
 
@@ -1792,7 +1792,7 @@ loadAllAssets().then(() => {
 });
 </script>
 <!-- MASCOM Conglomerate Nav -->
-<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180,0.32);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
 <span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
 <a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
 <a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>

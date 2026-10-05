@@ -14,7 +14,7 @@ body { background: #0a0a1a; color: #ddd; font-family: 'Courier New', monospace; 
 #ui { position: absolute; bottom: 0; left: 0; right: 0; height: 180px; background: rgba(10,10,30,0.95); border-top: 2px solid #444; display: flex; flex-direction: column; }
 #shopRow { display: flex; align-items: center; height: 90px; padding: 5px 10px; gap: 8px; }
 .shopCard { width: 120px; height: 82px; background: #1a1a3a; border: 2px solid #555; border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.15s; position: relative; padding-top: 2px; gap: 1px; }
-.shopCard:hover { border-color: #8af; transform: translateY(-3px); box-shadow: 0 4px 12px rgba(100,150,255, 0.65); }
+.shopCard:hover { border-color: #8af; transform: translateY(-3px); box-shadow: 0 4px 12px rgba(100,150,255,0.38); }
 .shopCard .name { font-size: 11px; font-weight: bold; margin-bottom: 2px; }
 .shopCard .role { font-size: 9px; color: #aaa; }
 .shopCard .cost { position: absolute; top: 3px; right: 6px; font-size: 10px; color: #fc0; }
@@ -31,10 +31,10 @@ body { background: #0a0a1a; color: #ddd; font-family: 'Courier New', monospace; 
 .benchSlot { width: 36px; height: 36px; background: #151530; border: 1px solid #333; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; }
 .benchSlot.occupied { border-color: #8af; }
 #btnRefresh { background: #2a2a5a; color: #fc0; border: 1px solid #fc0; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 12px; transition: all 0.15s; }
-#btnRefresh:hover { background: #3a3a7a; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(255,204,0, 0.65); }
+#btnRefresh:hover { background: #3a3a7a; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(255,204,0,0.38); }
 #btnRefresh:active { transform: translateY(0); }
 #btnBuyXP { background: #2a4a2a; color: #8f8; border: 1px solid #8f8; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 12px; transition: all 0.15s; }
-#btnBuyXP:hover { background: #3a6a3a; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(136,255,136, 0.65); }
+#btnBuyXP:hover { background: #3a6a3a; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(136,255,136,0.38); }
 #btnBuyXP:active { transform: translateY(0); }
 #btnStartRound { background: #4a2a2a; color: #f88; border: 1px solid #f88; padding: 6px 18px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: bold; transition: all 0.15s; }
 #btnStartRound:hover { background: #6a3a3a; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255,136,136,0.4); }
@@ -53,7 +53,7 @@ body { background: #0a0a1a; color: #ddd; font-family: 'Courier New', monospace; 
 #gameOver .finalRound { color: #8af; font-size: 18px; }
 #gameOver button { margin-top: 15px; padding: 8px 24px; background: #2a2a5a; color: #fff; border: 1px solid #88f; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 14px; }
 #gameOver button:hover { background: #3a3a7a; transform: scale(1.05); }
-#sellZone { position: absolute; bottom: 185px; left: 50%; transform: translateX(-50%); background: rgba(200,50,50, 0.65); border: 2px dashed #f55; border-radius: 8px; padding: 8px 24px; font-size: 12px; color: #f88; display: none; z-index: 5; }
+#sellZone { position: absolute; bottom: 185px; left: 50%; transform: translateX(-50%); background: rgba(200,50,50,0.14); border: 2px dashed #f55; border-radius: 8px; padding: 8px 24px; font-size: 12px; color: #f88; display: none; z-index: 5; }
 #splashScreen { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a0a1a 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
 #splashScreen h1 { font-size: 48px; color: #8af; text-shadow: 0 0 30px #88f, 0 0 60px #44f; margin-bottom: 20px; animation: pulse 2s ease-in-out infinite; }
 #splashScreen p { font-size: 18px; color: #aaa; margin-bottom: 30px; }
@@ -169,10 +169,10 @@ body.colorblind .cb-shape { display: inline; }
 @keyframes tutPop { from { opacity: 0; transform: scale(0.9) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 @keyframes tutPulseAnim { 0%, 100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.55), 0 0 30px rgba(136,170,255,0.5); } 50% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.55), 0 0 50px rgba(136,170,255,0.8); } }
 #splashHowTo { margin-top: 12px; padding: 8px 20px; background: transparent; color: #8af; border: 1px solid #8af; border-radius: 6px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 14px; transition: all 0.3s; }
-#splashHowTo:hover { background: rgba(136,170,255, 0.65); transform: scale(1.05); }
+#splashHowTo:hover { background: rgba(136,170,255,0.14); transform: scale(1.05); }
 /* === PROGRESSION SYSTEM STYLES === */
 #progressionBtn { margin-top: 12px; padding: 8px 20px; background: transparent; color: #fc0; border: 1px solid #fc0; border-radius: 6px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 14px; transition: all 0.3s; position: relative; }
-#progressionBtn:hover { background: rgba(255,204,0, 0.65); transform: scale(1.05); }
+#progressionBtn:hover { background: rgba(255,204,0,0.14); transform: scale(1.05); }
 #progressionBtn .newDot { position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: #f44; border-radius: 50%; animation: newPulse 1s ease-in-out infinite; font-size: 0; }
 @keyframes newPulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(255,68,68,0.6); } 50%{ box-shadow: 0 0 0 6px rgba(255,68,68,0); } }
 #progScreen { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(5,5,15,0.97); z-index: 90; display: none; overflow-y: auto; }
@@ -215,7 +215,7 @@ body.colorblind .cb-shape { display: inline; }
 .charCard .charLock { font-size: 20px; opacity: 0.4; }
 /* Achievement Toast */
 #toastContainer { position: fixed; top: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
-.achToast { background: rgba(20,20,40,0.95); border: 2px solid #fc0; border-radius: 10px; padding: 12px 18px; display: flex; align-items: center; gap: 12px; animation: toastIn 0.4s ease-out, toastOut 0.4s ease-in 2.6s forwards; box-shadow: 0 4px 20px rgba(255,204,0, 0.65); min-width: 250px; pointer-events: auto; }
+.achToast { background: rgba(20,20,40,0.95); border: 2px solid #fc0; border-radius: 10px; padding: 12px 18px; display: flex; align-items: center; gap: 12px; animation: toastIn 0.4s ease-out, toastOut 0.4s ease-in 2.6s forwards; box-shadow: 0 4px 20px rgba(255,204,0,0.38); min-width: 250px; pointer-events: auto; }
 .achToast .toastIcon { font-size: 28px; }
 .achToast .toastBody { flex: 1; }
 .achToast .toastTitle { font-size: 11px; color: #fc0; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
@@ -224,7 +224,7 @@ body.colorblind .cb-shape { display: inline; }
 @keyframes toastIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-20px); } }
 /* Game Over progression summary */
-#goProgression { margin-top: 12px; padding: 10px; background: rgba(255,204,0, 0.65); border: 1px solid #333; border-radius: 8px; }
+#goProgression { margin-top: 12px; padding: 10px; background: rgba(255,204,0,0.14); border: 1px solid #333; border-radius: 8px; }
 #goProgression .goXP { color: #fc0; font-size: 14px; margin-bottom: 4px; }
 #goProgression .goAch { color: #8af; font-size: 12px; }
 /* === GLOBAL LEADERBOARD STYLES === */
@@ -241,8 +241,8 @@ body.colorblind .cb-shape { display: inline; }
 .lbTable { width: 100%; border-collapse: collapse; }
 .lbTable th { color: #8af; font-size: 12px; text-align: left; padding: 6px 8px; border-bottom: 2px solid #333; position: sticky; top: 0; background: rgba(5,5,15,0.97); }
 .lbTable td { font-size: 12px; padding: 6px 8px; color: #aaa; border-bottom: 1px solid #1a1a2a; }
-.lbTable tr.lbHighlight td { color: #fc0; background: rgba(255,204,0, 0.65); }
-.lbTable tr:hover td { background: rgba(136,170,255, 0.65); }
+.lbTable tr.lbHighlight td { color: #fc0; background: rgba(255,204,0,0.14); }
+.lbTable tr:hover td { background: rgba(136,170,255,0.14); }
 .lbTable td:first-child { color: #666; width: 40px; text-align: center; }
 .lbTable .lbGold { color: #fc0; }
 .lbTable .lbSilver { color: #ccc; }
@@ -254,7 +254,7 @@ body.colorblind .cb-shape { display: inline; }
 #lbNameEntry h2 { font-size: 22px; color: #fc0; margin-bottom: 5px; }
 #lbNameEntry .lbScorePreview { color: #8af; font-size: 16px; margin-bottom: 15px; }
 #lbNameEntry input { background: #1a1a2a; border: 2px solid #8af; color: #fff; padding: 10px 16px; font-family: 'Courier New', monospace; font-size: 20px; text-align: center; border-radius: 6px; width: 200px; text-transform: uppercase; letter-spacing: 4px; outline: none; }
-#lbNameEntry input:focus { border-color: #fc0; box-shadow: 0 0 15px rgba(255,204,0, 0.65); }
+#lbNameEntry input:focus { border-color: #fc0; box-shadow: 0 0 15px rgba(255,204,0,0.38); }
 #lbNameEntry .lbNameHint { color: #666; font-size: 11px; margin-top: 6px; }
 #lbNameEntry .lbNameBtns { display: flex; gap: 8px; justify-content: center; margin-top: 15px; }
 #lbNameEntry .lbNameBtns button { padding: 8px 20px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 14px; transition: all 0.2s; }
@@ -264,12 +264,12 @@ body.colorblind .cb-shape { display: inline; }
 #lbNameSkip:hover { color: #aaa; border-color: #666; }
 /* Share button */
 .lbShareBtn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #2a2a5a; color: #8af; border: 1px solid #8af; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 13px; margin-top: 10px; transition: all 0.2s; }
-.lbShareBtn:hover { background: #3a3a7a; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(136,170,255, 0.65); }
+.lbShareBtn:hover { background: #3a3a7a; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(136,170,255,0.38); }
 .lbShareBtn.copied { background: #2a4a2a; border-color: #8f8; color: #8f8; }
 /* Game Over leaderboard button */
 #goLeaderboard { margin-top: 8px; }
 #goLeaderboard button { padding: 6px 16px; background: transparent; color: #8af; border: 1px solid #8af; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 12px; transition: all 0.2s; }
-#goLeaderboard button:hover { background: rgba(136,170,255, 0.65); }
+#goLeaderboard button:hover { background: rgba(136,170,255,0.14); }
 /* === CODEX / CONTENT DISCOVERY STYLES === */
 #codexOverlay { position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(5,5,15,0.97); z-index:88; display:none; overflow-y:auto; }
 #codexOverlay.open { display:flex; flex-direction:column; align-items:center; padding:20px; }
@@ -299,9 +299,9 @@ body.colorblind .cb-shape { display: inline; }
 /* === QUARTER MACHINE === */
 #quarterOverlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.92); z-index:500; display:none; align-items:center; justify-content:center; flex-direction:column; font-family:'Courier New',monospace; }
 #quarterOverlay.active { display:flex; }
-#quarterOverlay .qmTitle { font-size:42px; color:#fc0; text-shadow:0 0 30px rgba(255,204,0,0.6),0 0 60px rgba(255,204,0, 0.65); letter-spacing:6px; margin-bottom:30px; animation:qmPulse 1.5s ease-in-out infinite; }
-@keyframes qmPulse { 0%,100%{ text-shadow:0 0 30px rgba(255,204,0,0.6),0 0 60px rgba(255,204,0, 0.65); } 50%{ text-shadow:0 0 50px rgba(255,204,0,0.9),0 0 80px rgba(255,204,0,0.5); } }
-.qmCoinSlot { width:80px; height:120px; border:3px solid #888; border-radius:8px; background:linear-gradient(180deg,#2a2a2a,#1a1a1a); position:relative; margin-bottom:30px; box-shadow:inset 0 0 20px rgba(0,0,0,0.5),0 0 20px rgba(255,204,0, 0.65); }
+#quarterOverlay .qmTitle { font-size:42px; color:#fc0; text-shadow:0 0 30px rgba(255,204,0,0.6),0 0 60px rgba(255,204,0,0.38); letter-spacing:6px; margin-bottom:30px; animation:qmPulse 1.5s ease-in-out infinite; }
+@keyframes qmPulse { 0%,100%{ text-shadow:0 0 30px rgba(255,204,0,0.6),0 0 60px rgba(255,204,0,0.38); } 50%{ text-shadow:0 0 50px rgba(255,204,0,0.9),0 0 80px rgba(255,204,0,0.5); } }
+.qmCoinSlot { width:80px; height:120px; border:3px solid #888; border-radius:8px; background:linear-gradient(180deg,#2a2a2a,#1a1a1a); position:relative; margin-bottom:30px; box-shadow:inset 0 0 20px rgba(0,0,0,0.5),0 0 20px rgba(255,204,0,0.38); }
 .qmSlotHole { position:absolute; top:40px; left:50%; transform:translateX(-50%); width:40px; height:6px; background:#000; border-radius:3px; border:1px solid #555; box-shadow:inset 0 2px 4px rgba(0,0,0,0.8); }
 .qmCoin { position:absolute; left:50%; transform:translateX(-50%); width:32px; height:32px; background:radial-gradient(circle at 40% 35%,#ffe066,#fc0,#c90); border-radius:50%; border:2px solid #a80; box-shadow:0 2px 8px rgba(255,204,0,0.5); animation:qmCoinDrop 2s ease-in infinite; }
 @keyframes qmCoinDrop { 0%{ top:-40px; opacity:1; } 40%{ top:36px; opacity:1; } 50%{ top:36px; opacity:0; } 100%{ top:-40px; opacity:0; } }
@@ -309,7 +309,7 @@ body.colorblind .cb-shape { display: inline; }
 .qmInfo { text-align:center; max-width:350px; }
 .qmInfo .qmCredits { font-size:18px; color:#fc0; margin-bottom:12px; }
 .qmInfo .qmFreePlay { font-size:14px; color:#8f8; margin-bottom:12px; cursor:pointer; padding:8px 16px; border:1px solid #8f8; border-radius:6px; background:transparent; font-family:inherit; transition:all 0.2s; display:none; }
-.qmInfo .qmFreePlay:hover { background:rgba(136,255,136, 0.65); transform:scale(1.05); }
+.qmInfo .qmFreePlay:hover { background:rgba(136,255,136,0.14); transform:scale(1.05); }
 .qmInfo .qmFreePlay.disabled { color:#555; border-color:#333; cursor:default; }
 .qmInfo .qmFreePlay.disabled:hover { background:transparent; transform:none; }
 .qmInfo .qmLink { display:block; color:#8af; font-size:13px; margin-top:12px; text-decoration:none; transition:color 0.2s; }
@@ -324,22 +324,22 @@ body.colorblind .cb-shape { display: inline; }
 #goContinue button:hover { background:#3a3a2a; transform:scale(1.05); }
 #goContinue button:disabled { opacity:0.4; cursor:default; transform:none; }
 /* === SOCIAL SHARE PANEL === */
-#sharePanel { margin-top:12px; padding:12px; background:rgba(136,170,255, 0.65); border:1px solid #8af; border-radius:8px; }
+#sharePanel { margin-top:12px; padding:12px; background:rgba(136,170,255,0.14); border:1px solid #8af; border-radius:8px; }
 #sharePanel h3 { font-size:14px; color:#8af; margin-bottom:8px; }
 #shareCardCanvas { display:block; margin:0 auto 10px; border-radius:8px; border:1px solid #444; max-width:100%; cursor:pointer; }
 .shareBtnRow { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
 .shareBtn { padding:8px 16px; border-radius:6px; cursor:pointer; font-family:inherit; font-size:12px; transition:all 0.2s; display:inline-flex; align-items:center; gap:6px; }
 .shareBtn:hover { transform:translateY(-1px); }
 .shareBtn.copy { background:#2a2a5a; color:#8af; border:1px solid #8af; }
-.shareBtn.copy:hover { background:#3a3a7a; box-shadow:0 2px 8px rgba(136,170,255, 0.65); }
+.shareBtn.copy:hover { background:#3a3a7a; box-shadow:0 2px 8px rgba(136,170,255,0.38); }
 .shareBtn.challenge { background:#4a2a1a; color:#fc0; border:1px solid #fc0; }
-.shareBtn.challenge:hover { background:#5a3a2a; box-shadow:0 2px 8px rgba(255,204,0, 0.65); }
+.shareBtn.challenge:hover { background:#5a3a2a; box-shadow:0 2px 8px rgba(255,204,0,0.38); }
 .shareBtn.download { background:#1a3a2a; color:#8f8; border:1px solid #8f8; }
-.shareBtn.download:hover { background:#2a4a3a; box-shadow:0 2px 8px rgba(136,255,136, 0.65); }
+.shareBtn.download:hover { background:#2a4a3a; box-shadow:0 2px 8px rgba(136,255,136,0.38); }
 .shareBtn.copied { background:#2a4a2a; border-color:#8f8; color:#8f8; }
 /* === CHALLENGE MODE === */
-#challengeBanner { position:fixed; top:50px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,rgba(255,204,0, 0.65),rgba(255,100,0, 0.65)); border:2px solid #fc0; border-radius:10px; padding:8px 20px; font-size:13px; color:#fc0; z-index:80; display:none; text-align:center; white-space:nowrap; box-shadow:0 0 20px rgba(255,204,0, 0.65); animation:challengePulse 2s ease-in-out infinite; }
-@keyframes challengePulse { 0%,100%{ box-shadow:0 0 20px rgba(255,204,0, 0.65); } 50%{ box-shadow:0 0 30px rgba(255,204,0,0.4); } }
+#challengeBanner { position:fixed; top:50px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,rgba(255,204,0,0.14),rgba(255,100,0,0.14)); border:2px solid #fc0; border-radius:10px; padding:8px 20px; font-size:13px; color:#fc0; z-index:80; display:none; text-align:center; white-space:nowrap; box-shadow:0 0 20px rgba(255,204,0,0.38); animation:challengePulse 2s ease-in-out infinite; }
+@keyframes challengePulse { 0%,100%{ box-shadow:0 0 20px rgba(255,204,0,0.38); } 50%{ box-shadow:0 0 30px rgba(255,204,0,0.4); } }
 #challengeBanner .challengeScore { font-size:18px; font-weight:bold; display:block; }
 #challengeWin { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(10,10,30,0.97); border:3px solid #fc0; border-radius:16px; padding:30px; text-align:center; z-index:250; display:none; min-width:320px; box-shadow:0 0 60px rgba(255,204,0,0.4); }
 #challengeWin h2 { font-size:28px; color:#fc0; margin-bottom:10px; animation:challengeWinPulse 1s ease-in-out infinite; }
@@ -350,7 +350,7 @@ body.colorblind .cb-shape { display: inline; }
 #dailyBadge { position:fixed; top:12px; right:60px; background:rgba(100,50,200,0.9); border:1px solid #a8f; border-radius:12px; padding:3px 10px; font-size:11px; color:#c8f; z-index:80; display:none; pointer-events:none; }
 .dailyActive #dailyBadge { display:block; }
 #splashDailyBtn { margin-top:12px; padding:8px 20px; background:transparent; color:#c8f; border:1px solid #a8f; border-radius:6px; cursor:pointer; font-family:'Courier New',monospace; font-size:14px; transition:all 0.3s; position:relative; }
-#splashDailyBtn:hover { background:rgba(168,136,255, 0.65); transform:scale(1.05); }
+#splashDailyBtn:hover { background:rgba(168,136,255,0.14); transform:scale(1.05); }
 #splashDailyBtn .dailyStreak { font-size:10px; color:#fc0; display:block; margin-top:2px; }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
@@ -4527,7 +4527,7 @@ const SocialShare = (function() {
         ctx.strokeRect(1, 1, W - 2, H - 2);
 
         // Inner glow line
-        ctx.strokeStyle = 'rgba(136,170,255, 0.65)';
+        ctx.strokeStyle = 'rgba(136,170,255,0.32)';
         ctx.lineWidth = 1;
         ctx.strokeRect(6, 6, W - 12, H - 12);
 
@@ -4620,7 +4620,7 @@ const SocialShare = (function() {
         ctx.fillText('GAMEGOB', 15, H - 12);
 
         // Decorative dots
-        ctx.fillStyle = 'rgba(136,170,255, 0.65)';
+        ctx.fillStyle = 'rgba(136,170,255,0.14)';
         for (let i = 0; i < 5; i++) {
             ctx.beginPath();
             ctx.arc(15 + i * 8, 170, 2, 0, Math.PI * 2);
@@ -5243,21 +5243,21 @@ draw();
     transform: translate(-50%, -50%);
     width: 44px; height: 44px;
     border-radius: 50%;
-    background: rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
 }
 .mctl-dpad-btn {
     position: absolute;
     width: 48px; height: 48px;
     border-radius: 12px;
-    background: rgba(255,255,255, 0.65);
-    border: 2px solid rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
+    border: 2px solid rgba(255,255,255,0.32);
     display: flex; align-items: center; justify-content: center;
     font-size: 22px; color: rgba(255,255,255,0.6);
     transition: background 0.05s;
     -webkit-tap-highlight-color: transparent;
 }
 .mctl-dpad-btn.active {
-    background: rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
     border-color: rgba(255,255,255,0.6);
 }
 .mctl-dpad-up    { top: 0; left: 50%; transform: translateX(-50%); }
@@ -5270,8 +5270,8 @@ draw();
     position: fixed;
     width: 56px; height: 56px;
     border-radius: 50%;
-    background: rgba(255,255,255, 0.65);
-    border: 2px solid rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
+    border: 2px solid rgba(255,255,255,0.32);
     display: flex; align-items: center; justify-content: center;
     font-size: 16px; font-weight: bold; color: rgba(255,255,255,0.7);
     font-family: 'Courier New', monospace;
@@ -5279,12 +5279,12 @@ draw();
     -webkit-tap-highlight-color: transparent;
 }
 .mctl-btn.active {
-    background: rgba(255,255,255, 0.65);
+    background: rgba(255,255,255,0.14);
     border-color: rgba(255,255,255,0.6);
 }
 .mctl-btn-a {
     bottom: 50px; right: 20px;
-    background: rgba(80,200,120, 0.65);
+    background: rgba(80,200,120,0.14);
     border-color: rgba(80,200,120,0.4);
 }
 .mctl-btn-a.active {
@@ -5292,7 +5292,7 @@ draw();
 }
 .mctl-btn-b {
     bottom: 110px; right: 75px;
-    background: rgba(200,80,80, 0.65);
+    background: rgba(200,80,80,0.14);
     border-color: rgba(200,80,80,0.4);
 }
 .mctl-btn-b.active {
@@ -5436,7 +5436,7 @@ draw();
 </script>
 
 <!-- MASCOM Conglomerate Nav -->
-<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180, 0.65);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
+<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180,0.32);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
 <span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
 <a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
 <a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
