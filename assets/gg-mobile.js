@@ -265,6 +265,17 @@
     var parts = spec.trim().split(/\s+/);
     var el = document.querySelector(parts[0]); if (!el) return;
     var fixed = /^(\d+)x(\d+)$/.exec(parts[1] || '');
+    // A transformed element becomes the containing block for position:fixed
+    // descendants, so full-screen overlays nested in the fitted wrapper shrink
+    // with it (bullet_hell's #charSelect: SELECT button off-screen in
+    // landscape). Hoist the outermost fixed descendants to <body> once.
+    try {
+      [].slice.call(el.querySelectorAll('*')).forEach(function (n) {
+        if (getComputedStyle(n).position !== 'fixed') return;
+        for (var a = n.parentNode; a && a !== el; a = a.parentNode) if (getComputedStyle(a).position === 'fixed') return;
+        document.body.appendChild(n);
+      });
+    } catch (e) {}
     function apply() {
       el.style.transform = ''; el.style.marginRight = ''; el.style.marginBottom = '';
       var lw = el.offsetWidth, lh = el.offsetHeight;          // layout box
