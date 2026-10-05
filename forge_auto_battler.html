@@ -762,7 +762,10 @@ function resize() {
   canvas.width = W;
   canvas.height = H;
   SCALE = Math.min(W / 400, H / 720);
-  CELL_SIZE = Math.floor(Math.min((W - 20 * SCALE) / GRID_COLS, (H * 0.35) / GRID_ROWS));
+  // third bound (2026-10-05): the stack below the HUD is 2 boards + bench
+  // (1 cell) + shop card (1 cell) + ~160*SCALE of spacing, labels and the
+  // button row; on a phone the READY row ran off the bottom
+  CELL_SIZE = Math.floor(Math.min((W - 20 * SCALE) / GRID_COLS, (H * 0.35) / GRID_ROWS, (H - 172 * SCALE) / (2 * GRID_ROWS + 2)));
   BOARD_X = Math.floor((W - GRID_COLS * CELL_SIZE) / 2);
   ENEMY_BOARD_Y = Math.floor(50 * SCALE);
 }

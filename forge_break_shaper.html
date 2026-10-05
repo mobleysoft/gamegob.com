@@ -249,18 +249,37 @@ class BreakShaperGame {
     this.W = canvas.width;
     this.H = canvas.height;
     // Calculate cell size to fit board
-    this.cellSize = Math.floor(Math.min((this.W*0.4)/COLS, (this.H*0.85)/ROWS));
-    this.cellSize = Math.max(this.cellSize, 12);
-    this.boardW = this.cellSize * COLS;
-    this.boardH = this.cellSize * ROWS;
-    this.boardX = Math.floor(this.W*0.32 - this.boardW/2);
-    this.boardY = Math.floor((this.H - this.boardH)/2);
-    // Opponent board
-    this.oppCellSize = Math.floor(this.cellSize*0.45);
-    this.oppBoardW = this.oppCellSize * COLS;
-    this.oppBoardH = this.oppCellSize * ROWS;
-    this.oppBoardX = Math.floor(this.W*0.72);
-    this.oppBoardY = Math.floor(this.H*0.08);
+    this.portrait = this.H > this.W * 1.1;
+    if (this.portrait) {
+      // phone portrait (2026-10-05): a 110px stats panel on the left, the
+      // board beside it with room for the NEXT column, the opponent's
+      // mini-board in the band above the board
+      const panelW = 118, nextW = 56;
+      this.cellSize = Math.floor(Math.min((this.W - panelW - nextW - 24)/COLS, (this.H*0.62)/ROWS));
+      this.cellSize = Math.max(this.cellSize, 12);
+      this.boardW = this.cellSize * COLS;
+      this.boardH = this.cellSize * ROWS;
+      this.boardX = panelW + 20;
+      this.boardY = Math.floor(this.H*0.26);
+      this.oppCellSize = Math.max(4, Math.floor(this.cellSize*0.3));
+      this.oppBoardW = this.oppCellSize * COLS;
+      this.oppBoardH = this.oppCellSize * ROWS;
+      this.oppBoardX = this.W - this.oppBoardW - 12;
+      this.oppBoardY = 26;
+    } else {
+      this.cellSize = Math.floor(Math.min((this.W*0.4)/COLS, (this.H*0.85)/ROWS));
+      this.cellSize = Math.max(this.cellSize, 12);
+      this.boardW = this.cellSize * COLS;
+      this.boardH = this.cellSize * ROWS;
+      this.boardX = Math.floor(this.W*0.32 - this.boardW/2);
+      this.boardY = Math.floor((this.H - this.boardH)/2);
+      // Opponent board
+      this.oppCellSize = Math.floor(this.cellSize*0.45);
+      this.oppBoardW = this.oppCellSize * COLS;
+      this.oppBoardH = this.oppCellSize * ROWS;
+      this.oppBoardX = Math.floor(this.W*0.72);
+      this.oppBoardY = Math.floor(this.H*0.08);
+    }
     // Touch zones
     this.isMobile = ('ontouchstart' in window) || this.W < 800;
   }
