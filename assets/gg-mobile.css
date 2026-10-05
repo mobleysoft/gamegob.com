@@ -63,6 +63,12 @@ html.gg-native:not([data-gg-game]) body { padding-top: var(--gg-safe-top) !impor
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
     box-sizing: border-box;
+    /* centred flex + overflow puts the top of a tall panel above the scroll
+       range (survivors' 16-card roster opened on its locked bottom rows with
+       the title and the unlocked cards unreachable); the safe keyword falls
+       back to start alignment only when the content overflows */
+    justify-content: safe center !important;
+    align-items: safe center !important;
   }
 }
 
