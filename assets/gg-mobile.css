@@ -88,6 +88,12 @@ html.gg-native:not([data-gg-game]) body { padding-top: var(--gg-safe-top) !impor
   html[data-gg-game] #tutorialDimmer { pointer-events: none !important; }
   /* tutorial tips appended to <body> (platformer, smash_arena) sat under the pad */
   html[data-gg-game] .tut-tip, html[data-gg-game] .tutTip { z-index: 10001 !important; }
+  /* shared quarter-credit pill (10 games) sat on top-centre HUD text, and the
+     keyboard legends (platformer #abilityHint, smash_arena/hex_world #controls)
+     wrapped behind the pads; neither carries anything a phone player needs */
+  @media (pointer: coarse) and (max-width: 760px), (pointer: coarse) and (max-height: 520px) {
+    html[data-gg-game] #creditBadge, html[data-gg-game] #abilityHint, html[data-gg-game] #controls { display: none !important; }
+  }
 }
 
 /* 8. Shared touch pad: respect the home-indicator / notch insets. */
