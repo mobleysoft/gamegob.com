@@ -171,7 +171,68 @@
         if (n.nodeValue && n.nodeValue.length > 5 && /Press |Arrow|WASD|Click /.test(n.nodeValue)) { var v = fixCopy(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; }
       }
     };
-    document.addEventListener('DOMContentLoaded', function () { fixDom(); setTimeout(fixDom, 1500); });
+    // tutorials and tips are injected while playing, so keep watching (debounced)
+    var fixTimer = null;
+    var scheduleFix = function () { if (fixTimer) return; fixTimer = setTimeout(function () { fixTimer = null; try { fixDom(); } catch (e) {} }, 250); };
+    document.addEventListener('DOMContentLoaded', function () {
+      fixDom(); setTimeout(fixDom, 1500);
+      try { new MutationObserver(scheduleFix).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (e) {}
+    });
+  }
+
+  // ---- 4d. Key badges -> pad labels (2026-10-05) -----------------------------
+  // Tutorials in the flagship games show keycaps (Z, X, Space, W A S D). The
+  // shared .mctl pad maps those keys to labelled buttons via setupBtn('mctl_a',
+  // 'z') calls in the page's own script, so on a coarse pointer the keycap
+  // text is replaced by the pad's label for that key.
+  if (coarse) {
+    var padMap = null;
+    function buildPadMap() {
+      var map = {};
+      var src = [].map.call(document.scripts, function (s) { return s.src ? '' : s.textContent; }).join('\n');
+      var re = /setupBtn\(\s*['"](mctl_\w+)['"]\s*,\s*['"]([^'"]*)['"]/g, m;
+      while ((m = re.exec(src))) {
+        var el = document.getElementById(m[1]);
+        var label = el && el.textContent.trim();
+        if (label) m[2].split(',').forEach(function (k) {
+          // keys arrive as a comma list ('z, , ' = z + space; 'x,Shift'); a
+          // key that is itself a space survives the split as ' ' or ''
+          // games trim each key too, so a bare ' ' entry is a no-op, not Space
+          k = k.trim().toLowerCase(); if (k === 'space') k = ' ';
+          if (k && !map[k]) map[k] = label.toUpperCase();
+        });
+      }
+      if (document.querySelector('.mctl-dpad')) ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', '←', '→', '↑', '↓', '← →', 'a d', 'w a s d', 'wasd'].forEach(function (k) { map[k] = 'D-PAD'; });
+      return map;
+    }
+    var fixBadges = function () {
+      if (!padMap) padMap = buildPadMap();
+      if (!Object.keys(padMap).length) return;
+      document.querySelectorAll('kbd, .tut-key, .key, .keycap, .tut-keys span, .controls span').forEach(function (el) {
+        if (el.children.length || el.getAttribute('data-gg-badged')) return;
+        var t = el.textContent.trim(), k = t.toLowerCase();
+        if (k === 'space' || k === 'spc') k = ' ';
+        if (k === 'enter' || k === 'esc' || k === 'escape') return;
+        var label = padMap[k];
+        if (label && label !== t) {
+          el.setAttribute('data-gg-badged', t); el.textContent = label;
+          // "W A S D" / "← →" rows collapse to one D-PAD badge
+          var prev = el.previousElementSibling;
+          if (prev && prev.getAttribute('data-gg-badged') && prev.textContent === label) el.style.display = 'none';
+          // keyboard-only leftovers in a row that now names a pad control
+          // ("Space" beside D-PAD, "or D-pad" after a D-PAD badge) say nothing on a phone
+          [].forEach.call(el.parentNode ? el.parentNode.children : [], function (sib) {
+            if (sib === el || sib.getAttribute('data-gg-badged')) return;
+            var st = sib.textContent.trim().toLowerCase();
+            if (/^(or d-pad|or arrow keys|or arrows|space|spc|shift|ctrl|alt|tab|[a-z]|[\u2190-\u2193]( [\u2190-\u2193])*)$/.test(st) && !padMap[st === 'space' || st === 'spc' ? ' ' : st]) sib.style.display = 'none';
+          });
+        }
+      });
+    };
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(fixBadges, 300); setTimeout(fixBadges, 1800);
+      try { new MutationObserver(function () { setTimeout(fixBadges, 300); }).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+    });
   }
 
   // ---- 5. Fit: fixed-size canvas games -------------------------------------

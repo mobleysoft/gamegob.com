@@ -704,8 +704,8 @@ body.text-medium { /* default, no overrides needed */ }
 }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
-<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100506">
-<script src="/assets/gg-mobile.js?v=2026100506"></script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100510">
+<script src="/assets/gg-mobile.js?v=2026100510"></script>
 </head>
 <body>
 <div id="loadingScreen">
@@ -4231,7 +4231,7 @@ function updateAbilityUI() {
             cdEl.style.display = 'none';
         }
     });
-    document.getElementById('goldDisplay').textContent = ch.gold + 'g';
+    document.getElementById('goldDisplay').textContent = Math.floor(ch.gold) + 'g';
     document.getElementById('levelDisplay').textContent = 'Lv ' + ch.level + ' | HP: ' + Math.round(ch.hp) + '/' + ch.maxHp + ' | Mana: ' + Math.round(ch.mana) + '/' + ch.maxMana;
 }
 
