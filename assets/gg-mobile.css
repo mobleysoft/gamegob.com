@@ -1,5 +1,21 @@
-/* gg-mobile.css — GameGob shared mobile styles (2026-10-04). */
+/* gg-mobile.css — GameGob shared mobile styles (2026-10-04) + shared look kit (2026-10-05). */
+
+/* ---- Type: self-hosted (SIL OFL), no third-party font requests in the native shell.
+   JetBrains Mono shares Courier New's 0.6em advance, so swapping it in under
+   every 'Courier New'/monospace stack (DOM here, canvas via gg-mobile.js) keeps
+   every layout and only sharpens the letterforms. */
+@font-face { font-family: 'JetBrains Mono'; src: url(/assets/fonts/jetbrains-mono-400.woff2) format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'JetBrains Mono'; src: url(/assets/fonts/jetbrains-mono-700.woff2) format('woff2'); font-weight: 600 800; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Press Start 2P'; src: url(/assets/fonts/press-start-2p-400.woff2) format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+html[data-gg-game] body, html[data-gg-game] button, html[data-gg-game] input, html[data-gg-game] select, html[data-gg-game] textarea { font-family: 'JetBrains Mono', 'Courier New', monospace; }
+
 :root {
+  --gg-ink: #e9e6dc;
+  --gg-muted: #8d90a2;
+  --gg-gold: #f0b800;
+  --gg-gold-line: rgba(240,184,0,.42);
+  --gg-glass: rgba(14,16,24,.62);
+  --gg-panel: linear-gradient(160deg, rgba(17,19,31,.97), rgba(9,10,16,.985));
   --gg-safe-top: env(safe-area-inset-top, 0px);
   --gg-safe-right: env(safe-area-inset-right, 0px);
   --gg-safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -7,14 +23,14 @@
 }
 html, body { overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
 canvas { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-#gg-keypad { position: fixed; inset: 0; pointer-events: none; z-index: 2147483000; font: 700 18px/1 system-ui, sans-serif; }
+#gg-keypad { position: fixed; inset: 0; pointer-events: none; z-index: 2147483000; font: 700 18px/1 'JetBrains Mono', monospace; }
 #gg-keypad button {
   pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none;
-  width: 56px; height: 56px; border-radius: 50%; border: 1px solid rgba(255,212,0,.45);
-  color: rgba(255,255,255,.85); background: rgba(10,10,14,.55); backdrop-filter: blur(6px);
-  display: grid; place-items: center; padding: 0;
+  width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--gg-gold-line);
+  color: rgba(255,236,170,.92); background: var(--gg-glass); backdrop-filter: blur(6px);
+  box-shadow: 0 4px 14px rgba(0,0,0,.35); display: grid; place-items: center; padding: 0;
 }
-#gg-keypad button.on { background: rgba(255,212,0,.35); border-color: #ffd400; color: #0b0c10; }
+#gg-keypad button.on { background: rgba(240,184,0,.42); border-color: var(--gg-gold); color: #0b0c10; box-shadow: 0 0 20px rgba(240,184,0,.45); }
 #gg-keypad .gg-dpad { position: absolute; left: calc(14px + var(--gg-safe-left)); bottom: calc(18px + var(--gg-safe-bottom)); width: 176px; height: 176px; }
 #gg-keypad .gg-dpad .u { position: absolute; left: 60px; top: 0; }
 #gg-keypad .gg-dpad .l { position: absolute; left: 0; top: 60px; }
@@ -64,3 +80,72 @@ html.gg-native #mascom-nav { display: none !important; }
 /* 9. Fitted fixed-size games (html[data-gg-fit]): the scaled element keeps a
    crisp edge and the page never scrolls sideways under it. */
 html[data-gg-fit], html[data-gg-fit] body { overflow: hidden; }
+
+/* ---- 10. Shared look kit (2026-10-05). The games were built from a few
+   templates whose chrome never got a design pass: grey rounded-square pads,
+   #555-bordered translucent boxes, system fonts. These rules restyle that
+   shared chrome in one place (dark glass, one gold hairline, the same stick
+   language as SightX) and leave each game's own play-field art alone. */
+
+/* 10a. The flagship touch pad (.mctl-*, 11 games) */
+.mctl-dpad {
+  width: 150px !important; height: 150px !important; border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(9,10,13,.22), rgba(9,10,13,.6));
+  border: 1px solid rgba(240,184,0,.26); box-shadow: inset 0 0 28px rgba(0,0,0,.5), 0 14px 40px rgba(0,0,0,.3);
+  backdrop-filter: blur(8px);
+}
+.mctl-dpad-center { width: 36px !important; height: 36px !important; background: rgba(240,184,0,.09) !important; border: 1px solid rgba(240,184,0,.35); }
+.mctl-dpad-btn {
+  width: 46px !important; height: 46px !important; border-radius: 50% !important;
+  background: var(--gg-glass) !important; border: 1px solid var(--gg-gold-line) !important;
+  color: rgba(255,236,170,.92) !important; font: 700 18px/1 'JetBrains Mono', monospace !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35);
+}
+.mctl-dpad-btn.active { background: rgba(240,184,0,.42) !important; border-color: var(--gg-gold) !important; color: #0b0c10 !important; box-shadow: 0 0 20px rgba(240,184,0,.45); }
+.mctl-btn {
+  background: var(--gg-glass) !important; border: 1px solid var(--gg-gold-line) !important;
+  color: rgba(255,236,170,.92) !important; font: 700 11px/1 'JetBrains Mono', monospace !important;
+  letter-spacing: .06em; text-transform: uppercase; backdrop-filter: blur(6px);
+  box-shadow: 0 4px 14px rgba(0,0,0,.35);
+}
+.mctl-btn-a { width: 66px !important; height: 66px !important; border-color: rgba(0,217,139,.62) !important; color: #9df5cf !important; font-size: 12px !important; }
+.mctl-btn-b { border-color: rgba(255,108,108,.62) !important; color: #ffb9b9 !important; }
+.mctl-btn.active { background: rgba(240,184,0,.42) !important; border-color: var(--gg-gold) !important; color: #0b0c10 !important; }
+.mctl-btn-a.active { background: rgba(0,217,139,.5) !important; border-color: #00d98b !important; }
+.mctl-btn-b.active { background: rgba(255,108,108,.5) !important; border-color: #ff6c6c !important; }
+.mctl-start { border-radius: 14px !important; font-size: 9px !important; width: 64px !important; height: 26px !important; }
+.mctl-extra { border-radius: 12px !important; }
+
+/* 10b. The forge d-pad (#touch-controls .dpad / .act-btn, forge_rpg, forge_pac_man) */
+html[data-gg-game] .dpad-btn {
+  background: var(--gg-glass) !important; border: 1px solid var(--gg-gold-line) !important; border-radius: 50% !important;
+  color: rgba(255,236,170,.92) !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 700;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35); backdrop-filter: blur(6px);
+}
+html[data-gg-game] .dpad-btn:active { background: rgba(240,184,0,.42) !important; color: #0b0c10 !important; }
+html[data-gg-game] :is(.act-btn, .action-btn) {
+  background: var(--gg-glass) !important; border: 1px solid var(--gg-gold-line) !important;
+  color: rgba(255,236,170,.92) !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35); backdrop-filter: blur(6px);
+}
+html[data-gg-game] .btn-a { border-color: rgba(0,217,139,.62) !important; color: #9df5cf !important; }
+html[data-gg-game] .btn-b { border-color: rgba(255,108,108,.62) !important; color: #ffb9b9 !important; }
+html[data-gg-game] .btn-menu { background: var(--gg-glass) !important; border: 1px solid var(--gg-gold-line) !important; color: rgba(255,236,170,.92) !important; font-family: 'JetBrains Mono', monospace !important; border-radius: 10px !important; }
+html[data-gg-game] :is(.act-btn, .action-btn, .btn-menu):active { background: rgba(240,184,0,.42) !important; color: #0b0c10 !important; }
+
+/* 10c. The shared panel template (#charSelect family + cards) */
+html[data-gg-game] :is(#charSelect, #endScreen, #pauseScreen, #nameEntryModal, #gameOver, #sharePanel, #progressionScreen,
+  #leaderboardPanel, #leaderboardOverlay, #statsScreen, #myStatsScreen, #settingsScreen, #shopPanel, #scorePanel, #pauseMenu,
+  #scoreSubmitBox, #deathScreen, #augmentPicker, #lbNameEntry, #challengeWin, #sharePanelInner) {
+  background: var(--gg-panel) !important;
+  border: 1px solid rgba(240,184,0,.38) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 24px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05) !important;
+  color: var(--gg-ink);
+}
+html[data-gg-game] .charCard {
+  background: rgba(255,255,255,.035) !important; border: 1px solid rgba(255,255,255,.1) !important; border-radius: 8px !important;
+  box-shadow: none !important; transition: border-color .12s ease, transform .12s ease;
+}
+html[data-gg-game] .charCard:hover, html[data-gg-game] .charCard.selected { border-color: rgba(240,184,0,.65) !important; transform: translateY(-1px); }
+html[data-gg-game] :is(.tut-tip, .tutTip, .tutBubble, .tut-tip-box) { border-radius: 8px !important; }

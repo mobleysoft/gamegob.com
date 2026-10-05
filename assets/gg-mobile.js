@@ -106,6 +106,31 @@
     });
     GG.keypad = root;
   }
+  // ---- 4b. Canvas type (2026-10-05) -------------------------------------
+  // 1,079 ctx.font assignments across the fleet name 'Courier New' or bare
+  // monospace. JetBrains Mono (self-hosted, same 0.6em advance) is swapped in
+  // under those stacks at assignment time, so every game's canvas text
+  // sharpens without touching a game. Courier New stays as the fallback
+  // until the woff2 has loaded; the games redraw every frame anyway.
+  (function () {
+    var proto = window.CanvasRenderingContext2D && CanvasRenderingContext2D.prototype;
+    if (!proto) return;
+    var d = Object.getOwnPropertyDescriptor(proto, 'font');
+    if (!d || !d.set || !d.get) return;
+    var FAM = "'JetBrains Mono', 'Courier New', monospace";
+    var re = /^(.*?\d(?:\.\d+)?(?:px|pt|em|rem|%)(?:\s*\/\s*[\d.]+(?:px|em|%)?)?\s+)(.+)$/;
+    Object.defineProperty(proto, 'font', {
+      configurable: true, enumerable: d.enumerable,
+      get: function () { return d.get.call(this); },
+      set: function (v) {
+        var s = String(v), m = re.exec(s);
+        if (m && /courier|monospace/i.test(m[2]) && !/jetbrains|press start/i.test(m[2])) s = m[1] + FAM;
+        d.set.call(this, s);
+      }
+    });
+    try { if (document.fonts) { document.fonts.load("12px 'JetBrains Mono'"); document.fonts.load("bold 12px 'JetBrains Mono'"); } } catch (e) {}
+  })();
+
   // ---- 5. Fit: fixed-size canvas games -------------------------------------
   // <html data-gg-fit="#selector [WxH]"> scales that element (a canvas, or a
   // wrapper holding several) to fit the viewport with a CSS transform, and
