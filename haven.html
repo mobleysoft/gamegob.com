@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-gg-game
 <head>
 <meta property="og:title" content="Haven">
 <meta property="og:type" content="website">
@@ -225,8 +225,8 @@
         .gift-option:hover { background: rgba(255,105,180, 0.65); }
     </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
-<link rel="stylesheet" href="/assets/gg-mobile.css?v=20261004">
-<script src="/assets/gg-mobile.js?v=20261004"></script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=20261005">
+<script src="/assets/gg-mobile.js?v=20261005"></script>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
@@ -598,7 +598,9 @@
             if (vw / vh > aspect) { drawH = vh; drawW = vh * aspect; }
             else { drawW = vw; drawH = vw / aspect; }
 
-            const scale = Math.max(1, Math.floor(Math.min(drawW / NATIVE_W, drawH / NATIVE_H)));
+            const rawScale = Math.min(drawW / NATIVE_W, drawH / NATIVE_H);
+            // integer scaling keeps pixel art crisp when there is room; below 1x (phones in portrait) a fractional fit beats a 512px canvas hanging off a 390px screen
+            const scale = rawScale >= 1 ? Math.floor(rawScale) : rawScale;
             const finalW = NATIVE_W * scale;
             const finalH = NATIVE_H * scale;
 

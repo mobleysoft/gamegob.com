@@ -106,9 +106,48 @@
     });
     GG.keypad = root;
   }
+  // ---- 5. Fit: fixed-size canvas games -------------------------------------
+  // <html data-gg-fit="#selector [WxH]"> scales that element (a canvas, or a
+  // wrapper holding several) to fit the viewport with a CSS transform, and
+  // shrinks its layout box with negative margins so flex-centred bodies stay
+  // centred and nothing overflows. Transforms keep input correct for both
+  // coordinate styles the games use: offsetX/offsetY is reported in the
+  // element's own (unscaled) space, and getBoundingClientRect() reports the
+  // scaled rect that rect-mapping code divides by.
+  function mountFit(spec) {
+    var parts = spec.trim().split(/\s+/);
+    var el = document.querySelector(parts[0]); if (!el) return;
+    var fixed = /^(\d+)x(\d+)$/.exec(parts[1] || '');
+    function apply() {
+      el.style.transform = ''; el.style.marginRight = ''; el.style.marginBottom = '';
+      var lw = el.offsetWidth, lh = el.offsetHeight;          // layout box
+      var w = fixed ? +fixed[1] : lw, h = fixed ? +fixed[2] : lh; // visual extent to fit (may exceed the box: hung-off sidebars)
+      if (!w || !h) return;
+      // Chrome on Android widens the layout viewport to overflowing content
+      // before any script runs, so innerWidth can already be the canvas width;
+      // the physical screen size (CSS px) is the honest bound on a phone.
+      var vw = Math.min(window.innerWidth, (screen && screen.width) || window.innerWidth);
+      var vh = Math.min(window.innerHeight, (screen && screen.height) || window.innerHeight);
+      var s = Math.min(vw / w, vh / h, 1);
+      GG.fit = { el: el, scale: s, w: w, h: h, vw: vw, vh: vh };
+      if (s > 0.999) return;
+      el.style.transformOrigin = '0 0';
+      el.style.transform = 'scale(' + s + ')';
+      el.style.marginRight = (w * s - lw) + 'px';   // margin box = visual width
+      el.style.marginBottom = (h * s - lh) + 'px';
+    }
+    apply();
+    window.addEventListener('resize', apply);
+    window.addEventListener('orientationchange', function () { setTimeout(apply, 60); });
+    // games that size their canvas after load
+    setTimeout(apply, 250); setTimeout(apply, 1200);
+  }
   function boot() {
+    if (native) document.documentElement.classList.add('gg-native');
     var spec = document.documentElement.getAttribute('data-gg-keypad');
     if (spec) mountKeypad(spec);
+    var fit = document.documentElement.getAttribute('data-gg-fit');
+    if (fit) mountFit(fit);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

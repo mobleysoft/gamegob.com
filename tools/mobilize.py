@@ -17,13 +17,31 @@ Run from the repo root. Prints a per-file change summary; nothing else.
 import hashlib, os, re, sys, base64
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VERSION = '20261004'
+VERSION = '20261005'
 SKIP = {'og-image.html'}
 KEYPAD = {
     'photonic_forge_breakout.html': 'arrows space',
     'forge_word_cascade.html': 'enter space',
     'genesis.html': 'enter',
 }
+# 6. Pages that are not games (portal, catalogues, tools) keep the estate nav
+#    bar; every other page gets <html data-gg-game> so gg-mobile.css can hide
+#    that bar on phones and lift modals above the shared touch pad.
+NOT_GAMES = {'index.html', 'portal.html', 'games.html', 'shop.html', 'status.html', 'beings.html',
+             'beings_api_index.html', 'spritevae_viz.html', 'atlas_parser.html'}
+# 7. Fixed-size canvas games (no scaling code of their own) get
+#    <html data-gg-fit="selector [WxH]">; gg-mobile.js scales that element to
+#    the viewport. Measured 2026-10-04: these clipped 18-34% of the play
+#    field on an iPhone 13 in one or both orientations.
+FIT = {
+    'auto_battler.html': '#gameCanvas',
+    'battle_royale.html': '#c',
+    'bullet_hell.html': '#wrapper 660x640',   # 480x640 canvas + 180px sidebar hung off its right
+    'fps.html': '#wrapper 640x400',           # game + overlay canvases stacked in the wrapper
+    'platformer.html': '#gameCanvas',
+    'smash_arena.html': '#c',
+}
+GG_ASSET_RE = re.compile(r'(/assets/gg-mobile\.(?:css|js)\?v=)\d+')
 ADS_RE = re.compile(r'<script[^>]*src="(https://pagead2\.googlesyndication\.com/pagead/js/adsbygoogle\.js[^"]*)"[^>]*>\s*</script>', re.I)
 VIEWPORT_RE = re.compile(r'(<meta[^>]+name=["\']viewport["\'][^>]*content=["\'])([^"\']+)(["\'])', re.I)
 DATA_PNG_RE = re.compile(r'data:image/png;base64,([A-Za-z0-9+/=]+)')
@@ -66,10 +84,21 @@ def mobilize(name):
             notes.append('viewport-fit')
         return m.group(1) + content + m.group(3)
     s = VIEWPORT_RE.sub(vp, s, count=1)
-    # 2. runtime
+    # 2. runtime (and keep its cache-busting version current)
     if 'gg-mobile.js' not in s and '</head>' in s:
         s = s.replace('</head>', HEAD_TAG + '</head>', 1)
         notes.append('runtime')
+    s, nv = GG_ASSET_RE.subn(lambda m: m.group(1) + VERSION, s)
+    if nv and s != orig and 'runtime' not in notes and GG_ASSET_RE.sub(lambda m: m.group(1) + VERSION, orig) != orig:
+        notes.append('runtime v' + VERSION)
+    # 6. game marker
+    if name not in NOT_GAMES and 'data-gg-game' not in s:
+        s = re.sub(r'<html(\s[^>]*)?>', lambda m: '<html' + (m.group(1) or '') + ' data-gg-game', s, count=1)
+        notes.append('game')
+    # 7. fit
+    if name in FIT and 'data-gg-fit' not in s:
+        s = re.sub(r'<html(\s[^>]*)?>', lambda m: '<html' + (m.group(1) or '') + ' data-gg-fit="%s"' % FIT[name], s, count=1)
+        notes.append('fit:' + FIT[name])
     # 3. ads
     def ads(m):
         notes.append('ads-gated')

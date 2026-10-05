@@ -23,3 +23,44 @@ canvas { touch-action: none; -webkit-user-select: none; user-select: none; -webk
 #gg-keypad .gg-actions { position: absolute; right: calc(16px + var(--gg-safe-right)); bottom: calc(26px + var(--gg-safe-bottom)); display: flex; gap: 14px; align-items: flex-end; }
 #gg-keypad .gg-actions button { width: 64px; height: 64px; }
 @media (hover: hover) and (pointer: fine) { #gg-keypad { display: none; } }
+
+/* 5. Estate nav bar: it is a 32px fixed strip at the bottom of every page,
+   exactly where game controls live. Never on a phone game page, never
+   inside a native shell (outbound links would trap the user in-app). */
+@media (pointer: coarse), (max-width: 760px) { html[data-gg-game] #mascom-nav { display: none !important; } }
+html.gg-native #mascom-nav { display: none !important; }
+
+/* 6. Shared centered-modal template (charSelect / endScreen / pauseScreen
+   family used by the flagship games): translate(-50%,-50%) boxes with a
+   desktop max-width and no max-height clip off a phone. Fit and scroll. */
+@media (max-width: 760px), (max-height: 520px) {
+  #charSelect, #endScreen, #pauseScreen, #nameEntryModal, #gameOver, #sharePanel, #progressionScreen,
+  #leaderboardPanel, #leaderboardOverlay, #statsScreen, #myStatsScreen, #settingsScreen, #shopPanel,
+  #scorePanel, #pauseMenu, #scoreSubmitBox, #deathScreen, #augmentPicker, #lbNameEntry, #challengeWin,
+  #sharePanelInner, #tutorialOverlay {
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 16px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+  }
+}
+
+/* 7. Modals above the shared .mctl-overlay touch pad (z 9999) so the pad
+   never covers a Start / Continue button; secondary dialogs one step higher. */
+@media (pointer: coarse) {
+  html[data-gg-game] :is(#charSelect, #endScreen, #pauseScreen, #titleScreen, #gameOver, #progressionScreen,
+    #leaderboardPanel, #leaderboardOverlay, #statsScreen, #myStatsScreen, #shopPanel, #scorePanel, #pauseMenu,
+    #deathScreen, #splashScreen, #tutorialOverlay, #augmentPicker, #challengeWin) { z-index: 10000 !important; }
+  html[data-gg-game] :is(#nameEntryModal, #sharePanel, #sharePanelInner, #scoreSubmitBox, #settingsScreen, #lbNameEntry) { z-index: 10010 !important; }
+}
+
+/* 8. Shared touch pad: respect the home-indicator / notch insets. */
+.mctl-dpad { bottom: calc(22px + var(--gg-safe-bottom)) !important; left: calc(16px + var(--gg-safe-left)) !important; }
+.mctl-btn-a { bottom: calc(44px + var(--gg-safe-bottom)) !important; right: calc(16px + var(--gg-safe-right)) !important; }
+.mctl-btn-b { bottom: calc(104px + var(--gg-safe-bottom)) !important; }
+.mctl-start { bottom: calc(6px + var(--gg-safe-bottom)) !important; }
+
+/* 9. Fitted fixed-size games (html[data-gg-fit]): the scaled element keeps a
+   crisp edge and the page never scrolls sideways under it. */
+html[data-gg-fit], html[data-gg-fit] body { overflow: hidden; }
