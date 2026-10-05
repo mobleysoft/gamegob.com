@@ -366,10 +366,14 @@ body.colorblind-active .cb-shape-indicator { display: inline; }
 /* Focus visible for keyboard nav */
 *:focus-visible { outline: 2px solid #fd0 !important; outline-offset: 2px !important; }
 .kb-nav-active .char-card:focus, .kb-nav-active .track-card:focus, .kb-nav-active .btn:focus, .kb-nav-active button:focus { outline: 2px solid #fd0; outline-offset: 2px; box-shadow: 0 0 12px rgba(255,215,0,0.38); }
+/* phone: the centred .overlay panels (character / track select, menus) are taller than the screen; fit and scroll (2026-10-05) */
+@media (max-width: 760px), (max-height: 520px) {
+  #ui .overlay { max-width: calc(100vw - 16px) !important; max-height: calc(100dvh - 16px); overflow-y: auto; -webkit-overflow-scrolling: touch; box-sizing: border-box; }
+}
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
-<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100515">
-<script src="/assets/gg-mobile.js?v=2026100515"></script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100516">
+<script src="/assets/gg-mobile.js?v=2026100516"></script>
 </head>
 <body>
 <button id="muteBtn" title="Toggle Sound">&#x1F50A;</button>

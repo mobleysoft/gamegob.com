@@ -189,18 +189,20 @@
   if (coarse) {
     var padMap = null;
     function buildPadMap() {
-      var map = {};
+      var map = {}, dedicated = {};
       var src = [].map.call(document.scripts, function (s) { return s.src ? '' : s.textContent; }).join('\n');
       var re = /setupBtn\(\s*['"](mctl_\w+)['"]\s*,\s*['"]([^'"]*)['"]/g, m;
       while ((m = re.exec(src))) {
         var el = document.getElementById(m[1]);
         var label = el && el.textContent.trim();
-        if (label) m[2].split(',').forEach(function (k) {
+        if (!label) continue;
+        var keys = m[2].split(',').map(function (k) { k = k.trim().toLowerCase(); return k === 'space' ? ' ' : k; }).filter(Boolean);
+        keys.forEach(function (k) {
           // keys arrive as a comma list ('z, , ' = z + space; 'x,Shift'); a
-          // key that is itself a space survives the split as ' ' or ''
-          // games trim each key too, so a bare ' ' entry is a no-op, not Space
-          k = k.trim().toLowerCase(); if (k === 'space') k = ' ';
-          if (k && !map[k]) map[k] = label.toUpperCase();
+          // button that fires only this key owns its label over one that
+          // fires it as a side effect (bullet_hell: Shift = FOCUS, not BOMB)
+          if (!map[k] || (keys.length === 1 && !dedicated[k])) map[k] = label.toUpperCase();
+          if (keys.length === 1) dedicated[k] = true;
         });
       }
       if (document.querySelector('.mctl-dpad')) ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', '←', '→', '↑', '↓', '← →', 'a d', 'w a s d', 'wasd'].forEach(function (k) { if (!map[k]) map[k] = 'D-PAD'; });
