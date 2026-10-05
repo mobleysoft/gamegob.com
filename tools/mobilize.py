@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""mobilize.py — apply the GameGob mobile pass to every game page (2026-10-04).
+
+Idempotent, mechanical, reviewable. For each *.html at the repo root (except
+og-image.html, a social-card template):
+  1. viewport meta gains viewport-fit=cover (keeps the page's own flags).
+  2. <head> gets /assets/gg-mobile.css and /assets/gg-mobile.js (synchronous,
+     before any game script, so the rAF/Audio patches are in place first).
+  3. The static AdSense <script> becomes a loader that skips inside a native
+     shell (Capacitor / standalone), where web display ads are not permitted.
+  4. Keyboard-only games get <html data-gg-keypad="..."> so gg-mobile.js
+     mounts an on-screen keypad on touch devices.
+  5. Pages carrying more than 200 KB of base64 PNG get those images written
+     to assets/inline/<page>/<sha1>.png and referenced by path instead.
+Run from the repo root. Prints a per-file change summary; nothing else.
+"""
+import hashlib, os, re, sys, base64
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+VERSION = '20261004'
+SKIP = {'og-image.html'}
+KEYPAD = {
+    'photonic_forge_breakout.html': 'arrows space',
+    'forge_word_cascade.html': 'enter space',
+    'genesis.html': 'enter',
+}
+ADS_RE = re.compile(r'<script[^>]*src="(https://pagead2\.googlesyndication\.com/pagead/js/adsbygoogle\.js[^"]*)"[^>]*>\s*</script>', re.I)
+VIEWPORT_RE = re.compile(r'(<meta[^>]+name=["\']viewport["\'][^>]*content=["\'])([^"\']+)(["\'])', re.I)
+DATA_PNG_RE = re.compile(r'data:image/png;base64,([A-Za-z0-9+/=]+)')
+HEAD_TAG = '<link rel="stylesheet" href="/assets/gg-mobile.css?v=%s">\n<script src="/assets/gg-mobile.js?v=%s"></script>\n' % (VERSION, VERSION)
+ADS_LOADER = ('<script>/* gg: web display ads only on the web, never inside a native shell */'
+              'if(!(window.Capacitor||navigator.standalone||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))){'
+              'var ggAd=document.createElement("script");ggAd.async=true;ggAd.crossOrigin="anonymous";ggAd.src="%s";document.head.appendChild(ggAd);}</script>')
+
+def externalize(name, s):
+    stem = name[:-5]
+    outdir = os.path.join(ROOT, 'assets', 'inline', stem)
+    count = 0
+    def repl(m):
+        nonlocal count
+        b64 = m.group(1)
+        try:
+            raw = base64.b64decode(b64, validate=False)
+        except Exception:
+            return m.group(0)
+        h = hashlib.sha1(raw).hexdigest()[:16]
+        os.makedirs(outdir, exist_ok=True)
+        path = os.path.join(outdir, h + '.png')
+        if not os.path.exists(path):
+            with open(path, 'wb') as fh: fh.write(raw)
+        count += 1
+        return '/assets/inline/%s/%s.png' % (stem, h)
+    s2 = DATA_PNG_RE.sub(repl, s)
+    return s2, count
+
+def mobilize(name):
+    path = os.path.join(ROOT, name)
+    s = open(path, encoding='utf-8', errors='surrogateescape').read()
+    orig = s
+    notes = []
+    # 1. viewport
+    def vp(m):
+        content = m.group(2)
+        if 'viewport-fit' not in content:
+            content = content.rstrip(', ') + ', viewport-fit=cover'
+            notes.append('viewport-fit')
+        return m.group(1) + content + m.group(3)
+    s = VIEWPORT_RE.sub(vp, s, count=1)
+    # 2. runtime
+    if 'gg-mobile.js' not in s and '</head>' in s:
+        s = s.replace('</head>', HEAD_TAG + '</head>', 1)
+        notes.append('runtime')
+    # 3. ads
+    def ads(m):
+        notes.append('ads-gated')
+        return ADS_LOADER % m.group(1)
+    s = ADS_RE.sub(ads, s)
+    # 4. keypad
+    if name in KEYPAD and 'data-gg-keypad' not in s:
+        s = re.sub(r'<html(\s[^>]*)?>', lambda m: '<html' + (m.group(1) or '') + ' data-gg-keypad="%s">' % KEYPAD[name], s, count=1)
+        notes.append('keypad:' + KEYPAD[name])
+    # 5. inline assets
+    inline_kb = sum(len(b) for b in DATA_PNG_RE.findall(s)) // 1024
+    if inline_kb > 200:
+        s, n = externalize(name, s)
+        notes.append('externalized %d png (%d KB)' % (n, inline_kb))
+    if s != orig:
+        open(path, 'w', encoding='utf-8', errors='surrogateescape').write(s)
+    return notes
+
+def main():
+    names = sorted(f for f in os.listdir(ROOT) if f.endswith('.html') and f not in SKIP)
+    changed = 0
+    for n in names:
+        notes = mobilize(n)
+        if notes:
+            changed += 1
+            print('%-36s %s' % (n, ', '.join(notes)))
+    print('changed %d of %d pages' % (changed, len(names)))
+
+if __name__ == '__main__':
+    main()

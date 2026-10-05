@@ -5,7 +5,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://gamegob">
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Purgefire</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -434,6 +434,8 @@ body.text-small #titleScreen h1 { font-size: 26px; }
 body.text-small .controls { font-size: 10px; }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=20261004">
+<script src="/assets/gg-mobile.js?v=20261004"></script>
 </head>
 <body>
 <div id="wrapper">
@@ -1367,7 +1369,7 @@ const AchTracker = (function() {
     let rocketKills = 0;
     let chainsawKills = 0;
     let bfgKills = 0;
-    let weaponUsed = new Array(TOTAL_WEAPONS).fill(false);
+    let weaponUsed = []; // sized in reset(): TOTAL_WEAPONS is declared later in the file
     let damageTakenOnFloor = false;
     let noDamageFloors = [];
     let gameStartTime = 0;
@@ -3468,7 +3470,7 @@ document.addEventListener("mousemove", e => {
 document.addEventListener("mousedown", e => {
   if (e.button === 0) shootPressed = true;
   if (!mouseLocked) {
-    cvs.requestPointerLock();
+    if (matchMedia('(pointer: fine)').matches) cvs.requestPointerLock();
   }
 });
 document.addEventListener("pointerlockchange", () => {
@@ -5735,7 +5737,7 @@ function togglePause() {
   } else {
     pauseEl.style.display = "none";
     pauseEl.style.pointerEvents = "none";
-    cvs.requestPointerLock();
+    if (matchMedia('(pointer: fine)').matches) cvs.requestPointerLock();
   }
 }
 
@@ -5904,7 +5906,7 @@ QuarterMachine.continueGame = function() {
   Sound.init();
   Sound.resume();
   Sound.startBgm();
-  cvs.requestPointerLock();
+  if (matchMedia('(pointer: fine)').matches) cvs.requestPointerLock();
   requestAnimationFrame(gameLoop);
   var checkEnd = setInterval(function() {
     if (state && !state.running) {
@@ -5935,13 +5937,13 @@ startBtn.addEventListener("click", () => {
   if (QuarterMachine.canPlay()) {
     if (!QuarterMachine.deductForPlay()) return;
     QuarterMachine.updateBadge();
-    cvs.requestPointerLock();
+    if (matchMedia('(pointer: fine)').matches) cvs.requestPointerLock();
     startGame();
   } else {
     QuarterMachine.setPendingAction(function() {
       if (QuarterMachine.deductForPlay()) {
         QuarterMachine.updateBadge();
-        cvs.requestPointerLock();
+        if (matchMedia('(pointer: fine)').matches) cvs.requestPointerLock();
         startGame();
       }
     });
@@ -5976,13 +5978,13 @@ howToPlayBtn.addEventListener("click", (e) => {
   if (QuarterMachine.canPlay()) {
     if (!QuarterMachine.deductForPlay()) return;
     QuarterMachine.updateBadge();
-    cvs.requestPointerLock();
+    if (matchMedia('(pointer: fine)').matches) cvs.requestPointerLock();
     startGame(true);
   } else {
     QuarterMachine.setPendingAction(function() {
       if (QuarterMachine.deductForPlay()) {
         QuarterMachine.updateBadge();
-        cvs.requestPointerLock();
+        if (matchMedia('(pointer: fine)').matches) cvs.requestPointerLock();
         startGame(true);
       }
     });

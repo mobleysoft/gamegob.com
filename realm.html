@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Realm — GameGob by Mobleysoft</title>
 <meta name="description" content="GameGob: The AGI Gaming Company. Free browser games, instant play.">
 <meta name="keywords" content="free browser games, 3D arcade, online games, HTML5 games, GameGob, Realm, Mobleysoft">
@@ -79,7 +79,9 @@ canvas{display:block;width:100%;height:100%}
 #touch-interact{width:70px;height:70px;border-radius:50%;border:2px solid #CC88FF;display:flex;align-items:center;justify-content:center;color:#CC88FF;font-size:0.7rem;font-weight:700}
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419" crossorigin="anonymous"></script>
+<script>/* gg: web display ads only on the web, never inside a native shell */if(!(window.Capacitor||navigator.standalone||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))){var ggAd=document.createElement("script");ggAd.async=true;ggAd.crossOrigin="anonymous";ggAd.src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419";document.head.appendChild(ggAd);}</script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=20261004">
+<script src="/assets/gg-mobile.js?v=20261004"></script>
 </head>
 <body>
 
@@ -589,7 +591,7 @@ document.addEventListener('mousemove', e => {
 document.addEventListener('click', () => {
   if (previewOpen) return;
   if (!pointerLocked) {
-    renderer.domElement.requestPointerLock();
+    if (matchMedia('(pointer: fine)').matches) renderer.domElement.requestPointerLock();
     return;
   }
   // Raycast for cabinet interaction
@@ -633,7 +635,7 @@ function showPreview(game) {
 function closePreview() {
   previewOpen = false;
   prevEl.classList.remove('show');
-  renderer.domElement.requestPointerLock();
+  if (matchMedia('(pointer: fine)').matches) renderer.domElement.requestPointerLock();
 }
 
 prevEl.addEventListener('click', e => {

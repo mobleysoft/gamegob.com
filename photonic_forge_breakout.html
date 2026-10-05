@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-gg-keypad="arrows space">
 <head>
 <meta property="og:title" content="Breakout">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://gamegob">
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Breakout</title>
 <style>
   body { margin: 0; overflow: hidden; background-color: #0a0a0f; color: #f0b800; font-family: monospace; }
@@ -13,6 +13,8 @@
   .menu, .game-over { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
 </style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
+<link rel="stylesheet" href="/assets/gg-mobile.css?v=20261004">
+<script src="/assets/gg-mobile.js?v=20261004"></script>
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -38,9 +40,7 @@ window.addEventListener('keydown', e => keys[e.key] = true);
 window.addEventListener('keyup', e => keys[e.key] = false);
 
 function gameLoop(timestamp) {
-  const deltaTime = timestamp - lastTime;
-  update(deltaTime / 1000);
-  draw();
+  draw(); // movement is integrated inside draw(); there is no separate update()
   lastTime = timestamp;
   requestAnimationFrame(gameLoop);
 }
