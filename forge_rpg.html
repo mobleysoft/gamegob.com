@@ -1208,8 +1208,13 @@ function drawTitle(dt) {
     drawText('(Save data found — will continue)', COLS*TILE/2, 250, '#666688', 8, 'center');
   }
   // Controls
-  drawText('Arrow Keys / WASD: Move', COLS*TILE/2, 310, '#445566', 8, 'center');
-  drawText('Enter/Space: Confirm  |  Esc: Back  |  E: Menu', COLS*TILE/2, 325, '#445566', 8, 'center');
+  if (isMobile) {
+    drawText('D-pad: Move', COLS*TILE/2, 310, '#445566', 8, 'center');
+    drawText('ACT: Confirm  |  BACK: Back  |  MENU: Menu', COLS*TILE/2, 325, '#445566', 8, 'center');
+  } else {
+    drawText('Arrow Keys / WASD: Move', COLS*TILE/2, 310, '#445566', 8, 'center');
+    drawText('Enter/Space: Confirm  |  Esc: Back  |  E: Menu', COLS*TILE/2, 325, '#445566', 8, 'center');
+  }
   // High score
   if (highScore > 0) drawText(`Best Score: ${highScore}`, COLS*TILE/2, 360, '#f0b800', 8, 'center');
   // Credits

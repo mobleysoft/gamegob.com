@@ -738,7 +738,7 @@ const TOUCH_BUTTON_SIZE = () => Math.max(44, 50 * SCALE);
 const getTouchButtons = () => {
   const bs = TOUCH_BUTTON_SIZE();
   const pad = Math.floor(12 * SCALE);
-  const bottomY = H - bs - pad;
+  const bottomY = H - bs * 1.5 - pad * 2 - 16; // the down button hung half off the bottom edge on phones (2026-10-05)
   const midY = bottomY - bs - pad;
 
   return {
@@ -1134,7 +1134,7 @@ const drawUI = () => {
   ctx.lineWidth = 1;
   ctx.strokeRect(holdX, holdY, holdW, holdH);
 
-  ctx.fillStyle = canHold ? COLORS.white : 'rgba(255,255,255, 0.65)';
+  ctx.fillStyle = canHold ? COLORS.white : 'rgba(255,255,255,0.22)';
   ctx.font = `${Math.floor(10 * SCALE)}px monospace`;
   ctx.textAlign = 'center';
   ctx.fillText('HOLD', holdX + holdW / 2, holdY - 5);

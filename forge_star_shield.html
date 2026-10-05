@@ -2214,7 +2214,7 @@ const drawShop = () => {
     const affordable = credits >= item.cost;
 
     // Item box
-    ctx.fillStyle = affordable ? 'rgba(240,184,0,0.14)' : 'rgba(255,50,50, 0.65)';
+    ctx.fillStyle = affordable ? 'rgba(240,184,0,0.14)' : 'rgba(255,50,50,0.08)';
     ctx.fillRect(W*0.1, y - itemH*0.4, W*0.8, itemH*0.8);
     ctx.strokeStyle = affordable ? COL.panelBorder : 'rgba(255,50,50,0.32)';
     ctx.lineWidth = 1;
@@ -2265,7 +2265,7 @@ const drawFuse = () => {
     const y = startY + i * itemH;
     const selected = i === fuseSlotA || i === fuseSlotB;
 
-    ctx.fillStyle = selected ? 'rgba(204,68,255,0.14)' : 'rgba(240,184,0, 0.65)';
+    ctx.fillStyle = selected ? 'rgba(204,68,255,0.14)' : 'rgba(240,184,0,0.08)';
     ctx.fillRect(W*0.1, y - itemH*0.35, W*0.8, itemH*0.7);
     ctx.strokeStyle = selected ? COL.purple : COL.panelBorder;
     ctx.lineWidth = selected ? 2 : 1;

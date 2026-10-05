@@ -1724,7 +1724,7 @@ const drawHUD = (time) => {
     const active = gadgetActive[i] > 0;
 
     // Background
-    ctx.fillStyle = selected ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255, 0.65)';
+    ctx.fillStyle = selected ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.08)';
     if (active) ctx.fillStyle = `${info.color}33`;
     ctx.fillRect(gx, barY, gadgetW, barH);
 

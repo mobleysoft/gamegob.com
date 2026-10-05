@@ -64,7 +64,7 @@ const COLORS = {
   red: '#ff3344', blue: '#3388ff', purple: '#aa44ff', white: '#ffffff',
   darkGold: '#8a6800', path: '#1a1a2a', pathBorder: '#2a2a3f',
   panelBg: '#0d0d14', panelBorder: '#222233', healthBar: '#00cc66',
-  healthBg: '#331111', towerRange: 'rgba(240,184,0, 0.65)',
+  healthBg: '#331111', towerRange: 'rgba(240,184,0,0.14)',
   enemyGlow: 'rgba(255,51,68,0.38)', uiShadow: 'rgba(0,0,0,0.7)'
 };
 
@@ -1128,7 +1128,7 @@ const drawPlacementPreview = () => {
   const data = TOWER_TYPES[selectedTowerType];
   const affordable = gold >= data.cost;
 
-  ctx.fillStyle = valid && affordable ? 'rgba(0,255,136,0.14)' : 'rgba(255,51,68, 0.65)';
+  ctx.fillStyle = valid && affordable ? 'rgba(0,255,136,0.14)' : 'rgba(255,51,68,0.08)';
   ctx.fillRect(px, py, cellSize, cellSize);
 
   ctx.strokeStyle = valid && affordable ? COLORS.green : COLORS.red;

@@ -7380,7 +7380,7 @@ const ShareCard = (function() {
         // Challenge target if applicable
         if (data.challengeScore) {
             const beatIt = data.score > data.challengeScore;
-            ctx.fillStyle = beatIt ? 'rgba(76,175,80,0.14)' : 'rgba(239,83,80, 0.65)';
+            ctx.fillStyle = beatIt ? 'rgba(76,175,80,0.14)' : 'rgba(239,83,80,0.08)';
             const cBadgeW = 200, cBadgeH = 24;
             const cBadgeX = W / 2 + 50 - cBadgeW / 2, cBadgeY = 275;
             ctx.fillRect(cBadgeX, cBadgeY, cBadgeW, cBadgeH);

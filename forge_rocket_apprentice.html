@@ -475,7 +475,7 @@ const drawPanel = (x, y, w, h) => {
 };
 
 const drawButton = (text, x, y, w, h, color = C.gold, hover = false) => {
-  ctx.fillStyle = hover ? color : 'rgba(240,184,0, 0.65)';
+  ctx.fillStyle = hover ? color : 'rgba(240,184,0,0.22)';
   if (hover) ctx.globalAlpha = 0.2;
   ctx.fillRect(x, y, w, h);
   ctx.globalAlpha = 1;
@@ -808,7 +808,7 @@ const drawUpgrades = (dt) => {
       // Level pips
       for (let i = 0; i < upg.maxLvl; i++) {
         const px = sx + 10 + i * 14;
-        ctx.fillStyle = i < lvl ? C.green : 'rgba(255,255,255, 0.65)';
+        ctx.fillStyle = i < lvl ? C.green : 'rgba(255,255,255,0.22)';
         ctx.fillRect(px, sy + 50, 10, 8);
       }
 
@@ -1269,7 +1269,7 @@ const drawGame = (dt) => {
   for (let i = 0; i < Math.ceil(player.maxShield); i++) {
     const full = player.shield >= i + 1;
     const partial = player.shield > i && player.shield < i + 1;
-    ctx.fillStyle = full ? C.green : partial ? 'rgba(0,255,136,0.4)' : 'rgba(255,255,255, 0.65)';
+    ctx.fillStyle = full ? C.green : partial ? 'rgba(0,255,136,0.4)' : 'rgba(255,255,255,0.22)';
     ctx.fillRect(50 + i * 18, hudY + 22, 14, 10);
   }
 
