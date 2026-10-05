@@ -145,6 +145,9 @@
     [/Click to Start/g, 'Tap to Start'], [/Click or Tap/gi, 'Tap'], [/Click a card/g, 'Tap a card'], [/Click anywhere/gi, 'Tap anywhere'],
     [/Arrow Keys \/ WASD/g, 'D-pad'], [/ARROW KEYS \/ WASD/g, 'D-PAD'], [/ARROWS\s*\/\s*WASD/g, 'D-PAD'], [/WASD\s*\/\s*Arrows/gi, 'D-pad'], [/WASD\/ARROWS/g, 'D-PAD'],
     [/\[Arrow Keys\]/g, '[D-pad]'], [/Arrow Keys/g, 'D-pad'], [/ARROW KEYS/g, 'D-PAD'],
+    // title / game-over prompts: the touchstart handlers take the same path as Enter
+    [/PRESS (?:ENTER|SPACE) TO (PLAY AGAIN|RESTART|START|PLAY|CONTINUE|SKIP)/g, 'TAP TO $1'],
+    [/[Pp]ress (?:Enter|ENTER|Space|SPACE) to (\w[\w ]*?)(?=[.!]|$)/g, 'Tap to $1'],
   ];
   function fixCopy(t) {
     if (typeof t !== 'string' || t.length < 6) return t;
