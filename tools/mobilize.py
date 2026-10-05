@@ -17,7 +17,7 @@ Run from the repo root. Prints a per-file change summary; nothing else.
 import hashlib, os, re, sys, base64
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VERSION = '2026100503'
+VERSION = '2026100504'
 SKIP = {'og-image.html'}
 KEYPAD = {
     'photonic_forge_breakout.html': 'arrows space',
