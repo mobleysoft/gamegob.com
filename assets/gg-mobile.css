@@ -57,7 +57,8 @@ html.gg-native:not([data-gg-game]) body { padding-top: var(--gg-safe-top) !impor
   #charSelect, #endScreen, #pauseScreen, #nameEntryModal, #gameOver, #sharePanel, #progressionScreen,
   #leaderboardPanel, #leaderboardOverlay, #statsScreen, #myStatsScreen, #settingsScreen, #shopPanel,
   #scorePanel, #pauseMenu, #scoreSubmitBox, #deathScreen, #augmentPicker, #lbNameEntry, #challengeWin,
-  #sharePanelInner, #tutorialOverlay {
+  #sharePanelInner, #tutorialOverlay,
+  #splash, #splashScreen /* card_game / platformer full-screen splashes: same centred-overflow cut */ {
     max-width: calc(100vw - 16px) !important;
     max-height: calc(100dvh - 16px) !important;
     overflow-y: auto !important;
