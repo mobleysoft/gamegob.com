@@ -1815,12 +1815,12 @@ const renderTouchControls = () => {
   ctx.globalAlpha = 0.25;
 
   const drawBtn = (zone, label, active) => {
-    ctx.fillStyle = active ? COLORS.gold : '#333';
+    ctx.fillStyle = active ? COLORS.gold : 'rgba(14,16,24,0.62)';
     ctx.beginPath();
     ctx.roundRect(zone.x, zone.y, zone.w, zone.h, 10);
     ctx.fill();
 
-    ctx.fillStyle = active ? '#000' : '#888';
+    ctx.fillStyle = active ? '#0b0c10' : 'rgba(255,236,170,0.88)';
     ctx.font = `bold ${Math.max(12, zone.h * 0.25)}px monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';

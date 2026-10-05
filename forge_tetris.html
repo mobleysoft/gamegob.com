@@ -1211,18 +1211,18 @@ const drawTouchControls = () => {
 
   for (const [name, btn] of Object.entries(btns)) {
     const active = activeBtns.has(name);
-    ctx.fillStyle = active ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255, 0.65)';
+    ctx.fillStyle = active ? 'rgba(240,184,0,0.42)' : 'rgba(14,16,24,0.62)';
     ctx.beginPath();
     ctx.roundRect(btn.x, btn.y, btn.w, btn.h, 8);
     ctx.fill();
 
-    ctx.strokeStyle = active ? COLORS.gold : 'rgba(255,255,255, 0.65)';
+    ctx.strokeStyle = active ? COLORS.gold : 'rgba(240,184,0,0.42)';
     ctx.lineWidth = active ? 2 : 1;
     ctx.beginPath();
     ctx.roundRect(btn.x, btn.y, btn.w, btn.h, 8);
     ctx.stroke();
 
-    ctx.fillStyle = active ? COLORS.gold : 'rgba(255,255,255,0.4)';
+    ctx.fillStyle = active ? '#0b0c10' : 'rgba(255,236,170,0.88)';
     ctx.font = `${Math.floor(btn.w * 0.4)}px monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
