@@ -221,7 +221,15 @@
             border-bottom: 1px solid #222;
         }
         .gift-option:hover { background: rgba(255,105,180,0.14); }
-    </style>
+    
+#dpad-actions { display: none; position: fixed; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); width: 150px; height: 130px; z-index: 200; }
+#dpad-actions .act { font-size: 10px; letter-spacing: .04em; width: 52px; height: 52px; border-radius: 50%; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+#act-atk { right: 0; bottom: 0; width: 64px; height: 64px; border-color: rgba(255,100,100,.6); color: #ffb9b9; font-size: 12px; }
+#act-inv { right: 76px; bottom: 6px; }
+#act-buy { right: 76px; bottom: 70px; }
+#act-craft { right: 8px; bottom: 76px; }
+@media (pointer: coarse) { #dpad-actions { display: block !important; } }
+</style>
 <script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
 <link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100506">
 <script src="/assets/gg-mobile.js?v=2026100506"></script>
@@ -251,6 +259,13 @@
         <div id="dpad-right" class="dpad-btn">&rarr;</div>
         <div id="dpad-action" class="dpad-btn">E</div>
     </div>
+<!-- Touch action cluster (2026-10-05): the hint bar lists [I]nv [B]uy [C]raft [Space]Atk, none of which a phone can press -->
+<div id="dpad-actions">
+  <div class="dpad-btn act" data-key=" " data-code="Space" id="act-atk">ATK</div>
+  <div class="dpad-btn act" data-key="i" data-code="KeyI" id="act-inv">INV</div>
+  <div class="dpad-btn act" data-key="b" data-code="KeyB" id="act-buy">BUY</div>
+  <div class="dpad-btn act" data-key="c" data-code="KeyC" id="act-craft">CRAFT</div>
+</div>
 
     <!-- Inventory panel (press I) -->
     <div id="inventoryPanel">
@@ -1655,7 +1670,21 @@
 <a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
 </div>
 <!-- HelmCorp Analytics -->
-<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()</script>
+<script>(function(){var v='gamegob';fetch('https://helmcorp.cc/api/beacon',{method:'POST',body:JSON.stringify({v:v,p:location.pathname,t:Date.now()}),headers:{'Content-Type':'application/json'},keepalive:true}).catch(function(){})})()
+// Touch action cluster -> the keyboard handlers the game already has
+;(function () {
+  function fire(type, key, code) {
+    var ev = new KeyboardEvent(type, { key: key, code: code, bubbles: true, cancelable: true });
+    document.dispatchEvent(ev);
+  }
+  document.querySelectorAll('#dpad-actions .act').forEach(function (b) {
+    var key = b.getAttribute('data-key'), code = b.getAttribute('data-code');
+    b.addEventListener('touchstart', function (e) { e.preventDefault(); b.classList.add('on'); fire('keydown', key, code); }, { passive: false });
+    var up = function (e) { if (e && e.cancelable) e.preventDefault(); b.classList.remove('on'); fire('keyup', key, code); };
+    b.addEventListener('touchend', up, { passive: false }); b.addEventListener('touchcancel', up, { passive: false });
+  });
+})();
+</script>
 <!-- VentureForge:collated -->
 </body>
 </html>
