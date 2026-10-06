@@ -371,7 +371,6 @@ body.colorblind-active .cb-shape-indicator { display: inline; }
   #ui .overlay { max-width: calc(100vw - 16px) !important; max-height: calc(100dvh - 16px); overflow-y: auto; -webkit-overflow-scrolling: touch; box-sizing: border-box; }
 }
 </style>
-<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
 <link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100524">
 <script src="/assets/gg-mobile.js?v=2026100524"></script>
 <meta name="description" content="Play Burnline free in your browser on GameGob. Works on phones, no install.">
@@ -2958,6 +2957,12 @@ function updateRacer(r, dt, isPlayerControlled) {
         }
     }
 
+    // Segment indices for checkpoints and lap detection. Before 2026-10-05 these were
+    // declared below the checkpoint block that reads them: a temporal-dead-zone
+    // ReferenceError on every frame, so the race never drew its road and the car never moved.
+    const prevSeg = Math.floor(wrapPos(prevPos) / SEG_LENGTH);
+    const currSeg = Math.floor(wrapPos(r.position) / SEG_LENGTH);
+
     // Checkpoint feedback (every 1/4 lap for player)
     if (isPlayerControlled) {
         const checkpointInterval = TOTAL_SEGMENTS / 4;
@@ -2978,8 +2983,6 @@ function updateRacer(r, dt, isPlayerControlled) {
     }
 
     // Lap detection
-    const prevSeg = Math.floor(wrapPos(prevPos) / SEG_LENGTH);
-    const currSeg = Math.floor(wrapPos(r.position) / SEG_LENGTH);
     if (prevSeg > TOTAL_SEGMENTS * 0.8 && currSeg < TOTAL_SEGMENTS * 0.2 && r.speed > 0) {
         r.lap++;
         const lapTime = raceTime - r.lapStart;
@@ -3406,11 +3409,13 @@ function render() {
         const pNext = i < projected.length - 1 ? projected[i + 1] : null;
         if (!pNext) continue;
 
-        const y1 = p.projY, y2 = pNext.projY;
-        if (y1 > maxY) continue;
-
-        const clippedY1 = Math.max(0, y1);
-        const clippedY2 = Math.min(maxY, y2);
+        // p is the nearer segment (lower on screen), pNext the farther one (higher). Before
+        // 2026-10-05 this clipped as if the nearer edge were the top, so every strip was
+        // rejected and the race drew sky and ground with no road at all.
+        const yNear = p.projY, yFar = pNext.projY;
+        const y1 = yNear, y2 = yFar; // kept for the sprite and scenery code below
+        const clippedY1 = Math.max(0, Math.min(yNear, yFar));
+        const clippedY2 = Math.min(maxY, Math.max(yNear, yFar));
         if (clippedY1 >= clippedY2) continue;
 
         // Ground strip
@@ -3424,14 +3429,14 @@ function render() {
         ctx.fillStyle = rColor;
         drawTrapezoid(p.projX - rumbleW, pNext.projX - pNext.projW * 1.3,
                        p.projX + rumbleW, pNext.projX + pNext.projW * 1.3,
-                       clippedY1, clippedY2);
+                       clippedY2, clippedY1);
 
         // Road surface
         const rColor2 = (p.segIdx % 2 === 0) ? track.road1 : track.road2;
         ctx.fillStyle = rColor2;
         drawTrapezoid(p.projX - p.projW, pNext.projX - pNext.projW,
                        p.projX + p.projW, pNext.projX + pNext.projW,
-                       clippedY1, clippedY2);
+                       clippedY2, clippedY1);
 
         // Center dashes
         if (p.segIdx % 4 < 2) {
@@ -3439,7 +3444,7 @@ function render() {
             const dashW = p.projW * 0.02;
             drawTrapezoid(p.projX - dashW, pNext.projX - pNext.projW * 0.02,
                            p.projX + dashW, pNext.projX + pNext.projW * 0.02,
-                           clippedY1, clippedY2);
+                           clippedY2, clippedY1);
         }
 
         // Lane markers
@@ -3451,7 +3456,7 @@ function render() {
             const lwN = pNext.projW * 0.008;
             drawTrapezoid(p.projX + lx - lw, pNext.projX + lxN - lwN,
                            p.projX + lx + lw, pNext.projX + lxN + lwN,
-                           clippedY1, clippedY2);
+                           clippedY2, clippedY1);
         }
 
         // Scenery
@@ -3580,7 +3585,8 @@ function render() {
             }
         });
 
-        if (y1 < maxY) maxY = y1;
+        // Strips are painted far to near (painter's order), so no clip line is needed; the
+        // old near-to-far clip here rejected every strip after the first one.
     }
 
     // Draw AI racers (sorted by distance, far first)
@@ -6412,19 +6418,6 @@ body:has(#trackSelectScreen:not([style*="display: none"]):not([style*="display:n
 })();
 </script>
 
-<!-- MASCOM Conglomerate Nav -->
-<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180,0.32);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
-<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
-<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
-<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
-<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
-<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
-<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
-<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
-<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
-<span style="flex:1"></span>
-<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
-</div>
 <!-- HelmCorp Analytics -->
 <script>(function(){var v='gamegob';(function(u,b){try{if(navigator.sendBeacon){navigator.sendBeacon(u,b)}else{fetch(u,{method:'POST',mode:'no-cors',keepalive:true,body:b}).catch(function(){})}}catch(e){}})('https://helmcorp.cc/api/beacon',JSON.stringify({v:v,p:location.pathname,t:Date.now()}))})()</script>
 <!-- VentureForge:collated -->

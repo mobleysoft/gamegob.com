@@ -1411,7 +1411,6 @@ body.text-small .hint { font-size: 11px; }
 .kbnav .weapon-choice:focus { border-color: #FFD700; box-shadow: 0 0 12px rgba(255,215,0,0.5); }
 .kbnav button:focus { outline: 2px solid #FFD700; outline-offset: 2px; }
 </style>
-<script src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
 <link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100524">
 <script src="/assets/gg-mobile.js?v=2026100524"></script>
 <meta name="description" content="Play Dreadtide free in your browser on GameGob. Works on phones, no install.">
@@ -1927,22 +1926,35 @@ function drawSpriteFromSheet(ctx, img, frameX, frameY, frameW, frameH, dx, dy, d
     return true;
 }
 
-// Helper: Draw tiled background
+// The generated sheets are 1024x1024 grids of 4x4 cells (256px each), not 32px strips.
+// Until 2026-10-05 every reader assumed 32px frames at the origin and drew transparent
+// pixels: a working HUD over a black field. Cell size now comes from the sheet itself.
+function sheetCell(img) {
+    const w = img ? (img.naturalWidth || img.width || 0) : 0;
+    return w >= 512 ? Math.floor(w / 4) : 32;
+}
+
+// Helper: Draw tiled background (grass tufts with transparent gaps; the ground colour is
+// painted by the caller first)
 function drawTiledBackground(ctx, img, offsetX, offsetY, tileSize, screenW, screenH) {
     if (!img || !img.complete) return;
+    const cell = sheetCell(img);
     const tilesX = Math.ceil(screenW / tileSize) + 1;
     const tilesY = Math.ceil(screenH / tileSize) + 1;
     const startX = Math.floor(offsetX / tileSize) * tileSize - offsetX;
     const startY = Math.floor(offsetY / tileSize) * tileSize - offsetY;
-    
+    const tileCol = Math.floor(offsetX / tileSize), tileRow = Math.floor(offsetY / tileSize);
+
     for (let ty = 0; ty < tilesY; ty++) {
         for (let tx = 0; tx < tilesX; tx++) {
             const dx = startX + tx * tileSize;
             const dy = startY + ty * tileSize;
-            // Cycle through tile variants in the sheet
-            const variant = (tx + ty) % 4;
-            const srcX = variant * 32; // Assuming 32x32 tiles in a row
-            ctx.drawImage(img, srcX, 0, 32, 32, dx, dy, tileSize, tileSize);
+            // Cycle through the 8 tile variants in the first two rows of the sheet, keyed to
+            // world tile coordinates so the pattern does not swim as the camera moves
+            const variant = (((tileCol + tx) * 7 + (tileRow + ty) * 13) % 8 + 8) % 8;
+            const srcX = (variant % 4) * cell;
+            const srcY = Math.floor(variant / 4) * cell;
+            ctx.drawImage(img, srcX, srcY, cell, cell, dx, dy, tileSize, tileSize);
         }
     }
 }
@@ -6026,7 +6038,11 @@ function restart() {
 // ═══════════════════════════════════════════════════════════════
 // RENDER
 // ═══════════════════════════════════════════════════════════════
-function render() {
+// dt: the frame's delta, needed for the player's walk-cycle timing. Before 2026-10-05
+// render() read a dt that only existed inside loop(), threw ReferenceError on the first
+// frame of every run, and the game drew nothing but black behind the HUD.
+function render(dt) {
+    dt = typeof dt === 'number' && isFinite(dt) ? dt : 0;
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
@@ -6037,13 +6053,13 @@ function render() {
     ctx.save();
     Juice.applyShake(ctx);
 
-    // Background — use generated tile set if available
+    // Background: dark ground always, then the generated grass tufts over it when loaded
+    ctx.fillStyle = '#1a2a1a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     if (GAME_ASSETS.loaded && GAME_ASSETS.backgrounds.grass_set) {
-        drawTiledBackground(ctx, GAME_ASSETS.backgrounds.grass_set, cx, cy, 32, canvas.width, canvas.height);
+        drawTiledBackground(ctx, GAME_ASSETS.backgrounds.grass_set, cx, cy, 64, canvas.width, canvas.height);
     } else {
-        // Fallback: dark grass with grid
-        ctx.fillStyle = '#1a2a1a';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Fallback: grid over the dark grass
 
         // Grid lines for spatial reference
         ctx.strokeStyle = '#223322';
@@ -6071,7 +6087,7 @@ function render() {
         if (sx < -20 || sx > canvas.width + 20 || sy < -20 || sy > canvas.height + 20) continue;
         // Try to draw from powerups icon sheet (16x16 grid, XP gem is first icon)
         if (GAME_ASSETS.loaded && GAME_ASSETS.items.powerups) {
-            if (!drawSpriteFromSheet(ctx, GAME_ASSETS.items.powerups, 0, 0, 16, 16, sx - 6, sy - 6, 12, 12)) {
+            if (!drawSpriteFromSheet(ctx, GAME_ASSETS.items.powerups, 0, 0, sheetCell(GAME_ASSETS.items.powerups), sheetCell(GAME_ASSETS.items.powerups), sx - 8, sy - 8, 16, 16)) {
                 // Fallback circle
                 ctx.beginPath();
                 ctx.arc(sx, sy, 3, 0, Math.PI * 2);
@@ -6126,10 +6142,11 @@ function render() {
             }
 
             if (sheet) {
-                const frameSize = 32;
-                const scale = e.size / 16; // Scale to match enemy size
-                const renderSize = frameSize * scale;
-                if (drawSpriteFromSheet(ctx, sheet, idx * frameSize, 0, frameSize, frameSize,
+                const frameSize = sheetCell(sheet);
+                const renderSize = e.size * 2; // on screen: twice the enemy's collision size
+                const srcX = (idx % 4) * frameSize;
+                const srcY = (Math.floor(idx / 4) % 4) * frameSize;
+                if (drawSpriteFromSheet(ctx, sheet, srcX, srcY, frameSize, frameSize,
                                        sx - renderSize/2, sy - renderSize/2, renderSize, renderSize)) {
                     drawn = true;
                     // Apply hit flash by drawing white overlay
@@ -6174,14 +6191,14 @@ function render() {
     // Try generated character sprite sheets (4 directions x 3 frames, 32x32 per frame)
     if (GAME_ASSETS.loaded && GAME_ASSETS.characters[PLAYER_CHAR]) {
         const sheet = GAME_ASSETS.characters[PLAYER_CHAR];
-        // Sprite sheet layout: 4 rows (down/left/right/up) x 3 cols (frames)
-        const dirIdx = pDir === 'south' ? 0 : pDir === 'west' ? 1 : pDir === 'east' ? 2 : 3;
+        // Sheet layout (generated): 3 cols of walk frames; row 0 faces the camera, rows 1-2
+        // face away. South uses row 0, everything else a back view.
+        const dirIdx = pDir === 'south' ? 0 : pDir === 'north' ? 1 : 2;
         const frameIdx = pMoving ? Math.floor(player._walkFrame) % 3 : 0;
-        const frameSize = 32;
+        const frameSize = sheetCell(sheet);
         const srcX = frameIdx * frameSize;
         const srcY = dirIdx * frameSize;
-        const scale = 2;
-        const renderSize = frameSize * scale;
+        const renderSize = 64;
         if (drawSpriteFromSheet(ctx, sheet, srcX, srcY, frameSize, frameSize,
                                px - renderSize/2, py - renderSize/2, renderSize, renderSize)) {
             playerDrawn = true;
@@ -6419,7 +6436,7 @@ function loop(timestamp) {
     if (shouldUpdate) {
         update(dt);
     }
-    render();
+    render(dt);
 
     requestAnimationFrame(loop);
 }
@@ -7248,19 +7265,6 @@ buildCharSelect();
 })();
 </script>
 
-<!-- MASCOM Conglomerate Nav -->
-<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180,0.32);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
-<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
-<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
-<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
-<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
-<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
-<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
-<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
-<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
-<span style="flex:1"></span>
-<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
-</div>
 <!-- HelmCorp Analytics -->
 <script>(function(){var v='gamegob';(function(u,b){try{if(navigator.sendBeacon){navigator.sendBeacon(u,b)}else{fetch(u,{method:'POST',mode:'no-cors',keepalive:true,body:b}).catch(function(){})}}catch(e){}})('https://helmcorp.cc/api/beacon',JSON.stringify({v:v,p:location.pathname,t:Date.now()}))})()</script>
 <!-- VentureForge:collated -->

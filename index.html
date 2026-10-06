@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>GameGob - Free Browser Games | 60+ Instant Play Games</title>
-<meta name="description" content="GameGob: The AGI Gaming Company. 60+ free browser games, instant play. No downloads.">
+<title>GameGob &mdash; Free Browser Games: Haven, EndBird, Dreadtide, Burnline</title>
+<meta name="description" content="Six free browser games from GameGob: Haven, EndBird, Dreadtide, Forge Fighting, Burnline and Dreamweaver. Play instantly on your phone, no downloads. Plus a Workshop of 49 playable prototypes.">
 <meta name="keywords" content="free browser games, online games, HTML5 games, play free games, no download games, arcade games, puzzle games, RPG games, GameGob">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://gamegob.com/">
 <link rel="icon" type="image/png" href="/favicon.png">
 
 <!-- Open Graph -->
-<meta property="og:title" content="GameGob: The AGI Gaming Company">
-<meta property="og:description" content="GameGob: The AGI Gaming Company. Free browser games, instant play.">
+<meta property="og:title" content="GameGob &mdash; Free Browser Games">
+<meta property="og:description" content="Six free browser games, finished one at a time. Play instantly on your phone, no downloads.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://gamegob.com/">
 <meta property="og:image" content="https://gamegob.com/og-image.png">
@@ -20,8 +20,8 @@
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="GameGob - 55+ Free Browser Games">
-<meta name="twitter:description" content="Play 60+ free browser games instantly. No downloads, no installs.">
+<meta name="twitter:title" content="GameGob &mdash; Free Browser Games">
+<meta name="twitter:description" content="Six free browser games, finished one at a time. No downloads, no installs.">
 <meta name="twitter:image" content="https://gamegob.com/og-image.png">
 
 <!-- Structured Data -->
@@ -31,12 +31,7 @@
   "@type": "WebSite",
   "name": "GameGob",
   "url": "https://gamegob.com",
-  "description": "Play 60+ free browser games instantly. No downloads required.",
-  "potentialAction": {
-    "@type": "SearchAction",
-    "target": "https://gamegob.com/?q={search_term_string}",
-    "query-input": "required name=search_term_string"
-  }
+  "description": "Six free browser games, finished one at a time, plus a workshop of playable prototypes. No downloads."
 }
 </script>
 
@@ -690,30 +685,46 @@ body::after {
 .game-card .badge-featured { top: 10px; right: auto; left: 10px; }
 .game-card .fav-star { top: 10px; right: 10px; background: rgba(0,0,0,.6); }
 @media (hover: hover) { .game-card:hover .card-shot { filter: saturate(1.15) brightness(1.06); } }
+
+/* flagship storefront, 2026-10-05 */
+/* the header glow pseudo-element is 150% wide; clip it so the page never scrolls sideways */
+.site-header { overflow: hidden; }
+html, body { overflow-x: clip; }
+.flagship-grid { grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 18px; }
+.flagship-grid .game-card h3 { font-size: 16px; }
+.flagship-grid .game-card .card-desc { font-size: 11px; line-height: 1.6; }
+.flagship-grid .game-card .play-btn { font-size: 12px; }
+.flagship-grid .game-card .card-shot { margin-bottom: 14px; }
+.workshop-band { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 20px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); margin-bottom: 40px; }
+.workshop-band p { margin: 0; font-size: 11px; color: var(--text-dim); line-height: 1.6; max-width: 62ch; }
+.workshop-band p strong { color: var(--text); }
+.workshop-link { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border: 1px solid var(--forge-accent); border-radius: 8px; color: var(--forge-accent); text-decoration: none; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.workshop-link:hover, .workshop-link:focus-visible { background: var(--forge-glow); outline: none; }
+.continue-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 22px; font-size: 11px; }
+.continue-label { color: var(--text-dim); text-transform: uppercase; letter-spacing: .08em; font-size: 9px; }
+.continue-link { color: var(--accent-bright); text-decoration: none; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; }
+.continue-link:hover, .continue-link:focus-visible { border-color: var(--accent); outline: none; }
+@media (max-width: 480px) { .flagship-grid { grid-template-columns: 1fr; } }
 </style>
-<script defer src="https://authfor.com/sdk/v1/authfor.min.js" data-client-id="af_gamegob"></script>
 <link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100524">
 <script defer src="/assets/gg-mobile.js?v=2026100524"></script>
 </head>
 <body>
 
-<!-- ================================================================== -->
-<!-- HEADER                                                             -->
-<!-- ================================================================== -->
 <header class="site-header">
     <div class="page-wrapper">
         <a href="index.html" class="logo-link">
             <div class="site-logo">GAMEGOB</div>
         </a>
-        <p class="site-tagline">Free Browser Games &mdash; No Downloads, No Installs</p>
+        <p class="site-tagline">Six games, finished one at a time. Free in your browser &mdash; no downloads, no installs.</p>
         <div class="header-stats">
             <div class="header-stat">
-                <span class="header-stat-num">60+</span>
-                <span class="header-stat-label">Games</span>
+                <span class="header-stat-num">6</span>
+                <span class="header-stat-label">Flagship games</span>
             </div>
             <div class="header-stat">
-                <span class="header-stat-num">15+</span>
-                <span class="header-stat-label">Genres</span>
+                <span class="header-stat-num">49</span>
+                <span class="header-stat-label">Workshop prototypes</span>
             </div>
             <div class="header-stat">
                 <span class="header-stat-num">0</span>
@@ -723,1167 +734,134 @@ body::after {
     </div>
 </header>
 
-<!-- ================================================================== -->
-<!-- TOP BANNER AD                                                      -->
-<!-- ================================================================== -->
 <div class="page-wrapper">
-    <div class="promo-banner">
-        <a href="https://mobleysoft.com/publicos.html" target="_blank">
-            <span class="promo-icon">&#x1F4BB;</span>
-            <div class="promo-text">
-                <div class="promo-title">PublicOS</div>
-                <div class="promo-desc">13 AGI apps. Email, browser, terminal, games, art, video calls — all sovereign AI.</div>
-                <div class="promo-price">$1/month &middot; First month free</div>
-            </div>
-            <span class="promo-cta">Try Free</span>
-        </a>
-    </div>
-</div>
+    <main class="games-main" id="games-main">
 
-<!-- ================================================================== -->
-<!-- NAVIGATION / FILTER                                                -->
-<!-- ================================================================== -->
-<div class="page-wrapper">
-    <nav class="portal-nav" id="filter-nav">
-        <button class="nav-btn active" data-filter="all">All Games</button>
-        <button class="nav-btn" data-filter="favorites">&#9733; Favorites</button>
-        <button class="nav-btn" data-filter="recent">Recently Played</button>
-        <button class="nav-btn" data-filter="original">Original</button>
-        <button class="nav-btn" data-filter="forge">The Forge</button>
-        <button class="nav-btn" data-filter="action">Action</button>
-        <button class="nav-btn" data-filter="strategy">Strategy</button>
-        <button class="nav-btn" data-filter="puzzle">Puzzle</button>
-        <button class="nav-btn" data-filter="rpg">RPG</button>
-        <button class="nav-btn" data-filter="arcade">Arcade</button>
-        <a class="nav-btn" href="shop.html">Q Shop</a>
-    </nav>
+        <div class="continue-strip" id="continue-strip" hidden></div>
 
-    <div class="search-bar">
-        <span class="search-icon">&#x1F50D;</span>
-        <input type="text" class="search-input" id="search-input" placeholder="Search games..." autocomplete="off">
-    </div>
-</div>
+        <section class="original-section" id="section-flagships">
+            <h2 class="section-title original">Flagships</h2>
+            <p class="section-subtitle">The games we stand behind today. Phone or desktop &mdash; tap to play.</p>
+            <div class="section-divider original"></div>
 
-<!-- ================================================================== -->
-<!-- MAIN CONTENT                                                       -->
-<!-- ================================================================== -->
-<div class="page-wrapper">
-    <div class="content-area">
-
-        <!-- Main game listings -->
-        <main class="games-main" id="games-main">
-
-            <!-- ====== ORIGINAL COLLECTION ====== -->
-            <section class="original-section" id="section-original">
-                <h2 class="section-title original">Original Collection</h2>
-                <p class="section-subtitle">The core Haven universe &mdash; 16 sentient beings across 13 game modes</p>
-                <div class="section-divider original"></div>
-
-                <div class="games-grid" id="grid-original">
-
-                    <!-- Haven RPG -->
-                    <a href="haven.html" class="game-card" data-game="haven-rpg" data-genres="rpg" data-collection="original"
-                       style="--card-color:#88CC88;--card-glow:rgba(136,204,136,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/haven.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-featured">MAIN GAME</span>
-                        <div class="card-header">
-                            <h3>Haven RPG</h3>
-                            <span class="genre-tag genre-rpg">RPG</span>
-                        </div>
-                        <p class="card-desc">Explore Haven village. Bond with 16 sentient beings. Full SNES-style world with real neurochemistry and CRT effects.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Dreadtide (survivors) -->
-                    <a href="survivors.html" class="game-card" data-game="dreadtide" data-genres="action,survival" data-collection="original"
-                       style="--card-color:#DD5599;--card-glow:rgba(221,85,153,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/survivors.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Dreadtide</h3>
-                            <span class="genre-tag genre-survival">Survival</span>
-                        </div>
-                        <p class="card-desc">Horde survival. 18 weapons, endless waves. Auto-attack everything. Survive the dread.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Throne Wars (battle_chess) -->
-                    <a href="battle_chess.html" class="game-card" data-game="throne-wars" data-genres="strategy" data-collection="original"
-                       style="--card-color:#CCCC44;--card-glow:rgba(204,204,68,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/battle_chess.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Throne Wars</h3>
-                            <span class="genre-tag genre-strategy">Strategy</span>
-                        </div>
-                        <p class="card-desc">Chess with animated combat. 16 beings, one board. Personality-driven kill dialogue.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Purgefire (fps) -->
-                    <a href="fps.html" class="game-card" data-game="purgefire" data-genres="shooter" data-collection="original"
-                       style="--card-color:#44FF88;--card-glow:rgba(68,255,136,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/fps.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Purgefire</h3>
-                            <span class="genre-tag genre-shooter">Shooter</span>
-                        </div>
-                        <p class="card-desc">First-person raycasting dungeon crawler. Clear floors, fight beings, find loot.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Ascent (platformer) -->
-                    <a href="platformer.html" class="game-card" data-game="ascent" data-genres="action" data-collection="original"
-                       style="--card-color:#44CCCC;--card-glow:rgba(68,204,204,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/platformer.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Ascent</h3>
-                            <span class="genre-tag genre-action">Action</span>
-                        </div>
-                        <p class="card-desc">Precision platformer. 16 playable beings with unique abilities. Jump, climb, never look down.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Dreamweaver (bullet_hell) -->
-                    <a href="bullet_hell.html" class="game-card" data-game="dreamweaver" data-genres="shooter,action" data-collection="original"
-                       style="--card-color:#8888FF;--card-glow:rgba(136,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/bullet_hell.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Dreamweaver</h3>
-                            <span class="genre-tag genre-shooter">Bullet Hell</span>
-                        </div>
-                        <p class="card-desc">Dance through thousands of projectiles. 8 bosses with psychedelic bullet patterns.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Being Arena -->
-                    <a href="being_arena.html" class="game-card" data-game="being-arena" data-genres="fighting,action" data-collection="original"
-                       style="--card-color:#FF6655;--card-glow:rgba(255,102,85,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/being_arena.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-featured">NEW</span>
-                        <div class="card-header">
-                            <h3>Being Arena</h3>
-                            <span class="genre-tag genre-fighting">Fighting</span>
-                        </div>
-                        <p class="card-desc">1v1 fighter with all 16 beings. Neurochemistry shapes combat — Alpha rages, Gemma shields, Gigi adapts. Best of 3 rounds.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Promo: Alexander -->
-                    <div class="promo-card">
-                        <a href="https://mobleysoft.com/alexander.html" target="_blank">
-                            <span class="promo-icon">&#x2694;</span>
-                            <div class="promo-text">
-                                <div class="promo-title">Alexander</div>
-                                <div class="promo-desc">AGI-native dev environment. Build, deploy, and guard your code with sovereign intelligence.</div>
-                                <div class="promo-price">$20/month</div>
-                            </div>
-                            <span class="promo-cta">Start Building</span>
-                        </a>
+            <div class="games-grid flagship-grid" id="grid-flagships">
+                <a href="haven.html" class="game-card" data-game="haven-rpg" data-genres="rpg" data-collection="flagship"
+                   style="--card-color:#88CC88;--card-glow:rgba(136,204,136,0.38);">
+                    <img class="card-shot" src="/assets/thumbs/haven.webp?v=20261005c" alt="Haven title screen" width="800" height="450" loading="eager" fetchpriority="high">
+                    <div class="card-header">
+                        <h3>Haven</h3>
+                        <span class="genre-tag genre-rpg">RPG</span>
                     </div>
+                    <p class="card-desc">Explore Haven village and meet its beings. A full SNES-style world under a CRT glow.</p>
+                    <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
+                </a>
 
-                    <!-- Crown Fall (battle_royale) -->
-                    <a href="battle_royale.html" class="game-card" data-game="crown-fall" data-genres="action,shooter" data-collection="original"
-                       style="--card-color:#FF5555;--card-glow:rgba(255,85,85,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/battle_royale.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Crown Fall</h3>
-                            <span class="genre-tag genre-action">Battle Royale</span>
-                        </div>
-                        <p class="card-desc">Last mind standing. Shrinking zone. Loot weapons. Use unique abilities. Claim the crown.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Grimoire (card_game) -->
-                    <a href="card_game.html" class="game-card" data-game="grimoire" data-genres="card,strategy" data-collection="original"
-                       style="--card-color:#CC88CC;--card-glow:rgba(204,136,204,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/card_game.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Grimoire</h3>
-                            <span class="genre-tag genre-card">Card Game</span>
-                        </div>
-                        <p class="card-desc">Deck-building card battler. Summon creatures, cast spells, sacrifice for power. Conquer the Grimoire.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Brawl Sanctum (smash_arena) -->
-                    <a href="smash_arena.html" class="game-card" data-game="brawl-sanctum" data-genres="fighting,action" data-collection="original"
-                       style="--card-color:#FFCC00;--card-glow:rgba(255,204,0,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/smash_arena.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Brawl Sanctum</h3>
-                            <span class="genre-tag genre-fighting">Fighting</span>
-                        </div>
-                        <p class="card-desc">Platform fighter. Knockback %, 16 fighters with unique specials. 3 stocks. Knock them off the edge.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Canticle of Champions (moba) -->
-                    <a href="moba.html" class="game-card" data-game="canticle-of-champions" data-genres="moba,strategy" data-collection="original"
-                       style="--card-color:#FF44AA;--card-glow:rgba(255,68,170,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/moba.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Canticle of Champions</h3>
-                            <span class="genre-tag genre-moba">MOBA</span>
-                        </div>
-                        <p class="card-desc">5v5 MOBA. 16 champions with unique abilities. AI loss absorption — every player wins more than they lose.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Burnline (racer) -->
-                    <a href="racer.html" class="game-card" data-game="burnline" data-genres="racing" data-collection="original"
-                       style="--card-color:#FFAA22;--card-glow:rgba(255,170,34,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/racer.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Burnline</h3>
-                            <span class="genre-tag genre-racing">Racing</span>
-                        </div>
-                        <p class="card-desc">High-speed pseudo-3D racing. 16 racers with unique handling. Drift, boost, burn the line.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- War Council (auto_battler) -->
-                    <a href="auto_battler.html" class="game-card" data-game="war-council" data-genres="strategy" data-collection="original"
-                       style="--card-color:#A66BE6;--card-glow:rgba(166,107,230,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/auto_battler.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>War Council</h3>
-                            <span class="genre-tag genre-strategy">Auto Battler</span>
-                        </div>
-                        <p class="card-desc">Draft your army, watch them fight. Build synergies, star up units. Strategic auto-combat.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Game Selector (games) -->
-                    <a href="games.html" class="game-card" data-game="game-selector" data-genres="arcade" data-collection="original"
-                       style="--card-color:#88BBFF;--card-glow:rgba(136,187,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/games.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Game Selector</h3>
-                            <span class="genre-tag genre-arcade">Hub</span>
-                        </div>
-                        <p class="card-desc">The original game picker. Browse and launch all Haven game modes from one unified selection screen.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                </div>
-            </section>
-
-            <!-- ====== THE FORGE ====== -->
-            <section class="forge-section" id="section-forge">
-                <h2 class="section-title forge">The Forge</h2>
-                <p class="section-subtitle">AI-generated arcade classics and original remixes &mdash; forged from pure code</p>
-                <div class="section-divider forge"></div>
-
-                <!-- Forge: Arcade Archetypes -->
-                <p class="forge-subsection-label">Arcade Archetypes</p>
-                <div class="games-grid" id="grid-forge-archetypes">
-
-                    <!-- Forge Breakout -->
-                    <a href="forge_breakout.html" class="game-card" data-game="forge-breakout" data-genres="arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_breakout.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Breakout</h3>
-                            <span class="genre-tag genre-arcade">Arcade</span>
-                        </div>
-                        <p class="card-desc">Classic brick-breaking action. Paddle, ball, bricks. Pure arcade satisfaction.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge Snake -->
-                    <a href="forge_snake.html" class="game-card" data-game="forge-snake" data-genres="arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_snake.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Snake</h3>
-                            <span class="genre-tag genre-arcade">Arcade</span>
-                        </div>
-                        <p class="card-desc">Grow your snake, avoid your tail. The timeless classic reforged.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge Tic-Tac-Toe -->
-                    <a href="forge_tic_tac_toe.html" class="game-card" data-game="forge-tic-tac-toe" data-genres="puzzle,board" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_tic_tac_toe.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Tic-Tac-Toe</h3>
-                            <span class="genre-tag genre-board">Board</span>
-                        </div>
-                        <p class="card-desc">X's and O's with AI opponent. Simple, clean, classic.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge Block Cascade -->
-                    <a href="forge_tetris.html" class="game-card" data-game="forge-block-cascade" data-genres="puzzle,arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_tetris.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Block Cascade</h3>
-                            <span class="genre-tag genre-puzzle">Puzzle</span>
-                        </div>
-                        <p class="card-desc">The classic block-stacking puzzle, reforged. Stack, clear lines, chase high scores.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge Gob Chomp -->
-                    <a href="forge_pac_man.html" class="game-card" data-game="forge-gob-chomp" data-genres="arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_pac_man.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Gob Chomp</h3>
-                            <span class="genre-tag genre-arcade">Arcade</span>
-                        </div>
-                        <p class="card-desc">Chomp dots, dodge ghosts, conquer the maze. A timeless chase, reforged.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge Cosmic Barrage -->
-                    <a href="forge_space_invaders.html" class="game-card" data-game="forge-cosmic-barrage" data-genres="shooter,arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_space_invaders.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Cosmic Barrage</h3>
-                            <span class="genre-tag genre-shooter">Shooter</span>
-                        </div>
-                        <p class="card-desc">Defend Earth from alien waves. Shoot, dodge, survive the cosmic onslaught.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- === IN-FEED AD === -->
-                    <div class="promo-card">
-                        <a href="https://weylandai.com" target="_blank">
-                            <span class="promo-icon">&#x1F30D;</span>
-                            <div class="promo-text">
-                                <div class="promo-title">WeylandAI</div>
-                                <div class="promo-desc">Construction intelligence. Upload submittals, extract hardware schedules automatically.</div>
-                                
-                            </div>
-                            <span class="promo-cta">Try SubX</span>
-                        </a>
+                <a href="forge_end_bird.html" class="game-card" data-game="forge-end-bird" data-genres="arcade" data-collection="flagship"
+                   style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
+                    <img class="card-shot" src="/assets/thumbs/forge_end_bird.webp?v=20261005c" alt="EndBird title screen" width="800" height="450" loading="eager" fetchpriority="high">
+                    <div class="card-header">
+                        <h3>EndBird</h3>
+                        <span class="genre-tag genre-arcade">Arcade</span>
                     </div>
+                    <p class="card-desc">Eat, grow, explode. One bird in a chaotic world, from quarks to cosmos.</p>
+                    <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
+                </a>
 
-                    <!-- Forge Idle -->
-                    <a href="forge_idle.html" class="game-card" data-game="forge-idle" data-genres="idle" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_idle.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Idle / Clicker</h3>
-                            <span class="genre-tag genre-idle">Idle</span>
-                        </div>
-                        <p class="card-desc">Click to earn, automate to prosper. Numbers go up. Satisfaction guaranteed.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge Match-3 -->
-                    <a href="forge_match_three.html" class="game-card" data-game="forge-match-three" data-genres="puzzle" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_match_three.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Match-3 Puzzle</h3>
-                            <span class="genre-tag genre-puzzle">Puzzle</span>
-                        </div>
-                        <p class="card-desc">Swap gems, match three or more, trigger cascading combos.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge Tower Defense -->
-                    <a href="forge_tower_defense.html" class="game-card" data-game="forge-tower-defense" data-genres="strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_tower_defense.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Tower Defense</h3>
-                            <span class="genre-tag genre-strategy">Strategy</span>
-                        </div>
-                        <p class="card-desc">Place towers, route enemies, upgrade defenses. Waves of foes incoming.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge Platformer -->
-                    <a href="forge_platformer.html" class="game-card" data-game="forge-platformer" data-genres="action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_platformer.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Platformer</h3>
-                            <span class="genre-tag genre-action">Action</span>
-                        </div>
-                        <p class="card-desc">Run, jump, conquer levels. Classic side-scrolling platformer action.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge Fighting -->
-                    <a href="forge_fighting.html" class="game-card" data-game="forge-fighting" data-genres="fighting" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_fighting.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Fighting Game</h3>
-                            <span class="genre-tag genre-fighting">Fighting</span>
-                        </div>
-                        <p class="card-desc">1v1 combat. Combos, specials, knockouts. Pick your fighter and brawl.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge Bullet Hell -->
-                    <a href="forge_bullet_hell.html" class="game-card" data-game="forge-bullet-hell" data-genres="shooter,action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_bullet_hell.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Bullet Hell</h3>
-                            <span class="genre-tag genre-shooter">Shmup</span>
-                        </div>
-                        <p class="card-desc">Walls of projectiles. Tiny hitbox. Thread the needle or die trying.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- === IN-FEED AD === -->
-                    <div class="promo-card">
-                        <a href="https://mobleysoft.com/publicos.html" target="_blank">
-                            <span class="promo-icon">&#x1F4E8;</span>
-                            <div class="promo-text">
-                                <div class="promo-title">Corvus Mail</div>
-                                <div class="promo-desc">AGI-first email. Your inbox, understood by sovereign AI. Part of PublicOS.</div>
-                                <div class="promo-price">$1/mo with PublicOS</div>
-                            </div>
-                            <span class="promo-cta">Get Corvus</span>
-                        </a>
+                <a href="survivors.html" class="game-card" data-game="dreadtide" data-genres="survival" data-collection="flagship"
+                   style="--card-color:#DD5599;--card-glow:rgba(221,85,153,0.38);">
+                    <img class="card-shot" src="/assets/thumbs/survivors.webp?v=20261005c" alt="Dreadtide title screen" width="800" height="450" loading="lazy">
+                    <div class="card-header">
+                        <h3>Dreadtide</h3>
+                        <span class="genre-tag genre-survival">Survival</span>
                     </div>
+                    <p class="card-desc">Horde survival. 18 weapons, endless waves, auto-attack everything. Survive the dread.</p>
+                    <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
+                </a>
 
-                    <!-- Forge Auto-Battler -->
-                    <a href="forge_auto_battler.html" class="game-card" data-game="forge-auto-battler" data-genres="strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_auto_battler.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Auto-Battler</h3>
-                            <span class="genre-tag genre-strategy">Strategy</span>
-                        </div>
-                        <p class="card-desc">Draft units, position your team, watch them fight. Pure strategy, auto combat.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge Racing -->
-                    <a href="forge_racing.html" class="game-card" data-game="forge-racing" data-genres="racing" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_racing.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Racing Game</h3>
-                            <span class="genre-tag genre-racing">Racing</span>
-                        </div>
-                        <p class="card-desc">High-speed competition. Dodge obstacles, beat lap times, claim the podium.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge Survival -->
-                    <a href="forge_survival.html" class="game-card" data-game="forge-survival" data-genres="survival,action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_survival.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Survival</h3>
-                            <span class="genre-tag genre-survival">Survival</span>
-                        </div>
-                        <p class="card-desc">Vampire Survivors-style horde mode. Pick upgrades, mow down waves, survive.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge Card Game -->
-                    <a href="forge_card_game.html" class="game-card" data-game="forge-card-game" data-genres="card,strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_card_game.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Card Game / Deckbuilder</h3>
-                            <span class="genre-tag genre-card">Card Game</span>
-                        </div>
-                        <p class="card-desc">Build your deck, play your hand, outmaneuver the AI. Strategic card combat.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge FPS -->
-                    <a href="forge_fps.html" class="game-card" data-game="forge-fps" data-genres="shooter" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_fps.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>First-Person Shooter</h3>
-                            <span class="genre-tag genre-shooter">FPS</span>
-                        </div>
-                        <p class="card-desc">First-person action. Aim, shoot, survive. Browser-based FPS combat.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge Roguelike -->
-                    <a href="forge_roguelike.html" class="game-card" data-game="forge-roguelike" data-genres="roguelike,rpg" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_roguelike.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>Roguelike</h3>
-                            <span class="genre-tag genre-roguelike">Roguelike</span>
-                        </div>
-                        <p class="card-desc">Procedural dungeons, permadeath, loot. Every run is different.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- === IN-FEED AD === -->
-                    <div class="promo-card">
-                        <a href="https://mobleysoft.com/publicos.html" target="_blank">
-                            <span class="promo-icon">&#x1F310;</span>
-                            <div class="promo-text">
-                                <div class="promo-title">Lumen Browser</div>
-                                <div class="promo-desc">Browse the web with AGI by your side. Search, summarize, understand.</div>
-                                <div class="promo-price">$1/mo with PublicOS</div>
-                            </div>
-                            <span class="promo-cta">Get Lumen</span>
-                        </a>
+                <a href="forge_fighting.html" class="game-card" data-game="forge-fighting" data-genres="fighting" data-collection="flagship"
+                   style="--card-color:#FFCC00;--card-glow:rgba(255,204,0,0.38);">
+                    <img class="card-shot" src="/assets/thumbs/forge_fighting.webp?v=20261005c" alt="Forge Fighting title screen" width="800" height="450" loading="lazy">
+                    <div class="card-header">
+                        <h3>Forge Fighting</h3>
+                        <span class="genre-tag genre-fighting">Fighting</span>
                     </div>
+                    <p class="card-desc">1v1 combat. Combos, specials, knockouts. Pick a fighter and brawl.</p>
+                    <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
+                </a>
 
-                    <!-- Forge MOBA -->
-                    <a href="forge_moba.html" class="game-card" data-game="forge-moba" data-genres="moba,strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_moba.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>MOBA / Arena</h3>
-                            <span class="genre-tag genre-moba">MOBA</span>
-                        </div>
-                        <p class="card-desc">Lane-based arena combat. Pick your hero, push lanes, destroy the base.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Forge RPG -->
-                    <a href="forge_rpg.html" class="game-card" data-game="forge-rpg" data-genres="rpg" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_rpg.webp" alt="" loading="lazy" width="800" height="450">
-                        <div class="card-header">
-                            <h3>RPG</h3>
-                            <span class="genre-tag genre-rpg">RPG</span>
-                        </div>
-                        <p class="card-desc">Level up, equip gear, explore a world. Classic role-playing adventure.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                </div>
-
-                <!-- Forge: Original Remixes -->
-                <p class="forge-subsection-label">Original Remixes</p>
-                <div class="games-grid" id="grid-forge-remixes">
-
-                    <!-- BreakShaper -->
-                    <a href="forge_break_shaper.html" class="game-card" data-game="forge-break-shaper" data-genres="puzzle,arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_break_shaper.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">REMIX</span>
-                        <div class="card-header">
-                            <h3>BreakShaper</h3>
-                            <span class="genre-tag genre-puzzle">Puzzle</span>
-                        </div>
-                        <p class="card-desc">Shape, Break, Conquer. A creative twist on brick-breaking.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- DominoChampions -->
-                    <a href="forge_domino_champions.html" class="game-card" data-game="forge-domino-champions" data-genres="board,strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_domino_champions.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">REMIX</span>
-                        <div class="card-header">
-                            <h3>Domino Champions</h3>
-                            <span class="genre-tag genre-board">Board</span>
-                        </div>
-                        <p class="card-desc">Chain, React, Dominate. Strategic domino placement with chain reactions.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- EndBird -->
-                    <a href="forge_end_bird.html" class="game-card" data-game="forge-end-bird" data-genres="arcade,action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_end_bird.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">REMIX</span>
-                        <div class="card-header">
-                            <h3>EndBird</h3>
-                            <span class="genre-tag genre-arcade">Arcade</span>
-                        </div>
-                        <p class="card-desc">Eat, Grow, Explode. Guide your bird through a chaotic world.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Ghost Eater -->
-                    <a href="forge_ghost_eater.html" class="game-card" data-game="forge-ghost-eater" data-genres="arcade,action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_ghost_eater.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">REMIX</span>
-                        <div class="card-header">
-                            <h3>Ghost Eater</h3>
-                            <span class="genre-tag genre-arcade">Arcade</span>
-                        </div>
-                        <p class="card-desc">Capture, Upgrade, Conquer. Hunt ghosts and consume their power.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Hangman Heroes -->
-                    <a href="forge_hangman_heroes.html" class="game-card" data-game="forge-hangman-heroes" data-genres="word,puzzle" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_hangman_heroes.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">REMIX</span>
-                        <div class="card-header">
-                            <h3>Hangman Heroes</h3>
-                            <span class="genre-tag genre-word">Word</span>
-                        </div>
-                        <p class="card-desc">Guess, Craft, Conquer. Word-guessing meets hero progression.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Hero's Journey -->
-                    <a href="forge_heros_journey.html" class="game-card" data-game="forge-heros-journey" data-genres="rpg,action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_heros_journey.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">REMIX</span>
-                        <div class="card-header">
-                            <h3>Hero's Journey</h3>
-                            <span class="genre-tag genre-rpg">RPG</span>
-                        </div>
-                        <p class="card-desc">Explore, Upgrade, Conquer. A hero's adventure through dangerous lands.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- === IN-FEED AD === -->
-                    <div class="promo-card">
-                        <a href="https://mobleysoft.com/publicos.html" target="_blank">
-                            <span class="promo-icon">&#x1F4F1;</span>
-                            <div class="promo-text">
-                                <div class="promo-title">Textile</div>
-                                <div class="promo-desc">AGI-first messaging. Every conversation enhanced by sovereign intelligence.</div>
-                                <div class="promo-price">$1/mo with PublicOS</div>
-                            </div>
-                            <span class="promo-cta">Get Textile</span>
-                        </a>
+                <a href="racer.html" class="game-card" data-game="burnline" data-genres="racing" data-collection="flagship"
+                   style="--card-color:#FFAA22;--card-glow:rgba(255,170,34,0.38);">
+                    <img class="card-shot" src="/assets/thumbs/racer.webp?v=20261005c" alt="Burnline title screen" width="800" height="450" loading="lazy">
+                    <div class="card-header">
+                        <h3>Burnline</h3>
+                        <span class="genre-tag genre-racing">Racing</span>
                     </div>
+                    <p class="card-desc">High-speed pseudo-3D racing against a field of rivals, each with its own handling. Drift, boost, burn the line.</p>
+                    <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
+                </a>
 
-                    <!-- HexCheckers -->
-                    <a href="forge_hex_checkers.html" class="game-card" data-game="forge-hex-checkers" data-genres="board,strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_hex_checkers.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">REMIX</span>
-                        <div class="card-header">
-                            <h3>HexCheckers</h3>
-                            <span class="genre-tag genre-board">Board</span>
-                        </div>
-                        <p class="card-desc">Strategize, Upgrade, Dominate. Checkers on a hexagonal board with power-ups.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Mineshafted -->
-                    <a href="forge_mineshafted.html" class="game-card" data-game="forge-mineshafted" data-genres="puzzle,strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_mineshafted.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">REMIX</span>
-                        <div class="card-header">
-                            <h3>Mineshafted</h3>
-                            <span class="genre-tag genre-puzzle">Puzzle</span>
-                        </div>
-                        <p class="card-desc">Dig, Disarm, Discover. Minesweeper reimagined with mining and exploration.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- PowerJumpRun -->
-                    <a href="forge_power_jump_run.html" class="game-card" data-game="forge-power-jump-run" data-genres="action,arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_power_jump_run.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">REMIX</span>
-                        <div class="card-header">
-                            <h3>PowerJumpRun</h3>
-                            <span class="genre-tag genre-action">Action</span>
-                        </div>
-                        <p class="card-desc">Run, Jump, Upgrade. Endless runner with power-ups and upgrades.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Rocket Apprentice -->
-                    <a href="forge_rocket_apprentice.html" class="game-card" data-game="forge-rocket-apprentice" data-genres="arcade,action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_rocket_apprentice.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">REMIX</span>
-                        <div class="card-header">
-                            <h3>Rocket Apprentice</h3>
-                            <span class="genre-tag genre-arcade">Arcade</span>
-                        </div>
-                        <p class="card-desc">Navigate, Upgrade, Master. Pilot your rocket through treacherous courses.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- RPS Wands -->
-                    <a href="forge_rps_wands.html" class="game-card" data-game="forge-rps-wands" data-genres="strategy,card" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_rps_wands.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">REMIX</span>
-                        <div class="card-header">
-                            <h3>RPS Wands</h3>
-                            <span class="genre-tag genre-strategy">Strategy</span>
-                        </div>
-                        <p class="card-desc">Unleash Your Inner Magician. Rock-Paper-Scissors meets magical dueling.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Serpent's Coil -->
-                    <a href="forge_serpents_coil.html" class="game-card" data-game="forge-serpents-coil" data-genres="arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_serpents_coil.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">REMIX</span>
-                        <div class="card-header">
-                            <h3>Serpent's Coil</h3>
-                            <span class="genre-tag genre-arcade">Arcade</span>
-                        </div>
-                        <p class="card-desc">Slither, Grow, Evolve. Snake reimagined with evolution mechanics.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- === IN-FEED AD === -->
-                    <div class="promo-card">
-                        <a href="https://mobleysoft.com/bizos.html" target="_blank">
-                            <span class="promo-icon">&#x1F3E2;</span>
-                            <div class="promo-text">
-                                <div class="promo-title">BizOS</div>
-                                <div class="promo-desc">Your own AI-powered business operating system. Named for your company.</div>
-                                <div class="promo-price">$99/month</div>
-                            </div>
-                            <span class="promo-cta">Get BizOS</span>
-                        </a>
+                <a href="bullet_hell.html" class="game-card" data-game="dreamweaver" data-genres="shooter" data-collection="flagship"
+                   style="--card-color:#8888FF;--card-glow:rgba(136,136,255,0.38);">
+                    <img class="card-shot" src="/assets/thumbs/bullet_hell.webp?v=20261005c" alt="Dreamweaver title screen" width="800" height="450" loading="lazy">
+                    <div class="card-header">
+                        <h3>Dreamweaver</h3>
+                        <span class="genre-tag genre-shooter">Bullet Hell</span>
                     </div>
-
-                    <!-- StarShield -->
-                    <a href="forge_star_shield.html" class="game-card" data-game="forge-star-shield" data-genres="shooter,arcade" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_star_shield.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">REMIX</span>
-                        <div class="card-header">
-                            <h3>StarShield</h3>
-                            <span class="genre-tag genre-shooter">Shooter</span>
-                        </div>
-                        <p class="card-desc">Defend, Upgrade, Prevail. Protect your star base from incoming threats.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Tic Tac Titans -->
-                    <a href="forge_tic_tac_titans.html" class="game-card" data-game="forge-tic-tac-titans" data-genres="board,strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_tic_tac_titans.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">REMIX</span>
-                        <div class="card-header">
-                            <h3>Tic Tac Titans</h3>
-                            <span class="genre-tag genre-board">Board</span>
-                        </div>
-                        <p class="card-desc">Outsmart. Outplay. Outlast. Tic-Tac-Toe with titan powers and upgrades.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Gravity Well -->
-                    <a href="forge_gravity_well.html" class="game-card" data-game="forge-gravity-well" data-genres="puzzle" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_gravity_well.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">NEW</span>
-                        <div class="card-header">
-                            <h3>Gravity Well</h3>
-                            <span class="genre-tag genre-puzzle">Puzzle</span>
-                        </div>
-                        <p class="card-desc">Place gravity wells to bend a particle's path through obstacles to the target. 30 physics puzzle levels with star ratings.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Word Cascade -->
-                    <a href="forge_word_cascade.html" class="game-card" data-game="forge-word-cascade" data-genres="word,action" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_word_cascade.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">NEW</span>
-                        <div class="card-header">
-                            <h3>Word Cascade</h3>
-                            <span class="genre-tag genre-word">Word</span>
-                        </div>
-                        <p class="card-desc">Type falling words before they hit the ground. Escalating difficulty, combo scoring, WPM tracking.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Dungeon Solitaire -->
-                    <a href="forge_dungeon_solitaire.html" class="game-card" data-game="forge-dungeon-solitaire" data-genres="card,roguelike" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_dungeon_solitaire.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">NEW</span>
-                        <div class="card-header">
-                            <h3>Dungeon Solitaire</h3>
-                            <span class="genre-tag genre-roguelike">Roguelike</span>
-                        </div>
-                        <p class="card-desc">Flip cards to find treasure, fight monsters, descend 10 floors. Roguelike meets card game.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Asteroid Miner -->
-                    <a href="forge_asteroid_miner.html" class="game-card" data-game="forge-asteroid-miner" data-genres="action,shooter" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_asteroid_miner.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">NEW</span>
-                        <div class="card-header">
-                            <h3>Asteroid Miner</h3>
-                            <span class="genre-tag genre-action">Action</span>
-                        </div>
-                        <p class="card-desc">Twin-stick space miner. Blast asteroids for ore, fight pirates, upgrade your ship.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Color Flood -->
-                    <a href="forge_color_flood.html" class="game-card" data-game="forge-color-flood" data-genres="puzzle,strategy" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/forge_color_flood.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">NEW</span>
-                        <div class="card-header">
-                            <h3>Color Flood</h3>
-                            <span class="genre-tag genre-puzzle">Puzzle</span>
-                        </div>
-                        <p class="card-desc">Flood the board with one color before running out of moves. 30 levels with par scoring.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Genesis -->
-                    <a href="genesis.html" class="game-card" data-game="genesis" data-genres="arcade,sandbox" data-collection="forge"
-                       style="--card-color:#c9a227;--card-glow:rgba(201,162,39,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/genesis.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">NEW</span>
-                        <div class="card-header">
-                            <h3>Genesis</h3>
-                            <span class="genre-tag genre-arcade">Arcade</span>
-                        </div>
-                        <p class="card-desc">Type a description, walk the world. Real-time WebGL2 terrain generation from a text prompt. No downloads.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                    <!-- Photonic Forge Breakout -->
-                    <a href="photonic_forge_breakout.html" class="game-card" data-game="photonic-forge-breakout" data-genres="arcade,puzzle" data-collection="forge"
-                       style="--card-color:#CC88FF;--card-glow:rgba(204,136,255,0.38);">
-                        <img class="card-shot" src="/assets/thumbs/photonic_forge_breakout.webp" alt="" loading="lazy" width="800" height="450">
-                        <span class="badge-new">REMIX</span>
-                        <div class="card-header">
-                            <h3>Photonic Breakout</h3>
-                            <span class="genre-tag genre-arcade">Arcade</span>
-                        </div>
-                        <p class="card-desc">Light-powered brick-breaking. Photonic effects and forge mechanics.</p>
-                        <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
-                    </a>
-
-                </div>
-            </section>
-
-            <!-- No Results -->
-            <div class="no-results" id="no-results">
-                <div class="nr-icon">?</div>
-                <p id="no-results-text">No games match your search. Try a different term.</p>
-            </div>
-
-        </main>
-
-        <!-- Sidebar Promos -->
-        <aside class="sidebar-col">
-            <div class="promo-sidebar">
-                <a href="https://mobleysoft.com/publicos.html" target="_blank">
-                    <span class="promo-icon">&#x1F4BB;</span>
-                    <div class="promo-text">
-                        <div class="promo-title">PublicOS</div>
-                        <div class="promo-desc">13 AGI apps for $1/month. Email, browser, terminal, games, and more.</div>
-                        <div class="promo-price">First month free</div>
-                    </div>
-                    <span class="promo-cta">Try Free</span>
+                    <p class="card-desc">Dance through thousands of projectiles. Boss after boss, each with its own psychedelic pattern.</p>
+                    <div class="play-btn">PLAY <span class="arrow">&rarr;</span></div>
                 </a>
             </div>
-            <div class="promo-sidebar" style="margin-top:16px;">
-                <a href="https://mobleysoft.com/alexander.html" target="_blank">
-                    <span class="promo-icon">&#x2694;</span>
-                    <div class="promo-text">
-                        <div class="promo-title">Alexander</div>
-                        <div class="promo-desc">AGI dev environment. The future of coding.</div>
-                        <div class="promo-price">$20/month</div>
-                    </div>
-                    <span class="promo-cta">Start Building</span>
-                </a>
-            </div>
-        </aside>
+        </section>
 
-    </div>
+        <section class="forge-section" id="section-workshop">
+            <h2 class="section-title forge">The Workshop</h2>
+            <div class="section-divider forge"></div>
+            <div class="workshop-band">
+                <p><strong>49 more games live in the Workshop:</strong> prototypes, remixes and experiments from the Forge. They play, they are not finished, and they say so.</p>
+                <a class="workshop-link" href="workshop.html">Browse the Workshop <span class="arrow">&rarr;</span></a>
+            </div>
+        </section>
+
+    </main>
 </div>
 
-<!-- ================================================================== -->
-<!-- BOTTOM BANNER AD                                                   -->
-<!-- ================================================================== -->
-<div class="page-wrapper">
-    <div class="promo-banner">
-        <a href="https://mobleysoft.com/bizos.html" target="_blank">
-            <span class="promo-icon">&#x1F3E2;</span>
-            <div class="promo-text">
-                <div class="promo-title">BizOS</div>
-                <div class="promo-desc">Your own AI-powered business operating system. Named for your company. Built on sovereign AGI.</div>
-                <div class="promo-price">$99/month</div>
-            </div>
-            <span class="promo-cta">Get BizOS</span>
-        </a>
-    </div>
-</div>
-
-<!-- ================================================================== -->
-<!-- FOOTER                                                             -->
-<!-- ================================================================== -->
 <footer class="site-footer">
-    <p>gamegob.com &mdash; Free browser games, forged by AI</p>
+    <p>gamegob.com &mdash; Free browser games</p>
     <div class="footer-links">
-        <a href="games.html">Haven Sub-hub</a>
-        <a href="realm.html">3D Realm (experimental)</a>
+        <a href="workshop.html">Workshop</a>
+        <a href="shop.html">Q Shop</a>
         <a href="https://mobleyhelms.com">Mobley Helms</a>
     </div>
-    <p style="margin-top:12px;font-size:9px;color:#7a7a98;">&copy; 2025 GameGob. All games are free to play.</p>
+    <p style="margin-top:12px;font-size:9px;color:#7a7a98;">&copy; 2025&ndash;2026 GameGob. All games are free to play.</p>
 </footer>
 
-<!-- Back to Top -->
-<button class="back-to-top" id="back-to-top" aria-label="Back to top">&uarr;</button>
-
-<!-- ================================================================== -->
-<!-- JAVASCRIPT                                                         -->
-<!-- ================================================================== -->
 <script>
-(function() {
+(function () {
     'use strict';
-
-    // === Elements ===
-    const searchInput = document.getElementById('search-input');
-    const filterNav = document.getElementById('filter-nav');
-    const noResults = document.getElementById('no-results');
-    const backToTop = document.getElementById('back-to-top');
-    const allCards = document.querySelectorAll('.game-card');
-    const allAdSlots = document.querySelectorAll('.ad-in-feed');
-    const sectionOriginal = document.getElementById('section-original');
-    const sectionForge = document.getElementById('section-forge');
-    const subsectionLabels = document.querySelectorAll('.forge-subsection-label');
-
-    let activeFilter = 'all';
-
-    // === Favorites & Recently Played (localStorage) ===
-    const FAV_KEY = 'gamegob_favorites';
-    const RECENT_KEY = 'gamegob_recent';
-
-    function readIdSet(key) {
-        try {
-            const raw = localStorage.getItem(key);
-            return raw ? new Set(JSON.parse(raw)) : new Set();
-        } catch (e) {
-            return new Set();
-        }
-    }
-    function writeIdSet(key, set) {
-        try {
-            localStorage.setItem(key, JSON.stringify(Array.from(set)));
-        } catch (e) {
-            // localStorage unavailable (private browsing, quota) - fail silently,
-            // favorites/recent just won't persist this session.
-        }
-    }
-
-    let favorites = readIdSet(FAV_KEY);
-
-    function toggleFavorite(gameId, starEl) {
-        if (favorites.has(gameId)) {
-            favorites.delete(gameId);
-            starEl.classList.remove('favorited');
-        } else {
-            favorites.add(gameId);
-            starEl.classList.add('favorited');
-        }
-        writeIdSet(FAV_KEY, favorites);
-        if (activeFilter === 'favorites') applyFilters();
-    }
-
-    function recordRecentlyPlayed(gameId) {
-        // Real recency: re-inserting at the end of a Set (via delete+add)
-        // preserves insertion order, which we use as the recency order.
-        const recent = readIdSet(RECENT_KEY);
-        recent.delete(gameId);
-        recent.add(gameId);
-        const trimmed = Array.from(recent).slice(-30); // cap so localStorage can't grow unbounded
-        writeIdSet(RECENT_KEY, new Set(trimmed));
-    }
-
-    // Inject a favorite-star toggle onto every card and wire recently-played
-    // tracking on real navigation, without touching the 54 hand-authored
-    // <a class="game-card"> entries individually.
-    allCards.forEach(function(card) {
-        const gameId = card.dataset.game;
-        if (!gameId) return;
-
-        const star = document.createElement('button');
-        star.type = 'button';
-        star.className = 'fav-star' + (favorites.has(gameId) ? ' favorited' : '');
-        star.setAttribute('aria-label', 'Toggle favorite');
-        star.innerHTML = '&#9733;';
-        star.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleFavorite(gameId, star);
+    // Continue playing: the same localStorage key the Workshop writes (most recent last).
+    var MAP = {"haven-rpg":{"h":"haven.html","t":"Haven"},"dreadtide":{"h":"survivors.html","t":"Dreadtide"},"throne-wars":{"h":"battle_chess.html","t":"Throne Wars"},"purgefire":{"h":"fps.html","t":"Purgefire"},"ascent":{"h":"platformer.html","t":"Ascent"},"dreamweaver":{"h":"bullet_hell.html","t":"Dreamweaver"},"being-arena":{"h":"being_arena.html","t":"Being Arena"},"crown-fall":{"h":"battle_royale.html","t":"Crown Fall"},"grimoire":{"h":"card_game.html","t":"Grimoire"},"brawl-sanctum":{"h":"smash_arena.html","t":"Brawl Sanctum"},"canticle-of-champions":{"h":"moba.html","t":"Canticle of Champions"},"burnline":{"h":"racer.html","t":"Burnline"},"war-council":{"h":"auto_battler.html","t":"War Council"},"game-selector":{"h":"games.html","t":"Game Selector"},"forge-breakout":{"h":"forge_breakout.html","t":"Breakout"},"forge-snake":{"h":"forge_snake.html","t":"Serpent"},"forge-tic-tac-toe":{"h":"forge_tic_tac_toe.html","t":"Tic-Tac-Toe"},"forge-block-cascade":{"h":"forge_tetris.html","t":"Block Cascade"},"forge-gob-chomp":{"h":"forge_pac_man.html","t":"Gob Chomp"},"forge-cosmic-barrage":{"h":"forge_space_invaders.html","t":"Cosmic Barrage"},"forge-idle":{"h":"forge_idle.html","t":"Forge Idle"},"forge-match-three":{"h":"forge_match_three.html","t":"GemForge"},"forge-tower-defense":{"h":"forge_tower_defense.html","t":"Tower Defense"},"forge-platformer":{"h":"forge_platformer.html","t":"Platformer"},"forge-fighting":{"h":"forge_fighting.html","t":"Forge Fighting"},"forge-bullet-hell":{"h":"forge_bullet_hell.html","t":"Bullet Hell"},"forge-auto-battler":{"h":"forge_auto_battler.html","t":"Auto-Battler"},"forge-racing":{"h":"forge_racing.html","t":"Neon Drift"},"forge-survival":{"h":"forge_survival.html","t":"Forge Survivors"},"forge-card-game":{"h":"forge_card_game.html","t":"Spire of Shadows"},"forge-fps":{"h":"forge_fps.html","t":"Forge: Descent"},"forge-roguelike":{"h":"forge_roguelike.html","t":"Roguelike"},"forge-moba":{"h":"forge_moba.html","t":"Battle Lanes"},"forge-rpg":{"h":"forge_rpg.html","t":"RPG"},"forge-break-shaper":{"h":"forge_break_shaper.html","t":"BreakShaper"},"forge-domino-champions":{"h":"forge_domino_champions.html","t":"Domino Champions"},"forge-end-bird":{"h":"forge_end_bird.html","t":"EndBird"},"forge-ghost-eater":{"h":"forge_ghost_eater.html","t":"Ghost Eater"},"forge-hangman-heroes":{"h":"forge_hangman_heroes.html","t":"Hangman Heroes"},"forge-heros-journey":{"h":"forge_heros_journey.html","t":"Hero's Journey"},"forge-hex-checkers":{"h":"forge_hex_checkers.html","t":"HexCheckers"},"forge-mineshafted":{"h":"forge_mineshafted.html","t":"Mineshafted"},"forge-power-jump-run":{"h":"forge_power_jump_run.html","t":"PowerJumpRun"},"forge-rocket-apprentice":{"h":"forge_rocket_apprentice.html","t":"Rocket Apprentice"},"forge-rps-wands":{"h":"forge_rps_wands.html","t":"RPS Wands"},"forge-serpents-coil":{"h":"forge_serpents_coil.html","t":"Serpent's Coil"},"forge-star-shield":{"h":"forge_star_shield.html","t":"StarShield"},"forge-tic-tac-titans":{"h":"forge_tic_tac_titans.html","t":"Tic Tac Titans"},"forge-gravity-well":{"h":"forge_gravity_well.html","t":"Gravity Well"},"forge-word-cascade":{"h":"forge_word_cascade.html","t":"Word Cascade"},"forge-dungeon-solitaire":{"h":"forge_dungeon_solitaire.html","t":"Dungeon Solitaire"},"forge-asteroid-miner":{"h":"forge_asteroid_miner.html","t":"Asteroid Miner"},"forge-color-flood":{"h":"forge_color_flood.html","t":"Color Flood"},"genesis":{"h":"genesis.html","t":"Genesis"},"photonic-forge-breakout":{"h":"photonic_forge_breakout.html","t":"Photonic Breakout"}};
+    var KEY = 'gamegob_recent';
+    function ids() { try { var r = localStorage.getItem(KEY); return r ? JSON.parse(r) : []; } catch (e) { return []; } }
+    var strip = document.getElementById('continue-strip');
+    var recent = ids().slice().reverse().filter(function (id) { return MAP[id]; }).slice(0, 3);
+    if (strip && recent.length) {
+        var label = document.createElement('span'); label.className = 'continue-label'; label.textContent = 'Continue playing';
+        strip.appendChild(label);
+        recent.forEach(function (id) {
+            var a = document.createElement('a'); a.className = 'continue-link'; a.href = MAP[id].h; a.textContent = MAP[id].t + ' \u2192';
+            strip.appendChild(a);
         });
-        card.appendChild(star);
-
-        // Real click-through to a game - localStorage.setItem is synchronous,
-        // so this reliably lands before the browser navigates via the <a href>.
-        card.addEventListener('click', function(e) {
-            if (e.target === star) return;
-            recordRecentlyPlayed(gameId);
+        strip.hidden = false;
+    }
+    document.querySelectorAll('.game-card[data-game]').forEach(function (card) {
+        card.addEventListener('click', function () {
+            var id = card.getAttribute('data-game');
+            var r = ids().filter(function (x) { return x !== id; }); r.push(id);
+            try { localStorage.setItem(KEY, JSON.stringify(r.slice(-30))); } catch (e) {}
         });
     });
-
-    // === Filter Logic ===
-    filterNav.addEventListener('click', function(e) {
-        const btn = e.target.closest('.nav-btn');
-        if (!btn) return;
-
-        filterNav.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        activeFilter = btn.dataset.filter;
-        applyFilters();
-    });
-
-    // === Search Logic ===
-    searchInput.addEventListener('input', function() {
-        applyFilters();
-    });
-
-    function applyFilters() {
-        const query = searchInput.value.toLowerCase().trim();
-        let visibleCount = 0;
-        let visibleOriginal = 0;
-        let visibleForge = 0;
-        const recentSet = activeFilter === 'recent' ? readIdSet(RECENT_KEY) : null;
-
-        allCards.forEach(function(card) {
-            const name = (card.querySelector('h3')?.textContent || '').toLowerCase();
-            const desc = (card.querySelector('.card-desc')?.textContent || '').toLowerCase();
-            const genres = (card.dataset.genres || '').toLowerCase();
-            const collection = card.dataset.collection || '';
-            const gameId = card.dataset.game || '';
-
-            // Search match
-            const matchesSearch = !query ||
-                name.includes(query) ||
-                desc.includes(query) ||
-                genres.includes(query);
-
-            // Filter match
-            let matchesFilter = true;
-            if (activeFilter === 'original') {
-                matchesFilter = collection === 'original';
-            } else if (activeFilter === 'forge') {
-                matchesFilter = collection === 'forge';
-            } else if (activeFilter === 'favorites') {
-                matchesFilter = favorites.has(gameId);
-            } else if (activeFilter === 'recent') {
-                matchesFilter = recentSet.has(gameId);
-            } else if (activeFilter !== 'all') {
-                matchesFilter = genres.includes(activeFilter);
-            }
-
-            const visible = matchesSearch && matchesFilter;
-            card.style.display = visible ? '' : 'none';
-
-            if (visible) {
-                visibleCount++;
-                if (collection === 'original') visibleOriginal++;
-                if (collection === 'forge') visibleForge++;
-            }
-        });
-
-        // Show/hide sections
-        if (activeFilter === 'forge') {
-            sectionOriginal.style.display = 'none';
-        } else {
-            sectionOriginal.style.display = visibleOriginal > 0 || activeFilter === 'all' ? '' : 'none';
-        }
-
-        if (activeFilter === 'original') {
-            sectionForge.style.display = 'none';
-        } else {
-            sectionForge.style.display = visibleForge > 0 || activeFilter === 'all' ? '' : 'none';
-        }
-
-        // Show/hide subsection labels based on visibility
-        subsectionLabels.forEach(function(label) {
-            const nextGrid = label.nextElementSibling;
-            if (nextGrid) {
-                const hasVisible = nextGrid.querySelector('.game-card:not([style*="display: none"])');
-                label.style.display = hasVisible ? '' : 'none';
-            }
-        });
-
-        // In-feed ads: hide when filtering hides surrounding cards
-        allAdSlots.forEach(function(ad) {
-            if (activeFilter !== 'all' || query) {
-                ad.style.display = 'none';
-            } else {
-                ad.style.display = '';
-            }
-        });
-
-        // No results message - tailor the copy so an empty favorites/recent
-        // list doesn't wrongly tell the user their search term was bad.
-        noResults.style.display = visibleCount === 0 ? 'block' : 'none';
-        if (visibleCount === 0) {
-            const noResultsText = document.getElementById('no-results-text');
-            if (activeFilter === 'favorites') {
-                noResultsText.textContent = "No favorites yet. Click the star on any game to save it here.";
-            } else if (activeFilter === 'recent') {
-                noResultsText.textContent = "No recently played games yet. Play something and it'll show up here.";
-            } else {
-                noResultsText.textContent = "No games match your search. Try a different term.";
-            }
-        }
-    }
-
-    // === Mobile: open in new tab ===
-    if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
-        allCards.forEach(function(card) {
-            if (card.href) {
-                card.setAttribute('target', '_blank');
-                card.setAttribute('rel', 'noopener');
-            }
-        });
-    }
-
-    // === Back to Top ===
-    window.addEventListener('scroll', function() {
-        if (window.scrollY > 400) {
-            backToTop.classList.add('visible');
-        } else {
-            backToTop.classList.remove('visible');
-        }
-    }, { passive: true });
-
-    backToTop.addEventListener('click', function() {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    // === Analytics event helper ===
-    allCards.forEach(function(card) {
-        card.addEventListener('click', function() {
-            if (typeof gtag === 'function') {
-                gtag('event', 'game_click', {
-                    'event_category': 'engagement',
-                    'event_label': card.dataset.game || card.querySelector('h3')?.textContent || 'unknown',
-                    'value': 1
-                });
-            }
-        });
-    });
-
 })();
 </script>
-
-<!-- MASCOM Conglomerate Nav -->
-<div id="mascom-nav" style="position:fixed;bottom:0;left:0;right:0;height:32px;background:#0a0e14;border-top:1px solid rgba(70,130,180,0.32);display:flex;align-items:center;padding:0 12px;font-family:Inter,system-ui,sans-serif;font-size:11px;z-index:99999;gap:8px;opacity:0.85;transition:opacity 0.2s" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.85'">
-<span style="color:#4682B4;font-weight:600;letter-spacing:1px;font-size:10px">MASCOM</span>
-<a href="https://mobleysoft.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">PublicOS</a>
-<a href="https://weylandai.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">WeylandAI</a>
-<a href="https://gamegob.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">GameGob</a>
-<a href="https://helmcorp.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HelmCorp</a>
-<a href="https://filmline.cc" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">FilmLine</a>
-<a href="https://halside.com" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">HALside</a>
-<a href="https://mobleyreport.com/news" style="color:#888;text-decoration:none;padding:2px 6px;border-radius:3px" onmouseenter="this.style.color='#c8c8d4'" onmouseleave="this.style.color='#888'">News</a>
-<span style="flex:1"></span>
-<a href="https://authfor.com" style="color:#666;text-decoration:none;font-size:10px">AuthFor</a>
-</div>
 <!-- HelmCorp Analytics -->
 <script>(function(){var v='gamegob';(function(u,b){try{if(navigator.sendBeacon){navigator.sendBeacon(u,b)}else{fetch(u,{method:'POST',mode:'no-cors',keepalive:true,body:b}).catch(function(){})}}catch(e){}})('https://helmcorp.cc/api/beacon',JSON.stringify({v:v,p:location.pathname,t:Date.now()}))})()</script>
 <!-- VentureForge:collated -->
