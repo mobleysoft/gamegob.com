@@ -1,0 +1,32 @@
+{
+  "version": "2026-10-06",
+  "label": "free browser playtest",
+  "source_commit": "fa2b73cc69b536da92f3589878564d5a934c7b91",
+  "adapter_sha256": "300ca4138e993ef618ea09124822e61c0ef13e0fe18a7f2f547c939e96483716",
+  "release_changes": [
+    "additive labeled hub",
+    "separate playtest save keys",
+    "offline claim clarification"
+  ],
+  "storage_keys": {
+    "gamegob_loop_lab_v1": "gamegob_playtest_20261006_lab_v1",
+    "endbird_save": "gamegob_playtest_20261006_endbird",
+    "mineshafted_save_v2": "gamegob_playtest_20261006_mines_v2"
+  },
+  "files": {
+    "index.html": "b147506e825075c7b46b0c640b4d76ebf8c6807b0360fa649f51ba6e2dfcab45",
+    "gamegob-offline-candidates.zip": "930f0286a601cd9b4b09e81e70a5af04d55852f599e8a9ac59573efd5bb60e40",
+    "forge_end_bird.html": "653aff917ed574949a22d03192cf6c72ed9d8e7983272d26ede5dbaf397fba8a",
+    "loop_lab.html": "0141f0bfbb0abd7434a0aa517d936003b655ab1ce0e21fe64b3f5292c45e475f",
+    "forge_mineshafted.html": "02a1991f6353ab0dca2a74ed10e4511087888fccf5c2dccbb1f6a650acf74e51",
+    "assets/fonts/jetbrains-mono-400.woff2": "2c32b9b3ee358c119e210f6f5195f9bd34894d78a785ff2e95d60e718e400af4",
+    "assets/fonts/press-start-2p-400.woff2": "42144b97bd2942ea606e5d880684eae0f7be5c804bdd57b1faac5a8d7699ae6e",
+    "assets/fonts/jetbrains-mono-700.woff2": "5f0069c01b58b9e48c491bdb60343b75d7cbe4df17e73d98f7d6a9e3aa6f6a71"
+  },
+  "limitations": [
+    "No native iOS package",
+    "Physical iPhone performance unverified",
+    "Fresh web loads need internet",
+    "No customer metrics collected"
+  ]
+}

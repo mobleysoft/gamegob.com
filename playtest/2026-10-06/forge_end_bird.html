@@ -1,0 +1,3124 @@
+<!DOCTYPE html>
+<html lang="en" data-gg-game>
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; img-src 'self' data:; font-src 'self'">
+<meta property="og:title" content="EndBird — Eat, Grow, Explode">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>EndBird — Eat, Grow, Explode</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+body{background:#0a0a0f;overflow:hidden;font-family:'Courier New',monospace;display:flex;justify-content:center;align-items:center;height:100vh;width:100vw}
+canvas{display:block;image-rendering:pixelated}
+#endbird-sound{position:fixed;top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px));width:44px;height:44px;z-index:20;display:grid;place-items:center;border:1px solid #ffffff22;border-radius:50%;background:#0a0a0fcc;color:#b1b1c4;cursor:pointer;touch-action:manipulation}
+#endbird-sound:focus-visible{outline:2px solid #f0b800;outline-offset:3px}
+#endbird-sound svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#endbird-sound .sound-off{display:none}
+#endbird-sound[aria-pressed="true"]{color:#ff3355}
+#endbird-sound[aria-pressed="true"] .sound-on{display:none}
+#endbird-sound[aria-pressed="true"] .sound-off{display:block}
+</style>
+<style>
+/* gg-mobile.css — GameGob shared mobile styles (2026-10-04) + shared look kit (2026-10-05). */
+
+/* ---- Type: self-hosted (SIL OFL), no third-party font requests in the native shell.
+   JetBrains Mono shares Courier New's 0.6em advance, so swapping it in under
+   every 'Courier New'/monospace stack (DOM here, canvas via gg-mobile.js) keeps
+   every layout and only sharpens the letterforms. */
+@font-face { font-family: 'JetBrains Mono'; src: url(assets/fonts/jetbrains-mono-400.woff2) format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'JetBrains Mono'; src: url(assets/fonts/jetbrains-mono-700.woff2) format('woff2'); font-weight: 600 800; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Press Start 2P'; src: url(assets/fonts/press-start-2p-400.woff2) format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+html[data-gg-game] body, html[data-gg-game] button, html[data-gg-game] input, html[data-gg-game] select, html[data-gg-game] textarea { font-family: 'JetBrains Mono', 'Courier New', monospace; }
+
+:root {
+  --gg-ink: #e9e6dc;
+  --gg-muted: #8d90a2;
+  --gg-gold: #f0b800;
+  --gg-gold-line: rgba(240,184,0,.42);
+  --gg-glass: rgba(14,16,24,.62);
+  --gg-panel: linear-gradient(160deg, rgba(17,19,31,.97), rgba(9,10,16,.985));
+  --gg-safe-top: env(safe-area-inset-top, 0px);
+  --gg-safe-right: env(safe-area-inset-right, 0px);
+  --gg-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --gg-safe-left: env(safe-area-inset-left, 0px);
+}
+html, body { overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+canvas { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+#gg-keypad { position: fixed; inset: 0; pointer-events: none; z-index: 2147483000; font: 700 18px/1 'JetBrains Mono', monospace; }
+#gg-keypad button {
+  pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none;
+  width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--gg-gold-line);
+  color: rgba(255,236,170,.92); background: var(--gg-glass); backdrop-filter: blur(6px);
+  box-shadow: 0 4px 14px rgba(0,0,0,.35); display: grid; place-items: center; padding: 0;
+}
+#gg-keypad button.on { background: rgba(240,184,0,.42); border-color: var(--gg-gold); color: #0b0c10; box-shadow: 0 0 20px rgba(240,184,0,.45); }
+#gg-keypad .gg-dpad { position: absolute; left: calc(14px + var(--gg-safe-left)); bottom: calc(18px + var(--gg-safe-bottom)); width: 176px; height: 176px; }
+#gg-keypad .gg-dpad .u { position: absolute; left: 60px; top: 0; }
+#gg-keypad .gg-dpad .l { position: absolute; left: 0; top: 60px; }
+#gg-keypad .gg-dpad .r { position: absolute; right: 0; top: 60px; }
+#gg-keypad .gg-dpad .d { position: absolute; left: 60px; bottom: 0; }
+#gg-keypad .gg-actions { position: absolute; right: calc(16px + var(--gg-safe-right)); bottom: calc(26px + var(--gg-safe-bottom)); display: flex; gap: 14px; align-items: flex-end; }
+#gg-keypad .gg-actions button { width: 64px; height: 64px; }
+@media (hover: hover) and (pointer: fine) { #gg-keypad { display: none; } }
+
+/* 5. Estate nav bar: it is a 32px fixed strip at the bottom of every page,
+   exactly where game controls live. Never on a phone game page, never
+   inside a native shell (outbound links would trap the user in-app). */
+@media (pointer: coarse), (max-width: 760px) { html[data-gg-game] #mascom-nav { display: none !important; } }
+html.gg-native #mascom-nav { display: none !important; }
+/* App Store guideline 3.1.1: no links to purchases outside the app. The
+   native shell hides the PublicOS / Corvus cross-sell cards, the quarters
+   shop entry and the "add credits" link in the quarter overlay. */
+html.gg-native .promo-banner, html.gg-native .promo-card, html.gg-native .nav-btn[href="shop.html"], html.gg-native .qmLink { display: none !important; }
+html.gg-native #creditBadge { display: none !important; } /* credits are meaningless in the shell */
+/* Native shell: the web view runs edge to edge, so scrolling pages (the
+   storefront, catalogues) keep clear of the status bar and home indicator.
+   Games stay full-bleed; their controls already carry the inset vars. */
+html.gg-native:not([data-gg-game]) body { padding-top: var(--gg-safe-top) !important; padding-bottom: calc(var(--gg-safe-bottom) + 12px) !important; }
+
+/* 6. Shared centered-modal template (charSelect / endScreen / pauseScreen
+   family used by the flagship games): translate(-50%,-50%) boxes with a
+   desktop max-width and no max-height clip off a phone. Fit and scroll. */
+@media (max-width: 760px), (max-height: 520px) {
+  #charSelect, #endScreen, #pauseScreen, #nameEntryModal, #gameOver, #sharePanel, #progressionScreen,
+  #leaderboardPanel, #leaderboardOverlay, #statsScreen, #myStatsScreen, #settingsScreen, #shopPanel,
+  #scorePanel, #pauseMenu, #scoreSubmitBox, #deathScreen, #augmentPicker, #lbNameEntry, #challengeWin,
+  #sharePanelInner, #tutorialOverlay,
+  #splash, #splashScreen /* card_game / platformer full-screen splashes: same centred-overflow cut */ {
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 16px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+    /* centred flex + overflow puts the top of a tall panel above the scroll
+       range (survivors' 16-card roster opened on its locked bottom rows with
+       the title and the unlocked cards unreachable); the safe keyword falls
+       back to start alignment only when the content overflows */
+    justify-content: safe center !important;
+    align-items: safe center !important;
+  }
+}
+
+/* 7. Modals above the shared .mctl-overlay touch pad (z 9999) so the pad
+   never covers a Start / Continue button; secondary dialogs one step higher. */
+@media (pointer: coarse) {
+  /* #titleScreen is deliberately not lifted: in bullet_hell it sits under
+     #progScreen (z 22) and lifting it put the title text through the
+     progression panel. Title buttons are centred, away from the pad. */
+  html[data-gg-game] :is(#charSelect, #endScreen, #pauseScreen, #gameOver, #progressionScreen, #progScreen,
+    #leaderboardPanel, #leaderboardOverlay, #statsScreen, #myStatsScreen, #shopPanel, #scorePanel, #pauseMenu,
+    #deathScreen, #splashScreen, #tutorialOverlay, #augmentPicker, #challengeWin) { z-index: 10000 !important; }
+  html[data-gg-game] :is(#nameEntryModal, #sharePanel, #sharePanelInner, #scoreSubmitBox, #settingsScreen, #lbNameEntry) { z-index: 10010 !important; }
+  /* moba's tutorial dimmer goes "solid" on the "move your champion" step,
+     which on a phone also swallowed the pad the step asks you to use. */
+  html[data-gg-game] #tutorialDimmer { pointer-events: none !important; }
+  /* tutorial tips appended to <body> (platformer, smash_arena) sat under the pad */
+  html[data-gg-game] .tut-tip, html[data-gg-game] .tutTip { z-index: 10001 !important; }
+  /* shared quarter-credit pill (10 games) sat on top-centre HUD text, and the
+     keyboard legends (platformer #abilityHint, smash_arena/hex_world #controls)
+     wrapped behind the pads; neither carries anything a phone player needs */
+  @media (pointer: coarse) and (max-width: 760px), (pointer: coarse) and (max-height: 520px) {
+    html[data-gg-game] #creditBadge, html[data-gg-game] #abilityHint, html[data-gg-game] #controls { display: none !important; }
+  }
+}
+
+/* 8. Shared touch pad: respect the home-indicator / notch insets. */
+.mctl-dpad { bottom: calc(22px + var(--gg-safe-bottom)) !important; left: calc(16px + var(--gg-safe-left)) !important; }
+.mctl-btn-a { bottom: calc(44px + var(--gg-safe-bottom)) !important; right: calc(16px + var(--gg-safe-right)) !important; }
+.mctl-btn-b { bottom: calc(104px + var(--gg-safe-bottom)) !important; }
+.mctl-start { bottom: calc(6px + var(--gg-safe-bottom)) !important; }
+
+/* 9. Fitted fixed-size games (html[data-gg-fit]): the scaled element keeps a
+   crisp edge and the page never scrolls sideways under it. */
+html[data-gg-fit], html[data-gg-fit] body { overflow: hidden; }
+
+/* ---- 10. Shared look kit (2026-10-05). The games were built from a few
+   templates whose chrome never got a design pass: grey rounded-square pads,
+   #555-bordered translucent boxes, system fonts. These rules restyle that
+   shared chrome in one place (dark glass, one gold hairline, the same stick
+   language as SightX) and leave each game's own play-field art alone. */
+
+/* 10a. The flagship touch pad (.mctl-*, 11 games) */
+.mctl-dpad {
+  width: 150px !important; height: 150px !important; border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(9,10,13,.22), rgba(9,10,13,.6));
+  border: 1px solid rgba(240,184,0,.26); box-shadow: inset 0 0 28px rgba(0,0,0,.5), 0 14px 40px rgba(0,0,0,.3);
+  backdrop-filter: blur(8px);
+}
+.mctl-dpad-center { width: 36px !important; height: 36px !important; background: rgba(240,184,0,.09) !important; border: 1px solid rgba(240,184,0,.35); }
+.mctl-dpad-btn {
+  width: 46px !important; height: 46px !important; border-radius: 50% !important;
+  background: var(--gg-glass) !important; border: 1px solid var(--gg-gold-line) !important;
+  color: rgba(255,236,170,.92) !important; font: 700 18px/1 'JetBrains Mono', monospace !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35);
+}
+.mctl-dpad-btn.active { background: rgba(240,184,0,.42) !important; border-color: var(--gg-gold) !important; color: #0b0c10 !important; box-shadow: 0 0 20px rgba(240,184,0,.45); }
+.mctl-btn {
+  background: var(--gg-glass) !important; border: 1px solid var(--gg-gold-line) !important;
+  color: rgba(255,236,170,.92) !important; font: 700 11px/1 'JetBrains Mono', monospace !important;
+  letter-spacing: .06em; text-transform: uppercase; backdrop-filter: blur(6px);
+  box-shadow: 0 4px 14px rgba(0,0,0,.35);
+}
+.mctl-btn-a { width: 66px !important; height: 66px !important; border-color: rgba(0,217,139,.62) !important; color: #9df5cf !important; font-size: 12px !important; }
+.mctl-btn-b { border-color: rgba(255,108,108,.62) !important; color: #ffb9b9 !important; }
+.mctl-btn.active { background: rgba(240,184,0,.42) !important; border-color: var(--gg-gold) !important; color: #0b0c10 !important; }
+.mctl-btn-a.active { background: rgba(0,217,139,.5) !important; border-color: #00d98b !important; }
+.mctl-btn-b.active { background: rgba(255,108,108,.5) !important; border-color: #ff6c6c !important; }
+.mctl-start { border-radius: 14px !important; font-size: 9px !important; width: 64px !important; height: 26px !important; }
+.mctl-extra { border-radius: 12px !important; }
+
+/* 10b. The forge d-pad (#touch-controls .dpad / .act-btn, forge_rpg, forge_pac_man) */
+html[data-gg-game] .dpad-btn {
+  background: var(--gg-glass) !important; border: 1px solid var(--gg-gold-line) !important; border-radius: 50% !important;
+  color: rgba(255,236,170,.92) !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 700;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35); backdrop-filter: blur(6px);
+}
+html[data-gg-game] .dpad-btn:active { background: rgba(240,184,0,.42) !important; color: #0b0c10 !important; }
+html[data-gg-game] :is(.act-btn, .action-btn) {
+  background: var(--gg-glass) !important; border: 1px solid var(--gg-gold-line) !important;
+  color: rgba(255,236,170,.92) !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35); backdrop-filter: blur(6px);
+}
+html[data-gg-game] .btn-a { border-color: rgba(0,217,139,.62) !important; color: #9df5cf !important; }
+html[data-gg-game] .btn-b { border-color: rgba(255,108,108,.62) !important; color: #ffb9b9 !important; }
+html[data-gg-game] .btn-menu { background: var(--gg-glass) !important; border: 1px solid var(--gg-gold-line) !important; color: rgba(255,236,170,.92) !important; font-family: 'JetBrains Mono', monospace !important; border-radius: 10px !important; }
+html[data-gg-game] :is(.act-btn, .action-btn, .btn-menu):active { background: rgba(240,184,0,.42) !important; color: #0b0c10 !important; }
+
+/* 10c. The shared panel template (#charSelect family + cards) */
+html[data-gg-game] :is(#charSelect, #endScreen, #pauseScreen, #nameEntryModal, #gameOver, #sharePanel, #progressionScreen,
+  #leaderboardPanel, #leaderboardOverlay, #statsScreen, #myStatsScreen, #settingsScreen, #shopPanel, #scorePanel, #pauseMenu,
+  #scoreSubmitBox, #deathScreen, #augmentPicker, #lbNameEntry, #challengeWin, #sharePanelInner) {
+  background: var(--gg-panel) !important;
+  border: 1px solid rgba(240,184,0,.38) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 24px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05) !important;
+  color: var(--gg-ink);
+}
+html[data-gg-game] .charCard {
+  background: rgba(255,255,255,.035) !important; border: 1px solid rgba(255,255,255,.1) !important; border-radius: 8px !important;
+  box-shadow: none !important; transition: border-color .12s ease, transform .12s ease;
+}
+html[data-gg-game] .charCard:hover, html[data-gg-game] .charCard.selected { border-color: rgba(240,184,0,.65) !important; transform: translateY(-1px); }
+html[data-gg-game] :is(.tut-tip, .tutTip, .tutBubble, .tut-tip-box) { border-radius: 8px !important; }
+
+/* 11. Landscape gate (2026-10-05): shown by gg-mobile.js on a coarse pointer in
+   portrait for games stamped data-gg-landscape (built wide). */
+#gg-rotate { display: none; position: fixed; inset: 0; z-index: 10050; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 32px; text-align: center; color: var(--gg-ink, #f4efe4); background: radial-gradient(circle at 50% 38%, #2a230f, #07070b 70%); }
+#gg-rotate.on { display: flex; }
+#gg-rotate strong { color: var(--gg-gold, #f0b800); font: 700 14px/1.3 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .14em; }
+#gg-rotate p { max-width: 300px; margin: 0; color: rgba(244,239,228,.62); font: 13px/1.6 system-ui, sans-serif; }
+#gg-rotate .gg-rotate-skip { margin-top: 10px; padding: 11px 16px; border: 1px solid var(--gg-gold-line, rgba(240,184,0,.5)); border-radius: 999px; background: var(--gg-glass, rgba(255,255,255,.04)); color: var(--gg-gold, #f0b800); font: 700 10px/1 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .12em; }
+.gg-rotate-phone { width: 58px; height: 92px; border: 2px solid var(--gg-gold, #f0b800); border-radius: 10px; box-shadow: 0 0 28px rgba(240,184,0,.22); animation: gg-rotate-spin 1.8s ease-in-out infinite; }
+@keyframes gg-rotate-spin { 45%, 100% { transform: rotate(90deg); } }
+@media (prefers-reduced-motion: reduce) { .gg-rotate-phone { animation: none; transform: rotate(90deg); } }
+
+/* 12. The whole page is a game surface on touch (2026-10-05): no text selection,
+   no callout menu, no magnifier, no double-tap zoom. Inputs keep selection. */
+@media (hover: none) and (pointer: coarse) {
+  html[data-gg-game], html[data-gg-game] body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; overscroll-behavior: none; }
+  html[data-gg-game] :is(input, textarea, [contenteditable]) { -webkit-user-select: text; user-select: text; }
+  html[data-gg-game] img, html[data-gg-game] canvas { -webkit-touch-callout: none; } /* game surface */
+}
+
+</style>
+<script>
+/* gg-mobile.js — GameGob shared mobile runtime (2026-10-04).
+ * Loaded synchronously in <head> by every game page. Does four things no
+ * game should have to reimplement, without touching any game's own code:
+ *   1. Pause on hide: requestAnimationFrame callbacks queue while the tab or
+ *      app is hidden and flush when it returns, so no game burns CPU in the
+ *      background and no physics step sees a 30-second frame.
+ *   2. Audio unlock: every AudioContext the page creates is resumed on the
+ *      first touch/key, which is what iOS and Chrome require.
+ *   3. Gesture lock: no pinch zoom, no double-tap zoom, no scroll bounce on
+ *      canvas drags. Scrollable UI outside a canvas keeps scrolling.
+ *   4. Virtual keypad: for games that only listen to the keyboard
+ *      (<html data-gg-keypad="arrows space enter">), an on-screen d-pad and
+ *      buttons dispatch real KeyboardEvents on touch devices.
+ * It also exposes window.GG with the native-shell flag the ad loader uses.
+ */
+(function () {
+  'use strict';
+  if (window.GG) return;
+  var native = !!(window.Capacitor || navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
+  var coarse = !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
+  var GG = window.GG = { version: '20261004', native: native, coarse: coarse, paused: false, keypad: null };
+
+  // ---- 1. Pause on hide (rAF gate) --------------------------------------
+  var realRAF = window.requestAnimationFrame.bind(window);
+  var realCAF = window.cancelAnimationFrame.bind(window);
+  var queued = []; var nextId = 1e9;
+  window.requestAnimationFrame = function (cb) {
+    if (!document.hidden) return realRAF(cb);
+    var id = nextId++;
+    queued.push({ id: id, cb: cb });
+    return id;
+  };
+  window.cancelAnimationFrame = function (id) {
+    if (id >= 1e9) { queued = queued.filter(function (q) { return q.id !== id; }); return; }
+    realCAF(id);
+  };
+  document.addEventListener('visibilitychange', function () {
+    GG.paused = document.hidden;
+    if (document.hidden) return;
+    var pending = queued; queued = [];
+    pending.forEach(function (q) { realRAF(q.cb); });
+    try { document.dispatchEvent(new CustomEvent('gg:resume')); } catch (e) {}
+  });
+
+  // ---- 2. Audio unlock ----------------------------------------------------
+  var contexts = [];
+  ['AudioContext', 'webkitAudioContext'].forEach(function (name) {
+    var Orig = window[name];
+    if (typeof Orig !== 'function') return;
+    function Patched() {
+      var ctx = new (Function.prototype.bind.apply(Orig, [null].concat([].slice.call(arguments))))();
+      contexts.push(ctx);
+      return ctx;
+    }
+    Patched.prototype = Orig.prototype;
+    window[name] = Patched;
+  });
+  function unlock() {
+    contexts.forEach(function (c) { if (c.state === 'suspended' && c.resume) c.resume().catch(function () {}); });
+  }
+  ['pointerdown', 'touchend', 'keydown'].forEach(function (t) { document.addEventListener(t, unlock, { passive: true }); });
+
+  // ---- 3. Gesture lock ----------------------------------------------------
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+  document.addEventListener('dblclick', function (e) { if (e.target && e.target.tagName === 'CANVAS') e.preventDefault(); }, { passive: false });
+  document.addEventListener('touchmove', function (e) {
+    var t = e.target;
+    if (t && (t.tagName === 'CANVAS' || t === document.body || t === document.documentElement)) e.preventDefault();
+  }, { passive: false });
+
+  // ---- 4. Virtual keypad --------------------------------------------------
+  function keyEvent(type, key, code, keyCode) {
+    var ev = new KeyboardEvent(type, { key: key, code: code, keyCode: keyCode, which: keyCode, bubbles: true, cancelable: true });
+    try { Object.defineProperty(ev, 'keyCode', { get: function () { return keyCode; } }); Object.defineProperty(ev, 'which', { get: function () { return keyCode; } }); } catch (e) {}
+    document.dispatchEvent(ev);
+  }
+  var KEYS = {
+    up: ['ArrowUp', 'ArrowUp', 38], down: ['ArrowDown', 'ArrowDown', 40], left: ['ArrowLeft', 'ArrowLeft', 37], right: ['ArrowRight', 'ArrowRight', 39],
+    space: [' ', 'Space', 32], enter: ['Enter', 'Enter', 13], w: ['w', 'KeyW', 87], a: ['a', 'KeyA', 65], s: ['s', 'KeyS', 83], d: ['d', 'KeyD', 68], esc: ['Escape', 'Escape', 27]
+  };
+  function mountKeypad(spec) {
+    if (!coarse || document.getElementById('gg-keypad')) return;
+    var wants = spec.split(/[\s,]+/).filter(Boolean);
+    var root = document.createElement('div'); root.id = 'gg-keypad'; root.setAttribute('aria-label', 'Game controls');
+    var html = '';
+    if (wants.indexOf('arrows') !== -1 || wants.indexOf('wasd') !== -1) {
+      var p = wants.indexOf('wasd') !== -1 && wants.indexOf('arrows') === -1 ? { up: 'w', left: 'a', down: 's', right: 'd' } : { up: 'up', left: 'left', down: 'down', right: 'right' };
+      html += '<div class="gg-dpad"><button data-k="' + p.up + '" class="u" aria-label="Up">&#9650;</button><button data-k="' + p.left + '" class="l" aria-label="Left">&#9664;</button><button data-k="' + p.right + '" class="r" aria-label="Right">&#9654;</button><button data-k="' + p.down + '" class="d" aria-label="Down">&#9660;</button></div>';
+    }
+    var acts = wants.filter(function (w) { return w !== 'arrows' && w !== 'wasd'; });
+    if (acts.length) html += '<div class="gg-actions">' + acts.map(function (k) { return '<button data-k="' + k + '" aria-label="' + k + '">' + (k === 'space' ? 'A' : k === 'enter' ? 'B' : k.toUpperCase()) + '</button>'; }).join('') + '</div>';
+    root.innerHTML = html;
+    document.body.appendChild(root);
+    var held = {};
+    function press(k, down) {
+      var def = KEYS[k]; if (!def) return;
+      if (down && held[k]) return;
+      held[k] = down;
+      keyEvent(down ? 'keydown' : 'keyup', def[0], def[1], def[2]);
+    }
+    root.querySelectorAll('button').forEach(function (b) {
+      var k = b.getAttribute('data-k');
+      b.addEventListener('pointerdown', function (e) { e.preventDefault(); b.setPointerCapture(e.pointerId); b.classList.add('on'); press(k, true); });
+      var up = function () { b.classList.remove('on'); press(k, false); };
+      b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+    });
+    GG.keypad = root;
+  }
+  // ---- 4b. Canvas type (2026-10-05) -------------------------------------
+  // 1,079 ctx.font assignments across the fleet name 'Courier New' or bare
+  // monospace. JetBrains Mono (self-hosted, same 0.6em advance) is swapped in
+  // under those stacks at assignment time, so every game's canvas text
+  // sharpens without touching a game. Courier New stays as the fallback
+  // until the woff2 has loaded; the games redraw every frame anyway.
+  (function () {
+    var proto = window.CanvasRenderingContext2D && CanvasRenderingContext2D.prototype;
+    if (!proto) return;
+    var d = Object.getOwnPropertyDescriptor(proto, 'font');
+    if (!d || !d.set || !d.get) return;
+    var FAM = "'JetBrains Mono', 'Courier New', monospace";
+    var re = /^(.*?\d(?:\.\d+)?(?:px|pt|em|rem|%)(?:\s*\/\s*[\d.]+(?:px|em|%)?)?\s+)(.+)$/;
+    Object.defineProperty(proto, 'font', {
+      configurable: true, enumerable: d.enumerable,
+      get: function () { return d.get.call(this); },
+      set: function (v) {
+        var s = String(v), m = re.exec(s);
+        if (m && /courier|monospace/i.test(m[2]) && !/jetbrains|press start/i.test(m[2])) s = m[1] + FAM;
+        d.set.call(this, s);
+      }
+    });
+    try { if (document.fonts) { document.fonts.load("12px 'JetBrains Mono'"); document.fonts.load("bold 12px 'JetBrains Mono'"); } } catch (e) {}
+  })();
+
+  // ---- 4c. Touch copy (2026-10-05) -------------------------------------------
+  // 35 games tell the player to "Press ENTER", use "Arrow Keys / WASD" or
+  // "Click to Start" in canvas text and overlays. On a coarse pointer those
+  // phrases are rewritten at draw time to their touch equivalents. Only
+  // phrases with a known-true touch counterpart are touched: an "or Tap"
+  // alternative already in the string, click->tap, and the direction keys
+  // (every pad-driven game maps its pad to those keys).
+  var COPY = [
+    [/Press (?:ENTER|Enter|SPACE|Space|Any Key|any key|START|Start)(?:\s*\/\s*\w+)?,? or Tap to (\w+)/g, 'Tap to $1'],
+    [/Press (?:ENTER|Enter|SPACE|Space|ESC|Esc|P)(?:\s*\/\s*\w+)? or Tap to (\w+)/g, 'Tap to $1'],
+    [/Press Any Key \/ Tap to (\w+)/g, 'Tap to $1'],
+    [/Click to Start/g, 'Tap to Start'], [/Click or Tap/gi, 'Tap'], [/Click a card/g, 'Tap a card'], [/Click anywhere/gi, 'Tap anywhere'],
+    [/Arrow Keys \/ WASD/g, 'D-pad'], [/ARROW KEYS \/ WASD/g, 'D-PAD'], [/ARROWS\s*\/\s*WASD/g, 'D-PAD'], [/WASD\s*\/\s*Arrows/gi, 'D-pad'], [/WASD\/ARROWS/g, 'D-PAD'],
+    [/\[Arrow Keys\]/g, '[D-pad]'], [/Arrow Keys/g, 'D-pad'], [/ARROW KEYS/g, 'D-PAD'],
+    // title / game-over prompts: the touchstart handlers take the same path as Enter
+    [/PRESS (?:ENTER|SPACE) TO (PLAY AGAIN|RESTART|START|PLAY|CONTINUE|SKIP)/g, 'TAP TO $1'],
+    [/[Pp]ress (?:Enter|ENTER|Space|SPACE) to (\w[\w ]*?)(?=[.!]|$)/g, 'Tap to $1'],
+  ];
+  function fixCopy(t) {
+    if (typeof t !== 'string' || t.length < 6) return t;
+    var hit = fixCopy.cache.get(t);
+    if (hit !== undefined) return hit;
+    var out = t;
+    for (var i = 0; i < COPY.length; i++) out = out.replace(COPY[i][0], COPY[i][1]);
+    if (fixCopy.pad) out = fixCopy.pad(out);
+    if (fixCopy.cache.size > 2000) fixCopy.cache.clear();
+    fixCopy.cache.set(t, out);
+    return out;
+  }
+  fixCopy.cache = new Map();
+  if (coarse && window.CanvasRenderingContext2D) {
+    ['fillText', 'strokeText', 'measureText'].forEach(function (name) {
+      var orig = CanvasRenderingContext2D.prototype[name];
+      if (!orig) return;
+      CanvasRenderingContext2D.prototype[name] = function (t) { arguments[0] = fixCopy(t); return orig.apply(this, arguments); };
+    });
+    var fixDom = function () {
+      var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      var n; while ((n = w.nextNode())) {
+        var pn = n.parentNode && n.parentNode.nodeName;
+        if (pn === 'SCRIPT' || pn === 'STYLE' || pn === 'TEXTAREA') continue;
+        if (n.nodeValue && n.nodeValue.length > 5 && /Press |Arrow|WASD|Click |\[[A-Za-z]\]|\b[A-Z]: |\bSpace\b|\bSPACE\b/.test(n.nodeValue)) { var v = fixCopy(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; }
+      }
+    };
+    // tutorials and tips are injected while playing, so keep watching (debounced)
+    var fixTimer = null;
+    var scheduleFix = function () { if (fixTimer) return; fixTimer = setTimeout(function () { fixTimer = null; try { fixDom(); } catch (e) {} }, 250); };
+    document.addEventListener('DOMContentLoaded', function () {
+      fixDom(); setTimeout(fixDom, 1500);
+      try { new MutationObserver(scheduleFix).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (e) {}
+    });
+  }
+
+  // ---- 4d. Key badges -> pad labels (2026-10-05) -----------------------------
+  // Tutorials in the flagship games show keycaps (Z, X, Space, W A S D). The
+  // shared .mctl pad maps those keys to labelled buttons via setupBtn('mctl_a',
+  // 'z') calls in the page's own script, so on a coarse pointer the keycap
+  // text is replaced by the pad's label for that key.
+  if (coarse) {
+    var padMap = null;
+    function buildPadMap() {
+      var map = {}, dedicated = {};
+      var src = [].map.call(document.scripts, function (s) { return s.src ? '' : s.textContent; }).join('\n');
+      var re = /setupBtn\(\s*['"](mctl_\w+)['"]\s*,\s*['"]([^'"]*)['"]/g, m;
+      while ((m = re.exec(src))) {
+        var el = document.getElementById(m[1]);
+        var label = el && el.textContent.trim();
+        if (!label) continue;
+        var keys = m[2].split(',').map(function (k) { k = k.trim().toLowerCase(); return k === 'space' ? ' ' : k; }).filter(Boolean);
+        keys.forEach(function (k) {
+          // keys arrive as a comma list ('z, , ' = z + space; 'x,Shift'); a
+          // button that fires only this key owns its label over one that
+          // fires it as a side effect (bullet_hell: Shift = FOCUS, not BOMB)
+          if (!map[k] || (keys.length === 1 && !dedicated[k])) map[k] = label.toUpperCase();
+          if (keys.length === 1) dedicated[k] = true;
+        });
+      }
+      if (document.querySelector('.mctl-dpad')) ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', '←', '→', '↑', '↓', '← →', 'a d', 'w a s d', 'wasd'].forEach(function (k) { if (!map[k]) map[k] = 'D-PAD'; });
+      // legend text: "[Z] Attack", "Z: Attack", "LMB / Space — Shoot" -> pad labels
+      var keyed = Object.keys(map).filter(function (k) { return k.length === 1 && k !== ' ' || k === 'shift'; });
+      if (keyed.length) {
+        var alts = keyed.map(function (k) { return k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'); }).join('|');
+        var reBr = new RegExp('\\[(' + alts + ')\\]', 'gi'), reCol = new RegExp('(^|[|\\s])(' + alts + '):(?=\\s)', 'gi');
+        var reSp = map[' '] ? /\b(?:Space|SPACE)\b/g : null;
+        fixCopy.pad = function (t) {
+          if (reSp) t = t.replace(reSp, map[' ']); // first, so an inserted label is never re-matched
+          return t.replace(reBr, function (_, k) { return '[' + map[k.toLowerCase()] + ']'; }).replace(reCol, function (_, pre, k) { return pre + map[k.toLowerCase()] + ':'; });
+        };
+        fixCopy.cache.clear();
+      }
+      return map;
+    }
+    var fixBadges = function () {
+      if (!padMap) padMap = buildPadMap();
+      if (!Object.keys(padMap).length) return;
+      document.querySelectorAll('kbd, .tut-key, .tutKey, .key, .keycap, .tut-keys span, .controls span').forEach(function (el) {
+        if (el.children.length || el.getAttribute('data-gg-badged')) return;
+        var t = el.textContent.trim(), k = t.toLowerCase();
+        if (k === 'space' || k === 'spc') k = ' ';
+        if (k === 'enter' || k === 'esc' || k === 'escape') return;
+        var label = padMap[k];
+        if (!label && k.indexOf('/') > -1) {
+          var parts = [];
+          k.split('/').forEach(function (part) { part = part.trim(); if (part === 'space' || part === 'spc') part = ' '; var l = padMap[part]; if (l && parts.indexOf(l) < 0) parts.push(l); });
+          if (parts.length) label = parts.join(' / ');
+        }
+        if (label && label !== t) {
+          el.setAttribute('data-gg-badged', t); el.textContent = label;
+          // "W A S D" / "← →" rows collapse to one D-PAD badge
+          var prev = el.previousElementSibling;
+          if (prev && prev.getAttribute('data-gg-badged') && prev.textContent === label) el.style.display = 'none';
+          // keyboard-only leftovers in a row that now names a pad control
+          // ("Space" beside D-PAD, "or D-pad" after a D-PAD badge) say nothing on a phone
+          [].forEach.call(el.parentNode ? el.parentNode.children : [], function (sib) {
+            if (sib === el || sib.getAttribute('data-gg-badged')) return;
+            var st = sib.textContent.trim().toLowerCase();
+            if (/^(or d-pad|or arrow keys|or arrows|space|spc|shift|ctrl|alt|tab|[a-z]|[\u2190-\u2193]( [\u2190-\u2193])*)$/.test(st) && !padMap[st === 'space' || st === 'spc' ? ' ' : st]) sib.style.display = 'none';
+          });
+        }
+      });
+    };
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(fixBadges, 300); setTimeout(fixBadges, 1800);
+      try { new MutationObserver(function () { setTimeout(fixBadges, 300); }).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+    });
+  }
+
+  // ---- 5. Fit: fixed-size canvas games -------------------------------------
+  // <html data-gg-fit="#selector [WxH]"> scales that element (a canvas, or a
+  // wrapper holding several) to fit the viewport with a CSS transform, and
+  // shrinks its layout box with negative margins so flex-centred bodies stay
+  // centred and nothing overflows. Transforms keep input correct for both
+  // coordinate styles the games use: offsetX/offsetY is reported in the
+  // element's own (unscaled) space, and getBoundingClientRect() reports the
+  // scaled rect that rect-mapping code divides by.
+  function mountFit(spec) {
+    var parts = spec.trim().split(/\s+/);
+    var el = document.querySelector(parts[0]); if (!el) return;
+    var fixed = /^(\d+)x(\d+)$/.exec(parts[1] || '');
+    // A transformed element becomes the containing block for position:fixed
+    // descendants, so full-screen overlays nested in the fitted wrapper shrink
+    // with it (bullet_hell's #charSelect: SELECT button off-screen in
+    // landscape). Hoist the outermost fixed descendants to <body> once.
+    try {
+      [].slice.call(el.querySelectorAll('*')).forEach(function (n) {
+        if (getComputedStyle(n).position !== 'fixed') return;
+        for (var a = n.parentNode; a && a !== el; a = a.parentNode) if (getComputedStyle(a).position === 'fixed') return;
+        document.body.appendChild(n);
+      });
+    } catch (e) {}
+    function apply() {
+      el.style.transform = ''; el.style.marginRight = ''; el.style.marginBottom = '';
+      var lw = el.offsetWidth, lh = el.offsetHeight;          // layout box
+      var w = fixed ? +fixed[1] : lw, h = fixed ? +fixed[2] : lh; // visual extent to fit (may exceed the box: hung-off sidebars)
+      if (!w || !h) return;
+      // Chrome on Android widens the layout viewport to overflowing content
+      // before any script runs, so innerWidth can already be the canvas width;
+      // bound it by the visual viewport and the device's longer screen edge.
+      // (iOS keeps screen.width at the portrait value in landscape, so the
+      // shorter edge would shrink a landscape game to ~60%.)
+      var edge = Math.max((screen && screen.width) || 0, (screen && screen.height) || 0) || Infinity;
+      var vv = window.visualViewport;
+      var vw = Math.min(window.innerWidth, (vv && vv.width) || Infinity, edge);
+      var vh = Math.min(window.innerHeight, (vv && vv.height) || Infinity, edge);
+      var s = Math.min(vw / w, vh / h, 1);
+      GG.fit = { el: el, scale: s, w: w, h: h, vw: vw, vh: vh };
+      if (s > 0.999) return;
+      el.style.transformOrigin = '0 0';
+      el.style.transform = 'scale(' + s + ')';
+      el.style.marginRight = (w * s - lw) + 'px';   // margin box = visual width
+      el.style.marginBottom = (h * s - lh) + 'px';
+    }
+    apply();
+    window.addEventListener('resize', apply);
+    window.addEventListener('orientationchange', function () { setTimeout(apply, 60); });
+    // games that size their canvas after load
+    setTimeout(apply, 250); setTimeout(apply, 1200);
+  }
+  // ---- 11. Landscape gate (2026-10-05) --------------------------------------
+  // <html data-gg-landscape>: the game is built wide (canvas aspect >= 1.3) and
+  // renders at a third of a portrait phone. On a coarse pointer in portrait,
+  // ask for a sideways phone; "play small anyway" is one tap and remembered
+  // for the session. Nothing is shown on desktops or in landscape.
+  function mountRotateGate() {
+    if (!coarse) return;
+    var gate = document.createElement('div');
+    gate.id = 'gg-rotate';
+    gate.innerHTML = '<div class="gg-rotate-phone" aria-hidden="true"></div><strong>TURN YOUR PHONE SIDEWAYS</strong>' +
+      '<p>This one is built wide. In portrait it plays at a third of the screen.</p>' +
+      '<button type="button" class="gg-rotate-skip">PLAY SMALL ANYWAY</button>';
+    document.body.appendChild(gate);
+    var skipped = false;
+    try { skipped = sessionStorage.getItem('gg-rotate-skip:' + location.pathname) === '1'; } catch (e) {}
+    function update() {
+      var portrait = window.innerHeight > window.innerWidth;
+      gate.classList.toggle('on', portrait && !skipped);
+    }
+    gate.querySelector('.gg-rotate-skip').addEventListener('click', function () {
+      skipped = true; try { sessionStorage.setItem('gg-rotate-skip:' + location.pathname, '1'); } catch (e) {}
+      update();
+    });
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', function () { setTimeout(update, 80); });
+    update();
+  }
+  // ---- 12. Taps become clicks; holds stay in the game (2026-10-05) ---------
+  // iOS Safari (and Chrome) withhold the synthesized click when a page calls
+  // preventDefault() on touchstart/touchend. 23 games do exactly that on
+  // their canvas to stop scrolling and zooming, then run their menus from
+  // 'click' handlers (upgrade cards, START, difficulty) - so on a phone those
+  // taps did nothing (EndBird: title -> upgrade screen, then stuck). When a
+  // short, still touch ends with its default prevented, dispatch the click
+  // the browser withheld. One synthetic click per touch, never for native
+  // controls, which get their own clicks.
+  function tapToClick() {
+    var start = null;
+    document.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1) { start = null; return; }
+      var t = e.touches[0];
+      start = { x: t.clientX, y: t.clientY, at: performance.now(), target: e.target };
+    }, { capture: true, passive: true });
+    document.addEventListener('touchend', function (e) {
+      var s = start; start = null;
+      if (!s || !e.defaultPrevented || e.touches.length) return;
+      var t = e.changedTouches && e.changedTouches[0]; if (!t) return;
+      if (performance.now() - s.at > 450 || Math.hypot(t.clientX - s.x, t.clientY - s.y) > 12) return;
+      var el = e.target && e.target.nodeType === 1 ? e.target : document.elementFromPoint(t.clientX, t.clientY);
+      if (!el || (el.closest && el.closest('button, a, input, select, textarea, label, [role=button], .mctl-overlay, #gg-pad, #gg-rotate'))) return;
+      var ev = new MouseEvent('click', { bubbles: true, cancelable: true, view: window, clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY, button: 0 });
+      ev.ggSynthetic = true;
+      el.dispatchEvent(ev);
+    }, { capture: false, passive: true });
+    // A held finger is play, not a request for a context menu.
+    document.addEventListener('contextmenu', function (e) {
+      if (e.target && e.target.closest && e.target.closest('input, textarea, a[href^="http"]')) return;
+      e.preventDefault();
+    });
+  }
+  function boot() {
+    if (native) {
+      document.documentElement.classList.add('gg-native');
+      // Storefront copy written for the web ("no installs") reads wrong inside
+      // the installed app; the bundle is local, so "play offline" is true.
+      document.querySelectorAll('p, h2, div, span').forEach(function (el) {
+        if (el.children.length === 0 && /^Free Browser Games/.test(el.textContent.trim())) el.textContent = 'Free games. Play offline.';
+      });
+      document.querySelectorAll('.header-stat').forEach(function (st) { if (/installs needed/i.test(st.textContent)) st.style.display = 'none'; });
+    }
+    var spec = document.documentElement.getAttribute('data-gg-keypad');
+    if (spec) mountKeypad(spec);
+    var fit = document.documentElement.getAttribute('data-gg-fit');
+    if (fit) mountFit(fit);
+    if (document.documentElement.hasAttribute('data-gg-landscape')) mountRotateGate();
+    if (coarse && document.documentElement.hasAttribute('data-gg-game')) tapToClick();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+
+</script>
+<meta name="description" content="Play EndBird — Eat, Grow, Explode free in your browser on GameGob. Works on phones, no install.">
+</head>
+<body>
+<canvas id="c"></canvas>
+<button id="endbird-sound" type="button" aria-label="Mute sound" aria-pressed="false" title="Mute sound (M)">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z"/><path class="sound-on" d="M16 8a6 6 0 0 1 0 8M19 5a10 10 0 0 1 0 14"/><path class="sound-off" d="m16 9 6 6m0-6-6 6"/></svg>
+</button>
+<script>
+/* EndBird synthesized sound palette (2026-10-06).
+ * Angle: feel and juice (bass thump + pitched tail on eat, crunchy explode with a low-pass
+ * sweep, brass tier-up fanfare, Vampire Survivors style pickup cascade).
+ * Pure WebAudio: oscillators, noise buffers, biquad filters, gain envelopes. No audio files,
+ * no CDN, no dependency. Every event takes an explicit start time t, so the same code renders
+ * in an OfflineAudioContext for measurement and runs live with t = ctx.currentTime. */
+(function (root) {
+'use strict';
+
+const PENT = [0, 2, 4, 7, 9, 12, 14, 16];          // major pentatonic, 1.5 octaves (combo ladder)
+const PENT5 = [0, 2, 4, 7, 9];
+const keyPc = tier => (2 + 7 * tier) % 12;            // circle of fifths: D A E B F# C# G# D# A# F
+const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+const rootIn = (tier, lo) => { let f = hz(60 + keyPc(tier)); while (f < lo) f *= 2; while (f >= lo * 2) f /= 2; return f; };
+const st = (f, s) => f * Math.pow(2, s / 12);
+const ct = t => Math.max(0, Math.min(9, t | 0));
+
+// Per-tier ambience. r = tier key root folded into [98,196) Hz; voices are multiples of r.
+const AMB = [
+  { name: 'Quantum', level: 0.12, lp: 2600, q: 0.7, lpLfo: [0.3, 400], vib: [5.5, 8], trem: [9, 0.3],
+    voices: [{ w: 'triangle', m: 2, g: 0.4 }, { w: 'sine', m: 4, g: 0.5 }, { w: 'sine', m: 6, g: 0.3 }],
+    noise: { f: 'highpass', hz: 5000, q: 0.7, g: 0.04 },
+    pings: { kind: 'blip', rate: 3, lo: 1046, g: 0.4, dec: 0.025, echo: 0.5 }, echo: [0.12, 0.25] },
+  { name: 'Atomic', level: 0.084, lp: 1800, q: 1, lpLfo: [0.25, 500],
+    voices: [{ w: 'triangle', m: 2, g: 0.4 }, { w: 'sine', m: 2, g: 0.3, d: 7 }, { w: 'sine', m: 3, g: 0.4 }, { w: 'sine', m: 4, g: 0.2 }, { w: 'sine', m: 5, g: 0.15 }],
+    pings: { kind: 'blip', rate: 1.2, lo: 880, g: 0.35, dec: 0.06, echo: 0.4 }, echo: [0.16, 0.3] },
+  { name: 'Micro', level: 0.093, lp: 1400, q: 0.7, lpLfo: [0.18, 300],
+    voices: [{ w: 'sine', m: 2, g: 0.5 }, { w: 'triangle', m: 3, g: 0.25 }],
+    noise: { f: 'lowpass', hz: 900, q: 0.7, g: 0.12, am: [0.6, 0.5] },
+    pings: { kind: 'bubble', rate: 1.5, lo: 400, g: 0.35, dec: 0.05, echo: 0.3 }, echo: [0.2, 0.3] },
+  { name: 'Insect', level: 0.186, lp: 1600, q: 0.7, lpLfo: [0.2, 300],
+    voices: [{ w: 'sawtooth', m: 2, g: 0.18 }, { w: 'triangle', m: 3, g: 0.3 }],
+    buzz: { m: 4, hz: 1200, q: 3, g: 0.06, am: [23, 0.6] },
+    pings: { kind: 'chitter', rate: 2, lo: 1500, g: 0.15, dec: 0.015, echo: 0.2 }, echo: [0.2, 0.25] },
+  { name: 'Animal', level: 0.094, lp: 1200, q: 0.7, lpLfo: [0.12, 400], vib: [0.12, 4],
+    voices: [{ w: 'triangle', m: 1, g: 0.25 }, { w: 'triangle', m: 1.5, g: 0.35 }, { w: 'sine', m: 2, g: 0.4 }, { w: 'sine', m: 3, g: 0.15 }],
+    pings: { kind: 'chirp', rate: 0.4, lo: 1320, g: 0.2, dec: 0.06, echo: 0.4 }, echo: [0.24, 0.3] },
+  { name: 'Mega', level: 0.186, lp: 800, q: 2, lpLfo: [0.1, 200],
+    voices: [{ w: 'sawtooth', m: 1, g: 0.3 }, { w: 'sawtooth', m: 1.5, g: 0.22 }, { w: 'triangle', m: 2, g: 0.25 }],
+    pings: { kind: 'stomp', period: 1.6, g: 0.6 }, echo: [0.28, 0.3] },
+  { name: 'Planetary', level: 0.094, lp: 1300, q: 0.7, lpLfo: [0.07, 300],
+    voices: [{ w: 'sine', m: 2, g: 0.3 }, { w: 'sine', m: 3, g: 0.4 }, { w: 'triangle', m: 4, g: 0.25 }],
+    noise: { f: 'bandpass', hz: 500, q: 2, g: 0.25, sweep: [0.08, 300] }, echo: [0.32, 0.35] },
+  { name: 'Stellar', level: 0.31, lp: 1500, q: 1.5, lpLfo: [0.15, 500], vib: [0.3, 6],
+    voices: [{ w: 'sawtooth', m: 2, g: 0.18 }, { w: 'sawtooth', m: 3, g: 0.14, d: 5 }, { w: 'sawtooth', m: 5, g: 0.07, d: -5 }],
+    noise: { f: 'highpass', hz: 4000, q: 0.7, g: 0.02 },
+    pings: { kind: 'bell', rate: 0.5, lo: 1046, g: 0.3, dec: 0.5, echo: 0.6 }, echo: [0.38, 0.38] },
+  { name: 'Galactic', level: 0.25, lp: 900, q: 6, lpLfo: [0.05, 700],
+    voices: [{ w: 'sawtooth', m: 2, g: 0.2 }, { w: 'sawtooth', m: 3, g: 0.16 }, { w: 'triangle', m: 4, g: 0.15 }],
+    pings: { kind: 'bell', rate: 0.6, lo: 1046, g: 0.3, dec: 0.6, echo: 0.7 }, echo: [0.42, 0.42] },
+  { name: 'Cosmic', level: 0.122, lp: 1800, q: 0.7, lpLfo: [0.04, 600], ampLfo: [0.07, 0.11, 0.13, 0.17, 0.05],
+    voices: [{ w: 'triangle', m: 1, g: 0.35 }, { w: 'sine', m: 2, g: 0.3 }, { w: 'sine', m: 3, g: 0.22 }, { w: 'sine', m: 4, g: 0.15 }, { w: 'sawtooth', m: 0.5, g: 0.15 }],
+    noise: { f: 'highpass', hz: 6000, q: 0.7, g: 0.015 },
+    pings: { kind: 'bell', rate: 0.8, lo: 1046, g: 0.3, dec: 0.7, echo: 0.8 }, echo: [0.45, 0.45] },
+];
+
+function createEndBirdAudio(ctx, opts) {
+  opts = opts || {};
+  const SR = ctx.sampleRate;
+  const A = {};
+  const S = { started: 0, kinds: {}, dropped: {}, stolen: 0, maxVoices: 0, nodes: 0, unlockTimes: [] };
+
+  // ---- output graph: separate buses -> master, with headroom in the voice levels ----
+  const master = ctx.createGain(); master.gain.value = opts.master != null ? opts.master : 0.25;
+  const dest = opts.destination || ctx.destination;
+  master.connect(dest);
+  const mkBus = n => { const g = ctx.createGain(); g.connect(master); g._name = n; return g; };
+  const pickBus = mkBus('pick'), fxBus = mkBus('fx'), uiBus = mkBus('ui'), ambBus = mkBus('amb');
+  const echoIn = ctx.createGain();
+  let echoDelay = ctx.createDelay(1), echoLp = ctx.createBiquadFilter(), echoFb = ctx.createGain();
+  echoDelay.delayTime.value = 0.12; echoLp.type = 'lowpass'; echoLp.frequency.value = 2200; echoFb.gain.value = 0.25;
+  echoIn.connect(echoDelay); echoDelay.connect(echoLp); echoLp.connect(echoFb); echoFb.connect(echoDelay); echoLp.connect(ambBus);
+
+  // ---- noise buffers (built once) ----
+  const white = ctx.createBuffer(1, SR, SR);
+  { const d = white.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const crush = ctx.createBuffer(1, SR, SR);   // NES-style 15-bit LFSR, sample-and-hold at ~9 kHz, two levels
+  { const d = crush.getChannelData(0); let r = 0x4001, v = 0.7; const hold = Math.max(1, Math.round(SR / 9000));
+    for (let i = 0; i < d.length; i++) { if (i % hold === 0) { const b = (r ^ (r >> 1)) & 1; r = (r >> 1) | (b << 14); v = (r & 1) ? 0.7 : -0.7; } d[i] = v; } }
+
+  // ---- node helpers ----
+  const G = (to, v) => { const g = ctx.createGain(); g.gain.value = v == null ? 1 : v; if (to) g.connect(to); S.nodes++; return g; };
+  const F = (type, f, q, to) => { const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; if (q != null) b.Q.value = q; if (to) b.connect(to); S.nodes++; return b; };
+  const track = (v, s, stop) => { if (!v) return; v.srcs.push(s); if (stop > v.stopMax) { v.stopMax = stop; v.lastSrc = s; } };
+  const O = (type, f, t, stop, to, v) => { const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, t); if (to) o.connect(to); o.start(t); o.stop(stop); S.nodes++; track(v, o, stop); return o; };
+  const N = (buf, t, stop, to, v) => { const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; if (to) s.connect(to); s.start(t, Math.random() * 0.8); s.stop(stop); S.nodes++; track(v, s, stop); return s; };
+  const env = (p, t, peak, atk, dec) => { p.setValueAtTime(0, t); p.linearRampToValueAtTime(peak, t + atk); p.exponentialRampToValueAtTime(0.0001, t + atk + dec); return t + atk + dec; };
+
+  // ---- voice manager: per-event gap + cap, global cap with priority stealing ----
+  const PRIO = { death: 6, victory: 6, tierUp: 5, explode: 5, hurt: 4, unlock: 3, ready: 3, beat: 3, sting: 2, grow: 2, bonk: 2, deny: 2, eat: 1, click: 1 };
+  const CAP = { death: 1, victory: 1, tierUp: 1, explode: 1, hurt: 1, unlock: 3, ready: 1, beat: 1, sting: 1, grow: 2, bonk: 2, deny: 1, eat: 3, click: 1 };
+  const GAP = { death: 1, victory: 1, tierUp: 0.6, explode: 0.25, hurt: 0.3, unlock: 0.2, ready: 0.5, beat: 0.5, sting: 0, grow: 0.08, bonk: 0.07, deny: 0.15, eat: 0.06, click: 0.12 };
+  const MAX_VOICES = 14;
+  const voices = [], last = {};
+  const drop = k => { S.dropped[k] = (S.dropped[k] || 0) + 1; return null; };
+  const live = t => {
+    // Scheduling a future reward must not forget a cue that is playing now.
+    for (let i = voices.length - 1; i >= 0; i--) if (voices[i].end <= ctx.currentTime) voices.splice(i, 1);
+    return voices.filter(v => !v.stolen && v.start <= t && v.end > t);
+  };
+  const steal = (v, t) => {
+    if (v.stolen) return; v.stolen = true; S.stolen++;
+    v.out.gain.setValueAtTime(1, t); v.out.gain.setTargetAtTime(0, t, 0.006);   // separate steal gain: click-free in every engine
+    v.srcs.forEach(s => { try { s.stop(t + 0.05); } catch (e) {} }); v.end = t + 0.05;
+  };
+  const begin = (kind, t, bus) => {
+    if (last[kind] != null && Math.abs(t - last[kind]) < GAP[kind]) return drop(kind);
+    let act = live(t);
+    const same = act.filter(v => v.kind === kind);
+    if (same.length >= CAP[kind]) { steal(same[0], t); act = live(t); }
+    if (act.length >= MAX_VOICES) {
+      let vic = null;
+      for (const v of act) if (!vic || PRIO[v.kind] < PRIO[vic.kind] || (PRIO[v.kind] === PRIO[vic.kind] && v.start < vic.start)) vic = v;
+      if (PRIO[vic.kind] > PRIO[kind]) return drop(kind);
+      steal(vic, t);
+    }
+    last[kind] = t;
+    const v = { kind, start: t, end: t + 3, out: G(bus), srcs: [], stopMax: 0, lastSrc: null, stolen: false };
+    voices.push(v); S.started++; S.kinds[kind] = (S.kinds[kind] || 0) + 1;
+    S.maxVoices = Math.max(S.maxVoices, live(t).length);
+    return v;
+  };
+  const finish = (v, end) => {
+    v.end = end;
+    if (v.lastSrc) v.lastSrc.onended = () => {
+      v.srcs.forEach(s => { try { s.disconnect(); } catch (e) {} });
+      try { v.out.disconnect(); } catch (e) {}
+    };
+  };
+
+  // ---- ducking (depth = gain multiplier); overlapping ducks keep the deeper depth and the later release ----
+  const ducks = {};
+  const duck = (bus, t, depth, hold, rel) => {
+    const s = ducks[bus._name] || { depth: 1, until: -1 };
+    const active = t < s.until;
+    const d = active ? Math.min(depth, s.depth) : depth;
+    const until = Math.max(t + hold, active ? s.until : -1);
+    bus.gain.cancelScheduledValues(t);
+    bus.gain.setTargetAtTime(d, t, 0.012);
+    bus.gain.setTargetAtTime(1, until, rel);
+    ducks[bus._name] = { depth: d, until };
+  };
+
+  // ---- building blocks ----
+  // thump: sine pitch-drop plus a triangle an octave up (the part a phone speaker can play)
+  const thump = (v, t, f0, f1, sweep, dec, peak, harm) => {
+    const g = G(v.out); env(g.gain, t, peak, 0.002, dec);
+    const o1 = O('sine', f0, t, t + dec + 0.03, g, v); o1.frequency.exponentialRampToValueAtTime(f1, t + sweep);
+    const o2 = O('triangle', f0 * 2, t, t + dec + 0.03, G(g, harm == null ? 0.55 : harm), v); o2.frequency.exponentialRampToValueAtTime(f1 * 2, t + sweep);
+    return t + dec + 0.03;
+  };
+  const tick = (v, t, f, q, peak, dec, type) => { const g = G(v.out); env(g.gain, t, peak, 0.0005, dec); N(white, t, t + dec + 0.01, F(type || 'bandpass', f, q, g), v); return t + dec + 0.01; };
+  const tone = (v, t, type, f, peak, atk, dec, lpf) => { const g = G(v.out); env(g.gain, t, peak, atk, dec); O(type, f, t, t + atk + dec + 0.02, lpf ? F('lowpass', lpf, 0.7, g) : g, v); return t + atk + dec + 0.02; };
+  // brass: two sawtooths +-7 cents through a swelling low-pass; sustained notes get delayed vibrato
+  const brass = (v, f, at, dur, peak, sustain) => {
+    const g = G(v.out); g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(peak, at + 0.012);
+    let end;
+    if (sustain) { g.gain.setTargetAtTime(peak * 0.75, at + 0.012, 0.1); g.gain.setTargetAtTime(0, at + dur, 0.12); end = at + dur + 0.7; }
+    else { g.gain.exponentialRampToValueAtTime(0.0001, at + 0.012 + dur); end = at + dur + 0.05; }
+    const lp = F('lowpass', 600, 1, g); lp.frequency.setValueAtTime(600, at); lp.frequency.exponentialRampToValueAtTime(3500, at + 0.03); lp.frequency.exponentialRampToValueAtTime(1400, at + 0.35);
+    let vib = null;
+    if (sustain) { vib = G(null, 0); vib.gain.setValueAtTime(0, at); vib.gain.linearRampToValueAtTime(12, at + 0.25); O('sine', 5.5, at, end, vib, v); }
+    [-7, 7].forEach(c => { const o = O('sawtooth', f, at, end, lp, v); o.detune.setValueAtTime(c, at); if (vib) vib.connect(o.detune); });
+    return end;
+  };
+
+  // ---- ambience ----
+  let amb = null, heat = 0, heatT = 0, schedUntil = 0;
+  const ambienceBeds = new Set(), ambiencePings = new Set();
+  const buildAmb = (tier, mode, t) => {
+    const P = AMB[tier], r = rootIn(tier, 98), menu = mode === 'menu';
+    const a = { tier, mode, P, r, level: P.level * (menu ? 0.5 : 1), lpBase: P.lp * (menu ? 0.6 : 1), srcs: [] };
+    ambienceBeds.add(a);
+    a.g = G(ambBus, 0); a.g.gain.setValueAtTime(0, t); a.g.gain.setTargetAtTime(a.level, t + 0.05, 0.5);
+    a.lp = F('lowpass', a.lpBase, P.q, a.g); a.lp.frequency.setValueAtTime(a.lpBase, t);
+    const mix = G(a.lp, 1);
+    const persist = (type, f, to) => { const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, t); if (to) o.connect(to); o.start(t); a.srcs.push(o); S.nodes++; return o; };
+    const lfo = (rate, depth, param) => { const g = G(null, depth); persist('sine', rate, g); g.connect(param); };
+    if (P.lpLfo) lfo(P.lpLfo[0], P.lpLfo[1] * (menu ? 0.6 : 1), a.lp.frequency);
+    let vib = null; if (P.vib) { vib = G(null, P.vib[1]); persist('sine', P.vib[0], vib); }
+    if (P.trem) { mix.gain.value = 1 - P.trem[1]; lfo(P.trem[0], P.trem[1], mix.gain); }
+    P.voices.forEach((vc, i) => {
+      const vg = G(mix, vc.g);
+      if (P.ampLfo) { vg.gain.value = vc.g * 0.7; lfo(P.ampLfo[i % P.ampLfo.length], vc.g * 0.3, vg.gain); }
+      const o = persist(vc.w, r * vc.m, vg); if (vc.d) o.detune.setValueAtTime(vc.d, t); if (vib) vib.connect(o.detune);
+    });
+    if (P.noise) {
+      const n = P.noise, ng = G(a.g, n.g);
+      if (n.am) { ng.gain.value = n.g * (1 - n.am[1] / 2); lfo(n.am[0], n.g * n.am[1] / 2, ng.gain); }
+      const nf = F(n.f, n.hz, n.q, ng); if (n.sweep) lfo(n.sweep[0], n.sweep[1], nf.frequency);
+      const s = ctx.createBufferSource(); s.buffer = white; s.loop = true; s.connect(nf); s.start(t, Math.random() * 0.8); a.srcs.push(s); S.nodes++;
+    }
+    if (P.buzz) { const z = P.buzz, zg = G(a.g, z.g * (1 - z.am[1] / 2)); lfo(z.am[0], z.g * z.am[1] / 2, zg.gain); persist('sawtooth', r * z.m, F('bandpass', z.hz, z.q, zg)); }
+    a.ping = G(a.g, 1);
+    if (P.pings && P.pings.echo) { a.send = G(echoIn, P.pings.echo * a.level); a.ping.connect(a.send); }
+    echoDelay.delayTime.setTargetAtTime(P.echo[0], t, 0.3); echoFb.gain.setTargetAtTime(P.echo[1], t, 0.3);
+    return a;
+  };
+  const dropAmb = (a, t, tau) => {
+    if (!a) return;
+    a.g.gain.cancelScheduledValues(t); a.g.gain.setTargetAtTime(0, t, tau);
+    const end = t + tau * 7;
+    a.srcs.forEach(s => { try { s.stop(end); } catch (e) {} });
+    if (a.srcs.length) a.srcs[a.srcs.length - 1].onended = () => {
+      a.srcs.forEach(s => { try { s.disconnect(); } catch (e) {} });
+      a.g.disconnect(); if (a.send) a.send.disconnect();
+      ambienceBeds.delete(a);
+    };
+    if (a.send) a.send.gain.setTargetAtTime(0, t, tau);
+  };
+  A.setAmbience = (tier, mode, t) => {
+    if (mode === 'off') { dropAmb(amb, t, 0.4); amb = null; return; }
+    tier = ct(tier);
+    if (amb && amb.tier === tier) {
+      if (amb.mode === mode) return;
+      const menu = mode === 'menu';
+      amb.mode = mode; amb.level = amb.P.level * (menu ? 0.5 : 1); amb.lpBase = amb.P.lp * (menu ? 0.6 : 1);
+      amb.g.gain.cancelScheduledValues(t); amb.g.gain.setTargetAtTime(amb.level, t, 0.25);
+      amb.lp.frequency.cancelScheduledValues(t); amb.lp.frequency.setTargetAtTime(amb.lpBase, t, 0.25);
+      return;
+    }
+    dropAmb(amb, t, 0.3);
+    amb = buildAmb(tier, mode, t + 0.4);
+    schedUntil = t + 0.4;
+  };
+  const ping = (a, P, t) => {
+    const v = { out: G(a.ping), srcs: [], stopMax: 0, lastSrc: null };
+    ambiencePings.add(v);
+    const pingOsc = (type, f, at, end, to) => O(type, f, at, end, to, v);
+    const base = rootIn(a.tier, P.lo || 440);
+    let f = st(base, PENT5[(Math.random() * 5) | 0]);
+    if (P.kind === 'blip' && f < 1600 && Math.random() < 0.3) f *= 2;
+    const g = G(v.out);
+    if (P.kind === 'blip') { env(g.gain, t, P.g, 0.002, P.dec); pingOsc('sine', f, t, t + P.dec + 0.01, g); }
+    else if (P.kind === 'bubble') { env(g.gain, t, P.g, 0.004, P.dec); const o = pingOsc('sine', f, t, t + P.dec + 0.01, g); o.frequency.exponentialRampToValueAtTime(f * 1.8, t + 0.04); }
+    else if (P.kind === 'chitter') { for (let i = 0; i < 3; i++) { const gi = G(v.out); env(gi.gain, t + i * 0.03, P.g, 0.001, P.dec); pingOsc('square', f * (1 + i * 0.06), t + i * 0.03, t + i * 0.03 + P.dec + 0.01, F('lowpass', 3500, 0.7, gi)); } }
+    else if (P.kind === 'chirp') { [0, 0.09].forEach(dt => { const gi = G(v.out); env(gi.gain, t + dt, P.g, 0.005, P.dec); const o = pingOsc('sine', f, t + dt, t + dt + P.dec + 0.01, gi); o.frequency.exponentialRampToValueAtTime(f * 1.25, t + dt + P.dec * 0.8); }); }
+    else if (P.kind === 'bell') { env(g.gain, t, P.g, 0.002, P.dec); pingOsc('triangle', f, t, t + P.dec + 0.01, g); const h = G(v.out); env(h.gain, t, P.g * 0.3, 0.001, P.dec * 0.25); pingOsc('sine', f * 4, t, t + P.dec * 0.25 + 0.01, h); }
+    else if (P.kind === 'stomp') { env(g.gain, t, P.g, 0.003, 0.25); const o = pingOsc('sine', a.r * 2, t, t + 0.27, g); o.frequency.exponentialRampToValueAtTime(a.r, t + 0.08); const o2 = pingOsc('triangle', a.r * 4, t, t + 0.27, G(g, 0.4)); o2.frequency.exponentialRampToValueAtTime(a.r * 2, t + 0.08); }
+    finish(v, v.stopMax);
+    const cleanup = v.lastSrc.onended;
+    v.lastSrc.onended = () => { cleanup(); ambiencePings.delete(v); };
+  };
+  // lookahead scheduler for ambient pings; call every ~100 ms with now = ctx.currentTime
+  A.tick = now => {
+    if (!amb || !amb.P.pings) return;
+    const P = amb.P.pings, horizon = now + 0.3;
+    if (schedUntil < now) schedUntil = now;
+    if (P.kind === 'stomp') {
+      if (amb.nextStomp == null) amb.nextStomp = schedUntil;
+      if (amb.nextStomp < now) amb.nextStomp = now;
+      while (amb.nextStomp < horizon) { ping(amb, P, amb.nextStomp); amb.nextStomp += P.period; }
+      schedUntil = horizon; return;
+    }
+    let t = schedUntil;
+    for (;;) { t += -Math.log(1 - Math.random()) / P.rate; if (t >= horizon) break; ping(amb, P, t); }
+    schedUntil = horizon;
+  };
+  // combo heat: every eat opens the ambience low-pass a little; it relaxes back with a 1.5 s time constant
+  const bumpHeat = t => {
+    heat = heat * Math.exp(-Math.max(0, t - heatT) / 1.5) + 0.08; if (heat > 1) heat = 1; heatT = t;
+    if (!amb) return;
+    const p = amb.lp.frequency; p.cancelScheduledValues(t);
+    p.setTargetAtTime(amb.lpBase * (1 + 1.2 * heat), t, 0.05); p.setTargetAtTime(amb.lpBase, t + 0.2, 1.5);
+    const q = amb.g.gain; q.cancelScheduledValues(t);
+    q.setTargetAtTime(amb.level * (1 + 0.4 * heat), t, 0.05); q.setTargetAtTime(amb.level, t + 0.2, 1.5);
+  };
+
+  // ---- combo ladder + milestone stings ("combo tiers") ----
+  let comboHigh = 0, lastEatT = -9;
+  const sting = (level, tier, t) => {
+    const v = begin('sting', t, pickBus); if (!v) return;
+    const b = rootIn(tier, 440); let end = t;
+    if (level === 1) { [7, 12].forEach((s, i) => { end = Math.max(end, tone(v, t + i * 0.045, 'square', st(b, s), 0.16, 0.003, 0.1, 3500)); }); }
+    else {
+      const lift = level === 3 ? 7 : 0, notes = level >= 4 ? [0, 4, 7, 12, 16] : [0, 4, 7, 12];
+      const oct = st(b, notes[notes.length - 1] + lift) > 2400 ? 0.5 : 1;
+      notes.forEach((s, i) => { end = Math.max(end, tone(v, t + i * 0.035, 'square', st(b, s + lift) * oct, 0.15, 0.003, 0.11, 3500)); });
+      const w = G(v.out); env(w.gain, t, 0.08, 0.01, 0.12); const o = O('sine', 600, t, t + 0.15, w, v); o.frequency.exponentialRampToValueAtTime(1500, t + 0.12);
+      end = Math.max(end, tick(v, t + 0.05, 6000, 0.7, [0, 0, 0.05, 0.07, 0.09][level], [0, 0, 0.18, 0.25, 0.35][level], 'highpass'));
+      if (level >= 4) end = Math.max(end, tone(v, t, 'square', b / 2, 0.12, 0.004, 0.25, 1800));
+    }
+    finish(v, end);
+  };
+  A.combo = (n, tier, t) => {
+    n = Math.max(1, n | 0); tier = ct(tier);
+    if (n < comboHigh) comboHigh = 0;                      // the chain broke and restarted
+    const idx = n <= 8 ? n - 1 : 4 + ((n - 9) % 4);        // climb 8 notes, then roll the top four
+    const freq = rootIn(tier, 440) * Math.pow(2, PENT[idx] / 12);
+    let level = 0;
+    [[5, 1], [10, 2], [25, 3]].forEach(([m, L]) => { if (comboHigh < m && n >= m) level = Math.max(level, L); });
+    if (n >= 50 && Math.floor(n / 50) > Math.floor(comboHigh / 50)) level = 4;
+    comboHigh = Math.max(comboHigh, n);
+    if (level && t != null) sting(level, tier, t + 0.04);
+    return { freq, idx, level };
+  };
+
+  // ---- events ----
+  A.eat = (n, tier, t) => {
+    tier = ct(tier);
+    const c = A.combo(n, tier, t);                         // milestones fire even when this eat is coalesced
+    bumpHeat(t);
+    const gap = t - lastEatT;
+    const v = begin('eat', t, pickBus); if (!v) return c;
+    lastEatT = t;
+    const k = tier / 9, jit = 1 + (Math.random() - 0.5) * 0.06, weight = gap < 0.12 ? 0.7 : 1;
+    let end = thump(v, t, (340 - 140 * k) * jit, 120 - 50 * k, 0.04 + 0.035 * k, 0.09 + 0.08 * k, 0.55 * weight);
+    end = Math.max(end, tick(v, t, 2500, 1.2, 0.18, 0.012));
+    const tt = t + 0.012, tdec = 0.09 + Math.min(0.04, 0.005 * n);
+    const taper = Math.pow(440 / c.freq, 0.35) * (1 - 0.25 * Math.min(1, Math.max(0, n - 10) / 30));
+    const g = G(v.out); env(g.gain, tt, 0.3 * taper * jit, 0.003, tdec);
+    const o = O('square', c.freq * 0.94, tt, tt + tdec + 0.03, F('lowpass', Math.min(3200, c.freq * 3), 0.7, g), v);
+    o.frequency.exponentialRampToValueAtTime(c.freq, tt + 0.015);
+    finish(v, Math.max(end, tt + tdec + 0.03));
+    return c;
+  };
+  A.grow = (tier, t) => {
+    tier = ct(tier);
+    const v = begin('grow', t, pickBus); if (!v) return false;
+    const k = tier / 9;
+    let end = thump(v, t, 300 - 120 * k, 90 - 25 * k, 0.06 + 0.03 * k, 0.2 + 0.08 * k, 0.7);
+    const ng = G(v.out); env(ng.gain, t, 0.24, 0.001, 0.09);
+    const bp = F('bandpass', 1800, 0.9, ng); bp.frequency.setValueAtTime(1800, t); bp.frequency.exponentialRampToValueAtTime(500, t + 0.08);
+    N(crush, t, t + 0.11, bp, v);
+    const r = rootIn(tier, 220);
+    const wg = G(v.out); wg.gain.setValueAtTime(0, t + 0.03); wg.gain.linearRampToValueAtTime(0.2, t + 0.05); wg.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+    const o = O('triangle', r, t + 0.03, t + 0.28, F('lowpass', 2000, 0.7, wg), v); o.frequency.exponentialRampToValueAtTime(r * 3, t + 0.21);
+    end = Math.max(end, tone(v, t + 0.2, 'triangle', st(rootIn(tier, 440), 7), 0.18, 0.003, 0.16));
+    finish(v, Math.max(end, t + 0.28)); return true;
+  };
+  A.hurt = (tier, t, lowHp) => {
+    const v = begin('hurt', t, fxBus); if (!v) return false;
+    duck(ambBus, t, 0.5, 0.25, 0.2); duck(pickBus, t, 0.5, 0.15, 0.1);
+    const g = G(v.out); env(g.gain, t, 0.5, 0.003, 0.2);
+    const o = O('square', 240, t, t + 0.23, F('lowpass', 1200, 4, g), v); o.frequency.exponentialRampToValueAtTime(90, t + 0.14);
+    const ng = G(v.out); env(ng.gain, t, 0.3, 0.001, 0.06); N(crush, t, t + 0.08, F('bandpass', 700, 1, ng), v);
+    let end = t + 0.23;
+    if (lowHp) end = Math.max(end, tone(v, t + 0.2, 'square', 990, 0.12, 0.002, 0.05, 3000), tone(v, t + 0.29, 'square', 740, 0.12, 0.002, 0.07, 3000));
+    finish(v, end); return true;
+  };
+  A.bonk = (tier, t) => {
+    const v = begin('bonk', t, pickBus); if (!v) return false;
+    const g = G(v.out); env(g.gain, t, 0.45, 0.002, 0.07);
+    const o = O('triangle', 520, t, t + 0.09, g, v); o.frequency.exponentialRampToValueAtTime(260, t + 0.04);
+    finish(v, Math.max(t + 0.09, tick(v, t, 1800, 1.5, 0.12, 0.01))); return true;
+  };
+  A.deny = t => {
+    const v = begin('deny', t, uiBus); if (!v) return false;
+    let end = tone(v, t, 'square', 233, 0.22, 0.003, 0.07, 1400);
+    end = Math.max(end, tone(v, t + 0.1, 'square', 220, 0.22, 0.003, 0.09, 1400));
+    finish(v, end); return true;
+  };
+  A.click = t => {
+    const v = begin('click', t, uiBus); if (!v) return false;
+    const g = G(v.out); env(g.gain, t, 0.3, 0.001, 0.035);
+    const o = O('sine', 1400, t, t + 0.045, g, v); o.frequency.exponentialRampToValueAtTime(900, t + 0.025);
+    finish(v, Math.max(t + 0.045, tick(v, t, 3000, 0.7, 0.1, 0.006, 'highpass'))); return true;
+  };
+  A.explode = (tier, t) => {
+    const v = begin('explode', t, fxBus); if (!v) return false;
+    duck(ambBus, t, 0.2, 0.45, 0.5); duck(pickBus, t, 0.5, 0.3, 0.15);
+    let end = thump(v, t, 180, 60, 0.3, 0.6, 0.8);
+    const cg = G(v.out); cg.gain.setValueAtTime(0, t); cg.gain.linearRampToValueAtTime(0.55, t + 0.001); cg.gain.setValueAtTime(0.55, t + 0.04); cg.gain.exponentialRampToValueAtTime(0.0001, t + 1.0);
+    const lp = F('lowpass', 6000, 1.5, cg); lp.frequency.setValueAtTime(6000, t); lp.frequency.exponentialRampToValueAtTime(180, t + 0.8);
+    const s = N(crush, t, t + 1.02, lp, v); s.playbackRate.setValueAtTime(1, t); s.playbackRate.exponentialRampToValueAtTime(0.25, t + 0.7);
+    end = Math.max(end, tick(v, t, 2000, 0.7, 0.4, 0.025, 'highpass'));
+    for (let i = 0; i < 8; i++) tick(v, t + 0.15 + Math.random() * 0.75, 1500 + Math.random() * 2500, 2, 0.12 - i * 0.01, 0.008);
+    finish(v, Math.max(end, t + 1.02)); return true;
+  };
+  let holdUntil = 0; const uq = [];
+  A.tierUp = (tier, t) => {
+    tier = ct(tier);
+    const v = begin('tierUp', t, fxBus); if (!v) return false;
+    holdUntil = Math.max(holdUntil, t + 0.9);
+    duck(ambBus, t, 0.3, 0.9, 0.4); duck(pickBus, t, 0.6, 0.5, 0.2);
+    const k = tier / 9;
+    let end = thump(v, t, 300 - 120 * k, 90 - 25 * k, 0.05, 0.25, 0.6);
+    const sg = G(v.out); env(sg.gain, t, 0.08, 0.01, 0.25);
+    const sb = F('bandpass', 2000, 2, sg); sb.frequency.setValueAtTime(2000, t); sb.frequency.exponentialRampToValueAtTime(8000, t + 0.25); N(white, t, t + 0.28, sb, v);
+    const R = rootIn(tier, 262); v.out.connect(G(echoIn, 0.15));
+    [0, 4, 7].forEach((s, i) => { end = Math.max(end, brass(v, st(R, s), t + i * 0.08, 0.12, 0.14, false)); });
+    [0, 7, 12, 16].forEach(s => { end = Math.max(end, brass(v, st(R, s), t + 0.24, 0.6, 0.1, true)); });
+    finish(v, end);
+    if (opts.autoAmbience !== false) A.setAmbience(tier, 'play', t + 0.6);
+    return true;
+  };
+  A.victory = t => {
+    const v = begin('victory', t, fxBus); if (!v) return false;
+    holdUntil = Math.max(holdUntil, t + 3.0);
+    voices.filter(x => !x.stolen).forEach(x => { if (x !== v) steal(x, t); });
+    A.setAmbience(0, 'off', t); duck(pickBus, t, 0.3, 2.5, 0.3);
+    const R = rootIn(0, 262); v.out.connect(G(echoIn, 0.15));       // home key D: the journey resolves where it began
+    let end = thump(v, t, 260, 80, 0.06, 0.3, 0.7);
+    [0, 4, 7].forEach((s, i) => { end = Math.max(end, brass(v, st(R, s), t + i * 0.08, 0.12, 0.14, false)); });
+    [[5, 9, 12, 17], [7, 11, 14, 19]].forEach((ch, i) => ch.forEach(s => { end = Math.max(end, brass(v, st(R, s), t + 0.3 + i * 0.3, 0.26, 0.085, false)); }));
+    [0, 7, 12, 16].forEach(s => { end = Math.max(end, brass(v, st(R, s), t + 0.9, 1.6, 0.095, true)); });
+    thump(v, t + 0.9, 220, 70, 0.08, 0.35, 0.5);
+    end = Math.max(end, tick(v, t + 0.9, 5000, 0.7, 0.05, 2.0, 'highpass'));
+    finish(v, end); return true;
+  };
+  A.death = (tier, t) => {
+    tier = ct(tier);
+    const v = begin('death', t, fxBus); if (!v) return false;
+    voices.filter(x => !x.stolen).forEach(x => { if (x !== v) steal(x, t); });
+    A.setAmbience(0, 'off', t); duck(pickBus, t, 0.0001, 1.5, 0.3);
+    holdUntil = Math.max(holdUntil, t + 1.3);
+    const g = G(v.out); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.32, t + 0.005); g.gain.setValueAtTime(0.32, t + 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+    const lp = F('lowpass', 3000, 6, g); lp.frequency.setValueAtTime(3000, t); lp.frequency.exponentialRampToValueAtTime(200, t + 0.9);
+    const lg = G(null, 40); O('sine', 7, t, t + 1.15, lg, v);
+    const o1 = O('sawtooth', 440, t, t + 1.15, lp, v); o1.frequency.exponentialRampToValueAtTime(70, t + 0.9); lg.connect(o1.detune);
+    const o2 = O('square', 440, t, t + 1.15, G(lp, 0.6), v); o2.detune.setValueAtTime(-15, t); o2.frequency.exponentialRampToValueAtTime(70, t + 0.9); lg.connect(o2.detune);
+    const ng = G(v.out); env(ng.gain, t, 0.4, 0.002, 0.45);
+    const nl = F('lowpass', 1200, 0.8, ng); nl.frequency.setValueAtTime(1200, t); nl.frequency.exponentialRampToValueAtTime(150, t + 0.4); N(crush, t, t + 0.5, nl, v);
+    const R = rootIn(tier, 262);
+    let end = tone(v, t + 0.6, 'triangle', R, 0.22, 0.004, 0.35);
+    end = Math.max(end, tone(v, t + 0.9, 'triangle', st(R, -3), 0.22, 0.004, 0.5));
+    finish(v, Math.max(end, t + 1.15)); return true;
+  };
+  const chime = (u, t) => {
+    const v = begin('unlock', t, fxBus); if (!v) return;
+    const b = rootIn(u.tier, 523), purchase = u.variant === 'purchase';
+    const notes = purchase ? [0, 7, 12] : [0, 4, 7, 12], step = purchase ? 0.045 : 0.07;
+    v.out.connect(G(echoIn, 0.3));
+    let end = t;
+    notes.forEach((s, i) => { const at = t + i * step, f = st(b, s); end = Math.max(end, tone(v, at, 'triangle', f, 0.3, 0.002, 0.26)); tone(v, at, 'sine', f * 4, 0.08, 0.001, 0.06); });
+    end = Math.max(end, tick(v, t + notes.length * step, 7000, 0.7, 0.06, 0.3, 'highpass'));
+    finish(v, end);
+  };
+  A.unlock = (tier, variant) => { uq.push({ tier: ct(tier), variant: variant || 'unlock' }); while (uq.length > 3) uq.shift(); };
+  A.flushUnlocks = t => { let at = Math.max(t, holdUntil); uq.splice(0).forEach(u => { chime(u, at); S.unlockTimes.push(Math.round(at * 1000) / 1000); at += 0.24; }); };
+  A.ready = (tier, t) => {
+    const v = begin('ready', t, fxBus); if (!v) return false;
+    const R = rootIn(ct(tier), 262);
+    const lp = F('lowpass', 500, 2, G(v.out)); lp.frequency.setValueAtTime(500, t); lp.frequency.exponentialRampToValueAtTime(4000, t + 0.2);
+    let end = t;
+    [0, 7, 12, 19].forEach((s, i) => { const at = t + i * 0.045, gg = G(lp); env(gg.gain, at, 0.3, 0.002, 0.09); O('square', st(R, s), at, at + 0.11, gg, v); end = at + 0.11; });
+    const ng = G(v.out); env(ng.gain, t, 0.06, 0.15, 0.05);
+    const nb = F('bandpass', 800, 1.5, ng); nb.frequency.setValueAtTime(800, t); nb.frequency.exponentialRampToValueAtTime(5000, t + 0.18); N(white, t, t + 0.22, nb, v);
+    finish(v, Math.max(end, t + 0.22)); return true;
+  };
+  A.beat = (tier, t) => {
+    const v = begin('beat', t, fxBus); if (!v) return false;
+    let end = thump(v, t, 240, 110, 0.05, 0.12, 0.32, 1.0);
+    end = Math.max(end, thump(v, t + 0.14, 200, 95, 0.05, 0.14, 0.24, 1.0));
+    finish(v, end); return true;
+  };
+
+  // Mute, interruption and a new run discard scheduled cues on the audio clock.
+  A.clear = t => {
+    voices.splice(0).forEach(v => {
+      v.out.gain.cancelScheduledValues(t); v.out.gain.setValueAtTime(0, t);
+      v.srcs.forEach(s => { try { s.stop(t); s.disconnect(); } catch (e) {} });
+      v.out.disconnect();
+    });
+    ambiencePings.forEach(v => {
+      v.srcs.forEach(s => { try { s.stop(t); s.disconnect(); } catch (e) {} });
+      v.out.disconnect();
+    });
+    ambiencePings.clear();
+    // Fading beds are still live graphs, even after the current tier changes.
+    ambienceBeds.forEach(a => {
+      a.srcs.forEach(s => { try { s.stop(t); s.disconnect(); } catch (e) {} });
+      a.g.disconnect(); if (a.send) a.send.disconnect();
+    });
+    ambienceBeds.clear(); amb = null;
+    // Break and reconnect the echo loop to discard its buffered tail.
+    echoIn.disconnect(); echoDelay.disconnect(); echoLp.disconnect(); echoFb.disconnect();
+    echoDelay = ctx.createDelay(1); echoLp = ctx.createBiquadFilter(); echoFb = ctx.createGain();
+    echoDelay.delayTime.value = 0.12; echoLp.type = 'lowpass'; echoLp.frequency.value = 2200; echoFb.gain.value = 0.25;
+    echoIn.connect(echoDelay); echoDelay.connect(echoLp); echoLp.connect(echoFb); echoFb.connect(echoDelay); echoLp.connect(ambBus);
+    [pickBus, fxBus, uiBus, ambBus].forEach(b => { b.gain.cancelScheduledValues(t); b.gain.setValueAtTime(1, t); });
+    Object.keys(ducks).forEach(k => delete ducks[k]); Object.keys(last).forEach(k => delete last[k]);
+    uq.length = 0; holdUntil = t; comboHigh = 0; lastEatT = -9; heat = 0; heatT = t; schedUntil = t;
+  };
+  A.resetCombo = () => { comboHigh = 0; };
+  A.stageUntil = () => holdUntil;
+
+  A.stats = () => ({ started: S.started, kinds: Object.assign({}, S.kinds), dropped: Object.assign({}, S.dropped), stolen: S.stolen, maxVoices: S.maxVoices, nodes: S.nodes, unlockTimes: S.unlockTimes.slice() });
+  A.master = master; A.buses = { pickBus, fxBus, uiBus, ambBus };
+  A.ambInfo = () => (amb ? { tier: amb.tier, mode: amb.mode, level: amb.level } : null);
+  return A;
+}
+
+root.createEndBirdAudio = createEndBirdAudio;
+root.EndBirdAudioKeys = { rootIn, keyPc, PENT, AMB };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+'use strict';
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// ─── CONSTANTS ───
+const BG = '#0a0a0f';
+const GOLD = '#f0b800';
+const GREEN = '#00ff88';
+const RED = '#ff3355';
+const CYAN = '#00ddff';
+const WHITE = '#ffffff';
+const MAGENTA = '#ff44cc';
+
+// ─── SIZE TIERS ───
+const TIERS = [
+  { name: 'Quantum', minSize: 4, maxSize: 12, bg: '#05050a', food: ['quark','photon','neutrino','gluon'], foodColors: ['#ff55ff','#ffff55','#55ffff','#ff8844'], enemyNames: ['electron','positron'], desc: 'Subatomic Realm' },
+  { name: 'Atomic', minSize: 12, maxSize: 25, bg: '#080810', food: ['hydrogen','helium','carbon','oxygen'], foodColors: ['#aaaaff','#ffddaa','#555555','#5555ff'], enemyNames: ['ion','radical'], desc: 'Atomic Scale' },
+  { name: 'Micro', minSize: 25, maxSize: 50, bg: '#0a0a14', food: ['bacteria','virus','amino acid','protein'], foodColors: ['#44ff44','#ff4444','#ffaa44','#44aaff'], enemyNames: ['phage','amoeba'], desc: 'Microscopic World' },
+  { name: 'Insect', minSize: 50, maxSize: 90, bg: '#0c0c18', food: ['ant','fly','beetle','moth'], foodColors: ['#884422','#888888','#226622','#ccccaa'], enemyNames: ['spider','wasp'], desc: 'Insect Kingdom' },
+  { name: 'Animal', minSize: 90, maxSize: 150, bg: '#0e0e1c', food: ['mouse','fish','rabbit','frog'], foodColors: ['#aaaaaa','#4488cc','#cc8844','#44cc44'], enemyNames: ['hawk','fox'], desc: 'Animal World' },
+  { name: 'Mega', minSize: 150, maxSize: 250, bg: '#101020', food: ['elephant','whale','dinosaur','mammoth'], foodColors: ['#888888','#4466aa','#668844','#886644'], enemyNames: ['titan','kraken'], desc: 'Megafauna Era' },
+  { name: 'Planetary', minSize: 250, maxSize: 400, bg: '#0a0a20', food: ['moon','asteroid','comet','dwarf planet'], foodColors: ['#cccccc','#886644','#88ccff','#aa8866'], enemyNames: ['black hole','rogue planet'], desc: 'Planetary Scale' },
+  { name: 'Stellar', minSize: 400, maxSize: 600, bg: '#08082a', food: ['red dwarf','yellow star','blue giant','neutron star'], foodColors: ['#ff4422','#ffdd44','#4488ff','#ddddff'], enemyNames: ['supernova','pulsar'], desc: 'Stellar Realm' },
+  { name: 'Galactic', minSize: 600, maxSize: 900, bg: '#060630', food: ['nebula','star cluster','galaxy arm','dark matter'], foodColors: ['#ff44aa','#ffff88','#8844ff','#333366'], enemyNames: ['quasar','void'], desc: 'Galactic Scale' },
+  { name: 'Cosmic', minSize: 900, maxSize: 1500, bg: '#040440', food: ['galaxy','galaxy cluster','supercluster','universe'], foodColors: ['#aa88ff','#ffaa44','#ff88ff','#ffffff'], enemyNames: ['entropy','antimatter wave'], desc: 'THE COSMOS' },
+];
+
+// ─── AUDIO ENGINE ───
+// Audio starts from a gesture. Every cue is synthesized locally on the audio clock.
+let audioCtx = null, audioEngine = null, audioUnlockAt = -Infinity;
+const soundButton = document.getElementById('endbird-sound');
+const audioMuted = () => !!save.muted;
+const audioOn = () => !!audioEngine && !audioMuted() && !document.hidden &&
+  (audioCtx.state === 'running' ||
+    (audioCtx.state === 'suspended' && performance.now() - audioUnlockAt < 250));
+const audioNow = () => audioCtx.currentTime + 0.005;
+const quietPromise = p => { if (p && p.catch) p.catch(() => {}); };
+const applyAudioLevel = () => {
+  if (!audioEngine) return;
+  const t = audioCtx.currentTime, g = audioEngine.master.gain;
+  g.cancelScheduledValues(t); g.setTargetAtTime(audioMuted() || document.hidden ? 0 : 0.25, t, 0.012);
+};
+const ensureAudio = e => {
+  if (!e || !e.isTrusted || audioMuted() || document.hidden) return;
+  try {
+    if (!audioCtx) {
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (!C || !window.createEndBirdAudio) return;
+      try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (err) {}
+      let c;
+      try { c = new C({ latencyHint: 'interactive' }); } catch (err) { c = new C(); }
+      try { audioEngine = createEndBirdAudio(c, { master: 0, autoAmbience: false }); }
+      catch (err) { quietPromise(c.close()); return; }
+      audioCtx = c;
+      audioCtx.addEventListener('statechange', () => {
+        if (audioCtx.state !== 'running') audioEngine.clear(audioCtx.currentTime);
+        else applyAudioLevel();
+      });
+      applyAudioLevel();
+    }
+    if (audioCtx.state !== 'running' && audioCtx.state !== 'closed') {
+      audioUnlockAt = performance.now();
+      quietPromise(audioCtx.resume());
+      // A silent sample also unlocks WebKit on older iOS versions.
+      const silent = audioCtx.createBufferSource();
+      silent.buffer = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+      silent.connect(audioCtx.destination); silent.onended = () => silent.disconnect(); silent.start();
+    }
+  } catch (err) { /* Audio support must never stop a run. */ }
+};
+['pointerdown', 'touchstart', 'touchend', 'mousedown', 'keydown', 'click'].forEach(type =>
+  window.addEventListener(type, ensureAudio, { capture: true, passive: true }));
+
+// Keep the existing cue names and their gameplay calls.
+const sfx = {
+  eat: () => { if (audioOn()) audioEngine.eat(combo || 1, currentTier || 0, audioNow()); },
+  grow: () => { if (audioOn()) audioEngine.grow(currentTier || 0, audioNow()); },
+  tierUp: () => {
+    if (!audioOn()) return;
+    if (state === STATE.GAMEOVER) audioEngine.victory(audioNow());
+    else audioEngine.tierUp(currentTier, audioNow());
+  },
+  hit: () => {
+    if (!audioOn()) return;
+    if (state === STATE.UPGRADE) audioEngine.deny(audioNow());
+    else if (invincibleTimer > 1.45) audioEngine.hurt(currentTier || 0, audioNow(), !!player && player.hp === 1);
+    else audioEngine.bonk(currentTier || 0, audioNow());
+  },
+  death: () => { if (audioOn()) audioEngine.death(currentTier || 0, audioNow()); },
+  click: () => { if (audioOn()) audioEngine.click(audioNow()); },
+  unlock: () => { if (audioOn()) audioEngine.unlock(currentTier || 0, state === STATE.UPGRADE ? 'purchase' : 'unlock'); },
+  explode: () => { if (audioOn()) audioEngine.explode(currentTier || 0, audioNow()); },
+};
+let audioPreviousState = null, audioPreviousCombo = 0, audioPreviousReady = false, audioLastBeat = -9;
+const audioTick = () => {
+  const playing = state === STATE.PLAYING, armed = playing && !!explodeReady;
+  if (audioOn()) {
+    const t = audioNow();
+    if (playing && audioPreviousState !== state) { audioEngine.resetCombo(); audioLastBeat = t; }
+    if (playing && combo === 0 && audioPreviousCombo > 0) audioEngine.resetCombo();
+    if (playing) {
+      if (t >= audioEngine.stageUntil()) audioEngine.setAmbience(currentTier, 'play', t);
+    } else audioEngine.setAmbience(0, 'off', t);
+    audioEngine.tick(t);
+    // Same-frame unlocks wait behind the tier fanfare or game-over cue.
+    audioEngine.flushUnlocks(t);
+    if (armed && !audioPreviousReady) audioEngine.ready(currentTier, t);
+    if (playing && player && player.hp === 1 && player.maxHp > 1 && t - audioLastBeat > 0.85) {
+      audioEngine.beat(currentTier, t); audioLastBeat = t;
+    }
+  }
+  audioPreviousState = state; audioPreviousCombo = playing ? combo : 0; audioPreviousReady = armed;
+};
+const resetRunAudio = () => {
+  if (audioEngine) audioEngine.clear(audioCtx.currentTime);
+  audioPreviousState = null; audioPreviousCombo = 0; audioPreviousReady = false; audioLastBeat = -9;
+};
+const updateSoundButton = () => {
+  soundButton.setAttribute('aria-pressed', String(audioMuted()));
+  soundButton.setAttribute('aria-label', audioMuted() ? 'Unmute sound' : 'Mute sound');
+  soundButton.title = (audioMuted() ? 'Unmute sound' : 'Mute sound') + ' (M)';
+};
+const toggleAudio = e => {
+  save.muted = !audioMuted(); saveSave();
+  if (audioEngine && audioMuted()) audioEngine.clear(audioCtx.currentTime);
+  updateSoundButton(); applyAudioLevel();
+  if (!audioMuted()) { ensureAudio(e); sfx.click(); }
+};
+soundButton.addEventListener('click', toggleAudio);
+// Space/Enter on the button activates it without starting a run behind it.
+['keydown', 'keyup'].forEach(type => soundButton.addEventListener(type, e => {
+  if (e.key === ' ' || e.key === 'Enter') e.stopPropagation();
+}));
+window.addEventListener('keydown', e => {
+  if ((e.code === 'KeyM' || e.key === 'm' || e.key === 'M') && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) toggleAudio(e);
+});
+const pauseAudio = () => {
+  if (!audioCtx) return;
+  audioEngine.clear(audioCtx.currentTime);
+  audioEngine.master.gain.cancelScheduledValues(audioCtx.currentTime);
+  audioEngine.master.gain.setValueAtTime(0, audioCtx.currentTime);
+  quietPromise(audioCtx.suspend());
+};
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) pauseAudio();
+  else if (audioCtx && !audioMuted()) quietPromise(audioCtx.resume());
+});
+window.addEventListener('pagehide', pauseAudio);
+window.addEventListener('pageshow', () => {
+  if (audioCtx && !document.hidden && !audioMuted()) quietPromise(audioCtx.resume());
+});
+
+// ─── SAVE DATA ───
+const defaultSave = () => ({
+  muted: false,
+  totalScore: 0,
+  highScore: 0,
+  runsCompleted: 0,
+  totalEaten: 0,
+  highestTier: 0,
+  xp: 0,
+  level: 1,
+  upgrades: { speed: 0, magnet: 0, armor: 0, startSize: 0, xpMult: 0 },
+  achievements: {},
+  unlockedTiers: [0],
+});
+
+let save;
+const loadSave = () => {
+  try {
+    const d = JSON.parse(localStorage.getItem('gamegob_playtest_20261006_endbird'));
+    save = defaultSave();
+    if(d && typeof d==='object'){
+      for(const key of ['totalScore','highScore','runsCompleted','totalEaten','highestTier','xp','level'])
+        if(Number.isFinite(d[key])&&d[key]>=0)save[key]=Math.min(1e9,Math.floor(d[key]));
+      save.level=Math.max(1,save.level);save.highestTier=Math.min(9,save.highestTier);
+      for(const [key,max] of Object.entries({speed:10,magnet:8,armor:5,startSize:6,xpMult:5}))
+        if(Number.isFinite(d.upgrades&&d.upgrades[key]))save.upgrades[key]=Math.max(0,Math.min(max,Math.floor(d.upgrades[key])));
+      save.muted=d.muted===true;
+      if(d.achievements&&typeof d.achievements==='object')save.achievements=Object.fromEntries(Object.entries(d.achievements).filter(([k,v])=>v===true));
+      if(Array.isArray(d.unlockedTiers))save.unlockedTiers=[...new Set([0,...d.unlockedTiers.filter(v=>Number.isInteger(v)&&v>=0&&v<10)])];
+    }
+  } catch(e) { save = defaultSave(); }
+};
+const saveSave = () => { try { localStorage.setItem('gamegob_playtest_20261006_endbird', JSON.stringify(save)); } catch(e) {} };
+loadSave();
+updateSoundButton();
+
+// ─── UPGRADE DEFS ───
+const UPGRADE_DEFS = {
+  speed: { name: 'Swift Wings', desc: 'Move faster', maxLvl: 10, costBase: 50, costMult: 1.8, effect: l => 1 + l * 0.08, icon: '>' },
+  magnet: { name: 'Gravity Pull', desc: 'Attract food', maxLvl: 8, costBase: 80, costMult: 2.0, effect: l => l * 30, icon: '@' },
+  armor: { name: 'Thick Shell', desc: 'Extra HP', maxLvl: 5, costBase: 120, costMult: 2.5, effect: l => l, icon: '#' },
+  startSize: { name: 'Born Big', desc: 'Start larger', maxLvl: 6, costBase: 200, costMult: 2.2, effect: l => l * 3, icon: '+' },
+  xpMult: { name: 'Wise Eyes', desc: 'More XP', maxLvl: 5, costBase: 150, costMult: 2.5, effect: l => 1 + l * 0.2, icon: '*' },
+};
+
+const getUpgradeCost = (key) => {
+  const def = UPGRADE_DEFS[key];
+  return Math.floor(def.costBase * Math.pow(def.costMult, save.upgrades[key]));
+};
+
+// ─── ACHIEVEMENT DEFS ───
+const ACHIEVEMENTS = [
+  { id: 'first_eat', name: 'First Bite', desc: 'Eat your first thing', check: s => s.totalEaten >= 1 },
+  { id: 'eat_100', name: 'Hungry Bird', desc: 'Eat 100 things total', check: s => s.totalEaten >= 100 },
+  { id: 'eat_1000', name: 'Devourer', desc: 'Eat 1000 things total', check: s => s.totalEaten >= 1000 },
+  { id: 'tier_3', name: 'Bug Hunter', desc: 'Reach insect scale', check: s => s.highestTier >= 3 },
+  { id: 'tier_5', name: 'Giant', desc: 'Reach mega scale', check: s => s.highestTier >= 5 },
+  { id: 'tier_7', name: 'Star Eater', desc: 'Reach stellar scale', check: s => s.highestTier >= 7 },
+  { id: 'tier_9', name: 'Cosmic Entity', desc: 'Reach cosmic scale', check: s => s.highestTier >= 9 },
+  { id: 'score_10k', name: 'Ten Thousand', desc: 'Score 10,000 in one run', check: () => false },
+  { id: 'score_100k', name: 'Hundred Thousand', desc: 'Score 100,000 in one run', check: () => false },
+  { id: 'runs_10', name: 'Persistent', desc: 'Complete 10 runs', check: s => s.runsCompleted >= 10 },
+  { id: 'level_10', name: 'Veteran', desc: 'Reach level 10', check: s => s.level >= 10 },
+  { id: 'max_upgrade', name: 'Maxed Out', desc: 'Max any upgrade', check: s => Object.keys(s.upgrades).some(k => s.upgrades[k] >= UPGRADE_DEFS[k].maxLvl) },
+];
+
+// ─── RESIZE ───
+let W, H;
+const resize = () => {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W;
+  canvas.height = H;
+};
+window.addEventListener('resize', resize);
+resize();
+
+// ─── INPUT ───
+const keys = {};
+const touch = { active: false, x: 0, y: 0, dx: 0, dy: 0, startX: 0, startY: 0, actionDown: false };
+let mousePos = { x: W/2, y: H/2 };
+
+window.addEventListener('keydown', e => { keys[e.key] = true; keys[e.code] = true; });
+window.addEventListener('keyup', e => { keys[e.key] = false; keys[e.code] = false; });
+window.addEventListener('mousemove', e => { mousePos.x = e.clientX; mousePos.y = e.clientY; });
+
+let touchId = null;
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  ensureAudio(e);
+  const t = e.changedTouches[0];
+  touch.active = true;
+  touch.startX = touch.x = t.clientX;
+  touch.startY = touch.y = t.clientY;
+  touch.dx = 0;
+  touch.dy = 0;
+  touchId = t.identifier;
+  mousePos.x = t.clientX;
+  mousePos.y = t.clientY;
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier === touchId) {
+      touch.x = t.clientX;
+      touch.y = t.clientY;
+      touch.dx = touch.x - touch.startX;
+      touch.dy = touch.y - touch.startY;
+      mousePos.x = t.clientX;
+      mousePos.y = t.clientY;
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier === touchId) {
+      touch.active = false;
+      touch.dx = 0;
+      touch.dy = 0;
+      touchId = null;
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('mousedown', ensureAudio);
+
+// ─── PARTICLES ───
+class Particle {
+  constructor(x, y, vx, vy, color, life, size = 3) {
+    this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+    this.color = color; this.life = this.maxLife = life; this.size = size;
+    this.friction = 0.98;
+  }
+  update(dt) {
+    this.vx *= this.friction;
+    this.vy *= this.friction;
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.life -= dt;
+  }
+  draw(cx, cy) {
+    const a = Math.max(0, this.life / this.maxLife);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = this.color;
+    const sx = this.x - cx + W/2;
+    const sy = this.y - cy + H/2;
+    ctx.fillRect(sx - this.size/2, sy - this.size/2, this.size * a + 1, this.size * a + 1);
+    ctx.globalAlpha = 1;
+  }
+}
+
+let particles = [];
+const spawnParticles = (x, y, count, color, speed = 200, life = 0.5, size = 3) => {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = Math.random() * speed;
+    particles.push(new Particle(x, y, Math.cos(angle)*spd, Math.sin(angle)*spd, color, life + Math.random()*0.3, size));
+  }
+};
+
+// ─── SCREEN SHAKE ───
+let shakeX = 0, shakeY = 0, shakeMag = 0, shakeTime = 0;
+const startShake = (mag, dur) => { shakeMag = mag; shakeTime = dur; };
+
+// ─── NOTIFICATION ───
+let notifications = [];
+const notify = (text, color = GOLD, dur = 2.0) => {
+  notifications.push({ text, color, life: dur, maxLife: dur });
+};
+
+// ─── GAME STATE ───
+const STATE = { TITLE: 0, PLAYING: 1, GAMEOVER: 2, UPGRADE: 3, PAUSED: 4 };
+let state = STATE.TITLE;
+let titleTime = 0;
+let gameOverTime = 0;
+
+// ─── GAME WORLD ───
+let player, camera, foods, enemies, worldSize, score, combo, comboTimer;
+let currentTier, tierProgress, runTime, eatenThisRun, runXP;
+let skillGoal = 12, skillStart = 0, skillComplete = false, bankedRun = false;
+let sizeGoal, tierTransitionTimer, bgStars;
+let invincibleTimer, flashTimer;
+let explodeReady, explodeCooldown;
+
+// ─── BIRD ANIMATION ───
+const BIRD_FRAMES = 4;
+let birdFrame = 0, birdFrameTimer = 0;
+
+const drawBird = (x, y, size, facing, frame, tier) => {
+  const s = size;
+  const f = facing; // 1 = right, -1 = left
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(f, 1);
+
+  // Wing flap based on frame
+  const wingAngle = Math.sin(frame * Math.PI / 2) * 0.4;
+  const wingY = Math.sin(frame * Math.PI / 2) * s * 0.15;
+
+  // Glow based on tier
+  const glowColor = TIERS[Math.min(tier, TIERS.length-1)].foodColors[0];
+  ctx.shadowColor = glowColor;
+  ctx.shadowBlur = s * 0.3 + Math.sin(birdFrameTimer * 3) * 3;
+
+  // Body
+  ctx.fillStyle = tierBodyColor(tier);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, s * 0.5, s * 0.35, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Wing
+  ctx.fillStyle = tierWingColor(tier);
+  ctx.save();
+  ctx.rotate(wingAngle);
+  ctx.beginPath();
+  ctx.ellipse(-s * 0.05, -s * 0.15 + wingY, s * 0.4, s * 0.15, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Head
+  ctx.fillStyle = tierHeadColor(tier);
+  ctx.beginPath();
+  ctx.arc(s * 0.3, -s * 0.1, s * 0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eye
+  ctx.fillStyle = WHITE;
+  ctx.beginPath();
+  ctx.arc(s * 0.38, -s * 0.15, s * 0.07, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(s * 0.4, -s * 0.15, s * 0.04, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Beak
+  ctx.fillStyle = GOLD;
+  ctx.beginPath();
+  ctx.moveTo(s * 0.48, -s * 0.1);
+  ctx.lineTo(s * 0.65, -s * 0.05);
+  ctx.lineTo(s * 0.48, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  // Tail feathers
+  ctx.fillStyle = tierWingColor(tier);
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.45, i * s * 0.08);
+    ctx.lineTo(-s * 0.7, i * s * 0.15 + Math.sin(frame + i) * s * 0.05);
+    ctx.lineTo(-s * 0.5, i * s * 0.04);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // Invincibility flash
+  if (invincibleTimer > 0 && Math.floor(invincibleTimer * 10) % 2 === 0) {
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = WHITE;
+    ctx.beginPath();
+    ctx.ellipse(x, y, s * 0.55, s * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+};
+
+const tierBodyColor = t => {
+  const colors = ['#aa44ff','#4488ff','#44ff88','#ffaa22','#ff4444','#ff44aa','#44ffff','#ffff44','#ffffff','#ffd700'];
+  return colors[Math.min(t, colors.length-1)];
+};
+const tierWingColor = t => {
+  const colors = ['#7722cc','#2266cc','#22cc66','#cc8800','#cc2222','#cc2288','#22cccc','#cccc22','#cccccc','#ccaa00'];
+  return colors[Math.min(t, colors.length-1)];
+};
+const tierHeadColor = t => {
+  const colors = ['#cc66ff','#66aaff','#66ffaa','#ffcc44','#ff6666','#ff66cc','#66ffff','#ffff66','#ffffff','#ffe44d'];
+  return colors[Math.min(t, colors.length-1)];
+};
+
+// ─── FOOD ENTITY ───
+class Food {
+  constructor(tier) {
+    const td = TIERS[Math.min(tier, TIERS.length-1)];
+    const idx = Math.floor(Math.random() * td.food.length);
+    this.name = td.food[idx];
+    this.color = td.foodColors[idx];
+    this.size = td.minSize * (0.3 + Math.random() * 0.5);
+    this.x = (Math.random() - 0.5) * worldSize;
+    this.y = (Math.random() - 0.5) * worldSize;
+    this.vx = (Math.random() - 0.5) * 30;
+    this.vy = (Math.random() - 0.5) * 30;
+    this.bobPhase = Math.random() * Math.PI * 2;
+    this.value = Math.floor(td.minSize * (1 + tier * 0.5));
+    this.alive = true;
+    this.tier = tier;
+    this.pulse = 0;
+  }
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.bobPhase += dt * 2;
+    this.pulse += dt * 3;
+    // Bounce off world edges
+    if (Math.abs(this.x) > worldSize/2) { this.vx *= -1; this.x = Math.sign(this.x) * worldSize/2; }
+    if (Math.abs(this.y) > worldSize/2) { this.vy *= -1; this.y = Math.sign(this.y) * worldSize/2; }
+    // Magnet pull
+    if (save.upgrades.magnet > 0) {
+      const magnetRange = UPGRADE_DEFS.magnet.effect(save.upgrades.magnet);
+      const dx = player.x - this.x;
+      const dy = player.y - this.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < magnetRange + player.size && dist > 1) {
+        const pull = 100 * (1 - dist / (magnetRange + player.size));
+        this.vx += (dx / dist) * pull * dt;
+        this.vy += (dy / dist) * pull * dt;
+      }
+    }
+  }
+  draw(cx, cy) {
+    const sx = this.x - cx + W/2;
+    const sy = this.y - cy + H/2 + Math.sin(this.bobPhase) * 3;
+    if (sx < -50 || sx > W+50 || sy < -50 || sy > H+50) return;
+    const pulseS = 1 + Math.sin(this.pulse) * 0.1;
+    const r = Math.max(2.5 / viewZoom, this.size * 0.5 * pulseS);
+    // halo
+    ctx.fillStyle = hexAlpha(this.color, 0.18);
+    ctx.beginPath();
+    ctx.arc(sx, sy, r * 2.1, 0, Math.PI * 2);
+    ctx.fill();
+    // body with glow
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = r * 1.2;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.beginPath();
+    ctx.arc(sx - r * 0.3, sy - r * 0.3, r * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // Label (screen-sized regardless of zoom)
+    if (player.size < this.size * 3) {
+      const uz = 1 / viewZoom;
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.font = `${Math.max(8, Math.min(12, r * viewZoom * 0.8)) * uz}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText(this.name, sx, sy + r + 12 * uz);
+    }
+  }
+}
+
+// ─── ENEMY ENTITY ───
+class Enemy {
+  constructor(tier, playerSize) {
+    const td = TIERS[Math.min(tier, TIERS.length-1)];
+    const idx = Math.floor(Math.random() * td.enemyNames.length);
+    this.name = td.enemyNames[idx];
+    this.color = RED;
+    this.size = playerSize * (0.8 + Math.random() * 1.2);
+    this.x = (Math.random() - 0.5) * worldSize;
+    this.y = (Math.random() - 0.5) * worldSize;
+    this.vx = (Math.random() - 0.5) * 80;
+    this.vy = (Math.random() - 0.5) * 80;
+    this.alive = true;
+    this.hp = Math.ceil(tier * 0.5 + 1);
+    this.maxHp = this.hp;
+    this.speed = 50 + tier * 10;
+    this.tier = tier;
+    this.aggroRange = 200 + tier * 20;
+    this.pulse = Math.random() * Math.PI * 2;
+    this.value = Math.floor(td.minSize * (2 + tier));
+  }
+  update(dt) {
+    this.pulse += dt * 4;
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist < this.aggroRange) {
+      if (this.size > player.size * 0.8) {
+        // Chase player if bigger
+        this.vx += (dx / dist) * this.speed * dt * 2;
+        this.vy += (dy / dist) * this.speed * dt * 2;
+      } else {
+        // Flee if smaller
+        this.vx -= (dx / dist) * this.speed * dt * 1.5;
+        this.vy -= (dy / dist) * this.speed * dt * 1.5;
+      }
+    } else {
+      // Wander
+      this.vx += (Math.random() - 0.5) * 50 * dt;
+      this.vy += (Math.random() - 0.5) * 50 * dt;
+    }
+
+    // Friction
+    this.vx *= 0.98;
+    this.vy *= 0.98;
+    // Clamp speed
+    const spd = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+    if (spd > this.speed * 2) {
+      this.vx = (this.vx/spd) * this.speed * 2;
+      this.vy = (this.vy/spd) * this.speed * 2;
+    }
+
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+
+    if (Math.abs(this.x) > worldSize/2) { this.vx *= -1; this.x = Math.sign(this.x) * worldSize/2; }
+    if (Math.abs(this.y) > worldSize/2) { this.vy *= -1; this.y = Math.sign(this.y) * worldSize/2; }
+  }
+  draw(cx, cy) {
+    const sx = this.x - cx + W/2;
+    const sy = this.y - cy + H/2;
+    if (sx < -80 || sx > W+80 || sy < -80 || sy > H+80) return;
+    const pulseS = 1 + Math.sin(this.pulse) * 0.08;
+    const r = this.size * 0.5 * pulseS;
+
+    const danger = this.size * 1.2 >= player.size;
+    // Glow: red and pulsing when it can eat you, green when you can eat it
+    const gp = danger ? 0.22 + 0.12 * Math.sin(this.pulse * 1.5) : 0.10;
+    ctx.fillStyle = danger ? hexAlpha(RED, gp) : hexAlpha(GREEN, gp);
+    ctx.beginPath();
+    ctx.arc(sx, sy, r * 1.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body
+    ctx.shadowColor = danger ? RED : '#ffaa44';
+    ctx.shadowBlur = r * 0.6;
+    ctx.fillStyle = danger ? RED : '#ff9a4a';
+    ctx.beginPath();
+    // Spiky shape for enemies
+    const points = 6 + Math.floor(this.tier / 2);
+    for (let i = 0; i < points * 2; i++) {
+      const angle = (i / (points * 2)) * Math.PI * 2;
+      const rad = i % 2 === 0 ? r : r * 0.6;
+      const px = sx + Math.cos(angle) * rad;
+      const py = sy + Math.sin(angle) * rad;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = danger ? '#ff8899' : GREEN;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    const uz = 1 / viewZoom;
+    // HP bar
+    if (this.hp < this.maxHp) {
+      const barW = r * 2;
+      const barH = 4 * uz;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(sx - barW/2, sy - r - 10 * uz, barW, barH);
+      ctx.fillStyle = RED;
+      ctx.fillRect(sx - barW/2, sy - r - 10 * uz, barW * (this.hp / this.maxHp), barH);
+    }
+
+    // Name
+    ctx.fillStyle = danger ? '#ff9aa6' : '#ffc07a';
+    ctx.font = `${Math.max(9, Math.min(13, r * viewZoom * 0.5)) * uz}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(this.name, sx, sy + r + 14 * uz);
+
+    // Size comparison indicator
+    if (danger) {
+      ctx.fillStyle = RED;
+      ctx.font = `${10 * uz}px monospace`;
+      ctx.fillText('DANGER', sx, sy - r - 14 * uz);
+    }
+  }
+}
+
+// ─── BACKGROUND STARS ───
+const generateStars = (tier) => {
+  bgStars = [];
+  const count = 220 + tier * 40;
+  const tints = [WHITE, WHITE, WHITE, '#bfe3ff', '#ffe9b8', '#ffd6f2'];
+  for (let i = 0; i < count; i++) {
+    bgStars.push({
+      x: (Math.random() - 0.5) * worldSize * 1.5,
+      y: (Math.random() - 0.5) * worldSize * 1.5,
+      size: Math.random() < 0.08 ? 2.4 + Math.random() * 1.6 : Math.random() * 1.6 + 0.6,
+      brightness: Math.random(),
+      twinkleSpeed: 1 + Math.random() * 3,
+      depth: 0.2 + Math.random() * 0.8, // parallax
+      tint: tints[Math.floor(Math.random() * tints.length)],
+    });
+  }
+};
+
+// ─── NEBULAE, TRAIL, RINGS (2026-10-05 quality pass) ───
+let nebulae = [];
+const generateNebulae = (tier) => {
+  nebulae = [];
+  const td = TIERS[Math.min(tier, TIERS.length-1)];
+  const count = 4 + Math.min(4, tier);
+  for (let i = 0; i < count; i++) {
+    nebulae.push({
+      x: (Math.random() - 0.5) * worldSize * 1.4,
+      y: (Math.random() - 0.5) * worldSize * 1.4,
+      r: worldSize * (0.18 + Math.random() * 0.22),
+      color: td.foodColors[i % td.foodColors.length],
+      depth: 0.12 + Math.random() * 0.1,
+      alpha: 0.10 + Math.random() * 0.08,
+    });
+  }
+};
+let rings = [];
+let viewZoom = 1; // world-to-screen zoom, set each frame in draw()
+const computeZoom = () => Math.max(1, Math.min(5.5, 22 / Math.max(4, player ? player.size : 4)));
+// How much world is on screen depends on the zoom; keep about eight foods and one or two
+// enemies in view at any tier, capped so the update loop stays cheap.
+const visibleWorldArea = () => { const z = computeZoom(); return Math.max(1, (W / z) * (H / z)); };
+const foodTarget = () => Math.max(20, Math.min(320, Math.round(8 * (worldSize * worldSize) / visibleWorldArea())));
+const enemyTarget = () => Math.max(3, Math.min(40, Math.round((1.2 + currentTier * 0.3) * (worldSize * worldSize) / visibleWorldArea())));
+const spawnRing = (x, y, color, maxR) => rings.push({ x, y, r: 2, life: 0.35, maxLife: 0.35, color, grow: (maxR || 40) / 0.35 });
+const trail = [];
+let trailTimer = 0;
+const hexAlpha = (hex, a) => {
+  const h = hex.replace('#', '');
+  const v = h.length === 3 ? h.split('').map(c => c + c).join('') : h.slice(0, 6);
+  const n = parseInt(v, 16);
+  return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+};
+
+// ─── INIT GAME ───
+const initGame = (startTier = 0) => {
+  resetRunAudio();
+  skillStart = 0; skillComplete = false; bankedRun = false;
+  const td = TIERS[startTier];
+  const startSizeBonus = UPGRADE_DEFS.startSize.effect(save.upgrades.startSize);
+
+  player = {
+    x: 0, y: 0,
+    vx: 0, vy: 0,
+    size: td.minSize + startSizeBonus,
+    maxHp: 3 + UPGRADE_DEFS.armor.effect(save.upgrades.armor),
+    hp: 3 + UPGRADE_DEFS.armor.effect(save.upgrades.armor),
+    facing: 1,
+    speed: 200 * UPGRADE_DEFS.speed.effect(save.upgrades.speed),
+  };
+
+  camera = { x: 0, y: 0 };
+  foods = [];
+  enemies = [];
+  score = 0;
+  combo = 0;
+  comboTimer = 0;
+  currentTier = startTier;
+  tierProgress = 0;
+  sizeGoal = td.maxSize;
+  runTime = 0;
+  eatenThisRun = 0;
+  runXP = 0;
+  invincibleTimer = 0;
+  flashTimer = 0;
+  explodeReady = false;
+  explodeCooldown = 0;
+  tierTransitionTimer = 0;
+
+  worldSize = 900 + currentTier * 220;
+  generateStars(currentTier);
+  generateNebulae(currentTier);
+  spawnFoods(currentTier, foodTarget());
+  spawnEnemies(currentTier, enemyTarget());
+
+  state = STATE.PLAYING;
+  notifications = [];
+  rings = [];
+  trail.length = 0;
+  notify(td.desc, CYAN, 2.5);
+};
+
+const spawnFoods = (tier, count) => {
+  for (let i = 0; i < count; i++) {
+    foods.push(new Food(tier));
+  }
+};
+
+const spawnEnemies = (tier, count) => {
+  for (let i = 0; i < count; i++) {
+    const e = new Enemy(tier, player.size);
+    // Don't spawn too close to player
+    const dx = e.x - player.x;
+    const dy = e.y - player.y;
+    if (Math.sqrt(dx*dx+dy*dy) < 150) {
+      e.x = player.x + (Math.random() > 0.5 ? 1 : -1) * (200 + Math.random() * 200);
+      e.y = player.y + (Math.random() > 0.5 ? 1 : -1) * (200 + Math.random() * 200);
+    }
+    enemies.push(e);
+  }
+};
+
+// ─── TIER TRANSITION ───
+const advanceTier = () => {
+  currentTier++;
+  if (currentTier >= TIERS.length) {
+    // You ate the universe — game complete!
+    endRun(true);
+    return;
+  }
+
+  const td = TIERS[currentTier];
+  worldSize = 900 + currentTier * 220;
+  sizeGoal = td.maxSize;
+  tierTransitionTimer = 2.0;
+
+  // Update unlocks
+  if (!save.unlockedTiers.includes(currentTier)) {
+    save.unlockedTiers.push(currentTier);
+    sfx.unlock();
+    notify(`UNLOCKED: ${td.name} start!`, MAGENTA, 3);
+  }
+
+  if (currentTier > save.highestTier) {
+    save.highestTier = currentTier;
+  }
+
+  sfx.tierUp();
+  notify(`ASCENDED: ${td.desc}`, GOLD, 3);
+  generateStars(currentTier);
+  generateNebulae(currentTier);
+
+  // Spawn new entities for this tier
+  spawnFoods(currentTier, foodTarget());
+  spawnEnemies(currentTier, enemyTarget());
+
+  // Clear old small foods
+  foods = foods.filter(f => f.tier >= currentTier - 1);
+
+  // Refill HP partially
+  player.hp = Math.min(player.maxHp, player.hp + 1);
+
+  // Screen effect
+  startShake(8, 0.3);
+  spawnParticles(player.x, player.y, 40, GOLD, 300, 1.0, 5);
+};
+
+// ─── EXPLODE ABILITY ───
+const doExplode = () => {
+  if (!explodeReady || explodeCooldown > 0) return;
+  explodeCooldown = 8; // 8 second cooldown
+  explodeReady = false;
+
+  sfx.explode();
+  startShake(15, 0.5);
+
+  const range = player.size * 3;
+  spawnParticles(player.x, player.y, 60, GOLD, 400, 1.5, 6);
+  spawnParticles(player.x, player.y, 40, RED, 350, 1.0, 4);
+
+  // Damage/destroy nearby enemies
+  for (const e of enemies) {
+    const dx = e.x - player.x;
+    const dy = e.y - player.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < range) {
+      e.hp -= 3;
+      const pushF = 500 * (1 - dist/range);
+      e.vx += (dx/dist) * pushF;
+      e.vy += (dy/dist) * pushF;
+      if (e.hp <= 0) {
+        e.alive = false;
+        score += e.value * 2;
+        spawnParticles(e.x, e.y, 15, RED, 200, 0.5);
+      }
+    }
+  }
+
+  // Push away foods
+  for (const f of foods) {
+    const dx = f.x - player.x;
+    const dy = f.y - player.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < range && dist > 1) {
+      const pushF = 300 * (1 - dist/range);
+      f.vx += (dx/dist) * pushF;
+      f.vy += (dy/dist) * pushF;
+    }
+  }
+};
+
+// ─── END RUN ───
+const endRun = (victory = false) => {
+  if (state !== STATE.PLAYING) return;
+  state = STATE.GAMEOVER;
+  gameOverTime = 0;
+
+  const xpMult = UPGRADE_DEFS.xpMult.effect(save.upgrades.xpMult);
+  runXP = Math.floor(score * 0.1 * xpMult + eatenThisRun * 2 * xpMult + currentTier * 50 * xpMult);
+  if (victory) {
+    runXP *= 3;
+    notify('THE UNIVERSE IS CONSUMED', GOLD, 4);
+  }
+
+  save.totalScore += score;
+  save.xp += runXP;
+  save.totalEaten += eatenThisRun;
+  save.runsCompleted++;
+  if (score > save.highScore) save.highScore = score;
+
+  // Level up
+  while (save.xp >= save.level * 100) {
+    save.xp -= save.level * 100;
+    save.level++;
+    notify(`Level ${save.level}!`, GOLD, 2);
+  }
+
+  // Check achievements
+  checkAchievements();
+
+  if (victory) sfx.tierUp();
+  else sfx.death();
+
+  saveSave();
+};
+
+const checkAchievements = () => {
+  for (const a of ACHIEVEMENTS) {
+    if (!save.achievements[a.id]) {
+      if (a.id === 'score_10k' && score >= 10000) { save.achievements[a.id] = true; notify(`Achievement: ${a.name}!`, MAGENTA, 3); sfx.unlock(); }
+      else if (a.id === 'score_100k' && score >= 100000) { save.achievements[a.id] = true; notify(`Achievement: ${a.name}!`, MAGENTA, 3); sfx.unlock(); }
+      else if (a.check(save)) { save.achievements[a.id] = true; notify(`Achievement: ${a.name}!`, MAGENTA, 3); sfx.unlock(); }
+    }
+  }
+};
+
+// ─── UPDATE ───
+const update = (dt) => {
+  // Shake
+  if (shakeTime > 0) {
+    shakeTime -= dt;
+    shakeX = (Math.random() - 0.5) * shakeMag * 2;
+    shakeY = (Math.random() - 0.5) * shakeMag * 2;
+    shakeMag *= 0.9;
+  } else {
+    shakeX = shakeY = 0;
+  }
+
+  // Particles
+  particles = particles.filter(p => { p.update(dt); return p.life > 0; });
+
+  // Eat rings and the bird's trail
+  rings = rings.filter(rg => { rg.life -= dt; rg.r += rg.grow * dt; return rg.life > 0; });
+  if (state === STATE.PLAYING && player) {
+    trailTimer += dt;
+    if (trailTimer > 0.035) {
+      trailTimer = 0;
+      trail.push({ x: player.x, y: player.y });
+      if (trail.length > 12) trail.shift();
+    }
+  }
+
+  // Notifications
+  notifications = notifications.filter(n => { n.life -= dt; return n.life > 0; });
+
+  if (state === STATE.TITLE) {
+    titleTime += dt;
+    if (keys[' '] || keys['Enter'] || touch.active) {
+      sfx.click();
+      state = STATE.UPGRADE;
+      keys[' '] = false;
+      keys['Enter'] = false;
+      touch.active = false;
+    }
+    return;
+  }
+
+  if (state === STATE.GAMEOVER) {
+    gameOverTime += dt;
+    if (gameOverTime > 1.0 && (keys[' '] || keys['Enter'] || touch.active)) {
+      sfx.click();
+      state = STATE.UPGRADE;
+      keys[' '] = false;
+      keys['Enter'] = false;
+      touch.active = false;
+    }
+    return;
+  }
+
+  if (state === STATE.UPGRADE) {
+    // Handled by click/touch in draw
+    return;
+  }
+
+  if (state !== STATE.PLAYING) return;
+
+  runTime += dt;
+  if (!skillComplete && eatenThisRun - skillStart >= skillGoal) {
+    skillComplete = true; score += 120;
+    notify('CLEAN DOZEN +120 • Bank or keep growing', GOLD, 3);
+  }
+
+  // ─── PLAYER MOVEMENT ───
+  let moveX = 0, moveY = 0;
+
+  // Keyboard
+  if (keys['ArrowLeft'] || keys['a'] || keys['A']) moveX -= 1;
+  if (keys['ArrowRight'] || keys['d'] || keys['D']) moveX += 1;
+  if (keys['ArrowUp'] || keys['w'] || keys['W']) moveY -= 1;
+  if (keys['ArrowDown'] || keys['s'] || keys['S']) moveY += 1;
+
+  // Touch - joystick style
+  if (touch.active) {
+    const deadzone = 15;
+    if (Math.abs(touch.dx) > deadzone || Math.abs(touch.dy) > deadzone) {
+      const mag = Math.sqrt(touch.dx*touch.dx + touch.dy*touch.dy);
+      moveX = touch.dx / mag;
+      moveY = touch.dy / mag;
+    }
+  }
+
+  // Normalize
+  const moveMag = Math.sqrt(moveX*moveX + moveY*moveY);
+  if (moveMag > 0) {
+    moveX /= moveMag;
+    moveY /= moveMag;
+  }
+
+  // Apply movement with physics
+  const accel = player.speed * 3;
+  player.vx += moveX * accel * dt;
+  player.vy += moveY * accel * dt;
+
+  // Friction
+  player.vx *= 0.92;
+  player.vy *= 0.92;
+
+  // Clamp speed
+  const pSpd = Math.sqrt(player.vx*player.vx + player.vy*player.vy);
+  if (pSpd > player.speed) {
+    player.vx = (player.vx/pSpd) * player.speed;
+    player.vy = (player.vy/pSpd) * player.speed;
+  }
+
+  player.x += player.vx * dt;
+  player.y += player.vy * dt;
+
+  // Facing
+  if (Math.abs(player.vx) > 10) player.facing = player.vx > 0 ? 1 : -1;
+
+  // World bounds (soft bounce)
+  const half = worldSize / 2;
+  if (player.x < -half) { player.x = -half; player.vx = Math.abs(player.vx) * 0.5; }
+  if (player.x > half) { player.x = half; player.vx = -Math.abs(player.vx) * 0.5; }
+  if (player.y < -half) { player.y = -half; player.vy = Math.abs(player.vy) * 0.5; }
+  if (player.y > half) { player.y = half; player.vy = -Math.abs(player.vy) * 0.5; }
+
+  // Bird animation
+  birdFrameTimer += dt;
+  if (birdFrameTimer > 0.1) {
+    birdFrame = (birdFrame + 1) % BIRD_FRAMES;
+    birdFrameTimer -= 0.1;
+  }
+
+  // Camera follow
+  camera.x += (player.x - camera.x) * 4 * dt;
+  camera.y += (player.y - camera.y) * 4 * dt;
+
+  // Timers
+  if (invincibleTimer > 0) invincibleTimer -= dt;
+  if (flashTimer > 0) flashTimer -= dt;
+  comboTimer -= dt;
+  if (comboTimer <= 0) combo = 0;
+  if (explodeCooldown > 0) explodeCooldown -= dt;
+  if (tierTransitionTimer > 0) tierTransitionTimer -= dt;
+
+  // Explode charge: every 20 things eaten
+  if (eatenThisRun > 0 && eatenThisRun % 20 === 0 && !explodeReady && explodeCooldown <= 0) {
+    explodeReady = true;
+    notify('EXPLODE READY! [Space/Tap Action]', RED, 2);
+  }
+
+  // Explode input
+  if (keys[' '] && explodeReady) {
+    doExplode();
+    keys[' '] = false;
+  }
+
+  // ─── FOOD COLLISION ───
+  for (const f of foods) {
+    if (!f.alive) continue;
+    f.update(dt);
+
+    const dx = player.x - f.x;
+    const dy = player.y - f.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const eatDist = (player.size + f.size) * 0.4;
+
+    if (dist < eatDist && player.size > f.size * 0.6) {
+      f.alive = false;
+      eatenThisRun++;
+
+      // Grow
+      const growAmount = f.size * 0.08;
+      player.size += growAmount;
+
+      // Score
+      combo++;
+      comboTimer = 2.0;
+      const comboMult = Math.min(combo, 10);
+      const pts = f.value * comboMult;
+      score += pts;
+
+      sfx.eat();
+      spawnParticles(f.x, f.y, 8, f.color, 100, 0.3, 2);
+      spawnRing(f.x, f.y, f.color, Math.max(24, f.size * 2));
+
+      if (combo >= 5) notify(`${combo}x COMBO!`, GOLD, 1);
+
+      // Check tier advance
+      if (player.size >= sizeGoal) {
+        advanceTier();
+      }
+    }
+  }
+
+  // Remove dead foods
+  foods = foods.filter(f => f.alive);
+
+  // Replenish foods
+  const minFoods = Math.round(foodTarget() * 0.8);
+  while (foods.length < minFoods) {
+    foods.push(new Food(currentTier));
+  }
+  // Occasionally spawn previous tier foods (small snacks)
+  if (currentTier > 0 && foods.length < minFoods + 10 && Math.random() < 0.02) {
+    foods.push(new Food(currentTier - 1));
+  }
+
+  // ─── ENEMY COLLISION ───
+  for (const e of enemies) {
+    if (!e.alive) continue;
+    e.update(dt);
+
+    const dx = player.x - e.x;
+    const dy = player.y - e.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const hitDist = (player.size + e.size) * 0.35;
+
+    if (dist < hitDist) {
+      if (player.size > e.size * 1.2) {
+        // Eat the enemy!
+        e.hp--;
+        if (e.hp <= 0) {
+          e.alive = false;
+          player.size += e.size * 0.15;
+          const pts = e.value * 3;
+          score += pts;
+          eatenThisRun++;
+          sfx.grow();
+          spawnParticles(e.x, e.y, 20, RED, 200, 0.6, 4);
+          spawnRing(e.x, e.y, '#ffaa44', Math.max(40, e.size * 2.2));
+          startShake(3, 0.12);
+          startShake(5, 0.2);
+          notify(`+${pts}`, GREEN, 1);
+
+          if (player.size >= sizeGoal) advanceTier();
+        } else {
+          // Knock it back
+          const pushF = 300;
+          e.vx -= (dx/dist) * pushF;
+          e.vy -= (dy/dist) * pushF;
+          sfx.hit();
+          spawnParticles(e.x, e.y, 8, RED, 150, 0.3);
+          startShake(3, 0.1);
+        }
+      } else if (invincibleTimer <= 0) {
+        // Take damage
+        player.hp--;
+        if (!skillComplete) skillStart = eatenThisRun;
+        invincibleTimer = 1.5;
+        flashTimer = 0.3;
+        sfx.hit();
+        startShake(10, 0.3);
+        spawnParticles(player.x, player.y, 15, RED, 200, 0.5, 3);
+
+        // Knockback
+        const pushF = 300;
+        player.vx += (dx/dist) * pushF;
+        player.vy += (dy/dist) * pushF;
+
+        // Shrink slightly
+        player.size *= 0.9;
+
+        notify(`-HP (${player.hp}/${player.maxHp})`, RED, 1.5);
+
+        if (player.hp <= 0) {
+          spawnParticles(player.x, player.y, 50, RED, 300, 1.0, 5);
+          endRun(false);
+          return;
+        }
+      }
+    }
+  }
+
+  // Remove dead enemies
+  enemies = enemies.filter(e => e.alive);
+
+  // Replenish enemies
+  const minEnemies = Math.max(2, Math.round(enemyTarget() * 0.7));
+  while (enemies.length < minEnemies) {
+    spawnEnemies(currentTier, 1);
+  }
+
+  // Difficulty scaling: spawn tougher enemies over time
+  if (runTime > 30 && Math.random() < 0.001 * dt * 60) {
+    const e = new Enemy(currentTier, player.size);
+    e.size = player.size * (1.0 + Math.random() * 0.5);
+    e.hp = Math.ceil(currentTier * 0.5 + 2);
+    e.maxHp = e.hp;
+    enemies.push(e);
+  }
+};
+
+// ─── DRAW ───
+const draw = () => {
+  if (state === STATE.PAUSED) return;
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, W, H);
+
+  if (state === STATE.TITLE) {
+    drawTitle();
+    drawParticlesUI();
+    drawNotifications();
+    return;
+  }
+
+  if (state === STATE.UPGRADE) {
+    drawUpgradeScreen();
+    drawNotifications();
+    return;
+  }
+
+  if (state === STATE.GAMEOVER) {
+    drawGameOver();
+    drawParticlesUI();
+    drawNotifications();
+    return;
+  }
+
+  if (state !== STATE.PLAYING) return;
+
+  ctx.save();
+  ctx.translate(shakeX, shakeY);
+
+  const cx = camera.x;
+  const cy = camera.y;
+
+  // Background
+  const td = TIERS[Math.min(currentTier, TIERS.length-1)];
+  ctx.fillStyle = td.bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Nebulae: soft tier-coloured clouds, deepest parallax layer
+  for (const n of nebulae) {
+    const nx = n.x - cx * n.depth + W/2;
+    const ny = n.y - cy * n.depth + H/2;
+    if (nx < -n.r || nx > W + n.r || ny < -n.r || ny > H + n.r) continue;
+    const g = ctx.createRadialGradient(nx, ny, 0, nx, ny, n.r);
+    g.addColorStop(0, hexAlpha(n.color, n.alpha * (1 + 0.15 * Math.sin(runTime * 0.4 + n.r))));
+    g.addColorStop(1, hexAlpha(n.color, 0));
+    ctx.fillStyle = g;
+    // fill the circle, not a square: a square's edges showed as faint full-height seams
+    ctx.beginPath();
+    ctx.arc(nx, ny, n.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Stars with parallax: round, tinted, the big ones glow
+  for (const s of bgStars) {
+    const sx = (s.x - cx * s.depth) % (W * 2);
+    const sy = (s.y - cy * s.depth) % (H * 2);
+    const screenX = ((sx % W) + W) % W;
+    const screenY = ((sy % H) + H) % H;
+    const twinkle = 0.55 + 0.45 * Math.sin(runTime * s.twinkleSpeed + s.brightness * 10);
+    const r = s.size * 0.7 * (0.6 + s.depth * 0.6);
+    ctx.globalAlpha = Math.min(1, (0.35 + s.brightness * 0.65) * twinkle);
+    ctx.fillStyle = s.tint;
+    if (r > 1.6) { ctx.shadowColor = s.tint; ctx.shadowBlur = r * 3; }
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  ctx.globalAlpha = 1;
+
+  // Zoom the world so the bird is never a speck: 30px minimum on screen, at most 7x
+  viewZoom = computeZoom();
+  ctx.save();
+  ctx.translate(W/2, H/2);
+  ctx.scale(viewZoom, viewZoom);
+  ctx.translate(-W/2, -H/2);
+  const uz = 1 / viewZoom;
+
+  // World boundary
+  const bx1 = -worldSize/2 - cx + W/2;
+  const by1 = -worldSize/2 - cy + H/2;
+  const bx2 = worldSize/2 - cx + W/2;
+  const by2 = worldSize/2 - cy + H/2;
+  // The edge of the world reads as a soft wall, not a stray hairline
+  ctx.strokeStyle = 'rgba(120,160,255,0.16)';
+  ctx.lineWidth = 14 * uz;
+  ctx.strokeRect(bx1, by1, bx2 - bx1, by2 - by1);
+  ctx.strokeStyle = 'rgba(160,200,255,0.45)';
+  ctx.lineWidth = 2 * uz;
+  ctx.strokeRect(bx1, by1, bx2 - bx1, by2 - by1);
+
+  // Grid lines (subtle; only when the view is close to 1:1, zoomed in they read as stray lines)
+  const gridSize = 100;
+  ctx.strokeStyle = viewZoom > 1.5 ? 'rgba(255,255,255,0)' : '#ffffff08';
+  ctx.lineWidth = 1 * uz;
+  const startGX = Math.floor((-worldSize/2) / gridSize) * gridSize;
+  const startGY = Math.floor((-worldSize/2) / gridSize) * gridSize;
+  for (let gx = startGX; gx <= worldSize/2; gx += gridSize) {
+    const sx = gx - cx + W/2;
+    if (sx > -10 && sx < W + 10) {
+      ctx.beginPath();
+      ctx.moveTo(sx, Math.max(0, by1));
+      ctx.lineTo(sx, Math.min(H, by2));
+      ctx.stroke();
+    }
+  }
+  for (let gy = startGY; gy <= worldSize/2; gy += gridSize) {
+    const sy = gy - cy + H/2;
+    if (sy > -10 && sy < H + 10) {
+      ctx.beginPath();
+      ctx.moveTo(Math.max(0, bx1), sy);
+      ctx.lineTo(Math.min(W, bx2), sy);
+      ctx.stroke();
+    }
+  }
+
+  // Draw foods
+  for (const f of foods) f.draw(cx, cy);
+
+  // Draw enemies
+  for (const e of enemies) e.draw(cx, cy);
+
+  // Draw particles (world space)
+  for (const p of particles) p.draw(cx, cy);
+
+  // Eat rings (world space)
+  for (const rg of rings) {
+    const a = Math.max(0, rg.life / rg.maxLife);
+    ctx.strokeStyle = hexAlpha(rg.color, a * 0.9);
+    ctx.lineWidth = 1.5 + a * 2;
+    ctx.beginPath();
+    ctx.arc(rg.x - cx + W/2, rg.y - cy + H/2, rg.r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Motion trail behind the bird
+  {
+    const tc = tierWingColor(currentTier);
+    for (let i = 0; i < trail.length; i++) {
+      const t = trail[i];
+      const a = (i + 1) / (trail.length + 1);
+      ctx.fillStyle = hexAlpha(tc, a * 0.22);
+      ctx.beginPath();
+      ctx.arc(t.x - cx + W/2, t.y - cy + H/2, player.size * 0.28 * a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Draw player
+  if (flashTimer <= 0 || Math.floor(flashTimer * 20) % 2 === 0) {
+    const px = player.x - cx + W/2;
+    const py = player.y - cy + H/2;
+    drawBird(px, py, player.size, player.facing, birdFrame, currentTier);
+  }
+
+  // Magnet range indicator
+  if (save.upgrades.magnet > 0) {
+    const magnetRange = UPGRADE_DEFS.magnet.effect(save.upgrades.magnet);
+    const px = player.x - cx + W/2;
+    const py = player.y - cy + H/2;
+    ctx.strokeStyle = '#00ff8811';
+    ctx.lineWidth = 1 * uz;
+    ctx.beginPath();
+    ctx.arc(px, py, magnetRange + player.size, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.restore(); // zoom
+  ctx.restore();
+
+  // Vignette: pulls the eye to the middle, hides the hard edge of the dark field
+  {
+    const vg = ctx.createRadialGradient(W/2, H/2, Math.min(W, H) * 0.35, W/2, H/2, Math.max(W, H) * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ─── HUD ───
+  drawHUD();
+  drawTouchControls();
+  drawNotifications();
+
+  // Three-second teach: the controls, shown while playing, then gone
+  if (runTime < 3.6 && currentTier === 0) {
+    const a = runTime < 3.0 ? 1 : (3.6 - runTime) / 0.6;
+    const isTouch = ('ontouchstart' in window);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = 'rgba(10,10,20,0.78)';
+    const bw = Math.min(W - 24, 340), bh = 58, bx = W/2 - bw/2, by = H/2 + player.size * 0.6 + 36;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = hexAlpha(GOLD, 0.8);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+    ctx.fillStyle = WHITE;
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(isTouch ? 'Drag anywhere to steer' : 'Arrows or WASD to steer', W/2, by + 24);
+    ctx.fillStyle = GREEN;
+    ctx.font = '12px monospace';
+    ctx.fillText('Eat what is smaller than you. Avoid the red.', W/2, by + 44);
+    ctx.globalAlpha = 1;
+  }
+
+  // Tier transition overlay
+  if (tierTransitionTimer > 0) {
+    const a = Math.min(1, tierTransitionTimer / 1.0);
+    ctx.fillStyle = `rgba(255,255,255,${a * 0.3})`;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = GOLD;
+    ctx.font = 'bold 36px monospace';
+    ctx.textAlign = 'center';
+    ctx.globalAlpha = a;
+    ctx.fillText(TIERS[Math.min(currentTier, TIERS.length-1)].desc, W/2, H/2);
+    ctx.font = '18px monospace';
+    ctx.fillText(`Tier ${currentTier + 1} / ${TIERS.length}`, W/2, H/2 + 40);
+    ctx.globalAlpha = 1;
+  }
+};
+
+const drawHUD = () => {
+  const td = TIERS[Math.min(currentTier, TIERS.length-1)];
+  const pad = 15;
+
+  // Score
+  ctx.fillStyle = GOLD;
+  ctx.font = 'bold 20px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(`Score: ${score.toLocaleString()}`, pad, 30);
+
+  // Combo
+  if (combo > 1) {
+    ctx.fillStyle = GREEN;
+    ctx.font = 'bold 16px monospace';
+    ctx.fillText(`${combo}x Combo`, pad, 52);
+  }
+
+  // Tier
+  ctx.fillStyle = CYAN;
+  ctx.font = '14px monospace';
+  ctx.fillText(`${td.name} (${td.desc})`, pad, 72);
+
+  // HP
+  ctx.fillStyle = '#333';
+  const hpBarW = 120;
+  const hpBarH = 12;
+  ctx.fillRect(pad, 80, hpBarW, hpBarH);
+  const hpPct = player.hp / player.maxHp;
+  ctx.fillStyle = hpPct > 0.5 ? GREEN : hpPct > 0.25 ? GOLD : RED;
+  ctx.fillRect(pad, 80, hpBarW * hpPct, hpBarH);
+  ctx.fillStyle = WHITE;
+  ctx.font = '10px monospace';
+  ctx.fillText(`HP ${player.hp}/${player.maxHp}`, pad + 4, 90);
+
+  // Size progress bar
+  ctx.fillStyle = '#333';
+  const sizeBarW = 150;
+  ctx.fillRect(pad, 98, sizeBarW, 10);
+  const sizePct = Math.min(1, (player.size - TIERS[Math.min(currentTier, TIERS.length-1)].minSize) / (sizeGoal - TIERS[Math.min(currentTier, TIERS.length-1)].minSize));
+  ctx.fillStyle = MAGENTA;
+  ctx.fillRect(pad, 98, sizeBarW * sizePct, 10);
+  ctx.fillStyle = WHITE;
+  ctx.font = '9px monospace';
+  ctx.fillText(`Size: ${player.size.toFixed(0)} / ${sizeGoal}`, pad + 4, 107);
+
+  // Explode indicator
+  const explodeX = W - 108;
+  if (explodeReady) {
+    ctx.fillStyle = RED;
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('EXPLODE', explodeX, 30);
+    ctx.font = '10px monospace';
+    ctx.fillText('[SPACE]', explodeX, 44);
+  } else if (explodeCooldown > 0) {
+    ctx.fillStyle = '#555';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${Math.ceil(explodeCooldown)}s`, explodeX, 30);
+  }
+
+  // Eaten count
+  ctx.fillStyle = '#888';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(`Eaten: ${eatenThisRun}`, W - pad, 65);
+  ctx.fillText(`Time: ${formatTime(runTime)}`, W - pad, 80);
+
+  // Minimap
+  const mmSize = 80;
+  const mmX = W - mmSize - pad;
+  const mmY = H - mmSize - pad - 60;
+  ctx.fillStyle = '#00000088';
+  ctx.fillRect(mmX, mmY, mmSize, mmSize);
+  ctx.strokeStyle = '#ffffff33';
+  ctx.strokeRect(mmX, mmY, mmSize, mmSize);
+
+  const mmScale = mmSize / worldSize;
+  // Player dot
+  ctx.fillStyle = GOLD;
+  ctx.fillRect(mmX + mmSize/2 + player.x * mmScale - 2, mmY + mmSize/2 + player.y * mmScale - 2, 4, 4);
+  // Food dots
+  ctx.fillStyle = GREEN;
+  for (const f of foods) {
+    ctx.fillRect(mmX + mmSize/2 + f.x * mmScale, mmY + mmSize/2 + f.y * mmScale, 1, 1);
+  }
+  // Enemy dots
+  ctx.fillStyle = RED;
+  for (const e of enemies) {
+    ctx.fillRect(mmX + mmSize/2 + e.x * mmScale - 1, mmY + mmSize/2 + e.y * mmScale - 1, 2, 2);
+  }
+};
+
+const drawTouchControls = () => {
+  if (!('ontouchstart' in window)) return;
+
+  // Virtual joystick indicator
+  if (touch.active && (Math.abs(touch.dx) > 15 || Math.abs(touch.dy) > 15)) {
+    ctx.strokeStyle = '#ffffff33';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(touch.startX, touch.startY, 40, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const clampDist = Math.min(40, Math.sqrt(touch.dx*touch.dx + touch.dy*touch.dy));
+    const angle = Math.atan2(touch.dy, touch.dx);
+    ctx.fillStyle = '#ffffff55';
+    ctx.beginPath();
+    ctx.arc(touch.startX + Math.cos(angle)*clampDist, touch.startY + Math.sin(angle)*clampDist, 15, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Explode button (bottom right)
+  if (explodeReady) {
+    const bx = W - 60;
+    const by = H - 80;
+    ctx.fillStyle = '#ff333366';
+    ctx.beginPath();
+    ctx.arc(bx, by, 30, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = RED;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(bx, by, 30, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = WHITE;
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('BOOM', bx, by + 4);
+  }
+};
+
+const formatTime = (t) => {
+  const m = Math.floor(t / 60);
+  const s = Math.floor(t % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
+
+const drawParticlesUI = () => {
+  for (const p of particles) {
+    const a = Math.max(0, p.life / p.maxLife);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size * a + 1, p.size * a + 1);
+  }
+  ctx.globalAlpha = 1;
+};
+
+const drawNotifications = () => {
+  let ny = Math.max(275, H * 0.32);
+  for (const n of notifications) {
+    const a = Math.min(1, n.life / 0.5) * Math.min(1, (n.maxLife - (n.maxLife - n.life)) / 0.3);
+    ctx.globalAlpha = Math.max(0, a);
+    ctx.fillStyle = n.color;
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(n.text, W/2, ny);
+    ny += 24;
+  }
+  ctx.globalAlpha = 1;
+};
+
+// ─── TITLE SCREEN ───
+const drawTitle = () => {
+  // Animated bg
+  for (let i = 0; i < 50; i++) {
+    const x = ((i * 137 + titleTime * 20 * (i % 3 + 1)) % (W + 100)) - 50;
+    const y = ((i * 89 + titleTime * 10 * ((i+1) % 3 + 1)) % (H + 100)) - 50;
+    ctx.globalAlpha = 0.1 + Math.sin(titleTime * 2 + i) * 0.05;
+    ctx.fillStyle = [GOLD, GREEN, CYAN, MAGENTA][i % 4];
+    ctx.fillRect(x, y, 2, 2);
+  }
+  ctx.globalAlpha = 1;
+
+  const centerY = H * 0.35;
+
+  // Title
+  ctx.fillStyle = GOLD;
+  ctx.font = `bold ${Math.min(64, W * 0.1)}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.shadowColor = GOLD;
+  ctx.shadowBlur = 20 + Math.sin(titleTime * 3) * 10;
+  ctx.fillText('ENDBIRD', W/2, centerY);
+  ctx.shadowBlur = 0;
+
+  // Subtitle
+  ctx.fillStyle = GREEN;
+  ctx.font = `${Math.min(20, W * 0.035)}px monospace`;
+  ctx.fillText('Eat, Grow, Explode.', W/2, centerY + 40);
+
+  // Tagline
+  ctx.fillStyle = '#888';
+  ctx.font = `${Math.min(14, W * 0.025)}px monospace`;
+  ctx.fillText('From quarks to cosmos. Devour everything.', W/2, centerY + 70);
+
+  // Stats
+  ctx.fillStyle = CYAN;
+  ctx.font = '13px monospace';
+  ctx.fillText(`Level ${save.level} | High Score: ${save.highScore.toLocaleString()} | Runs: ${save.runsCompleted}`, W/2, centerY + 110);
+
+  // Prompt
+  const blink = Math.sin(titleTime * 4) > 0;
+  if (blink) {
+    ctx.fillStyle = WHITE;
+    ctx.font = 'bold 18px monospace';
+    ctx.fillText('Press ENTER or Tap to Start', W/2, centerY + 160);
+  }
+
+  // Bird preview
+  const previewSize = 40 + Math.sin(titleTime * 2) * 5;
+  drawBird(W/2, centerY - 80, previewSize, 1, Math.floor(titleTime * 6) % 4, Math.floor(titleTime) % TIERS.length);
+
+  // Controls
+  ctx.fillStyle = '#555';
+  ctx.font = '11px monospace';
+  ctx.fillText('Eat smaller things. Avoid bigger things.', W/2, H - 44);
+  ctx.fillText('Controls are taught as you start.', W/2, H - 28);
+};
+
+// ─── UPGRADE SCREEN ───
+let upgradeHover = -1;
+let startHover = false;
+let selectedStartTier = 0;
+
+const drawUpgradeScreen = () => {
+  ctx.fillStyle = '#0a0a14';
+  ctx.fillRect(0, 0, W, H);
+
+  const centerX = W / 2;
+  let y = 40;
+
+  // Title
+  ctx.fillStyle = GOLD;
+  ctx.font = 'bold 24px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('UPGRADE LAB', centerX, y);
+  y += 30;
+
+  // XP bar
+  const xpNeeded = save.level * 100;
+  ctx.fillStyle = '#222';
+  const xpBarW = Math.min(300, W * 0.7);
+  ctx.fillRect(centerX - xpBarW/2, y, xpBarW, 14);
+  ctx.fillStyle = CYAN;
+  ctx.fillRect(centerX - xpBarW/2, y, xpBarW * (save.xp / xpNeeded), 14);
+  ctx.fillStyle = WHITE;
+  ctx.font = '10px monospace';
+  ctx.fillText(`Level ${save.level} — XP: ${save.xp}/${xpNeeded}`, centerX, y + 11);
+  y += 30;
+
+  // Currency
+  ctx.fillStyle = GOLD;
+  ctx.font = '16px monospace';
+  ctx.fillText(`Total Score: ${save.totalScore.toLocaleString()}`, centerX, y);
+  y += 30;
+
+  // Upgrades
+  const keys_list = Object.keys(UPGRADE_DEFS);
+  const cardW = Math.min(160, (W - 40) / keys_list.length - 10);
+  const cardH = 140;
+  const totalW = keys_list.length * (cardW + 10) - 10;
+  const startX = centerX - totalW / 2;
+
+  upgradeHover = -1;
+
+  keys_list.forEach((key, i) => {
+    const def = UPGRADE_DEFS[key];
+    const lvl = save.upgrades[key];
+    const cost = getUpgradeCost(key);
+    const maxed = lvl >= def.maxLvl;
+    const canBuy = !maxed && save.totalScore >= cost;
+
+    const cx = startX + i * (cardW + 10);
+    const cy = y;
+
+    // Hit test
+    const mx = mousePos.x;
+    const my = mousePos.y;
+    const hover = mx >= cx && mx <= cx + cardW && my >= cy && my <= cy + cardH;
+    if (hover) upgradeHover = i;
+
+    // Card bg
+    ctx.fillStyle = hover ? '#1a1a2a' : '#111118';
+    ctx.fillRect(cx, cy, cardW, cardH);
+    ctx.strokeStyle = canBuy ? GREEN : maxed ? GOLD : '#333';
+    ctx.lineWidth = hover ? 2 : 1;
+    ctx.strokeRect(cx, cy, cardW, cardH);
+
+    // Icon
+    ctx.fillStyle = maxed ? GOLD : canBuy ? GREEN : '#555';
+    ctx.font = 'bold 24px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(def.icon, cx + cardW/2, cy + 28);
+
+    // Name
+    ctx.fillStyle = WHITE;
+    ctx.font = 'bold 11px monospace';
+    ctx.fillText(def.name, cx + cardW/2, cy + 48);
+
+    // Level
+    ctx.fillStyle = CYAN;
+    ctx.font = '10px monospace';
+    ctx.fillText(`Lv ${lvl}/${def.maxLvl}`, cx + cardW/2, cy + 64);
+
+    // Desc
+    ctx.fillStyle = '#888';
+    ctx.font = '9px monospace';
+    ctx.fillText(def.desc, cx + cardW/2, cy + 80);
+
+    // Effect
+    ctx.fillStyle = GREEN;
+    ctx.font = '9px monospace';
+    const effectVal = def.effect(lvl);
+    ctx.fillText(`Now: ${typeof effectVal === 'number' && effectVal % 1 !== 0 ? effectVal.toFixed(1) + 'x' : effectVal}`, cx + cardW/2, cy + 96);
+
+    // Cost
+    if (!maxed) {
+      ctx.fillStyle = canBuy ? GOLD : RED;
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText(`${cost.toLocaleString()}`, cx + cardW/2, cy + 116);
+      if (hover && canBuy) {
+        ctx.fillStyle = GREEN;
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText('CLICK TO BUY', cx + cardW/2, cy + 132);
+      }
+    } else {
+      ctx.fillStyle = GOLD;
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText('MAXED', cx + cardW/2, cy + 116);
+    }
+  });
+
+  y += cardH + 25;
+
+  // Starting tier selector
+  ctx.fillStyle = WHITE;
+  ctx.font = 'bold 16px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('Starting Scale:', centerX, y);
+  y += 20;
+
+  const tierBtnW = Math.min(90, (W - 40) / Math.min(save.unlockedTiers.length, 5) - 5);
+  const tierTotalW = Math.min(save.unlockedTiers.length, 5) * (tierBtnW + 5) - 5;
+  const tierStartX = centerX - tierTotalW / 2;
+
+  const displayTiers = save.unlockedTiers.slice(0, 5);
+  displayTiers.forEach((tierIdx, i) => {
+    const tx = tierStartX + i * (tierBtnW + 5);
+    const selected = tierIdx === selectedStartTier;
+    const td = TIERS[tierIdx];
+
+    ctx.fillStyle = selected ? '#222244' : '#111118';
+    ctx.fillRect(tx, y, tierBtnW, 36);
+    ctx.strokeStyle = selected ? GOLD : '#333';
+    ctx.lineWidth = selected ? 2 : 1;
+    ctx.strokeRect(tx, y, tierBtnW, 36);
+
+    ctx.fillStyle = selected ? GOLD : '#aaa';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(td.name, tx + tierBtnW/2, y + 15);
+    ctx.fillStyle = '#666';
+    ctx.font = '8px monospace';
+    ctx.fillText(td.desc, tx + tierBtnW/2, y + 28);
+
+    // Hit test for tier selection
+    const mx = mousePos.x, my2 = mousePos.y;
+    if (mx >= tx && mx <= tx + tierBtnW && my2 >= y && my2 <= y + 36) {
+      if (typeof lastClickTime !== 'undefined' && lastClickTime > 0) {
+        selectedStartTier = tierIdx;
+        sfx.click();
+      }
+    }
+  });
+
+  y += 55;
+
+  // Play button
+  const playBtnW = 200;
+  const playBtnH = 50;
+  const pbx = centerX - playBtnW/2;
+  const pby = y;
+  const playHover = mousePos.x >= pbx && mousePos.x <= pbx + playBtnW && mousePos.y >= pby && mousePos.y <= pby + playBtnH;
+  startHover = playHover;
+
+  ctx.fillStyle = playHover ? '#004422' : '#002211';
+  ctx.fillRect(pbx, pby, playBtnW, playBtnH);
+  ctx.strokeStyle = GREEN;
+  ctx.lineWidth = playHover ? 3 : 1;
+  ctx.strokeRect(pbx, pby, playBtnW, playBtnH);
+
+  ctx.fillStyle = GREEN;
+  ctx.font = 'bold 20px monospace';
+  ctx.fillText('START RUN', centerX, pby + 32);
+
+  y += playBtnH + 20;
+
+  // Achievements
+  ctx.fillStyle = '#666';
+  ctx.font = '12px monospace';
+  ctx.fillText(`Achievements: ${Object.keys(save.achievements).length}/${ACHIEVEMENTS.length}`, centerX, y);
+  y += 18;
+
+  const achPerRow = Math.min(6, Math.floor((W - 40) / 140));
+  const achW = Math.min(130, (W - 40) / achPerRow - 10);
+  const achTotalW = Math.min(achPerRow, ACHIEVEMENTS.length) * (achW + 5) - 5;
+  const achStartX = centerX - achTotalW / 2;
+
+  ACHIEVEMENTS.slice(0, achPerRow * 2).forEach((a, i) => {
+    const row = Math.floor(i / achPerRow);
+    const col = i % achPerRow;
+    const ax = achStartX + col * (achW + 5);
+    const ay = y + row * 32;
+    const unlocked = save.achievements[a.id];
+
+    ctx.fillStyle = unlocked ? '#1a1a22' : '#0a0a0f';
+    ctx.fillRect(ax, ay, achW, 26);
+    ctx.strokeStyle = unlocked ? GOLD : '#222';
+    ctx.strokeRect(ax, ay, achW, 26);
+
+    ctx.fillStyle = unlocked ? GOLD : '#444';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(unlocked ? a.name : '???', ax + achW/2, ay + 11);
+    ctx.fillStyle = unlocked ? '#888' : '#333';
+    ctx.font = '7px monospace';
+    ctx.fillText(unlocked ? a.desc : 'Locked', ax + achW/2, ay + 22);
+  });
+};
+
+let lastClickTime = 0;
+canvas.addEventListener('click', (e) => {
+  lastClickTime = performance.now();
+  ensureAudio(e);
+
+  if (state === STATE.UPGRADE) {
+    const mx = e.clientX;
+    const my = e.clientY;
+
+    // Check upgrade cards
+    const keys_list = Object.keys(UPGRADE_DEFS);
+    const cardW = Math.min(160, (W - 40) / keys_list.length - 10);
+    const cardH = 140;
+    const totalW = keys_list.length * (cardW + 10) - 10;
+    const startX = W/2 - totalW/2;
+    const cardY = 130;
+
+    keys_list.forEach((key, i) => {
+      const cx = startX + i * (cardW + 10);
+      if (mx >= cx && mx <= cx + cardW && my >= cardY && my <= cardY + cardH) {
+        const def = UPGRADE_DEFS[key];
+        const lvl = save.upgrades[key];
+        const cost = getUpgradeCost(key);
+        if (lvl < def.maxLvl && save.totalScore >= cost) {
+          save.totalScore -= cost;
+          save.upgrades[key]++;
+          sfx.unlock();
+          notify(`${def.name} Lv${save.upgrades[key]}!`, GREEN, 1.5);
+          saveSave();
+        } else if (lvl >= def.maxLvl) {
+          sfx.click();
+        } else {
+          sfx.hit();
+          notify('Not enough score!', RED, 1);
+        }
+      }
+    });
+
+    // Check tier buttons
+    const tierBtnY = cardY + cardH + 45;
+    const tierBtnW = Math.min(90, (W - 40) / Math.min(save.unlockedTiers.length, 5) - 5);
+    const tierTotalW = Math.min(save.unlockedTiers.length, 5) * (tierBtnW + 5) - 5;
+    const tierStartX = W/2 - tierTotalW/2;
+    const displayTiers = save.unlockedTiers.slice(0, 5);
+    displayTiers.forEach((tierIdx, i) => {
+      const tx = tierStartX + i * (tierBtnW + 5);
+      if (mx >= tx && mx <= tx + tierBtnW && my >= tierBtnY && my <= tierBtnY + 36) {
+        selectedStartTier = tierIdx;
+        sfx.click();
+      }
+    });
+
+    // Check play button
+    const playBtnW = 200;
+    const playBtnH = 50;
+    const pbx = W/2 - playBtnW/2;
+    const pby = tierBtnY + 55;
+    if (mx >= pbx && mx <= pbx + playBtnW && my >= pby && my <= pby + playBtnH) {
+      sfx.click();
+      initGame(selectedStartTier);
+    }
+  }
+
+  // Explode button (touch)
+  if (state === STATE.PLAYING && explodeReady) {
+    const bx = W - 60;
+    const by = H - 80;
+    const mx2 = e.clientX, my2 = e.clientY;
+    if (Math.sqrt((mx2-bx)**2 + (my2-by)**2) < 35) {
+      doExplode();
+    }
+  }
+
+  setTimeout(() => { lastClickTime = 0; }, 100);
+});
+
+// ─── GAME OVER SCREEN ───
+const drawGameOver = () => {
+  ctx.fillStyle = '#0a0a0fcc';
+  ctx.fillRect(0, 0, W, H);
+
+  const centerY = H * 0.3;
+  ctx.textAlign = 'center';
+
+  ctx.fillStyle = RED;
+  ctx.font = `bold ${Math.min(48, W * 0.08)}px monospace`;
+  ctx.fillText(bankedRun ? 'RUN BANKED' : 'GAME OVER', W/2, centerY);
+
+  ctx.fillStyle = GOLD;
+  ctx.font = 'bold 24px monospace';
+  ctx.fillText(`Score: ${score.toLocaleString()}`, W/2, centerY + 50);
+
+  ctx.fillStyle = GREEN;
+  ctx.font = '16px monospace';
+  ctx.fillText(`+${runXP} XP earned`, W/2, centerY + 80);
+
+  ctx.fillStyle = CYAN;
+  ctx.font = '14px monospace';
+  ctx.fillText(`Eaten: ${eatenThisRun} | Time: ${formatTime(runTime)}`, W/2, centerY + 110);
+  ctx.fillText(`Highest Tier: ${TIERS[Math.min(currentTier, TIERS.length-1)].name}`, W/2, centerY + 130);
+
+  if (score >= save.highScore && score > 0) {
+    ctx.fillStyle = GOLD;
+    ctx.font = 'bold 18px monospace';
+    ctx.shadowColor = GOLD;
+    ctx.shadowBlur = 15;
+    ctx.fillText('NEW HIGH SCORE!', W/2, centerY + 165);
+    ctx.shadowBlur = 0;
+  }
+
+  if (gameOverTime > 1.0) {
+    const blink = Math.sin(gameOverTime * 4) > 0;
+    if (blink) {
+      ctx.fillStyle = WHITE;
+      ctx.font = 'bold 16px monospace';
+      ctx.fillText('Press ENTER or Tap to Continue', W/2, centerY + 210);
+    }
+  }
+};
+
+// ─── GAME LOOP ───
+let lastTime = 0;
+const loop = (time) => {
+  const dt = Math.min(0.05, (time - lastTime) / 1000);
+  lastTime = time;
+
+  resize();
+  update(dt);
+  audioTick();
+  draw();
+
+  requestAnimationFrame(loop);
+};
+
+requestAnimationFrame((time) => {
+  lastTime = time;
+  requestAnimationFrame(loop);
+});
+
+// Only actors whose rendered bodies intersect this viewport enter player observations.
+const playerObservation = () => {
+ const z=computeZoom(),position=(q,bob=0)=>({x:W/2+(q.x-camera.x)*z,y:H/2+(q.y-camera.y+bob)*z});
+ const inView=(q,r)=>q.x+r>=0&&q.x-r<=W&&q.y+r>=0&&q.y-r<=H;
+ const sceneFoods=foods.filter(f=>f.alive).map(f=>{const p=position(f,Math.sin(f.bobPhase)*3),r=Math.max(2.5,f.size*.5*(1+Math.sin(f.pulse)*.1)*z);return {...p,r,color:f.color};}).filter(q=>inView(q,q.r));
+ const sceneEnemies=enemies.filter(e=>e.alive).map(e=>{const p=position(e),r=e.size*.5*(1+Math.sin(e.pulse)*.08)*z;return {...p,r,cue:e.size*1.2>=player.size?'red-danger':'green-edible'};}).filter(q=>inView(q,q.r));
+ const bar=[...document.querySelectorAll('.loopbar button')],bank=bar.find(b=>b.textContent==='Bank run');
+ return {phase:state===STATE.PLAYING?'playing':state===STATE.PAUSED?'paused':state===STATE.GAMEOVER?(bankedRun?'won':'lost'):'ready',width:W,height:H,bird:player?{...position(player),r:player.size*.5*z}:null,foods:sceneFoods,enemies:sceneEnemies,hp:player&&player.hp,size:player&&player.size,sizeGoal,tier:TIERS[Math.min(currentTier||0,TIERS.length-1)].name,score,eaten:eatenThisRun,goal:document.querySelector('.loopbar span')?.textContent||'',bankEnabled:!!bank&&!bank.disabled,explosionLabel:explodeReady?'BOOM READY':'BOOM CHARGING'};
+};
+window.GameGobLoop = {
+  controlOffset:120,
+  observe:playerObservation,
+  status: () => ({playing:state===STATE.PLAYING, paused:state===STATE.PAUSED, goal:skillComplete?'Clean dozen complete • +120':'Clean dozen: '+Math.max(0,eatenThisRun-skillStart||0)+'/12 without a hit', canBank:skillComplete&&state===STATE.PLAYING}),
+  pause: () => { if(state===STATE.PLAYING){state=STATE.PAUSED; touch.active=false; for(const k in keys)keys[k]=false;} else if(state===STATE.PAUSED){state=STATE.PLAYING;touch.active=false;for(const k in keys)keys[k]=false;} },
+  restart: () => initGame(Math.min(currentTier||0,TIERS.length-1)),
+  bank: () => {if(skillComplete&&state===STATE.PLAYING){bankedRun=true;endRun(false);}},
+  reset: () => {save=defaultSave();saveSave();state=STATE.TITLE;},
+  metrics: () => ({state,score,eaten:eatenThisRun,time:runTime,hp:player&&player.hp,skillComplete,bankedRun})
+};
+</script>
+<script>
+// Shared interface for offline loop experiments. No analytics or network calls.
+(()=>{'use strict';const game=window.GameGobLoop;if(!game)return;
+const style=document.createElement('style');style.textContent=`.loopbar{position:fixed;z-index:999;left:8px;right:8px;top:var(--loop-offset,110px);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;font:11px system-ui;color:#dcf6ff;pointer-events:none}.loopbar button,.loopbar a{pointer-events:auto;min-height:44px;padding:8px 10px;border:1px solid #4c6288;border-radius:9px;background:#101b30ed;color:#dcf6ff;font:inherit;text-decoration:none}.loopbar span{width:100%;text-align:center;background:#101b30dd;padding:4px;border-radius:5px}.loopbar button:disabled{opacity:.4}.loopveil{position:fixed;inset:0;background:#080f22ad;z-index:998;display:grid;place-items:center;color:#fff;font:24px system-ui;pointer-events:none}`;document.head.append(style);
+const bar=document.createElement('nav');bar.className='loopbar';bar.style.setProperty('--loop-offset',(game.controlOffset||110)+'px');bar.setAttribute('aria-label','Run controls');document.body.append(bar);
+const goal=document.createElement('span');goal.setAttribute('role','status');bar.append(goal);
+const add=(text,fn)=>{const b=document.createElement('button');b.textContent=text;b.onclick=e=>{e.stopPropagation();fn();sync();};bar.append(b);return b;};
+const pause=add('Pause',()=>game.pause()),restart=add('Restart',()=>game.restart());
+let bank;if(game.bank)bank=add('Bank run',()=>game.bank());if(game.hint)add('Clue hint',()=>{const r=game.hint();if(r){goal.textContent=r;messageUntil=Date.now()+4000;}});
+let resetUntil=0,messageUntil=0;const reset=add('Reset save',()=>{if(Date.now()<resetUntil){game.reset();reset.textContent='Reset save';resetUntil=0;}else{resetUntil=Date.now()+4000;reset.textContent='Confirm reset';}});
+const a=document.createElement('a');a.href='loop_lab.html';a.textContent='Loop lab';bar.append(a);
+const veil=document.createElement('div');veil.className='loopveil';veil.textContent='Paused • tap Resume';veil.hidden=true;veil.style.display='none';document.body.append(veil);
+function sync(){const s=game.status();pause.textContent=s.paused?'Resume':'Pause';veil.style.display=s.paused?'grid':'none';if(Date.now()>messageUntil)goal.textContent='FREE PLAYTEST • '+(s.goal||'');if(bank)bank.disabled=!s.canBank;if(resetUntil&&Date.now()>resetUntil){reset.textContent='Reset save';resetUntil=0;}}
+window.addEventListener('blur',()=>{if(game.status().playing&&!game.status().paused)game.pause();sync();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&game.status().playing&&!game.status().paused)game.pause();sync();});
+window.addEventListener('keydown',e=>{if(e.repeat)return;if(e.key==='Escape'||e.key==='p'){game.pause();sync();}});window.addEventListener('gamegob:qa-render',sync);setInterval(sync,200);sync();
+})();
+
+</script>
+
+</body>
+</html>

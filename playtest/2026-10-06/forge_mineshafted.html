@@ -1,0 +1,2319 @@
+<!DOCTYPE html>
+<html lang="en" data-gg-game>
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; img-src 'self' data:; font-src 'self'">
+<meta property="og:title" content="Mineshafted — Dig, Disarm, Discover">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gamegob">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Mineshafted — Dig, Disarm, Discover</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+</style>
+<style>
+/* gg-mobile.css — GameGob shared mobile styles (2026-10-04) + shared look kit (2026-10-05). */
+
+/* ---- Type: self-hosted (SIL OFL), no third-party font requests in the native shell.
+   JetBrains Mono shares Courier New's 0.6em advance, so swapping it in under
+   every 'Courier New'/monospace stack (DOM here, canvas via gg-mobile.js) keeps
+   every layout and only sharpens the letterforms. */
+@font-face { font-family: 'JetBrains Mono'; src: url(assets/fonts/jetbrains-mono-400.woff2) format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'JetBrains Mono'; src: url(assets/fonts/jetbrains-mono-700.woff2) format('woff2'); font-weight: 600 800; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Press Start 2P'; src: url(assets/fonts/press-start-2p-400.woff2) format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+html[data-gg-game] body, html[data-gg-game] button, html[data-gg-game] input, html[data-gg-game] select, html[data-gg-game] textarea { font-family: 'JetBrains Mono', 'Courier New', monospace; }
+
+:root {
+  --gg-ink: #e9e6dc;
+  --gg-muted: #8d90a2;
+  --gg-gold: #f0b800;
+  --gg-gold-line: rgba(240,184,0,.42);
+  --gg-glass: rgba(14,16,24,.62);
+  --gg-panel: linear-gradient(160deg, rgba(17,19,31,.97), rgba(9,10,16,.985));
+  --gg-safe-top: env(safe-area-inset-top, 0px);
+  --gg-safe-right: env(safe-area-inset-right, 0px);
+  --gg-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --gg-safe-left: env(safe-area-inset-left, 0px);
+}
+html, body { overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+canvas { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+#gg-keypad { position: fixed; inset: 0; pointer-events: none; z-index: 2147483000; font: 700 18px/1 'JetBrains Mono', monospace; }
+#gg-keypad button {
+  pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none;
+  width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--gg-gold-line);
+  color: rgba(255,236,170,.92); background: var(--gg-glass); backdrop-filter: blur(6px);
+  box-shadow: 0 4px 14px rgba(0,0,0,.35); display: grid; place-items: center; padding: 0;
+}
+#gg-keypad button.on { background: rgba(240,184,0,.42); border-color: var(--gg-gold); color: #0b0c10; box-shadow: 0 0 20px rgba(240,184,0,.45); }
+#gg-keypad .gg-dpad { position: absolute; left: calc(14px + var(--gg-safe-left)); bottom: calc(18px + var(--gg-safe-bottom)); width: 176px; height: 176px; }
+#gg-keypad .gg-dpad .u { position: absolute; left: 60px; top: 0; }
+#gg-keypad .gg-dpad .l { position: absolute; left: 0; top: 60px; }
+#gg-keypad .gg-dpad .r { position: absolute; right: 0; top: 60px; }
+#gg-keypad .gg-dpad .d { position: absolute; left: 60px; bottom: 0; }
+#gg-keypad .gg-actions { position: absolute; right: calc(16px + var(--gg-safe-right)); bottom: calc(26px + var(--gg-safe-bottom)); display: flex; gap: 14px; align-items: flex-end; }
+#gg-keypad .gg-actions button { width: 64px; height: 64px; }
+@media (hover: hover) and (pointer: fine) { #gg-keypad { display: none; } }
+
+/* 5. Estate nav bar: it is a 32px fixed strip at the bottom of every page,
+   exactly where game controls live. Never on a phone game page, never
+   inside a native shell (outbound links would trap the user in-app). */
+@media (pointer: coarse), (max-width: 760px) { html[data-gg-game] #mascom-nav { display: none !important; } }
+html.gg-native #mascom-nav { display: none !important; }
+/* App Store guideline 3.1.1: no links to purchases outside the app. The
+   native shell hides the PublicOS / Corvus cross-sell cards, the quarters
+   shop entry and the "add credits" link in the quarter overlay. */
+html.gg-native .promo-banner, html.gg-native .promo-card, html.gg-native .nav-btn[href="shop.html"], html.gg-native .qmLink { display: none !important; }
+html.gg-native #creditBadge { display: none !important; } /* credits are meaningless in the shell */
+/* Native shell: the web view runs edge to edge, so scrolling pages (the
+   storefront, catalogues) keep clear of the status bar and home indicator.
+   Games stay full-bleed; their controls already carry the inset vars. */
+html.gg-native:not([data-gg-game]) body { padding-top: var(--gg-safe-top) !important; padding-bottom: calc(var(--gg-safe-bottom) + 12px) !important; }
+
+/* 6. Shared centered-modal template (charSelect / endScreen / pauseScreen
+   family used by the flagship games): translate(-50%,-50%) boxes with a
+   desktop max-width and no max-height clip off a phone. Fit and scroll. */
+@media (max-width: 760px), (max-height: 520px) {
+  #charSelect, #endScreen, #pauseScreen, #nameEntryModal, #gameOver, #sharePanel, #progressionScreen,
+  #leaderboardPanel, #leaderboardOverlay, #statsScreen, #myStatsScreen, #settingsScreen, #shopPanel,
+  #scorePanel, #pauseMenu, #scoreSubmitBox, #deathScreen, #augmentPicker, #lbNameEntry, #challengeWin,
+  #sharePanelInner, #tutorialOverlay,
+  #splash, #splashScreen /* card_game / platformer full-screen splashes: same centred-overflow cut */ {
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 16px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+    /* centred flex + overflow puts the top of a tall panel above the scroll
+       range (survivors' 16-card roster opened on its locked bottom rows with
+       the title and the unlocked cards unreachable); the safe keyword falls
+       back to start alignment only when the content overflows */
+    justify-content: safe center !important;
+    align-items: safe center !important;
+  }
+}
+
+/* 7. Modals above the shared .mctl-overlay touch pad (z 9999) so the pad
+   never covers a Start / Continue button; secondary dialogs one step higher. */
+@media (pointer: coarse) {
+  /* #titleScreen is deliberately not lifted: in bullet_hell it sits under
+     #progScreen (z 22) and lifting it put the title text through the
+     progression panel. Title buttons are centred, away from the pad. */
+  html[data-gg-game] :is(#charSelect, #endScreen, #pauseScreen, #gameOver, #progressionScreen, #progScreen,
+    #leaderboardPanel, #leaderboardOverlay, #statsScreen, #myStatsScreen, #shopPanel, #scorePanel, #pauseMenu,
+    #deathScreen, #splashScreen, #tutorialOverlay, #augmentPicker, #challengeWin) { z-index: 10000 !important; }
+  html[data-gg-game] :is(#nameEntryModal, #sharePanel, #sharePanelInner, #scoreSubmitBox, #settingsScreen, #lbNameEntry) { z-index: 10010 !important; }
+  /* moba's tutorial dimmer goes "solid" on the "move your champion" step,
+     which on a phone also swallowed the pad the step asks you to use. */
+  html[data-gg-game] #tutorialDimmer { pointer-events: none !important; }
+  /* tutorial tips appended to <body> (platformer, smash_arena) sat under the pad */
+  html[data-gg-game] .tut-tip, html[data-gg-game] .tutTip { z-index: 10001 !important; }
+  /* shared quarter-credit pill (10 games) sat on top-centre HUD text, and the
+     keyboard legends (platformer #abilityHint, smash_arena/hex_world #controls)
+     wrapped behind the pads; neither carries anything a phone player needs */
+  @media (pointer: coarse) and (max-width: 760px), (pointer: coarse) and (max-height: 520px) {
+    html[data-gg-game] #creditBadge, html[data-gg-game] #abilityHint, html[data-gg-game] #controls { display: none !important; }
+  }
+}
+
+/* 8. Shared touch pad: respect the home-indicator / notch insets. */
+.mctl-dpad { bottom: calc(22px + var(--gg-safe-bottom)) !important; left: calc(16px + var(--gg-safe-left)) !important; }
+.mctl-btn-a { bottom: calc(44px + var(--gg-safe-bottom)) !important; right: calc(16px + var(--gg-safe-right)) !important; }
+.mctl-btn-b { bottom: calc(104px + var(--gg-safe-bottom)) !important; }
+.mctl-start { bottom: calc(6px + var(--gg-safe-bottom)) !important; }
+
+/* 9. Fitted fixed-size games (html[data-gg-fit]): the scaled element keeps a
+   crisp edge and the page never scrolls sideways under it. */
+html[data-gg-fit], html[data-gg-fit] body { overflow: hidden; }
+
+/* ---- 10. Shared look kit (2026-10-05). The games were built from a few
+   templates whose chrome never got a design pass: grey rounded-square pads,
+   #555-bordered translucent boxes, system fonts. These rules restyle that
+   shared chrome in one place (dark glass, one gold hairline, the same stick
+   language as SightX) and leave each game's own play-field art alone. */
+
+/* 10a. The flagship touch pad (.mctl-*, 11 games) */
+.mctl-dpad {
+  width: 150px !important; height: 150px !important; border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(9,10,13,.22), rgba(9,10,13,.6));
+  border: 1px solid rgba(240,184,0,.26); box-shadow: inset 0 0 28px rgba(0,0,0,.5), 0 14px 40px rgba(0,0,0,.3);
+  backdrop-filter: blur(8px);
+}
+.mctl-dpad-center { width: 36px !important; height: 36px !important; background: rgba(240,184,0,.09) !important; border: 1px solid rgba(240,184,0,.35); }
+.mctl-dpad-btn {
+  width: 46px !important; height: 46px !important; border-radius: 50% !important;
+  background: var(--gg-glass) !important; border: 1px solid var(--gg-gold-line) !important;
+  color: rgba(255,236,170,.92) !important; font: 700 18px/1 'JetBrains Mono', monospace !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35);
+}
+.mctl-dpad-btn.active { background: rgba(240,184,0,.42) !important; border-color: var(--gg-gold) !important; color: #0b0c10 !important; box-shadow: 0 0 20px rgba(240,184,0,.45); }
+.mctl-btn {
+  background: var(--gg-glass) !important; border: 1px solid var(--gg-gold-line) !important;
+  color: rgba(255,236,170,.92) !important; font: 700 11px/1 'JetBrains Mono', monospace !important;
+  letter-spacing: .06em; text-transform: uppercase; backdrop-filter: blur(6px);
+  box-shadow: 0 4px 14px rgba(0,0,0,.35);
+}
+.mctl-btn-a { width: 66px !important; height: 66px !important; border-color: rgba(0,217,139,.62) !important; color: #9df5cf !important; font-size: 12px !important; }
+.mctl-btn-b { border-color: rgba(255,108,108,.62) !important; color: #ffb9b9 !important; }
+.mctl-btn.active { background: rgba(240,184,0,.42) !important; border-color: var(--gg-gold) !important; color: #0b0c10 !important; }
+.mctl-btn-a.active { background: rgba(0,217,139,.5) !important; border-color: #00d98b !important; }
+.mctl-btn-b.active { background: rgba(255,108,108,.5) !important; border-color: #ff6c6c !important; }
+.mctl-start { border-radius: 14px !important; font-size: 9px !important; width: 64px !important; height: 26px !important; }
+.mctl-extra { border-radius: 12px !important; }
+
+/* 10b. The forge d-pad (#touch-controls .dpad / .act-btn, forge_rpg, forge_pac_man) */
+html[data-gg-game] .dpad-btn {
+  background: var(--gg-glass) !important; border: 1px solid var(--gg-gold-line) !important; border-radius: 50% !important;
+  color: rgba(255,236,170,.92) !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 700;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35); backdrop-filter: blur(6px);
+}
+html[data-gg-game] .dpad-btn:active { background: rgba(240,184,0,.42) !important; color: #0b0c10 !important; }
+html[data-gg-game] :is(.act-btn, .action-btn) {
+  background: var(--gg-glass) !important; border: 1px solid var(--gg-gold-line) !important;
+  color: rgba(255,236,170,.92) !important; font-family: 'JetBrains Mono', monospace !important; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35); backdrop-filter: blur(6px);
+}
+html[data-gg-game] .btn-a { border-color: rgba(0,217,139,.62) !important; color: #9df5cf !important; }
+html[data-gg-game] .btn-b { border-color: rgba(255,108,108,.62) !important; color: #ffb9b9 !important; }
+html[data-gg-game] .btn-menu { background: var(--gg-glass) !important; border: 1px solid var(--gg-gold-line) !important; color: rgba(255,236,170,.92) !important; font-family: 'JetBrains Mono', monospace !important; border-radius: 10px !important; }
+html[data-gg-game] :is(.act-btn, .action-btn, .btn-menu):active { background: rgba(240,184,0,.42) !important; color: #0b0c10 !important; }
+
+/* 10c. The shared panel template (#charSelect family + cards) */
+html[data-gg-game] :is(#charSelect, #endScreen, #pauseScreen, #nameEntryModal, #gameOver, #sharePanel, #progressionScreen,
+  #leaderboardPanel, #leaderboardOverlay, #statsScreen, #myStatsScreen, #settingsScreen, #shopPanel, #scorePanel, #pauseMenu,
+  #scoreSubmitBox, #deathScreen, #augmentPicker, #lbNameEntry, #challengeWin, #sharePanelInner) {
+  background: var(--gg-panel) !important;
+  border: 1px solid rgba(240,184,0,.38) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 24px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05) !important;
+  color: var(--gg-ink);
+}
+html[data-gg-game] .charCard {
+  background: rgba(255,255,255,.035) !important; border: 1px solid rgba(255,255,255,.1) !important; border-radius: 8px !important;
+  box-shadow: none !important; transition: border-color .12s ease, transform .12s ease;
+}
+html[data-gg-game] .charCard:hover, html[data-gg-game] .charCard.selected { border-color: rgba(240,184,0,.65) !important; transform: translateY(-1px); }
+html[data-gg-game] :is(.tut-tip, .tutTip, .tutBubble, .tut-tip-box) { border-radius: 8px !important; }
+
+/* 11. Landscape gate (2026-10-05): shown by gg-mobile.js on a coarse pointer in
+   portrait for games stamped data-gg-landscape (built wide). */
+#gg-rotate { display: none; position: fixed; inset: 0; z-index: 10050; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 32px; text-align: center; color: var(--gg-ink, #f4efe4); background: radial-gradient(circle at 50% 38%, #2a230f, #07070b 70%); }
+#gg-rotate.on { display: flex; }
+#gg-rotate strong { color: var(--gg-gold, #f0b800); font: 700 14px/1.3 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .14em; }
+#gg-rotate p { max-width: 300px; margin: 0; color: rgba(244,239,228,.62); font: 13px/1.6 system-ui, sans-serif; }
+#gg-rotate .gg-rotate-skip { margin-top: 10px; padding: 11px 16px; border: 1px solid var(--gg-gold-line, rgba(240,184,0,.5)); border-radius: 999px; background: var(--gg-glass, rgba(255,255,255,.04)); color: var(--gg-gold, #f0b800); font: 700 10px/1 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .12em; }
+.gg-rotate-phone { width: 58px; height: 92px; border: 2px solid var(--gg-gold, #f0b800); border-radius: 10px; box-shadow: 0 0 28px rgba(240,184,0,.22); animation: gg-rotate-spin 1.8s ease-in-out infinite; }
+@keyframes gg-rotate-spin { 45%, 100% { transform: rotate(90deg); } }
+@media (prefers-reduced-motion: reduce) { .gg-rotate-phone { animation: none; transform: rotate(90deg); } }
+
+/* 12. The whole page is a game surface on touch (2026-10-05): no text selection,
+   no callout menu, no magnifier, no double-tap zoom. Inputs keep selection. */
+@media (hover: none) and (pointer: coarse) {
+  html[data-gg-game], html[data-gg-game] body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; overscroll-behavior: none; }
+  html[data-gg-game] :is(input, textarea, [contenteditable]) { -webkit-user-select: text; user-select: text; }
+  html[data-gg-game] img, html[data-gg-game] canvas { -webkit-touch-callout: none; } /* game surface */
+}
+
+</style>
+<script>
+/* gg-mobile.js — GameGob shared mobile runtime (2026-10-04).
+ * Loaded synchronously in <head> by every game page. Does four things no
+ * game should have to reimplement, without touching any game's own code:
+ *   1. Pause on hide: requestAnimationFrame callbacks queue while the tab or
+ *      app is hidden and flush when it returns, so no game burns CPU in the
+ *      background and no physics step sees a 30-second frame.
+ *   2. Audio unlock: every AudioContext the page creates is resumed on the
+ *      first touch/key, which is what iOS and Chrome require.
+ *   3. Gesture lock: no pinch zoom, no double-tap zoom, no scroll bounce on
+ *      canvas drags. Scrollable UI outside a canvas keeps scrolling.
+ *   4. Virtual keypad: for games that only listen to the keyboard
+ *      (<html data-gg-keypad="arrows space enter">), an on-screen d-pad and
+ *      buttons dispatch real KeyboardEvents on touch devices.
+ * It also exposes window.GG with the native-shell flag the ad loader uses.
+ */
+(function () {
+  'use strict';
+  if (window.GG) return;
+  var native = !!(window.Capacitor || navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
+  var coarse = !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
+  var GG = window.GG = { version: '20261004', native: native, coarse: coarse, paused: false, keypad: null };
+
+  // ---- 1. Pause on hide (rAF gate) --------------------------------------
+  var realRAF = window.requestAnimationFrame.bind(window);
+  var realCAF = window.cancelAnimationFrame.bind(window);
+  var queued = []; var nextId = 1e9;
+  window.requestAnimationFrame = function (cb) {
+    if (!document.hidden) return realRAF(cb);
+    var id = nextId++;
+    queued.push({ id: id, cb: cb });
+    return id;
+  };
+  window.cancelAnimationFrame = function (id) {
+    if (id >= 1e9) { queued = queued.filter(function (q) { return q.id !== id; }); return; }
+    realCAF(id);
+  };
+  document.addEventListener('visibilitychange', function () {
+    GG.paused = document.hidden;
+    if (document.hidden) return;
+    var pending = queued; queued = [];
+    pending.forEach(function (q) { realRAF(q.cb); });
+    try { document.dispatchEvent(new CustomEvent('gg:resume')); } catch (e) {}
+  });
+
+  // ---- 2. Audio unlock ----------------------------------------------------
+  var contexts = [];
+  ['AudioContext', 'webkitAudioContext'].forEach(function (name) {
+    var Orig = window[name];
+    if (typeof Orig !== 'function') return;
+    function Patched() {
+      var ctx = new (Function.prototype.bind.apply(Orig, [null].concat([].slice.call(arguments))))();
+      contexts.push(ctx);
+      return ctx;
+    }
+    Patched.prototype = Orig.prototype;
+    window[name] = Patched;
+  });
+  function unlock() {
+    contexts.forEach(function (c) { if (c.state === 'suspended' && c.resume) c.resume().catch(function () {}); });
+  }
+  ['pointerdown', 'touchend', 'keydown'].forEach(function (t) { document.addEventListener(t, unlock, { passive: true }); });
+
+  // ---- 3. Gesture lock ----------------------------------------------------
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+  document.addEventListener('dblclick', function (e) { if (e.target && e.target.tagName === 'CANVAS') e.preventDefault(); }, { passive: false });
+  document.addEventListener('touchmove', function (e) {
+    var t = e.target;
+    if (t && (t.tagName === 'CANVAS' || t === document.body || t === document.documentElement)) e.preventDefault();
+  }, { passive: false });
+
+  // ---- 4. Virtual keypad --------------------------------------------------
+  function keyEvent(type, key, code, keyCode) {
+    var ev = new KeyboardEvent(type, { key: key, code: code, keyCode: keyCode, which: keyCode, bubbles: true, cancelable: true });
+    try { Object.defineProperty(ev, 'keyCode', { get: function () { return keyCode; } }); Object.defineProperty(ev, 'which', { get: function () { return keyCode; } }); } catch (e) {}
+    document.dispatchEvent(ev);
+  }
+  var KEYS = {
+    up: ['ArrowUp', 'ArrowUp', 38], down: ['ArrowDown', 'ArrowDown', 40], left: ['ArrowLeft', 'ArrowLeft', 37], right: ['ArrowRight', 'ArrowRight', 39],
+    space: [' ', 'Space', 32], enter: ['Enter', 'Enter', 13], w: ['w', 'KeyW', 87], a: ['a', 'KeyA', 65], s: ['s', 'KeyS', 83], d: ['d', 'KeyD', 68], esc: ['Escape', 'Escape', 27]
+  };
+  function mountKeypad(spec) {
+    if (!coarse || document.getElementById('gg-keypad')) return;
+    var wants = spec.split(/[\s,]+/).filter(Boolean);
+    var root = document.createElement('div'); root.id = 'gg-keypad'; root.setAttribute('aria-label', 'Game controls');
+    var html = '';
+    if (wants.indexOf('arrows') !== -1 || wants.indexOf('wasd') !== -1) {
+      var p = wants.indexOf('wasd') !== -1 && wants.indexOf('arrows') === -1 ? { up: 'w', left: 'a', down: 's', right: 'd' } : { up: 'up', left: 'left', down: 'down', right: 'right' };
+      html += '<div class="gg-dpad"><button data-k="' + p.up + '" class="u" aria-label="Up">&#9650;</button><button data-k="' + p.left + '" class="l" aria-label="Left">&#9664;</button><button data-k="' + p.right + '" class="r" aria-label="Right">&#9654;</button><button data-k="' + p.down + '" class="d" aria-label="Down">&#9660;</button></div>';
+    }
+    var acts = wants.filter(function (w) { return w !== 'arrows' && w !== 'wasd'; });
+    if (acts.length) html += '<div class="gg-actions">' + acts.map(function (k) { return '<button data-k="' + k + '" aria-label="' + k + '">' + (k === 'space' ? 'A' : k === 'enter' ? 'B' : k.toUpperCase()) + '</button>'; }).join('') + '</div>';
+    root.innerHTML = html;
+    document.body.appendChild(root);
+    var held = {};
+    function press(k, down) {
+      var def = KEYS[k]; if (!def) return;
+      if (down && held[k]) return;
+      held[k] = down;
+      keyEvent(down ? 'keydown' : 'keyup', def[0], def[1], def[2]);
+    }
+    root.querySelectorAll('button').forEach(function (b) {
+      var k = b.getAttribute('data-k');
+      b.addEventListener('pointerdown', function (e) { e.preventDefault(); b.setPointerCapture(e.pointerId); b.classList.add('on'); press(k, true); });
+      var up = function () { b.classList.remove('on'); press(k, false); };
+      b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+    });
+    GG.keypad = root;
+  }
+  // ---- 4b. Canvas type (2026-10-05) -------------------------------------
+  // 1,079 ctx.font assignments across the fleet name 'Courier New' or bare
+  // monospace. JetBrains Mono (self-hosted, same 0.6em advance) is swapped in
+  // under those stacks at assignment time, so every game's canvas text
+  // sharpens without touching a game. Courier New stays as the fallback
+  // until the woff2 has loaded; the games redraw every frame anyway.
+  (function () {
+    var proto = window.CanvasRenderingContext2D && CanvasRenderingContext2D.prototype;
+    if (!proto) return;
+    var d = Object.getOwnPropertyDescriptor(proto, 'font');
+    if (!d || !d.set || !d.get) return;
+    var FAM = "'JetBrains Mono', 'Courier New', monospace";
+    var re = /^(.*?\d(?:\.\d+)?(?:px|pt|em|rem|%)(?:\s*\/\s*[\d.]+(?:px|em|%)?)?\s+)(.+)$/;
+    Object.defineProperty(proto, 'font', {
+      configurable: true, enumerable: d.enumerable,
+      get: function () { return d.get.call(this); },
+      set: function (v) {
+        var s = String(v), m = re.exec(s);
+        if (m && /courier|monospace/i.test(m[2]) && !/jetbrains|press start/i.test(m[2])) s = m[1] + FAM;
+        d.set.call(this, s);
+      }
+    });
+    try { if (document.fonts) { document.fonts.load("12px 'JetBrains Mono'"); document.fonts.load("bold 12px 'JetBrains Mono'"); } } catch (e) {}
+  })();
+
+  // ---- 4c. Touch copy (2026-10-05) -------------------------------------------
+  // 35 games tell the player to "Press ENTER", use "Arrow Keys / WASD" or
+  // "Click to Start" in canvas text and overlays. On a coarse pointer those
+  // phrases are rewritten at draw time to their touch equivalents. Only
+  // phrases with a known-true touch counterpart are touched: an "or Tap"
+  // alternative already in the string, click->tap, and the direction keys
+  // (every pad-driven game maps its pad to those keys).
+  var COPY = [
+    [/Press (?:ENTER|Enter|SPACE|Space|Any Key|any key|START|Start)(?:\s*\/\s*\w+)?,? or Tap to (\w+)/g, 'Tap to $1'],
+    [/Press (?:ENTER|Enter|SPACE|Space|ESC|Esc|P)(?:\s*\/\s*\w+)? or Tap to (\w+)/g, 'Tap to $1'],
+    [/Press Any Key \/ Tap to (\w+)/g, 'Tap to $1'],
+    [/Click to Start/g, 'Tap to Start'], [/Click or Tap/gi, 'Tap'], [/Click a card/g, 'Tap a card'], [/Click anywhere/gi, 'Tap anywhere'],
+    [/Arrow Keys \/ WASD/g, 'D-pad'], [/ARROW KEYS \/ WASD/g, 'D-PAD'], [/ARROWS\s*\/\s*WASD/g, 'D-PAD'], [/WASD\s*\/\s*Arrows/gi, 'D-pad'], [/WASD\/ARROWS/g, 'D-PAD'],
+    [/\[Arrow Keys\]/g, '[D-pad]'], [/Arrow Keys/g, 'D-pad'], [/ARROW KEYS/g, 'D-PAD'],
+    // title / game-over prompts: the touchstart handlers take the same path as Enter
+    [/PRESS (?:ENTER|SPACE) TO (PLAY AGAIN|RESTART|START|PLAY|CONTINUE|SKIP)/g, 'TAP TO $1'],
+    [/[Pp]ress (?:Enter|ENTER|Space|SPACE) to (\w[\w ]*?)(?=[.!]|$)/g, 'Tap to $1'],
+  ];
+  function fixCopy(t) {
+    if (typeof t !== 'string' || t.length < 6) return t;
+    var hit = fixCopy.cache.get(t);
+    if (hit !== undefined) return hit;
+    var out = t;
+    for (var i = 0; i < COPY.length; i++) out = out.replace(COPY[i][0], COPY[i][1]);
+    if (fixCopy.pad) out = fixCopy.pad(out);
+    if (fixCopy.cache.size > 2000) fixCopy.cache.clear();
+    fixCopy.cache.set(t, out);
+    return out;
+  }
+  fixCopy.cache = new Map();
+  if (coarse && window.CanvasRenderingContext2D) {
+    ['fillText', 'strokeText', 'measureText'].forEach(function (name) {
+      var orig = CanvasRenderingContext2D.prototype[name];
+      if (!orig) return;
+      CanvasRenderingContext2D.prototype[name] = function (t) { arguments[0] = fixCopy(t); return orig.apply(this, arguments); };
+    });
+    var fixDom = function () {
+      var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+      var n; while ((n = w.nextNode())) {
+        var pn = n.parentNode && n.parentNode.nodeName;
+        if (pn === 'SCRIPT' || pn === 'STYLE' || pn === 'TEXTAREA') continue;
+        if (n.nodeValue && n.nodeValue.length > 5 && /Press |Arrow|WASD|Click |\[[A-Za-z]\]|\b[A-Z]: |\bSpace\b|\bSPACE\b/.test(n.nodeValue)) { var v = fixCopy(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; }
+      }
+    };
+    // tutorials and tips are injected while playing, so keep watching (debounced)
+    var fixTimer = null;
+    var scheduleFix = function () { if (fixTimer) return; fixTimer = setTimeout(function () { fixTimer = null; try { fixDom(); } catch (e) {} }, 250); };
+    document.addEventListener('DOMContentLoaded', function () {
+      fixDom(); setTimeout(fixDom, 1500);
+      try { new MutationObserver(scheduleFix).observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (e) {}
+    });
+  }
+
+  // ---- 4d. Key badges -> pad labels (2026-10-05) -----------------------------
+  // Tutorials in the flagship games show keycaps (Z, X, Space, W A S D). The
+  // shared .mctl pad maps those keys to labelled buttons via setupBtn('mctl_a',
+  // 'z') calls in the page's own script, so on a coarse pointer the keycap
+  // text is replaced by the pad's label for that key.
+  if (coarse) {
+    var padMap = null;
+    function buildPadMap() {
+      var map = {}, dedicated = {};
+      var src = [].map.call(document.scripts, function (s) { return s.src ? '' : s.textContent; }).join('\n');
+      var re = /setupBtn\(\s*['"](mctl_\w+)['"]\s*,\s*['"]([^'"]*)['"]/g, m;
+      while ((m = re.exec(src))) {
+        var el = document.getElementById(m[1]);
+        var label = el && el.textContent.trim();
+        if (!label) continue;
+        var keys = m[2].split(',').map(function (k) { k = k.trim().toLowerCase(); return k === 'space' ? ' ' : k; }).filter(Boolean);
+        keys.forEach(function (k) {
+          // keys arrive as a comma list ('z, , ' = z + space; 'x,Shift'); a
+          // button that fires only this key owns its label over one that
+          // fires it as a side effect (bullet_hell: Shift = FOCUS, not BOMB)
+          if (!map[k] || (keys.length === 1 && !dedicated[k])) map[k] = label.toUpperCase();
+          if (keys.length === 1) dedicated[k] = true;
+        });
+      }
+      if (document.querySelector('.mctl-dpad')) ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', '←', '→', '↑', '↓', '← →', 'a d', 'w a s d', 'wasd'].forEach(function (k) { if (!map[k]) map[k] = 'D-PAD'; });
+      // legend text: "[Z] Attack", "Z: Attack", "LMB / Space — Shoot" -> pad labels
+      var keyed = Object.keys(map).filter(function (k) { return k.length === 1 && k !== ' ' || k === 'shift'; });
+      if (keyed.length) {
+        var alts = keyed.map(function (k) { return k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'); }).join('|');
+        var reBr = new RegExp('\\[(' + alts + ')\\]', 'gi'), reCol = new RegExp('(^|[|\\s])(' + alts + '):(?=\\s)', 'gi');
+        var reSp = map[' '] ? /\b(?:Space|SPACE)\b/g : null;
+        fixCopy.pad = function (t) {
+          if (reSp) t = t.replace(reSp, map[' ']); // first, so an inserted label is never re-matched
+          return t.replace(reBr, function (_, k) { return '[' + map[k.toLowerCase()] + ']'; }).replace(reCol, function (_, pre, k) { return pre + map[k.toLowerCase()] + ':'; });
+        };
+        fixCopy.cache.clear();
+      }
+      return map;
+    }
+    var fixBadges = function () {
+      if (!padMap) padMap = buildPadMap();
+      if (!Object.keys(padMap).length) return;
+      document.querySelectorAll('kbd, .tut-key, .tutKey, .key, .keycap, .tut-keys span, .controls span').forEach(function (el) {
+        if (el.children.length || el.getAttribute('data-gg-badged')) return;
+        var t = el.textContent.trim(), k = t.toLowerCase();
+        if (k === 'space' || k === 'spc') k = ' ';
+        if (k === 'enter' || k === 'esc' || k === 'escape') return;
+        var label = padMap[k];
+        if (!label && k.indexOf('/') > -1) {
+          var parts = [];
+          k.split('/').forEach(function (part) { part = part.trim(); if (part === 'space' || part === 'spc') part = ' '; var l = padMap[part]; if (l && parts.indexOf(l) < 0) parts.push(l); });
+          if (parts.length) label = parts.join(' / ');
+        }
+        if (label && label !== t) {
+          el.setAttribute('data-gg-badged', t); el.textContent = label;
+          // "W A S D" / "← →" rows collapse to one D-PAD badge
+          var prev = el.previousElementSibling;
+          if (prev && prev.getAttribute('data-gg-badged') && prev.textContent === label) el.style.display = 'none';
+          // keyboard-only leftovers in a row that now names a pad control
+          // ("Space" beside D-PAD, "or D-pad" after a D-PAD badge) say nothing on a phone
+          [].forEach.call(el.parentNode ? el.parentNode.children : [], function (sib) {
+            if (sib === el || sib.getAttribute('data-gg-badged')) return;
+            var st = sib.textContent.trim().toLowerCase();
+            if (/^(or d-pad|or arrow keys|or arrows|space|spc|shift|ctrl|alt|tab|[a-z]|[\u2190-\u2193]( [\u2190-\u2193])*)$/.test(st) && !padMap[st === 'space' || st === 'spc' ? ' ' : st]) sib.style.display = 'none';
+          });
+        }
+      });
+    };
+    document.addEventListener('DOMContentLoaded', function () {
+      setTimeout(fixBadges, 300); setTimeout(fixBadges, 1800);
+      try { new MutationObserver(function () { setTimeout(fixBadges, 300); }).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+    });
+  }
+
+  // ---- 5. Fit: fixed-size canvas games -------------------------------------
+  // <html data-gg-fit="#selector [WxH]"> scales that element (a canvas, or a
+  // wrapper holding several) to fit the viewport with a CSS transform, and
+  // shrinks its layout box with negative margins so flex-centred bodies stay
+  // centred and nothing overflows. Transforms keep input correct for both
+  // coordinate styles the games use: offsetX/offsetY is reported in the
+  // element's own (unscaled) space, and getBoundingClientRect() reports the
+  // scaled rect that rect-mapping code divides by.
+  function mountFit(spec) {
+    var parts = spec.trim().split(/\s+/);
+    var el = document.querySelector(parts[0]); if (!el) return;
+    var fixed = /^(\d+)x(\d+)$/.exec(parts[1] || '');
+    // A transformed element becomes the containing block for position:fixed
+    // descendants, so full-screen overlays nested in the fitted wrapper shrink
+    // with it (bullet_hell's #charSelect: SELECT button off-screen in
+    // landscape). Hoist the outermost fixed descendants to <body> once.
+    try {
+      [].slice.call(el.querySelectorAll('*')).forEach(function (n) {
+        if (getComputedStyle(n).position !== 'fixed') return;
+        for (var a = n.parentNode; a && a !== el; a = a.parentNode) if (getComputedStyle(a).position === 'fixed') return;
+        document.body.appendChild(n);
+      });
+    } catch (e) {}
+    function apply() {
+      el.style.transform = ''; el.style.marginRight = ''; el.style.marginBottom = '';
+      var lw = el.offsetWidth, lh = el.offsetHeight;          // layout box
+      var w = fixed ? +fixed[1] : lw, h = fixed ? +fixed[2] : lh; // visual extent to fit (may exceed the box: hung-off sidebars)
+      if (!w || !h) return;
+      // Chrome on Android widens the layout viewport to overflowing content
+      // before any script runs, so innerWidth can already be the canvas width;
+      // bound it by the visual viewport and the device's longer screen edge.
+      // (iOS keeps screen.width at the portrait value in landscape, so the
+      // shorter edge would shrink a landscape game to ~60%.)
+      var edge = Math.max((screen && screen.width) || 0, (screen && screen.height) || 0) || Infinity;
+      var vv = window.visualViewport;
+      var vw = Math.min(window.innerWidth, (vv && vv.width) || Infinity, edge);
+      var vh = Math.min(window.innerHeight, (vv && vv.height) || Infinity, edge);
+      var s = Math.min(vw / w, vh / h, 1);
+      GG.fit = { el: el, scale: s, w: w, h: h, vw: vw, vh: vh };
+      if (s > 0.999) return;
+      el.style.transformOrigin = '0 0';
+      el.style.transform = 'scale(' + s + ')';
+      el.style.marginRight = (w * s - lw) + 'px';   // margin box = visual width
+      el.style.marginBottom = (h * s - lh) + 'px';
+    }
+    apply();
+    window.addEventListener('resize', apply);
+    window.addEventListener('orientationchange', function () { setTimeout(apply, 60); });
+    // games that size their canvas after load
+    setTimeout(apply, 250); setTimeout(apply, 1200);
+  }
+  // ---- 11. Landscape gate (2026-10-05) --------------------------------------
+  // <html data-gg-landscape>: the game is built wide (canvas aspect >= 1.3) and
+  // renders at a third of a portrait phone. On a coarse pointer in portrait,
+  // ask for a sideways phone; "play small anyway" is one tap and remembered
+  // for the session. Nothing is shown on desktops or in landscape.
+  function mountRotateGate() {
+    if (!coarse) return;
+    var gate = document.createElement('div');
+    gate.id = 'gg-rotate';
+    gate.innerHTML = '<div class="gg-rotate-phone" aria-hidden="true"></div><strong>TURN YOUR PHONE SIDEWAYS</strong>' +
+      '<p>This one is built wide. In portrait it plays at a third of the screen.</p>' +
+      '<button type="button" class="gg-rotate-skip">PLAY SMALL ANYWAY</button>';
+    document.body.appendChild(gate);
+    var skipped = false;
+    try { skipped = sessionStorage.getItem('gg-rotate-skip:' + location.pathname) === '1'; } catch (e) {}
+    function update() {
+      var portrait = window.innerHeight > window.innerWidth;
+      gate.classList.toggle('on', portrait && !skipped);
+    }
+    gate.querySelector('.gg-rotate-skip').addEventListener('click', function () {
+      skipped = true; try { sessionStorage.setItem('gg-rotate-skip:' + location.pathname, '1'); } catch (e) {}
+      update();
+    });
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', function () { setTimeout(update, 80); });
+    update();
+  }
+  // ---- 12. Taps become clicks; holds stay in the game (2026-10-05) ---------
+  // iOS Safari (and Chrome) withhold the synthesized click when a page calls
+  // preventDefault() on touchstart/touchend. 23 games do exactly that on
+  // their canvas to stop scrolling and zooming, then run their menus from
+  // 'click' handlers (upgrade cards, START, difficulty) - so on a phone those
+  // taps did nothing (EndBird: title -> upgrade screen, then stuck). When a
+  // short, still touch ends with its default prevented, dispatch the click
+  // the browser withheld. One synthetic click per touch, never for native
+  // controls, which get their own clicks.
+  function tapToClick() {
+    var start = null;
+    document.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1) { start = null; return; }
+      var t = e.touches[0];
+      start = { x: t.clientX, y: t.clientY, at: performance.now(), target: e.target };
+    }, { capture: true, passive: true });
+    document.addEventListener('touchend', function (e) {
+      var s = start; start = null;
+      if (!s || !e.defaultPrevented || e.touches.length) return;
+      var t = e.changedTouches && e.changedTouches[0]; if (!t) return;
+      if (performance.now() - s.at > 450 || Math.hypot(t.clientX - s.x, t.clientY - s.y) > 12) return;
+      var el = e.target && e.target.nodeType === 1 ? e.target : document.elementFromPoint(t.clientX, t.clientY);
+      if (!el || (el.closest && el.closest('button, a, input, select, textarea, label, [role=button], .mctl-overlay, #gg-pad, #gg-rotate'))) return;
+      var ev = new MouseEvent('click', { bubbles: true, cancelable: true, view: window, clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY, button: 0 });
+      ev.ggSynthetic = true;
+      el.dispatchEvent(ev);
+    }, { capture: false, passive: true });
+    // A held finger is play, not a request for a context menu.
+    document.addEventListener('contextmenu', function (e) {
+      if (e.target && e.target.closest && e.target.closest('input, textarea, a[href^="http"]')) return;
+      e.preventDefault();
+    });
+  }
+  function boot() {
+    if (native) {
+      document.documentElement.classList.add('gg-native');
+      // Storefront copy written for the web ("no installs") reads wrong inside
+      // the installed app; the bundle is local, so "play offline" is true.
+      document.querySelectorAll('p, h2, div, span').forEach(function (el) {
+        if (el.children.length === 0 && /^Free Browser Games/.test(el.textContent.trim())) el.textContent = 'Free games. Play offline.';
+      });
+      document.querySelectorAll('.header-stat').forEach(function (st) { if (/installs needed/i.test(st.textContent)) st.style.display = 'none'; });
+    }
+    var spec = document.documentElement.getAttribute('data-gg-keypad');
+    if (spec) mountKeypad(spec);
+    var fit = document.documentElement.getAttribute('data-gg-fit');
+    if (fit) mountFit(fit);
+    if (document.documentElement.hasAttribute('data-gg-landscape')) mountRotateGate();
+    if (coarse && document.documentElement.hasAttribute('data-gg-game')) tapToClick();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+
+</script>
+<meta name="description" content="Play Mineshafted — Dig, Disarm, Discover free in your browser on GameGob. Works on phones, no install.">
+</head>
+<body>
+<canvas id="gc"></canvas>
+<script>
+'use strict';
+
+// ============================================================
+// MINESHAFTED — Minesweeper Roguelike with Meta-Progression
+// ============================================================
+
+const canvas = document.getElementById('gc');
+const ctx = canvas.getContext('2d');
+
+// --- Responsive Canvas ---
+let W, H, SCALE;
+const resize = () => {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    SCALE = Math.min(W, H) < 500 ? 1 : 1;
+    canvas.width = W;
+    canvas.height = H;
+};
+window.addEventListener('resize', resize);
+resize();
+
+// --- Audio System ---
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+const ensureAudio = () => { if (!audioCtx) audioCtx = new AudioCtx(); };
+
+const playSound = (type) => {
+    ensureAudio();
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    switch(type) {
+        case 'dig':
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.exponentialRampToValueAtTime(500, now + 0.08);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+            osc.start(now); osc.stop(now + 0.12);
+            break;
+        case 'reveal':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(900, now + 0.15);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+            break;
+        case 'trap':
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, now);
+            osc.frequency.exponentialRampToValueAtTime(60, now + 0.4);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            osc.start(now); osc.stop(now + 0.5);
+            break;
+        case 'gem':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+            osc.start(now); osc.stop(now + 0.25);
+            // Second tone
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.connect(gain2); gain2.connect(audioCtx.destination);
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(1000, now + 0.08);
+            osc2.frequency.exponentialRampToValueAtTime(1500, now + 0.2);
+            gain2.gain.setValueAtTime(0.12, now + 0.08);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            osc2.start(now + 0.08); osc2.stop(now + 0.3);
+            break;
+        case 'shield':
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(300, now + 0.15);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+            break;
+        case 'buy':
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(500, now);
+            osc.frequency.exponentialRampToValueAtTime(700, now + 0.05);
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            osc.start(now); osc.stop(now + 0.15);
+            const osc3 = audioCtx.createOscillator();
+            const gain3 = audioCtx.createGain();
+            osc3.connect(gain3); gain3.connect(audioCtx.destination);
+            osc3.type = 'sine';
+            osc3.frequency.setValueAtTime(700, now + 0.06);
+            gain3.gain.setValueAtTime(0.12, now + 0.06);
+            gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            osc3.start(now + 0.06); osc3.stop(now + 0.2);
+            break;
+        case 'descend':
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(200, now + 0.5);
+            gain.gain.setValueAtTime(0.15, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+            osc.start(now); osc.stop(now + 0.6);
+            break;
+        case 'flag':
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.exponentialRampToValueAtTime(600, now + 0.06);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            osc.start(now); osc.stop(now + 0.1);
+            break;
+        case 'levelup':
+            for (let i = 0; i < 4; i++) {
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.connect(g); g.connect(audioCtx.destination);
+                o.type = 'sine';
+                const t = now + i * 0.12;
+                o.frequency.setValueAtTime(400 + i * 200, t);
+                g.gain.setValueAtTime(0.1, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+                o.start(t); o.stop(t + 0.15);
+            }
+            break;
+        case 'death':
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.exponentialRampToValueAtTime(40, now + 0.8);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+            osc.start(now); osc.stop(now + 1.0);
+            break;
+    }
+};
+
+// --- Seeded RNG ---
+class SeededRNG {
+    constructor(seed) {
+        this.seed = seed;
+    }
+    next() {
+        this.seed = (this.seed * 16807 + 0) % 2147483647;
+        return (this.seed - 1) / 2147483646;
+    }
+    nextInt(min, max) {
+        return Math.floor(this.next() * (max - min + 1)) + min;
+    }
+}
+
+// --- Particle System ---
+const particles = [];
+const spawnParticles = (x, y, color, count = 8, speed = 120) => {
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const spd = speed * (0.3 + Math.random() * 0.7);
+        particles.push({
+            x, y,
+            vx: Math.cos(angle) * spd,
+            vy: Math.sin(angle) * spd,
+            life: 0.4 + Math.random() * 0.4,
+            maxLife: 0.4 + Math.random() * 0.4,
+            size: 2 + Math.random() * 3,
+            color
+        });
+    }
+};
+
+const updateParticles = (dt) => {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 200 * dt;
+        p.life -= dt;
+        if (p.life <= 0) particles.splice(i, 1);
+    }
+};
+
+const drawParticles = () => {
+    for (const p of particles) {
+        const alpha = Math.max(0, p.life / p.maxLife);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+};
+
+// --- Screen Shake ---
+let shakeAmount = 0;
+let shakeTime = 0;
+const triggerShake = (amount = 5, duration = 0.15) => {
+    shakeAmount = amount;
+    shakeTime = duration;
+};
+
+// --- Flash Effect ---
+let flashColor = null;
+let flashTime = 0;
+const triggerFlash = (color = '#ff0000', duration = 0.1) => {
+    flashColor = color;
+    flashTime = duration;
+};
+
+// --- Persistence ---
+const SAVE_KEY = 'gamegob_playtest_20261006_mines_v2';
+const loadSave = () => {
+    const clean = {
+        gold: 0,
+        totalGold: 0,
+        deepestLevel: 0,
+        totalRuns: 0,
+        totalCellsDug: 0,
+        totalTrapsHit: 0,
+        totalGemsFound: 0,
+        upgrades: {
+            maxHP: 0,         // +1 HP per level (base 3)
+            detectors: 0,     // +1 starting detector per level
+            drills: 0,        // +1 starting drill per level
+            shields: 0,       // +1 starting shield per level
+            gemBonus: 0,      // +10% gem value per level
+            trapSense: 0,     // chance to auto-reveal adjacent trap
+            luckyDig: 0,      // chance to find bonus gold on dig
+            armorPlate: 0,    // chance to negate trap damage
+        },
+        achievements: {},
+        highScore: 0,
+    };
+    try {
+      const d=JSON.parse(localStorage.getItem(SAVE_KEY));
+      if(d&&typeof d==='object'){
+        for(const key of Object.keys(clean))if(typeof clean[key]==='number'&&Number.isFinite(d[key])&&d[key]>=0)clean[key]=Math.min(1e9,Math.floor(d[key]));
+        for(const key of Object.keys(clean.upgrades))if(Number.isFinite(d.upgrades&&d.upgrades[key]))clean.upgrades[key]=Math.max(0,Math.min(10,Math.floor(d.upgrades[key])));
+        if(d.achievements&&typeof d.achievements==='object')clean.achievements=Object.fromEntries(Object.entries(d.achievements).filter(([k,v])=>v===true));
+      }
+    } catch(e) {}
+    return clean;
+};
+
+const saveSave = (data) => {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch(e) {}
+};
+
+let saveData = loadSave();
+
+// --- Upgrade Definitions ---
+const UPGRADE_DEFS = {
+    maxHP: { name: 'Reinforced Hull', desc: '+1 Max HP', icon: '❤', baseCost: 50, costMult: 1.8, maxLevel: 10 },
+    detectors: { name: 'Detector Kit', desc: '+1 Starting Detector', icon: '📡', baseCost: 40, costMult: 1.6, maxLevel: 8 },
+    drills: { name: 'Diamond Drill', desc: '+1 Starting Drill', icon: '⛏', baseCost: 40, costMult: 1.6, maxLevel: 8 },
+    shields: { name: 'Energy Shield', desc: '+1 Starting Shield', icon: '🛡', baseCost: 60, costMult: 1.7, maxLevel: 6 },
+    gemBonus: { name: 'Gem Appraiser', desc: '+15% Gem Value', icon: '💎', baseCost: 80, costMult: 2.0, maxLevel: 10 },
+    trapSense: { name: 'Trap Sense', desc: '+5% Auto-Reveal Trap', icon: '👁', baseCost: 100, costMult: 2.2, maxLevel: 5 },
+    luckyDig: { name: 'Lucky Pickaxe', desc: '+4% Bonus Gold on Dig', icon: '🍀', baseCost: 70, costMult: 1.9, maxLevel: 8 },
+    armorPlate: { name: 'Armor Plating', desc: '+5% Negate Trap Damage', icon: '🔰', baseCost: 120, costMult: 2.5, maxLevel: 5 },
+};
+
+const getUpgradeCost = (key) => {
+    const def = UPGRADE_DEFS[key];
+    return Math.floor(def.baseCost * Math.pow(def.costMult, saveData.upgrades[key]));
+};
+
+// --- Achievement Definitions ---
+const ACHIEVEMENT_DEFS = [
+    { id: 'first_dig', name: 'First Steps', desc: 'Dig your first cell', check: (s) => s.totalCellsDug >= 1 },
+    { id: 'dig_100', name: 'Mole Person', desc: 'Dig 100 cells total', check: (s) => s.totalCellsDug >= 100 },
+    { id: 'dig_1000', name: 'Master Excavator', desc: 'Dig 1000 cells total', check: (s) => s.totalCellsDug >= 1000 },
+    { id: 'depth_5', name: 'Deep Diver', desc: 'Reach depth 5', check: (s) => s.deepestLevel >= 5 },
+    { id: 'depth_10', name: 'Abyssal Explorer', desc: 'Reach depth 10', check: (s) => s.deepestLevel >= 10 },
+    { id: 'depth_20', name: 'Core Crawler', desc: 'Reach depth 20', check: (s) => s.deepestLevel >= 20 },
+    { id: 'gold_500', name: 'Prospector', desc: 'Earn 500 total gold', check: (s) => s.totalGold >= 500 },
+    { id: 'gold_2000', name: 'Gold Rush', desc: 'Earn 2000 total gold', check: (s) => s.totalGold >= 2000 },
+    { id: 'gems_50', name: 'Gem Collector', desc: 'Find 50 gems', check: (s) => s.totalGemsFound >= 50 },
+    { id: 'runs_10', name: 'Persistent Miner', desc: 'Complete 10 runs', check: (s) => s.totalRuns >= 10 },
+    { id: 'survive_trap', name: 'Lucky Escape', desc: 'Survive a trap with armor', check: (s) => s.achievements.survive_trap },
+    { id: 'perfect_floor', name: 'Perfectionist', desc: 'Clear a floor with no trap hits', check: (s) => s.achievements.perfect_floor },
+];
+
+// --- Game State ---
+const STATES = { TITLE: 0, PLAYING: 1, SHOP: 2, GAMEOVER: 3, ACHIEVEMENTS: 4 };
+let state = STATES.TITLE;
+
+// Grid
+let GRID_COLS, GRID_ROWS, CELL_SIZE;
+let grid = [];
+let gridOffsetX, gridOffsetY;
+
+// Run state
+let run = null;
+
+// UI state
+let selectedTool = 'dig'; // 'dig', 'detector', 'drill', 'shield', 'flag'
+let hoveredCell = null;
+let cursorX = -1, cursorY = -1;
+let shopScroll = 0;
+let achievementNotifications = [];
+let titlePulse = 0;
+let animTime = 0;
+
+// Touch
+let touchStartX = 0, touchStartY = 0;
+let isTouching = false;
+let longPressTimer = null;
+
+// --- Cell Types ---
+const CELL = {
+    HIDDEN: 0,
+    REVEALED: 1,
+    FLAGGED: 2,
+    TRAP_REVEALED: 3,
+};
+
+const CONTENT = {
+    EMPTY: 0,
+    TRAP: 1,
+    GEM: 2,
+    GOLD: 3,
+    EXIT: 4,
+    TOOL_DETECTOR: 5,
+    TOOL_DRILL: 6,
+    TOOL_SHIELD: 7,
+    WALL: 8,
+};
+
+// Reserve the native run-control strip and the existing tool row on small phones.
+const layoutBoard = () => {
+    if(!GRID_COLS || !GRID_ROWS)return;
+    const usableHeight=Math.max(112,H-290);
+    CELL_SIZE=Math.max(18,Math.min(60,Math.floor(Math.min(W*.88/GRID_COLS,usableHeight/GRID_ROWS))));
+    gridOffsetX=Math.floor((W-GRID_COLS*CELL_SIZE)/2);
+    gridOffsetY=200+Math.max(0,Math.floor((usableHeight-GRID_ROWS*CELL_SIZE)/2));
+};
+window.addEventListener('resize',layoutBoard);
+
+// --- Level Generation ---
+const generateLevel = (depth, seed) => {
+    const rng = new SeededRNG(seed + depth * 7919);
+
+    // Grid size grows slightly with depth
+    const baseCols = Math.min(10, 6 + Math.floor(depth / 4));
+    const baseRows = Math.min(12, 7 + Math.floor(depth / 3));
+    GRID_COLS = baseCols;
+    GRID_ROWS = baseRows;
+
+    layoutBoard();
+
+    grid = [];
+    for (let r = 0; r < GRID_ROWS; r++) {
+        grid[r] = [];
+        for (let c = 0; c < GRID_COLS; c++) {
+            grid[r][c] = {
+                state: CELL.HIDDEN,
+                content: CONTENT.EMPTY,
+                adjacentTraps: 0,
+                revealAnim: 0,
+                shakeAnim: 0,
+            };
+        }
+    }
+
+    // Place walls (Perlin-ish noise via RNG)
+    const wallChance = Math.min(0.15, 0.05 + depth * 0.008);
+    for (let r = 0; r < GRID_ROWS; r++) {
+        for (let c = 0; c < GRID_COLS; c++) {
+            if (rng.next() < wallChance) {
+                grid[r][c].content = CONTENT.WALL;
+            }
+        }
+    }
+
+    // Place traps
+    const totalCells = GRID_COLS * GRID_ROWS;
+    const wallCount = grid.flat().filter(c => c.content === CONTENT.WALL).length;
+    const availCells = totalCells - wallCount;
+    const trapRatio = Math.min(0.25, 0.12 + depth * 0.01);
+    let trapCount = Math.floor(availCells * trapRatio);
+    trapCount = Math.max(3, trapCount);
+
+    let placed = 0;
+    while (placed < trapCount) {
+        const r = rng.nextInt(0, GRID_ROWS - 1);
+        const c = rng.nextInt(0, GRID_COLS - 1);
+        if (grid[r][c].content === CONTENT.EMPTY) {
+            grid[r][c].content = CONTENT.TRAP;
+            placed++;
+        }
+    }
+
+    // Place exit
+    let exitPlaced = false;
+    let attempts = 0;
+    while (!exitPlaced && attempts < 200) {
+        const r = rng.nextInt(Math.floor(GRID_ROWS * 0.5), GRID_ROWS - 1);
+        const c = rng.nextInt(0, GRID_COLS - 1);
+        if (grid[r][c].content === CONTENT.EMPTY) {
+            grid[r][c].content = CONTENT.EXIT;
+            exitPlaced = true;
+        }
+        attempts++;
+    }
+    if (!exitPlaced) {
+        // Force place
+        for (let r = GRID_ROWS - 1; r >= 0; r--) {
+            for (let c = GRID_COLS - 1; c >= 0; c--) {
+                if (grid[r][c].content === CONTENT.EMPTY) {
+                    grid[r][c].content = CONTENT.EXIT;
+                    exitPlaced = true;
+                    break;
+                }
+            }
+            if (exitPlaced) break;
+        }
+    }
+
+    // Place gems
+    const gemCount = Math.max(2, Math.floor(availCells * 0.06) + rng.nextInt(0, 2));
+    placed = 0;
+    while (placed < gemCount) {
+        const r = rng.nextInt(0, GRID_ROWS - 1);
+        const c = rng.nextInt(0, GRID_COLS - 1);
+        if (grid[r][c].content === CONTENT.EMPTY) {
+            grid[r][c].content = CONTENT.GEM;
+            placed++;
+        }
+    }
+
+    // Place gold nuggets
+    const goldCount = Math.max(3, Math.floor(availCells * 0.08) + rng.nextInt(0, 3));
+    placed = 0;
+    while (placed < goldCount) {
+        const r = rng.nextInt(0, GRID_ROWS - 1);
+        const c = rng.nextInt(0, GRID_COLS - 1);
+        if (grid[r][c].content === CONTENT.EMPTY) {
+            grid[r][c].content = CONTENT.GOLD;
+            placed++;
+        }
+    }
+
+    // Place tool pickups (rarer at deeper levels)
+    const toolTypes = [CONTENT.TOOL_DETECTOR, CONTENT.TOOL_DRILL, CONTENT.TOOL_SHIELD];
+    const toolCount = Math.max(1, 3 - Math.floor(depth / 5));
+    for (let i = 0; i < toolCount; i++) {
+        let tp = false;
+        let ta = 0;
+        while (!tp && ta < 100) {
+            const r = rng.nextInt(0, GRID_ROWS - 1);
+            const c = rng.nextInt(0, GRID_COLS - 1);
+            if (grid[r][c].content === CONTENT.EMPTY) {
+                grid[r][c].content = toolTypes[rng.nextInt(0, 2)];
+                tp = true;
+            }
+            ta++;
+        }
+    }
+
+    // An honest opening: the 3x3 corner contains no walls or traps.
+    for(let r=0;r<3;r++) for(let c=0;c<3;c++) {
+      if(grid[r][c].content===CONTENT.TRAP || grid[r][c].content===CONTENT.WALL) grid[r][c].content=CONTENT.EMPTY;
+    }
+    // Calculate adjacent trap counts
+    for (let r = 0; r < GRID_ROWS; r++) {
+        for (let c = 0; c < GRID_COLS; c++) {
+            if (grid[r][c].content === CONTENT.TRAP || grid[r][c].content === CONTENT.WALL) continue;
+            let count = 0;
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    const nr = r + dr, nc = c + dc;
+                    if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < GRID_COLS) {
+                        if (grid[nr][nc].content === CONTENT.TRAP) count++;
+                    }
+                }
+            }
+            grid[r][c].adjacentTraps = count;
+        }
+    }
+
+    // Auto-reveal starting cell (top-left safe area)
+    let startRevealed = false;
+    for (let r = 0; r < Math.min(2, GRID_ROWS); r++) {
+        for (let c = 0; c < Math.min(2, GRID_COLS); c++) {
+            if (grid[r][c].content === CONTENT.EMPTY && grid[r][c].adjacentTraps === 0 && !startRevealed) {
+                floodReveal(r, c);
+                startRevealed = true;
+            }
+        }
+    }
+    if (!startRevealed) {
+        // Reveal top-left cell regardless
+        if (grid[0][0].content !== CONTENT.TRAP) {
+            grid[0][0].state = CELL.REVEALED;
+            grid[0][0].revealAnim = 1;
+        }
+    }
+};
+
+const floodReveal = (r, c) => {
+    if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS) return;
+    const cell = grid[r][c];
+    if (cell.state === CELL.REVEALED) return;
+    if (cell.content === CONTENT.TRAP || cell.content === CONTENT.WALL) return;
+
+    cell.state = CELL.REVEALED;
+    cell.revealAnim = 1;
+    run.cellsDugThisFloor++;
+    run.totalCellsDug++;
+
+    if (cell.adjacentTraps === 0 && cell.content === CONTENT.EMPTY) {
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue;
+                floodReveal(r + dr, c + dc);
+            }
+        }
+    }
+};
+
+// --- Start New Run ---
+const startRun = (retrySeed) => {
+    const seed = Number.isFinite(retrySeed) ? retrySeed : Date.now();
+    run = {
+        depth: 1,
+        seed,
+        hp: 3 + saveData.upgrades.maxHP,
+        maxHP: 3 + saveData.upgrades.maxHP,
+        detectors: 1 + saveData.upgrades.detectors,
+        drills: 1 + saveData.upgrades.drills,
+        shields: 1 + saveData.upgrades.shields,
+        gold: 0,
+        gems: 0,
+        score: 0,
+        totalCellsDug: 0,
+        cellsDugThisFloor: 0,
+        trapsHitThisFloor: 0,
+        trapsHit: 0,
+        floorsCleared: 0,
+        floorComplete: false,
+    };
+    selectedTool = 'dig';
+    generateLevel(run.depth, run.seed);
+    state = STATES.PLAYING;
+};
+
+// --- Dig a Cell ---
+const digCell = (r, c) => {
+    if(loopPaused) return;
+    if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS) return;
+    const cell = grid[r][c];
+    // Flood fill can expose an exit or pickup before a direct dig. Let the player use it once.
+    if(cell.state===CELL.REVEALED && selectedTool==='dig' && [CONTENT.GEM,CONTENT.GOLD,CONTENT.EXIT,CONTENT.TOOL_DETECTOR,CONTENT.TOOL_DRILL,CONTENT.TOOL_SHIELD].includes(cell.content)){
+        handleCellContent(r,c);checkFloorComplete();return;
+    }
+    if ((cell.state === CELL.REVEALED && !(cell.content===CONTENT.WALL && selectedTool==='drill')) || cell.state === CELL.TRAP_REVEALED) return;
+
+    if (selectedTool === 'flag') {
+        cell.state = cell.state === CELL.FLAGGED ? CELL.HIDDEN : CELL.FLAGGED;
+        playSound('flag');
+        return;
+    }
+
+    if (cell.state === CELL.FLAGGED && selectedTool === 'dig') return; // Can't dig flagged
+
+    if (selectedTool === 'detector') {
+        if (run.detectors <= 0) return;
+        run.detectors--;
+        playSound('reveal');
+        // Reveal all traps adjacent to this cell (including the cell itself)
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                const nr = r + dr, nc = c + dc;
+                if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < GRID_COLS) {
+                    if (grid[nr][nc].content === CONTENT.TRAP && grid[nr][nc].state !== CELL.REVEALED) {
+                        grid[nr][nc].state = CELL.TRAP_REVEALED;
+                        grid[nr][nc].revealAnim = 1;
+                        spawnParticles(
+                            gridOffsetX + nc * CELL_SIZE + CELL_SIZE/2,
+                            gridOffsetY + nr * CELL_SIZE + CELL_SIZE/2,
+                            '#ff4444', 6, 80
+                        );
+                    }
+                }
+            }
+        }
+        triggerFlash('#00aaff', 0.08);
+        return;
+    }
+
+    if (selectedTool === 'drill') {
+        if (run.drills <= 0) return;
+        if (cell.content !== CONTENT.WALL && cell.content !== CONTENT.TRAP) {
+            // Drill can also safe-dig any cell
+        }
+        run.drills--;
+        playSound('dig');
+        cell.state = CELL.REVEALED;
+        cell.revealAnim = 1;
+        run.cellsDugThisFloor++;
+        run.totalCellsDug++;
+        // Drilling discovered rock removes it and reveals an honest neighboring-mine clue.
+        if(cell.content===CONTENT.WALL){
+            cell.content=CONTENT.EMPTY;cell.adjacentTraps=0;
+            for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+                const q=grid[r+dr]&&grid[r+dr][c+dc];
+                if((dr||dc)&&q&&q.content===CONTENT.TRAP)cell.adjacentTraps++;
+            }
+        }
+        // Drill safely reveals regardless of content
+        if (cell.content === CONTENT.TRAP) {
+            cell.state = CELL.TRAP_REVEALED;
+            spawnParticles(
+                gridOffsetX + c * CELL_SIZE + CELL_SIZE/2,
+                gridOffsetY + r * CELL_SIZE + CELL_SIZE/2,
+                '#ff8800', 10, 100
+            );
+        } else {
+            handleCellContent(r, c);
+        }
+        triggerFlash('#f0b800', 0.06);
+        return;
+    }
+
+    if (selectedTool === 'shield') {
+        if (run.shields <= 0) return;
+        // Shield: dig with protection
+        run.shields--;
+        playSound('shield');
+        cell.state = CELL.REVEALED;
+        cell.revealAnim = 1;
+        run.cellsDugThisFloor++;
+        run.totalCellsDug++;
+        if (cell.content === CONTENT.TRAP) {
+            cell.state = CELL.TRAP_REVEALED;
+            spawnParticles(
+                gridOffsetX + c * CELL_SIZE + CELL_SIZE/2,
+                gridOffsetY + r * CELL_SIZE + CELL_SIZE/2,
+                '#00aaff', 12, 120
+            );
+            triggerShake(3, 0.1);
+            // No damage taken
+        } else {
+            handleCellContent(r, c);
+        }
+        triggerFlash('#00aaff', 0.08);
+        return;
+    }
+
+    // Normal dig
+    if (cell.content === CONTENT.WALL) { cell.state=CELL.REVEALED;cell.revealAnim=1;playSound('dig');return; } // Show discovered rock; drilling remains available.
+
+    // Trap sense check
+    if (cell.content === CONTENT.TRAP && saveData.upgrades.trapSense > 0) {
+        const sense = saveData.upgrades.trapSense * 0.05;
+        if (Math.random() < sense) {
+            // Auto-reveal trap!
+            cell.state = CELL.TRAP_REVEALED;
+            cell.revealAnim = 1;
+            playSound('reveal');
+            spawnParticles(
+                gridOffsetX + c * CELL_SIZE + CELL_SIZE/2,
+                gridOffsetY + r * CELL_SIZE + CELL_SIZE/2,
+                '#ff4444', 8, 80
+            );
+            triggerFlash('#ffaa00', 0.1);
+            return;
+        }
+    }
+
+    cell.state = CELL.REVEALED;
+    cell.revealAnim = 1;
+    run.cellsDugThisFloor++;
+    run.totalCellsDug++;
+
+    if (cell.content === CONTENT.TRAP) {
+        cell.state = CELL.TRAP_REVEALED; // The hit mine must actually render as a bomb.
+        // Armor plate check
+        let blocked = false;
+        if (saveData.upgrades.armorPlate > 0) {
+            const armorChance = saveData.upgrades.armorPlate * 0.05;
+            if (Math.random() < armorChance) {
+                blocked = true;
+                if (!saveData.achievements.survive_trap) {
+                    saveData.achievements.survive_trap = true;
+                    checkAchievements();
+                }
+            }
+        }
+
+        if (!blocked) {
+            run.hp--;
+            run.trapsHit++;
+            run.trapsHitThisFloor++;
+        }
+        playSound('trap');
+        triggerShake(8, 0.2);
+        triggerFlash('#ff0000', 0.15);
+        spawnParticles(
+            gridOffsetX + c * CELL_SIZE + CELL_SIZE/2,
+            gridOffsetY + r * CELL_SIZE + CELL_SIZE/2,
+            blocked ? '#00aaff' : '#ff4444', 15, 150
+        );
+
+        if (run.hp <= 0) {
+            endRun();
+            return;
+        }
+    } else {
+        handleCellContent(r, c);
+        playSound('dig');
+
+        // Flood fill if 0 adjacent traps and empty
+        if (cell.adjacentTraps === 0 && cell.content === CONTENT.EMPTY) {
+            floodReveal(r, c);
+        }
+    }
+
+    // Lucky dig check
+    if (saveData.upgrades.luckyDig > 0 && cell.content !== CONTENT.TRAP) {
+        const luck = saveData.upgrades.luckyDig * 0.04;
+        if (Math.random() < luck) {
+            const bonus = Math.floor(3 + run.depth * 0.5);
+            run.gold += bonus;
+            spawnParticles(
+                gridOffsetX + c * CELL_SIZE + CELL_SIZE/2,
+                gridOffsetY + r * CELL_SIZE + CELL_SIZE/2,
+                '#f0b800', 5, 60
+            );
+        }
+    }
+
+    checkFloorComplete();
+};
+
+const handleCellContent = (r, c) => {
+    const cell = grid[r][c];
+    const cx = gridOffsetX + c * CELL_SIZE + CELL_SIZE/2;
+    const cy = gridOffsetY + r * CELL_SIZE + CELL_SIZE/2;
+
+    switch (cell.content) {
+        case CONTENT.GEM:
+            const gemValue = Math.floor((10 + run.depth * 5) * (1 + saveData.upgrades.gemBonus * 0.15));
+            run.gold += gemValue;
+            run.gems++;
+            run.score += gemValue * 2;
+            playSound('gem');
+            spawnParticles(cx, cy, '#00ffcc', 12, 100);
+            spawnParticles(cx, cy, '#ff00ff', 6, 60);
+            break;
+        case CONTENT.GOLD:
+            const goldValue = Math.floor(3 + run.depth * 2);
+            run.gold += goldValue;
+            run.score += goldValue;
+            playSound('gem');
+            spawnParticles(cx, cy, '#f0b800', 8, 80);
+            break;
+        case CONTENT.EXIT:
+            run.floorComplete = true;
+            playSound('descend');
+            break;
+        case CONTENT.TOOL_DETECTOR:
+            run.detectors++;
+            playSound('buy');
+            spawnParticles(cx, cy, '#00aaff', 8, 80);
+            break;
+        case CONTENT.TOOL_DRILL:
+            run.drills++;
+            playSound('buy');
+            spawnParticles(cx, cy, '#f0b800', 8, 80);
+            break;
+        case CONTENT.TOOL_SHIELD:
+            run.shields++;
+            playSound('buy');
+            spawnParticles(cx, cy, '#00ff88', 8, 80);
+            break;
+    }
+    if([CONTENT.GEM,CONTENT.GOLD,CONTENT.TOOL_DETECTOR,CONTENT.TOOL_DRILL,CONTENT.TOOL_SHIELD].includes(cell.content))cell.content=CONTENT.EMPTY; // Collected once; the revealed clue is now readable.
+};
+
+const checkFloorComplete = () => {
+    if (run.floorComplete) {
+        // Check perfect floor
+        if (run.trapsHitThisFloor === 0) {
+            if (!saveData.achievements.perfect_floor) {
+                saveData.achievements.perfect_floor = true;
+                checkAchievements();
+            }
+        }
+
+        run.floorsCleared++;
+        run.score += run.depth * 50;
+        run.depth++;
+        run.floorComplete = false;
+        run.cellsDugThisFloor = 0;
+        run.trapsHitThisFloor = 0;
+
+        if (run.depth > saveData.deepestLevel) {
+            saveData.deepestLevel = run.depth;
+        }
+
+        playSound('levelup');
+        triggerFlash('#00ff88', 0.2);
+
+        generateLevel(run.depth, run.seed);
+    }
+};
+
+const endRun = () => {
+    playSound('death');
+    triggerShake(12, 0.4);
+
+    saveData.gold += run.gold;
+    saveData.totalGold += run.gold;
+    saveData.totalRuns++;
+    saveData.totalCellsDug += run.totalCellsDug;
+    saveData.totalTrapsHit += run.trapsHit;
+    saveData.totalGemsFound += run.gems;
+
+    if (run.score > saveData.highScore) {
+        saveData.highScore = run.score;
+    }
+    if (run.depth > saveData.deepestLevel) {
+        saveData.deepestLevel = run.depth;
+    }
+
+    checkAchievements();
+    saveSave(saveData);
+    state = STATES.GAMEOVER;
+};
+
+const checkAchievements = () => {
+    for (const ach of ACHIEVEMENT_DEFS) {
+        if (!saveData.achievements[ach.id] && ach.check(saveData)) {
+            saveData.achievements[ach.id] = true;
+            achievementNotifications.push({ name: ach.name, time: 3 });
+        }
+    }
+};
+
+// --- Drawing Helpers ---
+const drawText = (text, x, y, size, color = '#ffffff', align = 'center', bold = false) => {
+    ctx.font = `${bold ? 'bold ' : ''}${size}px monospace`;
+    ctx.fillStyle = color;
+    ctx.textAlign = align;
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x, y);
+};
+
+const drawRect = (x, y, w, h, color, radius = 0) => {
+    ctx.fillStyle = color;
+    if (radius > 0) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, radius);
+        ctx.fill();
+    } else {
+        ctx.fillRect(x, y, w, h);
+    }
+};
+
+const drawRectStroke = (x, y, w, h, color, lw = 1, radius = 0) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    if (radius > 0) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, radius);
+        ctx.stroke();
+    } else {
+        ctx.strokeRect(x, y, w, h);
+    }
+};
+
+// --- Number Colors (minesweeper style) ---
+const NUM_COLORS = ['', '#00aaff', '#00cc44', '#ff4444', '#aa00ff', '#ff8800', '#00cccc', '#888888', '#ffffff'];
+
+// --- Draw Cell ---
+const drawCell = (r, c) => {
+    const cell = grid[r][c];
+    const x = gridOffsetX + c * CELL_SIZE;
+    const y = gridOffsetY + r * CELL_SIZE;
+    const pad = 1;
+    const inner = CELL_SIZE - pad * 2;
+
+    // Reveal animation
+    const revScale = cell.revealAnim > 0 ? 1 + cell.revealAnim * 0.15 : 1;
+    const shake = cell.shakeAnim > 0 ? Math.sin(cell.shakeAnim * 30) * 2 : 0;
+
+    const cx = x + CELL_SIZE/2 + shake;
+    const cy = y + CELL_SIZE/2;
+
+    if (cell.state === CELL.HIDDEN || cell.state === CELL.FLAGGED) {
+        // Undigged cell
+        const isHovered = hoveredCell && hoveredCell.r === r && hoveredCell.c === c;
+        const baseColor = isHovered ? '#3a3540' : '#2a2530';
+        drawRect(x + pad, y + pad, inner, inner, baseColor, 3);
+
+        // Surface texture
+        const texAlpha = 0.15;
+        ctx.globalAlpha = texAlpha;
+        drawRect(x + pad, y + pad, inner, inner * 0.3, '#4a4550', 3);
+        ctx.globalAlpha = 1;
+
+        // Border
+        drawRectStroke(x + pad, y + pad, inner, inner, '#4a4560', 1, 3);
+
+        if (cell.state === CELL.FLAGGED) {
+            drawText('⚑', cx, cy, CELL_SIZE * 0.5, '#ff4444');
+        }
+
+        if (isHovered && selectedTool !== 'flag') {
+            let toolColor = '#ffffff';
+            if (selectedTool === 'detector') toolColor = '#00aaff';
+            if (selectedTool === 'drill') toolColor = '#f0b800';
+            if (selectedTool === 'shield') toolColor = '#00ff88';
+            ctx.globalAlpha = 0.3;
+            drawRect(x + pad, y + pad, inner, inner, toolColor, 3);
+            ctx.globalAlpha = 1;
+        }
+    } else if (cell.state === CELL.REVEALED) {
+        // Revealed
+        const baseCol = '#151218';
+        ctx.save();
+        if (revScale > 1) {
+            ctx.translate(cx, cy);
+            ctx.scale(revScale, revScale);
+            ctx.translate(-cx, -cy);
+        }
+        drawRect(x + pad, y + pad, inner, inner, baseCol, 2);
+        drawRectStroke(x + pad, y + pad, inner, inner, '#1e1a22', 1, 2);
+
+        // Content
+        switch (cell.content) {
+            case CONTENT.EMPTY:
+                if (cell.adjacentTraps > 0) {
+                    const col = NUM_COLORS[cell.adjacentTraps] || '#ffffff';
+                    drawText(String(cell.adjacentTraps), cx, cy, CELL_SIZE * 0.5, col, 'center', true);
+                }
+                break;
+            case CONTENT.GEM:
+                drawText('◆', cx, cy, CELL_SIZE * 0.45, '#00ffcc');
+                break;
+            case CONTENT.GOLD:
+                drawText('●', cx, cy, CELL_SIZE * 0.35, '#f0b800');
+                break;
+            case CONTENT.EXIT:
+                // Pulsing exit
+                const pulse = 0.7 + Math.sin(animTime * 4) * 0.3;
+                ctx.globalAlpha = pulse;
+                drawRect(x + pad + 2, y + pad + 2, inner - 4, inner - 4, '#00ff8830', 2);
+                ctx.globalAlpha = 1;
+                drawText('▼', cx, cy, CELL_SIZE * 0.5, '#00ff88');
+                drawText('EXIT', cx, cy + CELL_SIZE * 0.28, CELL_SIZE * 0.18, '#00ff88');
+                break;
+            case CONTENT.WALL:
+                drawRect(x + pad, y + pad, inner, inner, '#3a3040', 2);
+                drawText('▓', cx, cy, CELL_SIZE * 0.5, '#5a5060');
+                break;
+            case CONTENT.TOOL_DETECTOR:
+                drawText('📡', cx, cy, CELL_SIZE * 0.4);
+                break;
+            case CONTENT.TOOL_DRILL:
+                drawText('⛏', cx, cy, CELL_SIZE * 0.4);
+                break;
+            case CONTENT.TOOL_SHIELD:
+                drawText('🛡', cx, cy, CELL_SIZE * 0.4);
+                break;
+        }
+        ctx.restore();
+    } else if (cell.state === CELL.TRAP_REVEALED) {
+        // Trap revealed
+        drawRect(x + pad, y + pad, inner, inner, '#2a0808', 2);
+        drawRectStroke(x + pad, y + pad, inner, inner, '#ff2222', 1, 2);
+        drawText('💣', cx, cy, CELL_SIZE * 0.45);
+    }
+};
+
+// --- Tool Bar (bottom of screen) ---
+const TOOL_BAR_HEIGHT = 56;
+const tools = [
+    { id: 'dig', label: '⛏ DIG', color: '#ffffff', key: '1' },
+    { id: 'detector', label: '📡 SCAN', color: '#00aaff', key: '2' },
+    { id: 'drill', label: '🔨 DRILL', color: '#f0b800', key: '3' },
+    { id: 'shield', label: '🛡 GUARD', color: '#00ff88', key: '4' },
+    { id: 'flag', label: '⚑ FLAG', color: '#ff4444', key: '5' },
+];
+
+const drawToolBar = () => {
+    const barY = H - TOOL_BAR_HEIGHT - 8;
+    drawRect(0, barY - 4, W, TOOL_BAR_HEIGHT + 12, '#0a0a0f');
+    drawRect(0, barY - 4, W, 1, '#2a2530');
+
+    const toolW = Math.min(80, (W - 20) / tools.length - 4);
+    const totalW = tools.length * (toolW + 4);
+    const startX = (W - totalW) / 2;
+
+    for (let i = 0; i < tools.length; i++) {
+        const t = tools[i];
+        const tx = startX + i * (toolW + 4);
+        const selected = selectedTool === t.id;
+
+        const bgColor = selected ? t.color + '33' : '#1a1520';
+        drawRect(tx, barY, toolW, TOOL_BAR_HEIGHT - 8, bgColor, 6);
+        if (selected) {
+            drawRectStroke(tx, barY, toolW, TOOL_BAR_HEIGHT - 8, t.color, 2, 6);
+        } else {
+            drawRectStroke(tx, barY, toolW, TOOL_BAR_HEIGHT - 8, '#3a3540', 1, 6);
+        }
+
+        drawText(t.label, tx + toolW/2, barY + 14, 10, selected ? t.color : '#888888', 'center', selected);
+
+        // Count
+        let count = '';
+        if (t.id === 'detector') count = String(run.detectors);
+        else if (t.id === 'drill') count = String(run.drills);
+        else if (t.id === 'shield') count = String(run.shields);
+        else if (t.id === 'dig') count = '∞';
+        else if (t.id === 'flag') count = '—';
+
+        drawText(count, tx + toolW/2, barY + 32, 14, selected ? t.color : '#666666', 'center', true);
+        drawText(t.key, tx + toolW - 8, barY + 6, 8, '#444444', 'right');
+    }
+};
+
+const getToolBarClick = (mx, my) => {
+    const barY = H - TOOL_BAR_HEIGHT - 8;
+    if (my < barY || my > barY + TOOL_BAR_HEIGHT) return null;
+    const toolW = Math.min(80, (W - 20) / tools.length - 4);
+    const totalW = tools.length * (toolW + 4);
+    const startX = (W - totalW) / 2;
+
+    for (let i = 0; i < tools.length; i++) {
+        const tx = startX + i * (toolW + 4);
+        if (mx >= tx && mx <= tx + toolW) return tools[i].id;
+    }
+    return null;
+};
+
+// --- HUD ---
+const drawHUD = () => {
+    // Top bar bg
+    drawRect(0, 0, W, 52, '#0a0a0f');
+    drawRect(0, 52, W, 1, '#2a2530');
+
+    // HP
+    let hpX = 12;
+    for (let i = 0; i < run.maxHP; i++) {
+        const filled = i < run.hp;
+        drawText('♥', hpX + i * 20, 18, 16, filled ? '#ff4444' : '#333333');
+    }
+
+    // Depth
+    drawText(`DEPTH ${run.depth}`, W/2, 16, 14, '#00ff88', 'center', true);
+
+    // Gold
+    drawText(`● ${run.gold}`, W - 12, 16, 13, '#f0b800', 'right', true);
+
+    // Score
+    drawText(`SCORE: ${run.score}`, W/2, 38, 10, '#888888', 'center');
+
+    // Gems
+    drawText(`◆ ${run.gems}`, W - 12, 38, 10, '#00ffcc', 'right');
+};
+
+// --- Title Screen ---
+const drawTitle = () => {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, W, H);
+
+    // Background grid decoration
+    const gridDecorSize = 30;
+    ctx.globalAlpha = 0.05;
+    for (let x = 0; x < W; x += gridDecorSize) {
+        for (let y = 0; y < H; y += gridDecorSize) {
+            const isOn = Math.sin(x * 0.03 + animTime) * Math.cos(y * 0.03 + animTime * 0.7) > 0.3;
+            if (isOn) {
+                ctx.fillStyle = '#f0b800';
+                ctx.fillRect(x + 2, y + 2, gridDecorSize - 4, gridDecorSize - 4);
+            }
+        }
+    }
+    ctx.globalAlpha = 1;
+
+    const cy = H * 0.32;
+    // Title
+    const titleSize = Math.min(48, W * 0.08);
+    drawText('MINESHAFTED', W/2, cy, titleSize, '#f0b800', 'center', true);
+    drawText('Dig. Disarm. Discover.', W/2, cy + titleSize * 0.8, titleSize * 0.3, '#888888', 'center');
+
+    // Subtitle with tools
+    const subY = cy + titleSize * 1.5;
+    drawText('⛏ Mine Clearance × Roguelike', W/2, subY, titleSize * 0.28, '#00ff88', 'center');
+
+    // Stats
+    const statY = H * 0.52;
+    if (saveData.totalRuns > 0) {
+        drawText(`Deepest: Depth ${saveData.deepestLevel}`, W/2, statY, 13, '#aaaaaa', 'center');
+        drawText(`High Score: ${saveData.highScore}`, W/2, statY + 20, 13, '#f0b800', 'center');
+        drawText(`Gold: ● ${saveData.gold}`, W/2, statY + 40, 13, '#f0b800', 'center');
+        drawText(`Runs: ${saveData.totalRuns}`, W/2, statY + 60, 11, '#666666', 'center');
+    }
+
+    // Buttons
+    const btnW = 200, btnH = 44;
+    const btnX = W/2 - btnW/2;
+    const playY = H * 0.72;
+
+    // Play button
+    const playPulse = 0.8 + Math.sin(animTime * 3) * 0.2;
+    ctx.globalAlpha = playPulse;
+    drawRect(btnX, playY, btnW, btnH, '#00ff8833', 8);
+    drawRectStroke(btnX, playY, btnW, btnH, '#00ff88', 2, 8);
+    ctx.globalAlpha = 1;
+    drawText('▶  D I G  I N', W/2, playY + btnH/2, 16, '#00ff88', 'center', true);
+
+    // Shop button
+    const shopY = playY + btnH + 12;
+    drawRect(btnX, shopY, btnW, btnH, '#f0b80022', 8);
+    drawRectStroke(btnX, shopY, btnW, btnH, '#f0b800', 1, 8);
+    drawText(`⚙  UPGRADES  (● ${saveData.gold})`, W/2, shopY + btnH/2, 13, '#f0b800', 'center', true);
+
+    // Achievements button
+    const achY = shopY + btnH + 12;
+    const achCount = ACHIEVEMENT_DEFS.filter(a => saveData.achievements[a.id]).length;
+    drawRect(btnX, achY, btnW, btnH, '#aa44ff22', 8);
+    drawRectStroke(btnX, achY, btnW, btnH, '#aa44ff', 1, 8);
+    drawText(`★  ACHIEVEMENTS  (${achCount}/${ACHIEVEMENT_DEFS.length})`, W/2, achY + btnH/2, 12, '#aa44ff', 'center', true);
+
+    // Return button positions for click handling
+    return { playY, shopY, achY, btnX, btnW, btnH };
+};
+
+let titleBtns = null;
+
+// --- Shop Screen ---
+const drawShop = () => {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, W, H);
+
+    drawText('UPGRADES', W/2, 30, 22, '#f0b800', 'center', true);
+    drawText(`Gold: ● ${saveData.gold}`, W/2, 56, 14, '#f0b800', 'center');
+
+    const keys = Object.keys(UPGRADE_DEFS);
+    const itemH = 64;
+    const listY = 80;
+    const maxScroll = Math.max(0, keys.length * itemH - (H - listY - 80));
+    shopScroll = Math.max(0, Math.min(shopScroll, maxScroll));
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, listY, W, H - listY - 70);
+    ctx.clip();
+
+    for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        const def = UPGRADE_DEFS[key];
+        const lvl = saveData.upgrades[key];
+        const cost = getUpgradeCost(key);
+        const maxed = lvl >= def.maxLevel;
+        const canBuy = !maxed && saveData.gold >= cost;
+
+        const iy = listY + i * itemH - shopScroll;
+        if (iy < listY - itemH || iy > H) continue;
+
+        const bgColor = canBuy ? '#1a1a2a' : '#121218';
+        drawRect(10, iy + 2, W - 20, itemH - 4, bgColor, 6);
+        if (canBuy) {
+            drawRectStroke(10, iy + 2, W - 20, itemH - 4, '#f0b80044', 1, 6);
+        }
+
+        drawText(def.icon, 32, iy + itemH/2, 20);
+        drawText(def.name, 56, iy + 16, 13, canBuy ? '#ffffff' : '#666666', 'left', true);
+        drawText(def.desc, 56, iy + 34, 10, '#888888', 'left');
+
+        // Level pips
+        for (let l = 0; l < def.maxLevel; l++) {
+            const px = 56 + l * 10;
+            const filled = l < lvl;
+            drawRect(px, iy + 46, 7, 7, filled ? '#f0b800' : '#333333', 2);
+        }
+
+        // Cost
+        if (maxed) {
+            drawText('MAX', W - 24, iy + itemH/2, 12, '#00ff88', 'right', true);
+        } else {
+            drawText(`● ${cost}`, W - 24, iy + itemH/2, 13, canBuy ? '#f0b800' : '#ff4444', 'right', true);
+        }
+    }
+
+    ctx.restore();
+
+    // Back button
+    const backY = H - 56;
+    drawRect(W/2 - 80, backY, 160, 40, '#2a2530', 8);
+    drawRectStroke(W/2 - 80, backY, 160, 40, '#666666', 1, 8);
+    drawText('◀  BACK', W/2, backY + 20, 14, '#ffffff', 'center', true);
+
+    return { listY, itemH, keys, backY };
+};
+
+let shopData = null;
+
+// --- Achievements Screen ---
+const drawAchievements = () => {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, W, H);
+
+    const achCount = ACHIEVEMENT_DEFS.filter(a => saveData.achievements[a.id]).length;
+    drawText('ACHIEVEMENTS', W/2, 30, 22, '#aa44ff', 'center', true);
+    drawText(`${achCount} / ${ACHIEVEMENT_DEFS.length}`, W/2, 54, 13, '#888888', 'center');
+
+    const itemH = 50;
+    const listY = 74;
+
+    for (let i = 0; i < ACHIEVEMENT_DEFS.length; i++) {
+        const ach = ACHIEVEMENT_DEFS[i];
+        const unlocked = !!saveData.achievements[ach.id];
+        const iy = listY + i * itemH;
+        if (iy > H - 70) break;
+
+        const bgColor = unlocked ? '#1a1a2a' : '#0e0e14';
+        drawRect(10, iy + 2, W - 20, itemH - 4, bgColor, 6);
+        if (unlocked) {
+            drawRectStroke(10, iy + 2, W - 20, itemH - 4, '#aa44ff44', 1, 6);
+        }
+
+        drawText(unlocked ? '★' : '☆', 28, iy + itemH/2, 16, unlocked ? '#f0b800' : '#333333');
+        drawText(ach.name, 48, iy + 16, 12, unlocked ? '#ffffff' : '#444444', 'left', true);
+        drawText(unlocked ? ach.desc : '???', 48, iy + 34, 10, unlocked ? '#888888' : '#333333', 'left');
+    }
+
+    // Back button
+    const backY = H - 56;
+    drawRect(W/2 - 80, backY, 160, 40, '#2a2530', 8);
+    drawRectStroke(W/2 - 80, backY, 160, 40, '#666666', 1, 8);
+    drawText('◀  BACK', W/2, backY + 20, 14, '#ffffff', 'center', true);
+
+    return { backY };
+};
+
+let achData = null;
+
+// --- Game Over ---
+const drawGameOver = () => {
+    ctx.fillStyle = '#0a0a0f';
+    ctx.fillRect(0, 0, W, H);
+
+    const cy = H * 0.22;
+    drawText('SHAFT COLLAPSED', W/2, cy, Math.min(32, W * 0.06), '#ff4444', 'center', true);
+
+    const statY = cy + 50;
+    const stats = [
+        [`Score`, `${run.score}`],
+        [`Depth`, `${run.depth}`],
+        [`Gold Earned`, `● ${run.gold}`],
+        [`Gems Found`, `◆ ${run.gems}`],
+        [`Cells Dug`, `${run.totalCellsDug}`],
+        [`Traps Hit`, `${run.trapsHit}`],
+        [`Floors Cleared`, `${run.floorsCleared}`],
+    ];
+
+    for (let i = 0; i < stats.length; i++) {
+        const y = statY + i * 24;
+        drawText(stats[i][0], W/2 - 10, y, 12, '#888888', 'right');
+        drawText(stats[i][1], W/2 + 10, y, 12, '#ffffff', 'left', true);
+    }
+
+    if (run.score >= saveData.highScore) {
+        drawText('★ NEW HIGH SCORE ★', W/2, statY + stats.length * 24 + 20, 14, '#f0b800', 'center', true);
+    }
+
+    // Total gold
+    drawText(`Total Gold: ● ${saveData.gold}`, W/2, H * 0.7, 16, '#f0b800', 'center', true);
+
+    // Buttons
+    const btnW = 180, btnH = 44;
+    const btnX = W/2 - btnW/2;
+    const retryY = H * 0.78;
+    const menuY = retryY + btnH + 12;
+
+    const pulse = 0.8 + Math.sin(animTime * 3) * 0.2;
+    ctx.globalAlpha = pulse;
+    drawRect(btnX, retryY, btnW, btnH, '#00ff8833', 8);
+    drawRectStroke(btnX, retryY, btnW, btnH, '#00ff88', 2, 8);
+    ctx.globalAlpha = 1;
+    drawText('▶  DIG AGAIN', W/2, retryY + btnH/2, 15, '#00ff88', 'center', true);
+
+    drawRect(btnX, menuY, btnW, btnH, '#2a2530', 8);
+    drawRectStroke(btnX, menuY, btnW, btnH, '#666666', 1, 8);
+    drawText('◀  MENU', W/2, menuY + btnH/2, 14, '#ffffff', 'center', true);
+
+    return { retryY, menuY, btnX, btnW, btnH };
+};
+
+let goBtns = null;
+
+// --- Achievement Notifications ---
+const drawNotifications = () => {
+    for (let i = achievementNotifications.length - 1; i >= 0; i--) {
+        const n = achievementNotifications[i];
+        const alpha = Math.min(1, n.time, n.time > 2.5 ? (3 - n.time) * 2 : 1);
+        const ny = 60 + i * 40;
+        ctx.globalAlpha = alpha;
+        drawRect(W/2 - 120, ny, 240, 34, '#aa44ff33', 8);
+        drawRectStroke(W/2 - 120, ny, 240, 34, '#aa44ff', 1, 8);
+        drawText(`★ ${n.name}`, W/2, ny + 17, 12, '#f0b800', 'center', true);
+        ctx.globalAlpha = 1;
+    }
+};
+
+// --- Input Handling ---
+const getCellFromPos = (mx, my) => {
+    const c = Math.floor((mx - gridOffsetX) / CELL_SIZE);
+    const r = Math.floor((my - gridOffsetY) / CELL_SIZE);
+    if (r >= 0 && r < GRID_ROWS && c >= 0 && c < GRID_COLS) return { r, c };
+    return null;
+};
+
+const handleClick = (mx, my) => {
+    if(loopPaused&&state===STATES.PLAYING)return;
+    ensureAudio();
+
+    if (state === STATES.TITLE) {
+        if (!titleBtns) return;
+        const { playY, shopY, achY, btnX, btnW, btnH } = titleBtns;
+        if (mx >= btnX && mx <= btnX + btnW) {
+            if (my >= playY && my <= playY + btnH) { startRun(); return; }
+            if (my >= shopY && my <= shopY + btnH) { state = STATES.SHOP; shopScroll = 0; return; }
+            if (my >= achY && my <= achY + btnH) { state = STATES.ACHIEVEMENTS; return; }
+        }
+        return;
+    }
+
+    if (state === STATES.SHOP) {
+        if (!shopData) return;
+        const { listY, itemH, keys, backY } = shopData;
+
+        // Back
+        if (my >= backY && my <= backY + 40 && mx >= W/2 - 80 && mx <= W/2 + 80) {
+            state = STATES.TITLE;
+            saveSave(saveData);
+            return;
+        }
+
+        // Buy
+        for (let i = 0; i < keys.length; i++) {
+            const iy = listY + i * itemH - shopScroll;
+            if (my >= iy && my <= iy + itemH && mx >= 10 && mx <= W - 10) {
+                const key = keys[i];
+                const def = UPGRADE_DEFS[key];
+                const cost = getUpgradeCost(key);
+                if (saveData.upgrades[key] < def.maxLevel && saveData.gold >= cost) {
+                    saveData.gold -= cost;
+                    saveData.upgrades[key]++;
+                    playSound('buy');
+                    saveSave(saveData);
+                }
+                return;
+            }
+        }
+        return;
+    }
+
+    if (state === STATES.ACHIEVEMENTS) {
+        if (!achData) return;
+        const { backY } = achData;
+        if (my >= backY && my <= backY + 40 && mx >= W/2 - 80 && mx <= W/2 + 80) {
+            state = STATES.TITLE;
+            return;
+        }
+        return;
+    }
+
+    if (state === STATES.GAMEOVER) {
+        if (!goBtns) return;
+        const { retryY, menuY, btnX, btnW, btnH } = goBtns;
+        if (mx >= btnX && mx <= btnX + btnW) {
+            if (my >= retryY && my <= retryY + btnH) { startRun(); return; }
+            if (my >= menuY && my <= menuY + btnH) { state = STATES.TITLE; return; }
+        }
+        return;
+    }
+
+    if (state === STATES.PLAYING) {
+        // Check toolbar first
+        const toolId = getToolBarClick(mx, my);
+        if (toolId) {
+            selectedTool = toolId;
+            playSound('flag');
+            return;
+        }
+
+        // Check grid
+        const cell = getCellFromPos(mx, my);
+        if (cell) {
+            // Click on exit cell to descend
+            if (grid[cell.r][cell.c].state === CELL.REVEALED && grid[cell.r][cell.c].content === CONTENT.EXIT) {
+                run.floorComplete = true;
+                playSound('descend');
+                checkFloorComplete();
+                return;
+            }
+            digCell(cell.r, cell.c);
+        }
+    }
+};
+
+const handleRightClick = (mx, my) => {
+    if(loopPaused&&state===STATES.PLAYING)return;
+    if (state !== STATES.PLAYING) return;
+    const cell = getCellFromPos(mx, my);
+    if (cell) {
+        const c = grid[cell.r][cell.c];
+        if (c.state === CELL.HIDDEN || c.state === CELL.FLAGGED) {
+            c.state = c.state === CELL.FLAGGED ? CELL.HIDDEN : CELL.FLAGGED;
+            playSound('flag');
+        }
+    }
+};
+
+// Mouse
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 2) {
+        handleRightClick(e.clientX, e.clientY);
+        return;
+    }
+    handleClick(e.clientX, e.clientY);
+});
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('mousemove', (e) => {
+    cursorX = e.clientX;
+    cursorY = e.clientY;
+});
+
+// Touch
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const t = e.touches[0];
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+    isTouching = true;
+    cursorX = t.clientX;
+    cursorY = t.clientY;
+
+    // Long press for flag
+    longPressTimer = setTimeout(() => {
+        if (state === STATES.PLAYING) {
+            handleRightClick(touchStartX, touchStartY);
+        }
+        longPressTimer = null;
+    }, 500);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const t = e.touches[0];
+    cursorX = t.clientX;
+    cursorY = t.clientY;
+
+    // Cancel long press on movement
+    if (longPressTimer && (Math.abs(t.clientX - touchStartX) > 10 || Math.abs(t.clientY - touchStartY) > 10)) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+    }
+
+    // Shop scroll
+    if (state === STATES.SHOP) {
+        shopScroll -= (t.clientY - touchStartY) * 0.3;
+        touchStartY = t.clientY;
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+        handleClick(touchStartX, touchStartY);
+    }
+    isTouching = false;
+}, { passive: false });
+
+// Keyboard
+document.addEventListener('keydown', (e) => {
+    if (state === STATES.TITLE) {
+        if (e.key === 'Enter' || e.key === ' ') { ensureAudio(); startRun(); }
+        if (e.key === 's' || e.key === 'S') { ensureAudio(); state = STATES.SHOP; shopScroll = 0; }
+        return;
+    }
+
+    if (state === STATES.GAMEOVER) {
+        if (e.key === 'Enter' || e.key === ' ') { startRun(); }
+        if (e.key === 'Escape') { state = STATES.TITLE; }
+        return;
+    }
+
+    if (state === STATES.SHOP || state === STATES.ACHIEVEMENTS) {
+        if (e.key === 'Escape' || e.key === 'Backspace') { state = STATES.TITLE; saveSave(saveData); }
+        return;
+    }
+
+    if (state === STATES.PLAYING) {
+        if (e.key === '1') selectedTool = 'dig';
+        if (e.key === '2') selectedTool = 'detector';
+        if (e.key === '3') selectedTool = 'drill';
+        if (e.key === '4') selectedTool = 'shield';
+        if (e.key === '5') selectedTool = 'flag';
+        if (e.key === 'q' || e.key === 'Q') selectedTool = 'dig';
+        if (e.key === 'w' || e.key === 'W') selectedTool = 'detector';
+        if (e.key === 'e' || e.key === 'E') selectedTool = 'drill';
+        if (e.key === 'r' || e.key === 'R') selectedTool = 'shield';
+        if (e.key === 'f' || e.key === 'F') selectedTool = 'flag';
+    }
+});
+
+// Mouse wheel for shop
+canvas.addEventListener('wheel', (e) => {
+    if (state === STATES.SHOP) {
+        shopScroll += e.deltaY * 0.5;
+        e.preventDefault();
+    }
+}, { passive: false });
+
+// --- Game Loop ---
+let lastTime = 0;
+
+let loopPaused = false;
+const update = (dt) => {
+    if(loopPaused) return;
+    animTime += dt;
+    titlePulse += dt;
+
+    // Screen shake
+    if (shakeTime > 0) shakeTime -= dt;
+
+    // Flash
+    if (flashTime > 0) flashTime -= dt;
+
+    // Particles
+    updateParticles(dt);
+
+    // Achievement notifications
+    for (let i = achievementNotifications.length - 1; i >= 0; i--) {
+        achievementNotifications[i].time -= dt;
+        if (achievementNotifications[i].time <= 0) {
+            achievementNotifications.splice(i, 1);
+        }
+    }
+
+    // Cell animations
+    if (state === STATES.PLAYING && grid.length > 0) {
+        for (let r = 0; r < GRID_ROWS; r++) {
+            for (let c = 0; c < GRID_COLS; c++) {
+                if (grid[r][c].revealAnim > 0) {
+                    grid[r][c].revealAnim = Math.max(0, grid[r][c].revealAnim - dt * 5);
+                }
+                if (grid[r][c].shakeAnim > 0) {
+                    grid[r][c].shakeAnim = Math.max(0, grid[r][c].shakeAnim - dt * 4);
+                }
+            }
+        }
+
+        // Hover
+        hoveredCell = getCellFromPos(cursorX, cursorY);
+    }
+};
+
+const render = () => {
+    ctx.save();
+
+    // Screen shake
+    if (shakeTime > 0) {
+        const sx = (Math.random() - 0.5) * shakeAmount * 2;
+        const sy = (Math.random() - 0.5) * shakeAmount * 2;
+        ctx.translate(sx, sy);
+    }
+
+    switch (state) {
+        case STATES.TITLE:
+            titleBtns = drawTitle();
+            break;
+        case STATES.SHOP:
+            shopData = drawShop();
+            break;
+        case STATES.ACHIEVEMENTS:
+            achData = drawAchievements();
+            break;
+        case STATES.GAMEOVER:
+            goBtns = drawGameOver();
+            break;
+        case STATES.PLAYING:
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, W, H);
+
+            // Draw grid
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    drawCell(r, c);
+                }
+            }
+
+            // Draw particles
+            drawParticles();
+
+            // HUD
+            drawHUD();
+            drawToolBar();
+            break;
+    }
+
+    // Flash overlay
+    if (flashTime > 0 && flashColor) {
+        ctx.globalAlpha = flashTime * 3;
+        ctx.fillStyle = flashColor;
+        ctx.fillRect(0, 0, W, H);
+        ctx.globalAlpha = 1;
+    }
+
+    // Notifications
+    drawNotifications();
+
+    ctx.restore();
+};
+
+const loop = (timestamp) => {
+    const dt = Math.min(0.1, (timestamp - lastTime) / 1000);
+    lastTime = timestamp;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+};
+
+requestAnimationFrame((ts) => {
+    lastTime = ts;
+    loop(ts);
+});
+
+
+// Free logical hint. Uses visible clues only; no hidden-content oracle or guessed flags.
+const logicalSafeCell = () => {
+  const knownMines=new Set(), hidden=new Set();
+  const neighbors=(r,c)=>{const a=[];for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const nr=r+dr,nc=c+dc;if((dr||dc)&&nr>=0&&nc>=0&&nr<GRID_ROWS&&nc<GRID_COLS)a.push([nr,nc]);}return a;};
+  for(let r=0;r<GRID_ROWS;r++)for(let c=0;c<GRID_COLS;c++){
+    const q=grid[r][c];if(q.state===CELL.TRAP_REVEALED||(q.state===CELL.REVEALED&&q.content===CONTENT.TRAP))knownMines.add(r+','+c);
+    else if(q.state===CELL.HIDDEN||q.state===CELL.FLAGGED)hidden.add(r+','+c);
+  }
+  for(let pass=0;pass<GRID_ROWS*GRID_COLS;pass++){
+    let changed=false;
+    for(let r=0;r<GRID_ROWS;r++)for(let c=0;c<GRID_COLS;c++){
+      const q=grid[r][c];if(q.state!==CELL.REVEALED||q.content!==CONTENT.EMPTY)continue;
+      const ns=neighbors(r,c),unknown=ns.filter(([a,b])=>hidden.has(a+','+b)&&!knownMines.has(a+','+b));
+      const remaining=q.adjacentTraps-ns.filter(([a,b])=>knownMines.has(a+','+b)).length;
+      if(remaining===0&&unknown.length)return unknown[0];
+      if(remaining===unknown.length&&remaining>0)for(const [a,b] of unknown){knownMines.add(a+','+b);changed=true;}
+    }
+    if(!changed)break;
+  }
+  return null;
+};
+// Glyph-equivalent observations: resource cells do not display their adjacent count.
+const playerObservation = () => ({
+ phase:loopPaused?'paused':state===STATES.PLAYING?'playing':state===STATES.GAMEOVER?'lost':'ready',
+ hp:run&&run.hp,depth:run&&run.depth,score:run&&run.score,tools:run?{detector:run.detectors,drill:run.drills,shield:run.shields}:null,selectedTool,
+ cells:grid.flatMap((row,r)=>row.map((q,c)=>{
+  const item={r,c,x:gridOffsetX+(c+.5)*CELL_SIZE,y:gridOffsetY+(r+.5)*CELL_SIZE,state:q.state===CELL.FLAGGED?'flagged':q.state===CELL.HIDDEN?'hidden':q.state===CELL.TRAP_REVEALED?'bomb':'revealed'};
+  if(q.state===CELL.REVEALED){const glyphs={0:'empty',1:'bomb',2:'gem',3:'gold',4:'exit',5:'detector',6:'drill',7:'shield',8:'wall'};item.glyph=glyphs[q.content];if(q.content===CONTENT.EMPTY)item.number=q.adjacentTraps;}
+  return item;
+ })),goal:document.querySelector('.loopbar span')?.textContent||''
+});
+window.GameGobLoop = {
+  controlOffset:70,
+  observe:playerObservation,
+  status:()=>({playing:state===STATES.PLAYING,paused:loopPaused,goal:'Safe corner • free clue hint • retry identical seed',hint:true}),
+  pause:()=>{loopPaused=!loopPaused;},
+  restart:()=>{loopPaused=false;startRun(run&&run.seed);},
+  hint:()=>{if(state!==STATES.PLAYING||loopPaused)return;const q=logicalSafeCell();if(q){const cell=grid[q[0]][q[1]];if(cell.content===CONTENT.WALL){cell.state=CELL.REVEALED;return 'Deduced safe cell contains solid rock. Drill to remove it.';}cell.state=CELL.HIDDEN;selectedTool='dig';digCell(...q);return 'Deduced safe cell opened';}return 'No certain move from visible clues. Use a detector or choose your risk.';},
+  reset:()=>{try{localStorage.removeItem(SAVE_KEY);}catch(e){}saveData=loadSave();loopPaused=false;state=STATES.TITLE;},
+  metrics:()=>({state,paused:loopPaused,seed:run&&run.seed,hp:run&&run.hp,depth:run&&run.depth,safeHint:logicalSafeCell()})
+};
+</script>
+<script>
+// Shared interface for offline loop experiments. No analytics or network calls.
+(()=>{'use strict';const game=window.GameGobLoop;if(!game)return;
+const style=document.createElement('style');style.textContent=`.loopbar{position:fixed;z-index:999;left:8px;right:8px;top:var(--loop-offset,110px);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;font:11px system-ui;color:#dcf6ff;pointer-events:none}.loopbar button,.loopbar a{pointer-events:auto;min-height:44px;padding:8px 10px;border:1px solid #4c6288;border-radius:9px;background:#101b30ed;color:#dcf6ff;font:inherit;text-decoration:none}.loopbar span{width:100%;text-align:center;background:#101b30dd;padding:4px;border-radius:5px}.loopbar button:disabled{opacity:.4}.loopveil{position:fixed;inset:0;background:#080f22ad;z-index:998;display:grid;place-items:center;color:#fff;font:24px system-ui;pointer-events:none}`;document.head.append(style);
+const bar=document.createElement('nav');bar.className='loopbar';bar.style.setProperty('--loop-offset',(game.controlOffset||110)+'px');bar.setAttribute('aria-label','Run controls');document.body.append(bar);
+const goal=document.createElement('span');goal.setAttribute('role','status');bar.append(goal);
+const add=(text,fn)=>{const b=document.createElement('button');b.textContent=text;b.onclick=e=>{e.stopPropagation();fn();sync();};bar.append(b);return b;};
+const pause=add('Pause',()=>game.pause()),restart=add('Restart',()=>game.restart());
+let bank;if(game.bank)bank=add('Bank run',()=>game.bank());if(game.hint)add('Clue hint',()=>{const r=game.hint();if(r){goal.textContent=r;messageUntil=Date.now()+4000;}});
+let resetUntil=0,messageUntil=0;const reset=add('Reset save',()=>{if(Date.now()<resetUntil){game.reset();reset.textContent='Reset save';resetUntil=0;}else{resetUntil=Date.now()+4000;reset.textContent='Confirm reset';}});
+const a=document.createElement('a');a.href='loop_lab.html';a.textContent='Loop lab';bar.append(a);
+const veil=document.createElement('div');veil.className='loopveil';veil.textContent='Paused • tap Resume';veil.hidden=true;veil.style.display='none';document.body.append(veil);
+function sync(){const s=game.status();pause.textContent=s.paused?'Resume':'Pause';veil.style.display=s.paused?'grid':'none';if(Date.now()>messageUntil)goal.textContent='FREE PLAYTEST • '+(s.goal||'');if(bank)bank.disabled=!s.canBank;if(resetUntil&&Date.now()>resetUntil){reset.textContent='Reset save';resetUntil=0;}}
+window.addEventListener('blur',()=>{if(game.status().playing&&!game.status().paused)game.pause();sync();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&game.status().playing&&!game.status().paused)game.pause();sync();});
+window.addEventListener('keydown',e=>{if(e.repeat)return;if(e.key==='Escape'||e.key==='p'){game.pause();sync();}});window.addEventListener('gamegob:qa-render',sync);setInterval(sync,200);sync();
+})();
+
+</script>
+
+</body>
+</html>
