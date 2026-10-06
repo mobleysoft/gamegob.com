@@ -11,6 +11,13 @@
 *{margin:0;padding:0;box-sizing:border-box;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 body{background:#0a0a0f;overflow:hidden;font-family:'Courier New',monospace;display:flex;justify-content:center;align-items:center;height:100vh;width:100vw}
 canvas{display:block;image-rendering:pixelated}
+#endbird-sound{position:fixed;top:calc(6px + env(safe-area-inset-top,0px));right:calc(6px + env(safe-area-inset-right,0px));width:44px;height:44px;z-index:20;display:grid;place-items:center;border:1px solid #ffffff22;border-radius:50%;background:#0a0a0fcc;color:#b1b1c4;cursor:pointer;touch-action:manipulation}
+#endbird-sound:focus-visible{outline:2px solid #f0b800;outline-offset:3px}
+#endbird-sound svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#endbird-sound .sound-off{display:none}
+#endbird-sound[aria-pressed="true"]{color:#ff3355}
+#endbird-sound[aria-pressed="true"] .sound-on{display:none}
+#endbird-sound[aria-pressed="true"] .sound-off{display:block}
 </style>
 <script>/* gg: web display ads only on the web, never inside a native shell */if(!(window.Capacitor||navigator.standalone||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))){var ggAd=document.createElement("script");ggAd.async=true;ggAd.crossOrigin="anonymous";ggAd.src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419";document.head.appendChild(ggAd);}</script>
 <link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100524">
@@ -19,6 +26,10 @@ canvas{display:block;image-rendering:pixelated}
 </head>
 <body>
 <canvas id="c"></canvas>
+<button id="endbird-sound" type="button" aria-label="Mute sound" aria-pressed="false" title="Mute sound (M)">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z"/><path class="sound-on" d="M16 8a6 6 0 0 1 0 8M19 5a10 10 0 0 1 0 14"/><path class="sound-off" d="m16 9 6 6m0-6-6 6"/></svg>
+</button>
+<script src="assets/endbird-audio.js?v=20261006"></script>
 <script>
 'use strict';
 
@@ -49,46 +60,133 @@ const TIERS = [
 ];
 
 // ─── AUDIO ENGINE ───
-let audioCtx = null;
-const ensureAudio = () => { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); };
-
-const playSound = (freq, type, dur, vol = 0.15) => {
-  ensureAudio();
+// Audio starts from a gesture. Every cue is synthesized locally on the audio clock.
+let audioCtx = null, audioEngine = null, audioUnlockAt = -Infinity;
+const soundButton = document.getElementById('endbird-sound');
+const audioMuted = () => !!save.muted;
+const audioOn = () => !!audioEngine && !audioMuted() && !document.hidden &&
+  (audioCtx.state === 'running' ||
+    (audioCtx.state === 'suspended' && performance.now() - audioUnlockAt < 250));
+const audioNow = () => audioCtx.currentTime + 0.005;
+const quietPromise = p => { if (p && p.catch) p.catch(() => {}); };
+const applyAudioLevel = () => {
+  if (!audioEngine) return;
+  const t = audioCtx.currentTime, g = audioEngine.master.gain;
+  g.cancelScheduledValues(t); g.setTargetAtTime(audioMuted() || document.hidden ? 0 : 0.25, t, 0.012);
+};
+const ensureAudio = e => {
+  if (!e || !e.isTrusted || audioMuted() || document.hidden) return;
   try {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + dur);
-  } catch(e) {}
+    if (!audioCtx) {
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (!C || !window.createEndBirdAudio) return;
+      try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (err) {}
+      let c;
+      try { c = new C({ latencyHint: 'interactive' }); } catch (err) { c = new C(); }
+      try { audioEngine = createEndBirdAudio(c, { master: 0, autoAmbience: false }); }
+      catch (err) { quietPromise(c.close()); return; }
+      audioCtx = c;
+      audioCtx.addEventListener('statechange', () => {
+        if (audioCtx.state !== 'running') audioEngine.clear(audioCtx.currentTime);
+        else applyAudioLevel();
+      });
+      applyAudioLevel();
+    }
+    if (audioCtx.state !== 'running' && audioCtx.state !== 'closed') {
+      audioUnlockAt = performance.now();
+      quietPromise(audioCtx.resume());
+      // A silent sample also unlocks WebKit on older iOS versions.
+      const silent = audioCtx.createBufferSource();
+      silent.buffer = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+      silent.connect(audioCtx.destination); silent.onended = () => silent.disconnect(); silent.start();
+    }
+  } catch (err) { /* Audio support must never stop a run. */ }
 };
+['pointerdown', 'touchstart', 'touchend', 'mousedown', 'keydown', 'click'].forEach(type =>
+  window.addEventListener(type, ensureAudio, { capture: true, passive: true }));
 
+// Keep the existing cue names and their gameplay calls.
 const sfx = {
-  eat: () => { playSound(600, 'sine', 0.1, 0.12); playSound(900, 'sine', 0.08, 0.1); },
-  grow: () => { playSound(200, 'triangle', 0.3, 0.15); playSound(400, 'triangle', 0.2, 0.1); },
+  eat: () => { if (audioOn()) audioEngine.eat(combo || 1, currentTier || 0, audioNow()); },
+  grow: () => { if (audioOn()) audioEngine.grow(currentTier || 0, audioNow()); },
   tierUp: () => {
-    [300,400,500,700,900].forEach((f,i) => setTimeout(() => playSound(f, 'sine', 0.15, 0.12), i * 80));
+    if (!audioOn()) return;
+    if (state === STATE.GAMEOVER) audioEngine.victory(audioNow());
+    else audioEngine.tierUp(currentTier, audioNow());
   },
-  hit: () => { playSound(100, 'sawtooth', 0.2, 0.2); playSound(60, 'square', 0.3, 0.15); },
-  death: () => {
-    [400,300,200,100,60].forEach((f,i) => setTimeout(() => playSound(f, 'sawtooth', 0.3, 0.2), i * 100));
+  hit: () => {
+    if (!audioOn()) return;
+    if (state === STATE.UPGRADE) audioEngine.deny(audioNow());
+    else if (invincibleTimer > 1.45) audioEngine.hurt(currentTier || 0, audioNow(), !!player && player.hp === 1);
+    else audioEngine.bonk(currentTier || 0, audioNow());
   },
-  click: () => playSound(800, 'sine', 0.05, 0.08),
-  unlock: () => {
-    [500,700,900,1200].forEach((f,i) => setTimeout(() => playSound(f, 'sine', 0.2, 0.1), i * 100));
-  },
-  explode: () => {
-    for (let i = 0; i < 8; i++) setTimeout(() => playSound(40 + Math.random()*100, 'sawtooth', 0.4, 0.15), i * 50);
-  },
+  death: () => { if (audioOn()) audioEngine.death(currentTier || 0, audioNow()); },
+  click: () => { if (audioOn()) audioEngine.click(audioNow()); },
+  unlock: () => { if (audioOn()) audioEngine.unlock(currentTier || 0, state === STATE.UPGRADE ? 'purchase' : 'unlock'); },
+  explode: () => { if (audioOn()) audioEngine.explode(currentTier || 0, audioNow()); },
 };
+let audioPreviousState = null, audioPreviousCombo = 0, audioPreviousReady = false, audioLastBeat = -9;
+const audioTick = () => {
+  const playing = state === STATE.PLAYING, armed = playing && !!explodeReady;
+  if (audioOn()) {
+    const t = audioNow();
+    if (playing && audioPreviousState !== state) { audioEngine.resetCombo(); audioLastBeat = t; }
+    if (playing && combo === 0 && audioPreviousCombo > 0) audioEngine.resetCombo();
+    if (playing) {
+      if (t >= audioEngine.stageUntil()) audioEngine.setAmbience(currentTier, 'play', t);
+    } else audioEngine.setAmbience(0, 'off', t);
+    audioEngine.tick(t);
+    // Same-frame unlocks wait behind the tier fanfare or game-over cue.
+    audioEngine.flushUnlocks(t);
+    if (armed && !audioPreviousReady) audioEngine.ready(currentTier, t);
+    if (playing && player && player.hp === 1 && player.maxHp > 1 && t - audioLastBeat > 0.85) {
+      audioEngine.beat(currentTier, t); audioLastBeat = t;
+    }
+  }
+  audioPreviousState = state; audioPreviousCombo = playing ? combo : 0; audioPreviousReady = armed;
+};
+const resetRunAudio = () => {
+  if (audioEngine) audioEngine.clear(audioCtx.currentTime);
+  audioPreviousState = null; audioPreviousCombo = 0; audioPreviousReady = false; audioLastBeat = -9;
+};
+const updateSoundButton = () => {
+  soundButton.setAttribute('aria-pressed', String(audioMuted()));
+  soundButton.setAttribute('aria-label', audioMuted() ? 'Unmute sound' : 'Mute sound');
+  soundButton.title = (audioMuted() ? 'Unmute sound' : 'Mute sound') + ' (M)';
+};
+const toggleAudio = e => {
+  save.muted = !audioMuted(); saveSave();
+  if (audioEngine && audioMuted()) audioEngine.clear(audioCtx.currentTime);
+  updateSoundButton(); applyAudioLevel();
+  if (!audioMuted()) { ensureAudio(e); sfx.click(); }
+};
+soundButton.addEventListener('click', toggleAudio);
+// Space/Enter on the button activates it without starting a run behind it.
+['keydown', 'keyup'].forEach(type => soundButton.addEventListener(type, e => {
+  if (e.key === ' ' || e.key === 'Enter') e.stopPropagation();
+}));
+window.addEventListener('keydown', e => {
+  if ((e.code === 'KeyM' || e.key === 'm' || e.key === 'M') && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) toggleAudio(e);
+});
+const pauseAudio = () => {
+  if (!audioCtx) return;
+  audioEngine.clear(audioCtx.currentTime);
+  audioEngine.master.gain.cancelScheduledValues(audioCtx.currentTime);
+  audioEngine.master.gain.setValueAtTime(0, audioCtx.currentTime);
+  quietPromise(audioCtx.suspend());
+};
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) pauseAudio();
+  else if (audioCtx && !audioMuted()) quietPromise(audioCtx.resume());
+});
+window.addEventListener('pagehide', pauseAudio);
+window.addEventListener('pageshow', () => {
+  if (audioCtx && !document.hidden && !audioMuted()) quietPromise(audioCtx.resume());
+});
 
 // ─── SAVE DATA ───
 const defaultSave = () => ({
+  muted: false,
   totalScore: 0,
   highScore: 0,
   runsCompleted: 0,
@@ -110,6 +208,7 @@ const loadSave = () => {
 };
 const saveSave = () => { try { localStorage.setItem('endbird_save', JSON.stringify(save)); } catch(e) {} };
 loadSave();
+updateSoundButton();
 
 // ─── UPGRADE DEFS ───
 const UPGRADE_DEFS = {
@@ -164,7 +263,7 @@ window.addEventListener('mousemove', e => { mousePos.x = e.clientX; mousePos.y =
 let touchId = null;
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
-  ensureAudio();
+  ensureAudio(e);
   const t = e.changedTouches[0];
   touch.active = true;
   touch.startX = touch.x = t.clientX;
@@ -202,7 +301,7 @@ canvas.addEventListener('touchend', e => {
   }
 }, { passive: false });
 
-canvas.addEventListener('mousedown', e => { ensureAudio(); });
+canvas.addEventListener('mousedown', ensureAudio);
 
 // ─── PARTICLES ───
 class Particle {
@@ -610,6 +709,7 @@ const hexAlpha = (hex, a) => {
 
 // ─── INIT GAME ───
 const initGame = (startTier = 0) => {
+  resetRunAudio();
   const td = TIERS[startTier];
   const startSizeBonus = UPGRADE_DEFS.startSize.effect(save.upgrades.startSize);
 
@@ -1358,7 +1458,7 @@ const drawHUD = () => {
   ctx.fillText(`Size: ${player.size.toFixed(0)} / ${sizeGoal}`, pad + 4, 107);
 
   // Explode indicator
-  const explodeX = W - 80;
+  const explodeX = W - 108;
   if (explodeReady) {
     ctx.fillStyle = RED;
     ctx.font = 'bold 14px monospace';
@@ -1745,7 +1845,7 @@ const drawUpgradeScreen = () => {
 let lastClickTime = 0;
 canvas.addEventListener('click', (e) => {
   lastClickTime = performance.now();
-  ensureAudio();
+  ensureAudio(e);
 
   if (state === STATE.UPGRADE) {
     const mx = e.clientX;
@@ -1809,8 +1909,6 @@ canvas.addEventListener('click', (e) => {
   if (state === STATE.PLAYING && explodeReady) {
     const bx = W - 60;
     const by = H - 80;
-    const dx = mx - bx;
-    const dy = my - by;
     const mx2 = e.clientX, my2 = e.clientY;
     if (Math.sqrt((mx2-bx)**2 + (my2-by)**2) < 35) {
       doExplode();
@@ -1872,6 +1970,7 @@ const loop = (time) => {
 
   resize();
   update(dt);
+  audioTick();
   draw();
 
   requestAnimationFrame(loop);
