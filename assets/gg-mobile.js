@@ -309,6 +309,33 @@
     // games that size their canvas after load
     setTimeout(apply, 250); setTimeout(apply, 1200);
   }
+  // ---- 11. Landscape gate (2026-10-05) --------------------------------------
+  // <html data-gg-landscape>: the game is built wide (canvas aspect >= 1.3) and
+  // renders at a third of a portrait phone. On a coarse pointer in portrait,
+  // ask for a sideways phone; "play small anyway" is one tap and remembered
+  // for the session. Nothing is shown on desktops or in landscape.
+  function mountRotateGate() {
+    if (!coarse) return;
+    var gate = document.createElement('div');
+    gate.id = 'gg-rotate';
+    gate.innerHTML = '<div class="gg-rotate-phone" aria-hidden="true"></div><strong>TURN YOUR PHONE SIDEWAYS</strong>' +
+      '<p>This one is built wide. In portrait it plays at a third of the screen.</p>' +
+      '<button type="button" class="gg-rotate-skip">PLAY SMALL ANYWAY</button>';
+    document.body.appendChild(gate);
+    var skipped = false;
+    try { skipped = sessionStorage.getItem('gg-rotate-skip:' + location.pathname) === '1'; } catch (e) {}
+    function update() {
+      var portrait = window.innerHeight > window.innerWidth;
+      gate.classList.toggle('on', portrait && !skipped);
+    }
+    gate.querySelector('.gg-rotate-skip').addEventListener('click', function () {
+      skipped = true; try { sessionStorage.setItem('gg-rotate-skip:' + location.pathname, '1'); } catch (e) {}
+      update();
+    });
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', function () { setTimeout(update, 80); });
+    update();
+  }
   function boot() {
     if (native) {
       document.documentElement.classList.add('gg-native');
@@ -323,6 +350,7 @@
     if (spec) mountKeypad(spec);
     var fit = document.documentElement.getAttribute('data-gg-fit');
     if (fit) mountFit(fit);
+    if (document.documentElement.hasAttribute('data-gg-landscape')) mountRotateGate();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

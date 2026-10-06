@@ -17,7 +17,7 @@ Run from the repo root. Prints a per-file change summary; nothing else.
 import hashlib, os, re, sys, base64
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VERSION = '2026100522'
+VERSION = '2026100523'
 SKIP = {'og-image.html'}
 KEYPAD = {
     'photonic_forge_breakout.html': 'arrows space',
@@ -40,6 +40,13 @@ FIT = {
     'fps.html': '#wrapper 640x400',           # game + overlay canvases stacked in the wrapper
     'platformer.html': '#gameCanvas',
     'smash_arena.html': '#c',
+}
+# 11. Landscape-built games (logical canvas aspect >= 1.3, measured 2026-10-05
+#     on a portrait iPhone 13 at 17-44% screen fill) get <html data-gg-landscape>
+#     so gg-mobile.js can ask for a sideways phone before play.
+LANDSCAPE = {
+    'survivors.html', 'fps.html', 'platformer.html', 'smash_arena.html', 'battle_royale.html',
+    'racer.html', 'forge_fighting.html', 'forge_rpg.html',
 }
 GG_ASSET_RE = re.compile(r'(/assets/gg-mobile\.(?:css|js)\?v=)\d+')
 ADS_RE = re.compile(r'<script[^>]*src="(https://pagead2\.googlesyndication\.com/pagead/js/adsbygoogle\.js[^"]*)"[^>]*>\s*</script>', re.I)
@@ -118,6 +125,8 @@ def mobilize(name):
         return ADS_LOADER % m.group(1)
     s = ADS_RE.sub(ads, s)
     # 4. keypad
+    if name in LANDSCAPE and 'data-gg-landscape' not in s:
+        s = re.sub(r'<html(\s[^>]*)?>', lambda m: '<html' + (m.group(1) or '') + ' data-gg-landscape', s, count=1)
     if name in KEYPAD and 'data-gg-keypad' not in s:
         s = re.sub(r'<html(\s[^>]*)?>', lambda m: '<html' + (m.group(1) or '') + ' data-gg-keypad="%s">' % KEYPAD[name], s, count=1)
         notes.append('keypad:' + KEYPAD[name])
