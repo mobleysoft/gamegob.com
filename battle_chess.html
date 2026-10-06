@@ -2723,13 +2723,9 @@ function preloadPortraits() {
 // ═══════════════════════════════════════════════════════════════
 // GENERATED ART ASSETS — Chess pieces, board, background, effects
 // ═══════════════════════════════════════════════════════════════
-const CHESS_ASSETS = {
-    whitePieces: '/game_assets/battle_chess/chess_pieces/white_pieces.png',
-    blackPieces: '/game_assets/battle_chess/chess_pieces/black_pieces.png',
-    boardTexture: '/game_assets/battle_chess/board_tiles/board_texture.png',
-    background: '/game_assets/battle_chess/background/chess_bg.png',
-    captureEffects: '/game_assets/battle_chess/ui_elements/capture_effects.png',
-};
+// The five generated art files this manifest named never existed in the repo or live;
+// the drawn pieces and board are the game (2026-10-05).
+const CHESS_ASSETS = {};
 const assetImages = {};
 let assetsLoaded = 0;
 const totalAssets = Object.keys(CHESS_ASSETS).length;
@@ -5357,6 +5353,7 @@ const Leaderboard = (function() {
     }
 
     function submitName() {
+        if (!pendingEntry) { closeNameEntry(); return; } // Enter/Skip with no pending score (2026-10-05)
         let name;
         if (nameMode === 'arcade') {
             name = String.fromCharCode(65 + arcadeLetters[0]) +
@@ -5376,6 +5373,7 @@ const Leaderboard = (function() {
     }
 
     function skipName() {
+        if (!pendingEntry) { closeNameEntry(); return; }
         pendingEntry.name = 'Anonymous';
         addEntry(pendingEntry);
         closeNameEntry();

@@ -1827,11 +1827,8 @@ const charSpriteImages = {};
 const CHAR_SPRITE_KEYS = ['claudine', 'gigi', 'johnny', 'gemma'];
 
 function loadCharSprites() {
-    CHAR_SPRITE_KEYS.forEach(key => {
-        const img = new Image();
-        img.src = `/game_assets/battle_royale/character_sprites/${key}_sprite.png`;
-        img.onload = () => { charSpriteImages[key] = img; };
-    });
+    // The generated character sprites were never produced (four 404s on every visit);
+    // the drawn beings are the game (2026-10-05).
 }
 loadCharSprites();
 

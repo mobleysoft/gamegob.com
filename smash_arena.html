@@ -2707,11 +2707,9 @@ FIGHTERS.forEach(f => {
 // Preload high-quality action sprites for in-game display
 const actionSprites = {};
 const ACTION_SPRITE_CHARS = ['claudine', 'gigi', 'johnny', 'gemma'];
-ACTION_SPRITE_CHARS.forEach(key => {
-    const img = new Image();
-    img.src = '/game_assets/smash_arena/character_sprites/' + key + '_sprite.png';
-    img.onload = () => { actionSprites[key] = img; };
-});
+// The generated action sprites were never produced (the loads 404'd on every visit);
+// fighters draw from the portrait sprites and shapes instead (2026-10-05).
+ACTION_SPRITE_CHARS.length = 0;
 
 function createFighter(template, x, facing, isAI) {
     const stocks = modSuddenDeath ? 1 : gameSettings.stocks;

@@ -2167,20 +2167,14 @@ const RACER_ASSETS = {
     nightSky: null,
     speedometer: null,
     loaded: 0,
-    total: 8
+    total: 0
 };
 
 function loadRacerAssets() {
-    const assetPaths = {
-        playerCar: '/game_assets/racer/car_sprites/player_car.png',
-        rivalCars: '/game_assets/racer/car_sprites/rival_cars.png',
-        asphalt: '/game_assets/racer/road_textures/asphalt.png',
-        desertRoad: '/game_assets/racer/road_textures/desert_road.png',
-        scenery: '/game_assets/racer/scenery_sprites/roadside_objects.png',
-        sunsetSky: '/game_assets/racer/sky_gradients/sunset_sky.png',
-        nightSky: '/game_assets/racer/sky_gradients/night_sky.png',
-        speedometer: '/game_assets/racer/hud_elements/speedometer.png'
-    };
+    // The eight generated sprite/texture files this manifest once pointed at never existed
+    // in the repo or live; every race logged eight 404s and fell back to the drawn road,
+    // sky and cars anyway. Empty manifest: the fallbacks are the game (2026-10-05).
+    const assetPaths = {};
 
     Object.keys(assetPaths).forEach(key => {
         const img = new Image();

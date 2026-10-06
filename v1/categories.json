@@ -1,0 +1,61 @@
+{
+ "api": "gamegob.com/v1",
+ "version": "1.0",
+ "organism": "MASCOM",
+ "source": "the roster in beings.html; static files rebuilt by tools/build_beings_api.py",
+ "total": 260,
+ "categories": [
+  {
+   "name": "Venture CEOs",
+   "count": 117
+  },
+  {
+   "name": "AUI Valkyries",
+   "count": 26
+  },
+  {
+   "name": "Dreadtide Enemies",
+   "count": 18
+  },
+  {
+   "name": "Extended Greek",
+   "count": 15
+  },
+  {
+   "name": "Espers",
+   "count": 15
+  },
+  {
+   "name": "Neurochemical Items",
+   "count": 15
+  },
+  {
+   "name": "Dreadtide Weapons",
+   "count": 14
+  },
+  {
+   "name": "Purgefire Bosses",
+   "count": 10
+  },
+  {
+   "name": "The Nine",
+   "count": 9
+  },
+  {
+   "name": "System Beings",
+   "count": 9
+  },
+  {
+   "name": "Dreadtide Bosses",
+   "count": 5
+  },
+  {
+   "name": "The Core Four",
+   "count": 4
+  },
+  {
+   "name": "SMS Beings",
+   "count": 3
+  }
+ ]
+}

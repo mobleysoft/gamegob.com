@@ -1914,6 +1914,12 @@ let _assetsLoaded = false;
 
 function loadGameAssets() {
     return new Promise((resolve, reject) => {
+        // None of the 14 generated art files (walls, weapons, HUD face, enemy sprites) ever
+        // existed in the repo or live; every load failed and the drawn fallbacks rendered the
+        // game anyway. Resolve at once instead of firing 14 requests (2026-10-05).
+        _assetsLoaded = true;
+        resolve();
+        return;
         let loadCount = 0;
         const totalAssets = 14; // 4 walls + 1 weapons + 1 hud_face + 8 enemies
 

@@ -10,7 +10,7 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-    background: #0a0a1a url('/game_assets/card_game/board_background/game_board.png') center/cover no-repeat fixed;
+    background: #0a0a1a;
     color: #ddd; font-family: 'Courier New', monospace; overflow: hidden;
 }
 /* Smooth transitions */
@@ -115,7 +115,7 @@ body {
 .card {
     position: relative; width: 90px; height: 120px; border: 2px solid #555; border-radius: 8px;
     cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
-    background: #1a1a3a url('/game_assets/card_game/card_frames/card_template.png') center/cover no-repeat;
+    background: #1a1a3a;
     overflow: hidden; flex-shrink: 0;
     box-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
@@ -213,7 +213,7 @@ body {
 .logQuote { color: #c8a; font-style: italic; }
 .deckDisplay {
     position: absolute; width: 50px; height: 70px; border-radius: 4px;
-    background: url('/game_assets/card_game/card_frames/card_back.png') center/cover no-repeat;
+    background: linear-gradient(135deg, #1a1a3a, #0a0a1a);
     box-shadow: 0 2px 4px rgba(0,0,0,0.6); display: flex; align-items: flex-end;
     justify-content: center; padding: 4px; font-size: 10px; font-weight: bold;
     color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000;
@@ -937,7 +937,7 @@ body.reduce-motion .juice-particle, body.reduce-motion .juice-text { display: no
   <h2>YOU WIN!</h2>
   <div class="beaten-msg" id="beatenMsg"></div>
   <button onclick="Social.shareChallenge()">Share Victory</button>
-  <button onclick="document.getElementById(\x27challengeBeaten\x27).style.display=\x27none\x27" style="background:#1a1a3a;color:#888;border-color:#555;margin-left:8px;">Close</button>
+  <button onclick="document.getElementById(&#39;challengeBeaten&#39;).style.display=&#39;none&#39;" style="background:#1a1a3a;color:#888;border-color:#555;margin-left:8px;">Close</button>
 </div>
 <div id="challengeScoreTracker">
   <div class="cst-label">CHALLENGE TARGET</div>
@@ -1087,8 +1087,8 @@ body.reduce-motion .juice-particle, body.reduce-motion .juice-text { display: no
     <div class="ne-score" id="neScore">0</div>
     <div class="ne-subtitle">Enter your name for the leaderboard</div>
     <div class="ne-mode-toggle">
-      <button class="ne-mode-btn active" onclick="Leaderboard.setNameMode(\x27arcade\x27)">ARCADE (3 letters)</button>
-      <button class="ne-mode-btn" onclick="Leaderboard.setNameMode(\x27full\x27)">FULL NAME</button>
+      <button class="ne-mode-btn active" onclick="Leaderboard.setNameMode(&#39;arcade&#39;)">ARCADE (3 letters)</button>
+      <button class="ne-mode-btn" onclick="Leaderboard.setNameMode(&#39;full&#39;)">FULL NAME</button>
     </div>
     <div id="nameInputArcade">
       <input type="text" maxlength="1" id="arcChar1" autocomplete="off">
@@ -2010,7 +2010,7 @@ const Portraits = (function() {
         NAMES.forEach(function(name) {
             const img = new Image();
             // Use card-specific portraits from game_assets
-            img.src = '/game_assets/card_game/card_portraits/' + name + '_card.png';
+            img.src = '/sprites/' + name + '_portrait.png'; // the card portraits were never generated; the being portraits exist
             img.onload = function() { cache[name] = img; loaded++; };
             img.onerror = function() {
                 // Fallback to general portraits
@@ -2038,7 +2038,7 @@ const Portraits = (function() {
     }
 
     function getUrl(id) {
-        return '/game_assets/card_game/card_portraits/' + id + '_card.png';
+        return '/sprites/' + id + '_portrait.png';
     }
 
     preload();

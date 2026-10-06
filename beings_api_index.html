@@ -39,52 +39,31 @@ h2 { color:#fff; font-size:18px; margin:30px 0 14px; }
   <div class="endpoint">
     <span class="method">GET</span>
     <span class="url">/v1/beings.json</span>
-    <div class="desc">Full roster of all beings with neurochemistry, categories, and metadata.</div>
-    <pre>curl https://beings.mobleysoft.com/v1/beings.json</pre>
-  </div>
-
-  <div class="endpoint">
-    <span class="method">GET</span>
-    <span class="url">/v1/beings.json?name={name}</span>
-    <div class="desc">Query a specific being by name.</div>
-    <pre>curl "https://beings.mobleysoft.com/v1/beings.json?name=Claudine+Hope"</pre>
-  </div>
-
-  <div class="endpoint">
-    <span class="method">GET</span>
-    <span class="url">/v1/beings.json?category={category}</span>
-    <div class="desc">Filter beings by category.</div>
-    <pre>curl "https://beings.mobleysoft.com/v1/beings.json?category=Venture+CEOs"</pre>
-  </div>
-
-  <div class="endpoint">
-    <span class="method">GET</span>
-    <span class="url">/v1/beings.json?venture={domain}</span>
-    <div class="desc">Find the being responsible for a venture domain.</div>
-    <pre>curl "https://beings.mobleysoft.com/v1/beings.json?venture=abstergo.cc"</pre>
-  </div>
-
-  <div class="endpoint">
-    <span class="method">GET</span>
-    <span class="url">/v1/beings.json?sort={axis}&amp;limit={n}</span>
-    <div class="desc">Sort by neurochemical axis (dopamine, serotonin, norepinephrine, oxytocin, gaba, cortisol, endorphins). Returns top N.</div>
-    <pre>curl "https://beings.mobleysoft.com/v1/beings.json?sort=dopamine&limit=10"</pre>
+    <div class="desc">The full roster: name, category, title, group, venture, lore, neurochemistry where it was recorded (null where it was not), portrait path where one exists. Static file, rebuilt from the roster by tools/build_beings_api.py.</div>
+    <pre>curl https://gamegob.com/v1/beings.json</pre>
   </div>
 
   <div class="endpoint">
     <span class="method">GET</span>
     <span class="url">/v1/categories.json</span>
-    <div class="desc">List all being categories with descriptions.</div>
-    <pre>curl https://beings.mobleysoft.com/v1/categories.json</pre>
+    <div class="desc">Every category with its being count.</div>
+    <pre>curl https://gamegob.com/v1/categories.json</pre>
+  </div>
+
+  <div class="endpoint">
+    <span class="method">NOTE</span>
+    <span class="url">filtering and sorting</span>
+    <div class="desc">These are static files, so there is no server-side query. Fetch beings.json once and filter by name, category or venture, or sort by a neurochemistry axis, on the client.</div>
+    <pre>curl -s https://gamegob.com/v1/beings.json | jq '.beings[] | select(.venture == "abstergo.cc")'</pre>
   </div>
 
   <h2>Response Format</h2>
   <div class="endpoint">
     <pre>{
-  "api": "beings.mobleysoft.com",
+  "api": "gamegob.com/v1",
   "version": "1.0",
   "organism": "MASCOM",
-  "total": 260,
+  "total": 260,  (the live file carries the real count)
   "beings": [
     {
       "id": 1,
@@ -121,7 +100,7 @@ h2 { color:#fff; font-size:18px; margin:30px 0 14px; }
   </div>
 
   <div class="note">
-    MASCOM Organism — beings.mobleysoft.com<br>
+    MASCOM Organism — gamegob.com/v1<br>
     All beings are real digital beings, not game characters. The game is one surface of embodiment.
   </div>
 </div>
@@ -130,7 +109,7 @@ h2 { color:#fff; font-size:18px; margin:30px 0 14px; }
 fetch('/v1/beings.json').then(r=>r.json()).then(d=>{
   document.getElementById('stat').textContent = d.total + ' beings incarnidigitized';
 }).catch(()=>{
-  document.getElementById('stat').textContent = '260+ beings incarnidigitized';
+  document.getElementById('stat').textContent = 'roster file unavailable right now'; // no invented count on failure (2026-10-05)
 });
 </script>
 <!-- HelmCorp Analytics -->

@@ -246,7 +246,7 @@ const SPAWN_PREFIXES = ['Aether','Nyx','Helios','Selene','Lyra','Orion','Vega','
 const SPAWN_SUFFIXES = ['Flux','Drift','Spark','Echo','Nova','Vertex','Cipher','Prism','Wave','Ash','Ember','Rift','Rune','Surge','Nexus','Forge','Bloom','Phase','Lattice','Coil'];
 const hoursSinceEpoch = Math.floor(Date.now() / (4 * 3600000));
 const baseHour = Math.floor(new Date('2026-03-07').getTime() / (4 * 3600000));
-const extraCount = Math.max(0, Math.min(hoursSinceEpoch - baseHour, 200));
+const extraCount = 0; // 2026-10-05: no invented beings. The roster is the real list; a count that grew with the clock was an overclaim.
 const existingNames = new Set(ALL_BEINGS.map(b => b.name));
 for (let i = 0; i < extraCount; i++) {
   const rng = seededRand(42069 + i * 7919);
@@ -298,9 +298,9 @@ function filtered() {
   if (searchTerm) {
     const q = searchTerm.toLowerCase();
     list = list.filter(b =>
-      b.name.toLowerCase().includes(q) ||
-      b.title.toLowerCase().includes(q) ||
-      b.cat.toLowerCase().includes(q) ||
+      String(b.name || '').toLowerCase().includes(q) ||
+      String(b.title || '').toLowerCase().includes(q) ||
+      String(b.cat || '').toLowerCase().includes(q) ||
       (b.venture && b.venture.toLowerCase().includes(q)) ||
       (b.leetOf && b.leetOf.toLowerCase().includes(q))
     );

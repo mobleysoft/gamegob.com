@@ -1,0 +1,5 @@
+/* GameGob self-hosted faces (the same files gg-mobile.css declares), for hub pages that do not load the game kit.
+   Replaces the Google Fonts @import that games.html and status.html carried (2026-10-05). */
+@font-face { font-family: 'JetBrains Mono'; src: url(/assets/fonts/jetbrains-mono-400.woff2) format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'JetBrains Mono'; src: url(/assets/fonts/jetbrains-mono-700.woff2) format('woff2'); font-weight: 600 800; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Press Start 2P'; src: url(/assets/fonts/press-start-2p-400.woff2) format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
