@@ -336,6 +336,39 @@
     window.addEventListener('orientationchange', function () { setTimeout(update, 80); });
     update();
   }
+  // ---- 12. Taps become clicks; holds stay in the game (2026-10-05) ---------
+  // iOS Safari (and Chrome) withhold the synthesized click when a page calls
+  // preventDefault() on touchstart/touchend. 23 games do exactly that on
+  // their canvas to stop scrolling and zooming, then run their menus from
+  // 'click' handlers (upgrade cards, START, difficulty) - so on a phone those
+  // taps did nothing (EndBird: title -> upgrade screen, then stuck). When a
+  // short, still touch ends with its default prevented, dispatch the click
+  // the browser withheld. One synthetic click per touch, never for native
+  // controls, which get their own clicks.
+  function tapToClick() {
+    var start = null;
+    document.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1) { start = null; return; }
+      var t = e.touches[0];
+      start = { x: t.clientX, y: t.clientY, at: performance.now(), target: e.target };
+    }, { capture: true, passive: true });
+    document.addEventListener('touchend', function (e) {
+      var s = start; start = null;
+      if (!s || !e.defaultPrevented || e.touches.length) return;
+      var t = e.changedTouches && e.changedTouches[0]; if (!t) return;
+      if (performance.now() - s.at > 450 || Math.hypot(t.clientX - s.x, t.clientY - s.y) > 12) return;
+      var el = e.target && e.target.nodeType === 1 ? e.target : document.elementFromPoint(t.clientX, t.clientY);
+      if (!el || (el.closest && el.closest('button, a, input, select, textarea, label, [role=button], .mctl-overlay, #gg-pad, #gg-rotate'))) return;
+      var ev = new MouseEvent('click', { bubbles: true, cancelable: true, view: window, clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY, button: 0 });
+      ev.ggSynthetic = true;
+      el.dispatchEvent(ev);
+    }, { capture: false, passive: true });
+    // A held finger is play, not a request for a context menu.
+    document.addEventListener('contextmenu', function (e) {
+      if (e.target && e.target.closest && e.target.closest('input, textarea, a[href^="http"]')) return;
+      e.preventDefault();
+    });
+  }
   function boot() {
     if (native) {
       document.documentElement.classList.add('gg-native');
@@ -351,6 +384,7 @@
     var fit = document.documentElement.getAttribute('data-gg-fit');
     if (fit) mountFit(fit);
     if (document.documentElement.hasAttribute('data-gg-landscape')) mountRotateGate();
+    if (coarse && document.documentElement.hasAttribute('data-gg-game')) tapToClick();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

@@ -190,3 +190,11 @@ html[data-gg-game] :is(.tut-tip, .tutTip, .tutBubble, .tut-tip-box) { border-rad
 .gg-rotate-phone { width: 58px; height: 92px; border: 2px solid var(--gg-gold, #f0b800); border-radius: 10px; box-shadow: 0 0 28px rgba(240,184,0,.22); animation: gg-rotate-spin 1.8s ease-in-out infinite; }
 @keyframes gg-rotate-spin { 45%, 100% { transform: rotate(90deg); } }
 @media (prefers-reduced-motion: reduce) { .gg-rotate-phone { animation: none; transform: rotate(90deg); } }
+
+/* 12. The whole page is a game surface on touch (2026-10-05): no text selection,
+   no callout menu, no magnifier, no double-tap zoom. Inputs keep selection. */
+@media (hover: none) and (pointer: coarse) {
+  html[data-gg-game], html[data-gg-game] body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; overscroll-behavior: none; }
+  html[data-gg-game] :is(input, textarea, [contenteditable]) { -webkit-user-select: text; user-select: text; }
+  html[data-gg-game] img, html[data-gg-game] canvas { -webkit-touch-callout: none; } /* game surface */
+}
