@@ -403,23 +403,32 @@ class Food {
     const sy = this.y - cy + H/2 + Math.sin(this.bobPhase) * 3;
     if (sx < -50 || sx > W+50 || sy < -50 || sy > H+50) return;
     const pulseS = 1 + Math.sin(this.pulse) * 0.1;
-    const r = this.size * 0.5 * pulseS;
+    const r = Math.max(2.5 / viewZoom, this.size * 0.5 * pulseS);
+    // halo
+    ctx.fillStyle = hexAlpha(this.color, 0.18);
+    ctx.beginPath();
+    ctx.arc(sx, sy, r * 2.1, 0, Math.PI * 2);
+    ctx.fill();
+    // body with glow
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = r * 1.2;
     ctx.fillStyle = this.color;
-    ctx.globalAlpha = 0.9;
     ctx.beginPath();
     ctx.arc(sx, sy, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 0.4;
+    ctx.shadowBlur = 0;
+    // highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.beginPath();
-    ctx.arc(sx, sy, r * 1.3, 0, Math.PI * 2);
+    ctx.arc(sx - r * 0.3, sy - r * 0.3, r * 0.3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 1;
-    // Label
+    // Label (screen-sized regardless of zoom)
     if (player.size < this.size * 3) {
-      ctx.fillStyle = WHITE;
-      ctx.font = `${Math.max(8, Math.min(12, r * 0.8))}px monospace`;
+      const uz = 1 / viewZoom;
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.font = `${Math.max(8, Math.min(12, r * viewZoom * 0.8)) * uz}px monospace`;
       ctx.textAlign = 'center';
-      ctx.fillText(this.name, sx, sy + r + 12);
+      ctx.fillText(this.name, sx, sy + r + 12 * uz);
     }
   }
 }
@@ -490,14 +499,18 @@ class Enemy {
     const pulseS = 1 + Math.sin(this.pulse) * 0.08;
     const r = this.size * 0.5 * pulseS;
 
-    // Danger glow
-    ctx.fillStyle = this.size > player.size ? '#ff000033' : '#00ff0011';
+    const danger = this.size > player.size;
+    // Glow: red and pulsing when it can eat you, green when you can eat it
+    const gp = danger ? 0.22 + 0.12 * Math.sin(this.pulse * 1.5) : 0.10;
+    ctx.fillStyle = danger ? hexAlpha(RED, gp) : hexAlpha(GREEN, gp);
     ctx.beginPath();
-    ctx.arc(sx, sy, r * 1.5, 0, Math.PI * 2);
+    ctx.arc(sx, sy, r * 1.6, 0, Math.PI * 2);
     ctx.fill();
 
     // Body
-    ctx.fillStyle = this.size > player.size ? RED : '#ff884488';
+    ctx.shadowColor = danger ? RED : '#ffaa44';
+    ctx.shadowBlur = r * 0.6;
+    ctx.fillStyle = danger ? RED : '#ff9a4a';
     ctx.beginPath();
     // Spiky shape for enemies
     const points = 6 + Math.floor(this.tier / 2);
@@ -511,28 +524,33 @@ class Enemy {
     }
     ctx.closePath();
     ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = danger ? '#ff8899' : GREEN;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
+    const uz = 1 / viewZoom;
     // HP bar
     if (this.hp < this.maxHp) {
       const barW = r * 2;
-      const barH = 4;
+      const barH = 4 * uz;
       ctx.fillStyle = '#333';
-      ctx.fillRect(sx - barW/2, sy - r - 10, barW, barH);
+      ctx.fillRect(sx - barW/2, sy - r - 10 * uz, barW, barH);
       ctx.fillStyle = RED;
-      ctx.fillRect(sx - barW/2, sy - r - 10, barW * (this.hp / this.maxHp), barH);
+      ctx.fillRect(sx - barW/2, sy - r - 10 * uz, barW * (this.hp / this.maxHp), barH);
     }
 
     // Name
-    ctx.fillStyle = this.size > player.size ? RED : '#ff8844';
-    ctx.font = `${Math.max(9, Math.min(13, r * 0.5))}px monospace`;
+    ctx.fillStyle = danger ? '#ff9aa6' : '#ffc07a';
+    ctx.font = `${Math.max(9, Math.min(13, r * viewZoom * 0.5)) * uz}px monospace`;
     ctx.textAlign = 'center';
-    ctx.fillText(this.name, sx, sy + r + 14);
+    ctx.fillText(this.name, sx, sy + r + 14 * uz);
 
     // Size comparison indicator
-    if (this.size > player.size) {
+    if (danger) {
       ctx.fillStyle = RED;
-      ctx.font = '10px monospace';
-      ctx.fillText('DANGER', sx, sy - r - 14);
+      ctx.font = `${10 * uz}px monospace`;
+      ctx.fillText('DANGER', sx, sy - r - 14 * uz);
     }
   }
 }
@@ -540,17 +558,54 @@ class Enemy {
 // ─── BACKGROUND STARS ───
 const generateStars = (tier) => {
   bgStars = [];
-  const count = 100 + tier * 30;
+  const count = 220 + tier * 40;
+  const tints = [WHITE, WHITE, WHITE, '#bfe3ff', '#ffe9b8', '#ffd6f2'];
   for (let i = 0; i < count; i++) {
     bgStars.push({
       x: (Math.random() - 0.5) * worldSize * 1.5,
       y: (Math.random() - 0.5) * worldSize * 1.5,
-      size: Math.random() * 2 + 0.5,
+      size: Math.random() < 0.08 ? 2.4 + Math.random() * 1.6 : Math.random() * 1.6 + 0.6,
       brightness: Math.random(),
       twinkleSpeed: 1 + Math.random() * 3,
       depth: 0.2 + Math.random() * 0.8, // parallax
+      tint: tints[Math.floor(Math.random() * tints.length)],
     });
   }
+};
+
+// ─── NEBULAE, TRAIL, RINGS (2026-10-05 quality pass) ───
+let nebulae = [];
+const generateNebulae = (tier) => {
+  nebulae = [];
+  const td = TIERS[Math.min(tier, TIERS.length-1)];
+  const count = 4 + Math.min(4, tier);
+  for (let i = 0; i < count; i++) {
+    nebulae.push({
+      x: (Math.random() - 0.5) * worldSize * 1.4,
+      y: (Math.random() - 0.5) * worldSize * 1.4,
+      r: worldSize * (0.18 + Math.random() * 0.22),
+      color: td.foodColors[i % td.foodColors.length],
+      depth: 0.12 + Math.random() * 0.1,
+      alpha: 0.10 + Math.random() * 0.08,
+    });
+  }
+};
+let rings = [];
+let viewZoom = 1; // world-to-screen zoom, set each frame in draw()
+const computeZoom = () => Math.max(1, Math.min(5.5, 22 / Math.max(4, player ? player.size : 4)));
+// How much world is on screen depends on the zoom; keep about eight foods and one or two
+// enemies in view at any tier, capped so the update loop stays cheap.
+const visibleWorldArea = () => { const z = computeZoom(); return Math.max(1, (W / z) * (H / z)); };
+const foodTarget = () => Math.max(20, Math.min(320, Math.round(8 * (worldSize * worldSize) / visibleWorldArea())));
+const enemyTarget = () => Math.max(3, Math.min(40, Math.round((1.2 + currentTier * 0.3) * (worldSize * worldSize) / visibleWorldArea())));
+const spawnRing = (x, y, color, maxR) => rings.push({ x, y, r: 2, life: 0.35, maxLife: 0.35, color, grow: (maxR || 40) / 0.35 });
+const trail = [];
+let trailTimer = 0;
+const hexAlpha = (hex, a) => {
+  const h = hex.replace('#', '');
+  const v = h.length === 3 ? h.split('').map(c => c + c).join('') : h.slice(0, 6);
+  const n = parseInt(v, 16);
+  return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
 };
 
 // ─── INIT GAME ───
@@ -586,13 +641,16 @@ const initGame = (startTier = 0) => {
   explodeCooldown = 0;
   tierTransitionTimer = 0;
 
-  worldSize = 800 + currentTier * 200;
+  worldSize = 900 + currentTier * 220;
   generateStars(currentTier);
-  spawnFoods(currentTier, 25 + currentTier * 5);
-  spawnEnemies(currentTier, 3 + currentTier);
+  generateNebulae(currentTier);
+  spawnFoods(currentTier, foodTarget());
+  spawnEnemies(currentTier, enemyTarget());
 
   state = STATE.PLAYING;
   notifications = [];
+  rings = [];
+  trail.length = 0;
   notify(td.desc, CYAN, 2.5);
 };
 
@@ -626,7 +684,7 @@ const advanceTier = () => {
   }
 
   const td = TIERS[currentTier];
-  worldSize = 800 + currentTier * 200;
+  worldSize = 900 + currentTier * 220;
   sizeGoal = td.maxSize;
   tierTransitionTimer = 2.0;
 
@@ -644,10 +702,11 @@ const advanceTier = () => {
   sfx.tierUp();
   notify(`ASCENDED: ${td.desc}`, GOLD, 3);
   generateStars(currentTier);
+  generateNebulae(currentTier);
 
   // Spawn new entities for this tier
-  spawnFoods(currentTier, 25 + currentTier * 5);
-  spawnEnemies(currentTier, 3 + currentTier);
+  spawnFoods(currentTier, foodTarget());
+  spawnEnemies(currentTier, enemyTarget());
 
   // Clear old small foods
   foods = foods.filter(f => f.tier >= currentTier - 1);
@@ -762,6 +821,17 @@ const update = (dt) => {
 
   // Particles
   particles = particles.filter(p => { p.update(dt); return p.life > 0; });
+
+  // Eat rings and the bird's trail
+  rings = rings.filter(rg => { rg.life -= dt; rg.r += rg.grow * dt; return rg.life > 0; });
+  if (state === STATE.PLAYING && player) {
+    trailTimer += dt;
+    if (trailTimer > 0.035) {
+      trailTimer = 0;
+      trail.push({ x: player.x, y: player.y });
+      if (trail.length > 12) trail.shift();
+    }
+  }
 
   // Notifications
   notifications = notifications.filter(n => { n.life -= dt; return n.life > 0; });
@@ -912,6 +982,7 @@ const update = (dt) => {
 
       sfx.eat();
       spawnParticles(f.x, f.y, 8, f.color, 100, 0.3, 2);
+      spawnRing(f.x, f.y, f.color, Math.max(24, f.size * 2));
 
       if (combo >= 5) notify(`${combo}x COMBO!`, GOLD, 1);
 
@@ -926,7 +997,7 @@ const update = (dt) => {
   foods = foods.filter(f => f.alive);
 
   // Replenish foods
-  const minFoods = 15 + currentTier * 5;
+  const minFoods = Math.round(foodTarget() * 0.8);
   while (foods.length < minFoods) {
     foods.push(new Food(currentTier));
   }
@@ -957,6 +1028,8 @@ const update = (dt) => {
           eatenThisRun++;
           sfx.grow();
           spawnParticles(e.x, e.y, 20, RED, 200, 0.6, 4);
+          spawnRing(e.x, e.y, '#ffaa44', Math.max(40, e.size * 2.2));
+          startShake(3, 0.12);
           startShake(5, 0.2);
           notify(`+${pts}`, GREEN, 1);
 
@@ -1002,7 +1075,7 @@ const update = (dt) => {
   enemies = enemies.filter(e => e.alive);
 
   // Replenish enemies
-  const minEnemies = 2 + currentTier;
+  const minEnemies = Math.max(2, Math.round(enemyTarget() * 0.7));
   while (enemies.length < minEnemies) {
     spawnEnemies(currentTier, 1);
   }
@@ -1055,32 +1128,64 @@ const draw = () => {
   ctx.fillStyle = td.bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Stars with parallax
+  // Nebulae: soft tier-coloured clouds, deepest parallax layer
+  for (const n of nebulae) {
+    const nx = n.x - cx * n.depth + W/2;
+    const ny = n.y - cy * n.depth + H/2;
+    if (nx < -n.r || nx > W + n.r || ny < -n.r || ny > H + n.r) continue;
+    const g = ctx.createRadialGradient(nx, ny, 0, nx, ny, n.r);
+    g.addColorStop(0, hexAlpha(n.color, n.alpha * (1 + 0.15 * Math.sin(runTime * 0.4 + n.r))));
+    g.addColorStop(1, hexAlpha(n.color, 0));
+    ctx.fillStyle = g;
+    // fill the circle, not a square: a square's edges showed as faint full-height seams
+    ctx.beginPath();
+    ctx.arc(nx, ny, n.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Stars with parallax: round, tinted, the big ones glow
   for (const s of bgStars) {
     const sx = (s.x - cx * s.depth) % (W * 2);
     const sy = (s.y - cy * s.depth) % (H * 2);
     const screenX = ((sx % W) + W) % W;
     const screenY = ((sy % H) + H) % H;
-    const twinkle = 0.5 + 0.5 * Math.sin(runTime * s.twinkleSpeed + s.brightness * 10);
-    ctx.globalAlpha = s.brightness * twinkle * 0.8;
-    ctx.fillStyle = WHITE;
-    ctx.fillRect(screenX, screenY, s.size, s.size);
+    const twinkle = 0.55 + 0.45 * Math.sin(runTime * s.twinkleSpeed + s.brightness * 10);
+    const r = s.size * 0.7 * (0.6 + s.depth * 0.6);
+    ctx.globalAlpha = Math.min(1, (0.35 + s.brightness * 0.65) * twinkle);
+    ctx.fillStyle = s.tint;
+    if (r > 1.6) { ctx.shadowColor = s.tint; ctx.shadowBlur = r * 3; }
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
   }
   ctx.globalAlpha = 1;
+
+  // Zoom the world so the bird is never a speck: 30px minimum on screen, at most 7x
+  viewZoom = computeZoom();
+  ctx.save();
+  ctx.translate(W/2, H/2);
+  ctx.scale(viewZoom, viewZoom);
+  ctx.translate(-W/2, -H/2);
+  const uz = 1 / viewZoom;
 
   // World boundary
   const bx1 = -worldSize/2 - cx + W/2;
   const by1 = -worldSize/2 - cy + H/2;
   const bx2 = worldSize/2 - cx + W/2;
   const by2 = worldSize/2 - cy + H/2;
-  ctx.strokeStyle = '#ffffff11';
-  ctx.lineWidth = 2;
+  // The edge of the world reads as a soft wall, not a stray hairline
+  ctx.strokeStyle = 'rgba(120,160,255,0.16)';
+  ctx.lineWidth = 14 * uz;
+  ctx.strokeRect(bx1, by1, bx2 - bx1, by2 - by1);
+  ctx.strokeStyle = 'rgba(160,200,255,0.45)';
+  ctx.lineWidth = 2 * uz;
   ctx.strokeRect(bx1, by1, bx2 - bx1, by2 - by1);
 
-  // Grid lines (subtle)
+  // Grid lines (subtle; only when the view is close to 1:1, zoomed in they read as stray lines)
   const gridSize = 100;
-  ctx.strokeStyle = '#ffffff06';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = viewZoom > 1.5 ? 'rgba(255,255,255,0)' : '#ffffff08';
+  ctx.lineWidth = 1 * uz;
   const startGX = Math.floor((-worldSize/2) / gridSize) * gridSize;
   const startGY = Math.floor((-worldSize/2) / gridSize) * gridSize;
   for (let gx = startGX; gx <= worldSize/2; gx += gridSize) {
@@ -1111,6 +1216,29 @@ const draw = () => {
   // Draw particles (world space)
   for (const p of particles) p.draw(cx, cy);
 
+  // Eat rings (world space)
+  for (const rg of rings) {
+    const a = Math.max(0, rg.life / rg.maxLife);
+    ctx.strokeStyle = hexAlpha(rg.color, a * 0.9);
+    ctx.lineWidth = 1.5 + a * 2;
+    ctx.beginPath();
+    ctx.arc(rg.x - cx + W/2, rg.y - cy + H/2, rg.r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Motion trail behind the bird
+  {
+    const tc = tierWingColor(currentTier);
+    for (let i = 0; i < trail.length; i++) {
+      const t = trail[i];
+      const a = (i + 1) / (trail.length + 1);
+      ctx.fillStyle = hexAlpha(tc, a * 0.22);
+      ctx.beginPath();
+      ctx.arc(t.x - cx + W/2, t.y - cy + H/2, player.size * 0.28 * a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   // Draw player
   if (flashTimer <= 0 || Math.floor(flashTimer * 20) % 2 === 0) {
     const px = player.x - cx + W/2;
@@ -1124,18 +1252,49 @@ const draw = () => {
     const px = player.x - cx + W/2;
     const py = player.y - cy + H/2;
     ctx.strokeStyle = '#00ff8811';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 * uz;
     ctx.beginPath();
     ctx.arc(px, py, magnetRange + player.size, 0, Math.PI * 2);
     ctx.stroke();
   }
 
+  ctx.restore(); // zoom
   ctx.restore();
+
+  // Vignette: pulls the eye to the middle, hides the hard edge of the dark field
+  {
+    const vg = ctx.createRadialGradient(W/2, H/2, Math.min(W, H) * 0.35, W/2, H/2, Math.max(W, H) * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
+  }
 
   // ─── HUD ───
   drawHUD();
   drawTouchControls();
   drawNotifications();
+
+  // Three-second teach: the controls, shown while playing, then gone
+  if (runTime < 3.6 && currentTier === 0) {
+    const a = runTime < 3.0 ? 1 : (3.6 - runTime) / 0.6;
+    const isTouch = ('ontouchstart' in window);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = 'rgba(10,10,20,0.78)';
+    const bw = Math.min(W - 24, 340), bh = 58, bx = W/2 - bw/2, by = H/2 + player.size * 0.6 + 36;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = hexAlpha(GOLD, 0.8);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+    ctx.fillStyle = WHITE;
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(isTouch ? 'Drag anywhere to steer' : 'Arrows or WASD to steer', W/2, by + 24);
+    ctx.fillStyle = GREEN;
+    ctx.font = '12px monospace';
+    ctx.fillText('Eat what is smaller than you. Avoid the red.', W/2, by + 44);
+    ctx.globalAlpha = 1;
+  }
 
   // Tier transition overlay
   if (tierTransitionTimer > 0) {
@@ -1368,9 +1527,8 @@ const drawTitle = () => {
   // Controls
   ctx.fillStyle = '#555';
   ctx.font = '11px monospace';
-  ctx.fillText('WASD / Arrow Keys / Touch to move', W/2, H - 60);
-  ctx.fillText('SPACE to Explode when charged', W/2, H - 44);
-  ctx.fillText('Eat smaller things. Avoid bigger things.', W/2, H - 28);
+  ctx.fillText('Eat smaller things. Avoid bigger things.', W/2, H - 44);
+  ctx.fillText('Controls are taught as you start.', W/2, H - 28);
 };
 
 // ─── UPGRADE SCREEN ───
