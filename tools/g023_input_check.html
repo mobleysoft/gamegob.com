@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>G023 input evidence</title>
+<style>body{font:15px system-ui;background:#10141b;color:#f4efe4;margin:24px}pre{white-space:pre-wrap}iframe{border:1px solid #556}a{color:#9de}</style>
+<h1>G023 — SightX input evidence</h1>
+<p>Production game, kit and vendor; synthetic DOM events, controlled 60 Hz frame steps, emulated coarse pointer. No physical latency or FPS claim.</p>
+<p><a href="/forge_survival.html">Open the unmodified game</a></p>
+<pre id="results">Running…</pre><iframe id="game" width="900" height="700" title="Forge Survivors input check"></iframe>
+<script>
+(async()=>{
+  const checks=[],out=document.getElementById('results'),frame=document.getElementById('game');
+  let w;
+  const run=code=>w.eval(code);
+  const check=(name,pass,observed)=>{checks.push({name,pass:!!pass,observed});out.textContent=JSON.stringify(checks,null,2)};
+  const near=(a,b)=>Math.abs(a-b)<1e-7;
+  const wait=async predicate=>{for(let i=0;i<200;i++){if(predicate())return;await new Promise(r=>setTimeout(r,20))}throw Error('Fixture readiness timeout')};
+  const load=async(query='',width=900,height=700)=>{
+    frame.width=width;frame.height=height;
+    await new Promise(resolve=>{frame.onload=resolve;frame.src='/__g023/game?'+query});
+    w=frame.contentWindow;
+    await wait(()=>run(query.includes('legacy')?'typeof gameState!=="undefined"':query.includes('missing')?'inputError':'!!movementInput'));
+    w.__step();
+  };
+  const key=(code,type='keydown',repeat=false)=>{
+    const name={Enter:'Enter',Space:' ',ArrowUp:'ArrowUp',ArrowDown:'ArrowDown',ArrowLeft:'ArrowLeft',ArrowRight:'ArrowRight'}[code]||code.replace('Key','').toLowerCase();
+    w.dispatchEvent(new w.KeyboardEvent(type,{code,key:name,repeat,bubbles:true,cancelable:true}));
+  };
+  const pos=()=>run('({x:player.x,y:player.y})');
+  const sample=()=>run('movementInput.state().move');
+  const delta=(before,after)=>({x:after.x-before.x,y:after.y-before.y});
+  const neutral=move=>near(move.x,0)&&near(move.y,0);
+  const pointer=(target,type,x,y,id=1)=>target.dispatchEvent(new w.PointerEvent(type,{pointerId:id,pointerType:'touch',isPrimary:true,button:0,buttons:type==='pointerup'?0:1,clientX:x,clientY:y,bubbles:true,cancelable:true}));
+  try{
+    await load();
+    check('shared kit loads one local vendor',run('typeof WeylandInput.create==="function" && GG.version==="20261009"'),run('[...document.scripts].filter(s=>s.src.includes("weyland-input")).map(s=>s.src)'));
+    key('Enter');w.__step();
+    for(let i=0;i<60;i++){key('Enter','keydown',true);w.__step()}
+    check('one Enter press opens selection; a one-second repeat cannot start play',run('state===STATE.CHAR_SELECT'),run('state'));
+    key('Enter','keyup');key('Enter');w.__step();key('Enter','keyup');
+    check('separate single Enter press starts selected character',run('state===STATE.PLAYING'),run('state'));
+    const step=run('player.speed/60');
+    for(const [code,x,y] of [['KeyD',1,0],['KeyA',-1,0],['KeyW',0,-1],['KeyS',0,1],['ArrowRight',1,0],['ArrowLeft',-1,0],['ArrowUp',0,-1],['ArrowDown',0,1]]){
+      const before=pos();key(code);const move=sample();w.__step();const d=delta(before,pos());key(code,'keyup');
+      check(code+' moves on first frame through SightX',near(d.x,x*step)&&near(d.y,y*step)&&near(move.x,x)&&near(move.y,-y),{move,displacement:d,stepSeconds:1/60});
+    }
+    let before=pos();w.__step();check('key release stops movement',neutral(delta(before,pos())),{displacement:delta(before,pos()),move:sample()});
+    key('KeyD');key('KeyW');let move=sample();w.__step();key('KeyD','keyup');key('KeyW','keyup');
+    check('diagonal input stays in the unit disk',near(Math.hypot(move.x,move.y),1),move);
+    key('KeyA');key('KeyD');move=sample();key('KeyA','keyup');key('KeyD','keyup');check('opposing keys cancel',neutral(move),move);
+    key('KeyD');w.dispatchEvent(new w.Event('blur'));before=pos();w.__step();check('blur clears movement without a keyup',neutral(delta(before,pos()))&&neutral(sample()),{move:sample(),displacement:delta(before,pos())});
+    key('KeyD');run('state=STATE.LEVEL_UP');w.__step();check('menu entry clears movement',neutral(sample()),sample());run('state=STATE.PLAYING');before=pos();w.__step();check('menu exit does not resume stale movement',neutral(delta(before,pos())),delta(before,pos()));
+    key('KeyD');run('Object.defineProperty(document,"hidden",{configurable:true,value:true});document.dispatchEvent(new Event("visibilitychange"))');move=sample();
+    run('Object.defineProperty(document,"hidden",{configurable:true,value:false});document.dispatchEvent(new Event("visibilitychange"))');w.__step();check('hide/show clears held movement',neutral(move)&&neutral(sample()),{hidden:move,resumed:sample()});
+    key('KeyD');run('window.__field=document.createElement("input");document.body.append(__field);__field.focus()');move=sample();key('KeyW');check('text focus clears and suppresses movement',neutral(move)&&neutral(sample()),sample());run('__field.remove()');
+    for(const type of ['resize','orientationchange']){key('KeyD');w.dispatchEvent(new w.Event(type));check(type+' clears input',neutral(sample()),sample())}
+    const second=await w.GG.createInput({active:()=>false});
+    check('second kit consumer reuses the vendor script',run('[...document.scripts].filter(s=>s.src.includes("weyland-input")).length===1'),run('[...document.scripts].filter(s=>s.src.includes("weyland-input")).length'));second.destroy();
+    check('desktop game has no runtime errors',w.__errors.length===0,w.__errors.slice());
+
+    await load('coarse=1',390,844);
+    const canvas=w.document.querySelector('canvas');
+    pointer(canvas,'pointerdown',195,300);w.__step();pointer(canvas,'pointerup',195,300);
+    check('single touch opens character selection',run('state===STATE.CHAR_SELECT'),run('state'));
+    pointer(canvas,'pointerdown',195,724);w.__step();pointer(canvas,'pointerup',195,724);w.__step();
+    check('one Start tap begins play',run('state===STATE.PLAYING'),run('state'));
+    const stick=w.document.querySelector('.weyland-stick'),r=stick.getBoundingClientRect(),cx=r.x+r.width/2,cy=r.y+r.height/2;
+    check('coarse pointer gets one visible SightX stick within viewport',run('movementInput.stickVisible')&&r.x>=0&&r.right<=390&&r.bottom<=844&&w.document.querySelectorAll('.weyland-stick').length===1,{x:r.x,y:r.y,width:r.width,height:r.height});
+    before=pos();pointer(stick,'pointerdown',cx+40,cy);move=sample();w.__step();let d=delta(before,pos());
+    check('first stick contact moves immediately without a hold or second tap',move.x>0&&d.x>0&&near(d.y,0),{move,displacement:d,stepSeconds:1/60});
+    pointer(stick,'pointermove',cx,cy-52);move=sample();before=pos();w.__step();d=delta(before,pos());
+    check('stick drag up becomes upward game movement',near(move.y,1)&&d.y<0&&near(d.x,0),{move,displacement:d});
+    pointer(stick,'pointermove',cx+52,cy);key('KeyW');move=sample();key('KeyW','keyup');
+    check('stick and keyboard combine through one normalized vector',move.x>0&&move.y>0&&near(Math.hypot(move.x,move.y),1),move);
+    pointer(stick,'pointerdown',cx-52,cy,2);pointer(stick,'pointerup',cx-52,cy,2);move=sample();
+    check('second finger cannot steal or release the active stick',near(move.x,1),move);
+    pointer(stick,'pointermove',cx+2,cy);check('stick center dead zone is neutral',neutral(sample()),sample());
+    for(const type of ['pointerup','pointercancel','lostpointercapture']){
+      pointer(stick,'pointerup',cx,cy);pointer(stick,'pointerdown',cx+52,cy);pointer(stick,type,cx+52,cy);before=pos();w.__step();
+      check(type+' stops stick movement',neutral(sample())&&neutral(delta(before,pos())),{move:sample(),displacement:delta(before,pos())});
+    }
+    w.document.querySelector('canvas').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true,cancelable:true}));
+    before=pos();w.__step();check('double-tap/click has no gameplay action',neutral(delta(before,pos()))&&run('state===STATE.PLAYING'),{state:run('state'),displacement:delta(before,pos())});
+    run('movementInput.setEnabled(false)');key('KeyD');pointer(stick,'pointerdown',cx+52,cy);before=pos();w.__step();
+    check('disabling the shared controller disables BOTH movement sources',neutral(sample())&&neutral(delta(before,pos())),{move:sample(),displacement:delta(before,pos())});
+    run('movementInput.setEnabled(true)');w.__step();
+    key('KeyD');pointer(stick,'pointerdown',cx+52,cy);run('movementInput.destroy()');key('KeyD');before=pos();w.__step();
+    check('destroy removes stick and listeners; game cannot move',!w.document.querySelector('.weyland-stick')&&neutral(delta(before,pos())),{stickCount:w.document.querySelectorAll('.weyland-stick').length,displacement:delta(before,pos())});
+    check('coarse-pointer game has no runtime errors',w.__errors.length===0,w.__errors.slice());
+
+    await load('missing=1');key('Enter');w.__step();check('vendor load failure reports unavailable controls and prevents play',run('inputError && !movementInput && state===STATE.TITLE'),run('({inputError,state})'));
+    await load('legacy=1&inline=1');
+    check('inlined legacy kit boots without loading or requiring the vendor',w.__errors.length===0&&!w.WeylandInput,{errors:w.__errors.slice(),vendorLoaded:!!w.WeylandInput});
+  }catch(error){check('harness completed',false,{message:error.message,stack:error.stack})}
+  const report={goal:'g023',userAgent:navigator.userAgent,method:'Real browser; production source; synthetic DOM input; explicit 1/60-second game frames; emulated coarse-pointer media. No physical-device latency/FPS measurement.',checks,passed:checks.filter(c=>c.pass).length};
+  out.textContent=JSON.stringify(report,null,2);
+  document.title=`G023: ${report.passed}/${checks.length} passed`;
+  await fetch('/__g023/evidence',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(report)});
+})()
+</script></html>

@@ -1,0 +1,433 @@
+{
+  "goal": "g023",
+  "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Mobile/15E148 Safari/604.1",
+  "method": "Real browser; production source; synthetic DOM input; explicit 1/60-second game frames; emulated coarse-pointer media. No physical-device latency/FPS measurement.",
+  "checks": [
+    {
+      "name": "shared kit loads one local vendor",
+      "pass": true,
+      "observed": [
+        "http://127.0.0.1:8773/assets/weyland-input.js?v=100073ef1640"
+      ]
+    },
+    {
+      "name": "one Enter press opens selection; a one-second repeat cannot start play",
+      "pass": true,
+      "observed": 1
+    },
+    {
+      "name": "separate single Enter press starts selected character",
+      "pass": true,
+      "observed": 2
+    },
+    {
+      "name": "KeyD moves on first frame through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 1,
+          "y": 0
+        },
+        "displacement": {
+          "x": 2.5000000000000115,
+          "y": 0
+        },
+        "stepSeconds": 0.016666666666666666
+      }
+    },
+    {
+      "name": "KeyA moves on first frame through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": -1,
+          "y": 0
+        },
+        "displacement": {
+          "x": -2.5000000000000115,
+          "y": 0
+        },
+        "stepSeconds": 0.016666666666666666
+      }
+    },
+    {
+      "name": "KeyW moves on first frame through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 1
+        },
+        "displacement": {
+          "x": 0,
+          "y": -2.5000000000000115
+        },
+        "stepSeconds": 0.016666666666666666
+      }
+    },
+    {
+      "name": "KeyS moves on first frame through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": -1
+        },
+        "displacement": {
+          "x": 0,
+          "y": 2.5000000000000115
+        },
+        "stepSeconds": 0.016666666666666666
+      }
+    },
+    {
+      "name": "ArrowRight moves on first frame through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 1,
+          "y": 0
+        },
+        "displacement": {
+          "x": 2.5000000000000115,
+          "y": 0
+        },
+        "stepSeconds": 0.016666666666666666
+      }
+    },
+    {
+      "name": "ArrowLeft moves on first frame through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": -1,
+          "y": 0
+        },
+        "displacement": {
+          "x": -2.5000000000000115,
+          "y": 0
+        },
+        "stepSeconds": 0.016666666666666666
+      }
+    },
+    {
+      "name": "ArrowUp moves on first frame through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 1
+        },
+        "displacement": {
+          "x": 0,
+          "y": -2.5000000000000115
+        },
+        "stepSeconds": 0.016666666666666666
+      }
+    },
+    {
+      "name": "ArrowDown moves on first frame through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": -1
+        },
+        "displacement": {
+          "x": 0,
+          "y": 2.5000000000000115
+        },
+        "stepSeconds": 0.016666666666666666
+      }
+    },
+    {
+      "name": "key release stops movement",
+      "pass": true,
+      "observed": {
+        "displacement": {
+          "x": 0,
+          "y": 0
+        },
+        "move": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "diagonal input stays in the unit disk",
+      "pass": true,
+      "observed": {
+        "x": 0.7071067811865475,
+        "y": 0.7071067811865475
+      }
+    },
+    {
+      "name": "opposing keys cancel",
+      "pass": true,
+      "observed": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "blur clears movement without a keyup",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 0
+        },
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "menu entry clears movement",
+      "pass": true,
+      "observed": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "menu exit does not resume stale movement",
+      "pass": true,
+      "observed": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "hide/show clears held movement",
+      "pass": true,
+      "observed": {
+        "hidden": {
+          "x": 0,
+          "y": 0
+        },
+        "resumed": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "text focus clears and suppresses movement",
+      "pass": true,
+      "observed": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "resize clears input",
+      "pass": true,
+      "observed": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "orientationchange clears input",
+      "pass": true,
+      "observed": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "second kit consumer reuses the vendor script",
+      "pass": true,
+      "observed": 1
+    },
+    {
+      "name": "desktop game has no runtime errors",
+      "pass": true,
+      "observed": []
+    },
+    {
+      "name": "single touch opens character selection",
+      "pass": true,
+      "observed": 1
+    },
+    {
+      "name": "one Start tap begins play",
+      "pass": true,
+      "observed": 2
+    },
+    {
+      "name": "coarse pointer gets one visible SightX stick within viewport",
+      "pass": true,
+      "observed": {
+        "x": 232,
+        "y": 682,
+        "width": 140,
+        "height": 140
+      }
+    },
+    {
+      "name": "first stick contact moves immediately without a hold or second tap",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0.7692307692307693,
+          "y": 0
+        },
+        "displacement": {
+          "x": 1.9230769230769236,
+          "y": 0
+        },
+        "stepSeconds": 0.016666666666666666
+      }
+    },
+    {
+      "name": "stick drag up becomes upward game movement",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 1
+        },
+        "displacement": {
+          "x": 0,
+          "y": -2.5000000000000004
+        }
+      }
+    },
+    {
+      "name": "stick and keyboard combine through one normalized vector",
+      "pass": true,
+      "observed": {
+        "x": 0.7071067811865475,
+        "y": 0.7071067811865475
+      }
+    },
+    {
+      "name": "second finger cannot steal or release the active stick",
+      "pass": true,
+      "observed": {
+        "x": 1,
+        "y": 0
+      }
+    },
+    {
+      "name": "stick center dead zone is neutral",
+      "pass": true,
+      "observed": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "pointerup stops stick movement",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 0
+        },
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "pointercancel stops stick movement",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 0
+        },
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "lostpointercapture stops stick movement",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 0
+        },
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "double-tap/click has no gameplay action",
+      "pass": true,
+      "observed": {
+        "state": 2,
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "disabling the shared controller disables BOTH movement sources",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 0
+        },
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "destroy removes stick and listeners; game cannot move",
+      "pass": true,
+      "observed": {
+        "stickCount": 0,
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "coarse-pointer game has no runtime errors",
+      "pass": true,
+      "observed": []
+    },
+    {
+      "name": "vendor load failure reports unavailable controls and prevents play",
+      "pass": true,
+      "observed": {
+        "inputError": true,
+        "state": 0
+      }
+    },
+    {
+      "name": "inlined legacy kit boots without loading or requiring the vendor",
+      "pass": true,
+      "observed": {
+        "errors": [],
+        "vendorLoaded": false
+      }
+    }
+  ],
+  "passed": 40,
+  "recorded_at": "2026-10-09T17:55:27.742328+00:00",
+  "source_sha256": {
+    "assets/weyland-input.js": "a5b53477f586569ee38f623d9ffae911710da2fea5f905ce54f2833a9d718dc4",
+    "assets/gg-mobile.js": "e78b2e9176ba3c9c3a39b0fb70c56ded70183393320423086d847306e5a3d03f",
+    "forge_survival.html": "61671e21c54b149ad389d7c3818055548d9fd47fb99c82384084f1f22ca049fa",
+    "tools/g023_input_check.html": "a63120751fc830a9aa2abfcc2bb439b670f8950295a8f7131423a83b4e423308",
+    "tools/g023_input_check.py": "b9ce64fdc38b8b6ee0623b7272736ae44de24bb364c22ba9a1ce8a8ed1cf36a5"
+  }
+}

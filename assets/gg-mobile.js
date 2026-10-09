@@ -1,5 +1,5 @@
 /* gg-mobile.js — GameGob shared mobile runtime (2026-10-04).
- * Loaded synchronously in <head> by every game page. Does four things no
+ * Loaded synchronously in <head> by every game page. Provides shared features no
  * game should have to reimplement, without touching any game's own code:
  *   1. Pause on hide: requestAnimationFrame callbacks queue while the tab or
  *      app is hidden and flush when it returns, so no game burns CPU in the
@@ -11,6 +11,9 @@
  *   4. Virtual keypad: for games that only listen to the keyboard
  *      (<html data-gg-keypad="arrows space enter">), an on-screen d-pad and
  *      buttons dispatch real KeyboardEvents on touch devices.
+ *   5. SightX input: GG.createInput(options) loads the vendored WeylandInput
+ *      and resolves to its controller. New games read controller.state()
+ *      each frame for stick + WASD/arrows; no hold/double-tap recognizers.
  * It also exposes window.GG with the native-shell flag the ad loader uses.
  */
 (function () {
@@ -18,7 +21,29 @@
   if (window.GG) return;
   var native = !!(window.Capacitor || navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
   var coarse = !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches);
-  var GG = window.GG = { version: '20261004', native: native, coarse: coarse, paused: false, keypad: null };
+  var GG = window.GG = { version: '20261009', native: native, coarse: coarse, paused: false, keypad: null };
+
+  // SightX is the input base for new games. Resolve beside this kit so the
+  // same local vendor works on the web, under a subpath, and in native bundles.
+  // Load on demand: legacy games keep their controls until migrated.
+  var kitURL = document.currentScript && document.currentScript.src;
+  var inputLibrary = null;
+  GG.createInput = function (options) {
+    if (!inputLibrary) {
+      inputLibrary = new Promise(function (resolve, reject) {
+        if (window.WeylandInput) { resolve(window.WeylandInput); return; }
+        var script = document.createElement('script');
+        script.src = new URL('weyland-input.js?v=100073ef1640', kitURL || new URL('assets/gg-mobile.js', document.baseURI)).href;
+        script.onload = function () {
+          if (window.WeylandInput) resolve(window.WeylandInput);
+          else reject(new Error('SightX input did not initialize'));
+        };
+        script.onerror = function () { reject(new Error('SightX input could not load')); };
+        document.head.appendChild(script);
+      });
+    }
+    return inputLibrary.then(function (input) { return input.create(options); });
+  };
 
   // ---- 1. Pause on hide (rAF gate) --------------------------------------
   var realRAF = window.requestAnimationFrame.bind(window);

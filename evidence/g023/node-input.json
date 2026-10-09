@@ -1,0 +1,441 @@
+{
+  "goal": "g023",
+  "recorded_at": "2026-10-09T17:48:00.859Z",
+  "method": "Node VM executes production vendor, shared kit, game and game loop with DOM/audio doubles, synthetic input and explicit 1/60-second frames. Browser/physical-device measurement is separate.",
+  "source_sha256": {
+    "assets/weyland-input.js": "a5b53477f586569ee38f623d9ffae911710da2fea5f905ce54f2833a9d718dc4",
+    "assets/gg-mobile.js": "e78b2e9176ba3c9c3a39b0fb70c56ded70183393320423086d847306e5a3d03f",
+    "forge_survival.html": "61671e21c54b149ad389d7c3818055548d9fd47fb99c82384084f1f22ca049fa"
+  },
+  "checks": [
+    {
+      "name": "kit resolves the local vendor relative to its own URL",
+      "pass": true,
+      "observed": [
+        "http://localhost/subpath/assets/weyland-input.js?v=100073ef1640"
+      ]
+    },
+    {
+      "name": "single Enter selects; held repeat cannot advance to gameplay",
+      "pass": true,
+      "observed": {
+        "state": 1,
+        "repeatFrames": 60
+      }
+    },
+    {
+      "name": "second distinct single press starts game",
+      "pass": true,
+      "observed": 2
+    },
+    {
+      "name": "KeyD moves on first update through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 1,
+          "y": 0
+        },
+        "displacement": {
+          "x": 2.5000000000000115,
+          "y": 0
+        },
+        "dt": 0.016666666666666666
+      }
+    },
+    {
+      "name": "KeyA moves on first update through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": -1,
+          "y": 0
+        },
+        "displacement": {
+          "x": -2.5000000000000115,
+          "y": 0
+        },
+        "dt": 0.016666666666666666
+      }
+    },
+    {
+      "name": "KeyW moves on first update through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 1
+        },
+        "displacement": {
+          "x": 0,
+          "y": -2.5000000000000115
+        },
+        "dt": 0.016666666666666666
+      }
+    },
+    {
+      "name": "KeyS moves on first update through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": -1
+        },
+        "displacement": {
+          "x": 0,
+          "y": 2.5000000000000115
+        },
+        "dt": 0.016666666666666666
+      }
+    },
+    {
+      "name": "ArrowRight moves on first update through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 1,
+          "y": 0
+        },
+        "displacement": {
+          "x": 2.5000000000000115,
+          "y": 0
+        },
+        "dt": 0.016666666666666666
+      }
+    },
+    {
+      "name": "ArrowLeft moves on first update through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": -1,
+          "y": 0
+        },
+        "displacement": {
+          "x": -2.5000000000000115,
+          "y": 0
+        },
+        "dt": 0.016666666666666666
+      }
+    },
+    {
+      "name": "ArrowUp moves on first update through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 1
+        },
+        "displacement": {
+          "x": 0,
+          "y": -2.5000000000000115
+        },
+        "dt": 0.016666666666666666
+      }
+    },
+    {
+      "name": "ArrowDown moves on first update through SightX",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": -1
+        },
+        "displacement": {
+          "x": 0,
+          "y": 2.5000000000000115
+        },
+        "dt": 0.016666666666666666
+      }
+    },
+    {
+      "name": "key release stops movement",
+      "pass": true,
+      "observed": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "diagonal normalized to unit length",
+      "pass": true,
+      "observed": {
+        "x": 0.7071067811865475,
+        "y": 0.7071067811865475
+      }
+    },
+    {
+      "name": "opposite keys cancel",
+      "pass": true,
+      "observed": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "blur clears movement without keyup",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 0
+        },
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "resize clears movement without keyup",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 0
+        },
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "orientationchange clears movement without keyup",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 0
+        },
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "menu transition clears input before resuming",
+      "pass": true,
+      "observed": {
+        "menu": {
+          "x": 0,
+          "y": 0
+        },
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "hidden/resume clears input",
+      "pass": true,
+      "observed": {
+        "hidden": {
+          "x": 0,
+          "y": 0
+        },
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "text focus clears and suppresses movement",
+      "pass": true,
+      "observed": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "second consumer reuses a single vendor load",
+      "pass": true,
+      "observed": [
+        "http://localhost/subpath/assets/weyland-input.js?v=100073ef1640"
+      ]
+    },
+    {
+      "name": "single pointer contact opens selection",
+      "pass": true,
+      "observed": 1
+    },
+    {
+      "name": "one Start tap starts play",
+      "pass": true,
+      "observed": 2
+    },
+    {
+      "name": "coarse pointer mounts the vendor stick",
+      "pass": true,
+      "observed": {
+        "className": "weyland-stick",
+        "visible": true
+      }
+    },
+    {
+      "name": "first stick contact moves without hold or double-tap",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0.7692307692307693,
+          "y": 0
+        },
+        "displacement": {
+          "x": 1.9230769230769236,
+          "y": 0
+        },
+        "dt": 0.016666666666666666
+      }
+    },
+    {
+      "name": "drag up maps +forward to -canvasY",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 1
+        },
+        "displacement": {
+          "x": 0,
+          "y": -2.5000000000000004
+        }
+      }
+    },
+    {
+      "name": "stick and keys share normalized movement",
+      "pass": true,
+      "observed": {
+        "x": 0.7071067811865475,
+        "y": 0.7071067811865475
+      }
+    },
+    {
+      "name": "second contact cannot steal the stick",
+      "pass": true,
+      "observed": {
+        "x": 1,
+        "y": 0
+      }
+    },
+    {
+      "name": "stick dead zone is neutral",
+      "pass": true,
+      "observed": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "name": "pointerup stops movement",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 0
+        },
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "pointercancel stops movement",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 0
+        },
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "lostpointercapture stops movement",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 0
+        },
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "double-click does not activate gameplay behavior",
+      "pass": true,
+      "observed": {
+        "displacement": {
+          "x": 0,
+          "y": 0
+        },
+        "state": 2
+      }
+    },
+    {
+      "name": "disabling shared input stops BOTH sources",
+      "pass": true,
+      "observed": {
+        "move": {
+          "x": 0,
+          "y": 0
+        },
+        "displacement": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "name": "destroy removes stick and event listeners",
+      "pass": true,
+      "observed": {
+        "displacement": {
+          "x": 0,
+          "y": 0
+        },
+        "stickRemoved": true
+      }
+    },
+    {
+      "name": "game/kit produced no runtime errors",
+      "pass": true,
+      "observed": []
+    },
+    {
+      "name": "missing vendor reports failure and prevents play",
+      "pass": true,
+      "observed": {
+        "state": 0,
+        "errors": [
+          "SightX input could not load"
+        ]
+      }
+    },
+    {
+      "name": "inlined kit resolves a local vendor without crashing",
+      "pass": true,
+      "observed": [
+        "http://localhost/subpath/assets/weyland-input.js?v=100073ef1640"
+      ]
+    },
+    {
+      "name": "vendor matches pinned upstream SHA-256",
+      "pass": true,
+      "observed": {
+        "sha256": "a5b53477f586569ee38f623d9ffae911710da2fea5f905ce54f2833a9d718dc4",
+        "commit": "100073ef1640ada127097ec0aba109697ef4c116"
+      }
+    }
+  ],
+  "passed": 39
+}

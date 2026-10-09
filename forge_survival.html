@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-gg-game
+<html lang="en" data-gg-game>
 <head>
 <meta property="og:title" content="Forge Survivors">
 <meta property="og:type" content="website">
@@ -14,7 +14,7 @@ canvas{display:block;margin:0 auto}
 </style>
 <script>/* gg: web display ads only on the web, never inside a native shell */if(!(window.Capacitor||navigator.standalone||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches))){var ggAd=document.createElement("script");ggAd.async=true;ggAd.crossOrigin="anonymous";ggAd.src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8149672461391419";document.head.appendChild(ggAd);}</script>
 <link rel="stylesheet" href="/assets/gg-mobile.css?v=2026100524">
-<script src="/assets/gg-mobile.js?v=2026100524"></script>
+<script src="assets/gg-mobile.js?v=20261009"></script>
 <meta name="description" content="Play Forge Survivors free in your browser on GameGob. Works on phones, no install.">
 </head>
 <body>
@@ -236,46 +236,27 @@ const ENEMY_TYPES=[
 ];
 
 // === INPUT ===
+// Gameplay movement belongs to SightX through the shared kit. Menus remain
+// single-press actions; repeated keydowns never advance another screen.
+let movementInput=null,inputError=false;
+GG.createInput({active:()=>state===STATE.PLAYING,stickSide:'right'}).then(input=>{
+  movementInput=input;
+}).catch(error=>{inputError=true;console.error(error)});
 const keys={};
-let touchMove={x:0,y:0,active:false};
-let touchDpad={x:0,y:0};
 let tapAction=false;
-let touchId=null;
+window.addEventListener('keydown',e=>{
+  if(!movementInput||state===STATE.PLAYING||e.repeat)return;
+  if(e.target.closest&&e.target.closest('input,textarea,select,[contenteditable]'))return;
+  if(!['Enter','Space','ArrowLeft','ArrowRight','KeyA','KeyD','Digit1','Digit2','Digit3'].includes(e.code))return;
+  e.preventDefault();keys[e.key.toLowerCase()]=true;
+});
+function clearMenuInput(){for(const key in keys)delete keys[key];tapAction=false}
+window.addEventListener('blur',clearMenuInput);
+document.addEventListener('visibilitychange',clearMenuInput);
 
-window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;keys[e.code]=true;
-  if(e.key===' '||e.key==='Enter')e.preventDefault()});
-window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;keys[e.code]=false});
-
-canvas.addEventListener('touchstart',e=>{
-  e.preventDefault();ensureAudio();
-  for(const t of e.changedTouches){
-    const tx=t.clientX,ty=t.clientY;
-    if(state===STATE.TITLE||state===STATE.GAME_OVER){tapAction=true;return}
-    if(state===STATE.CHAR_SELECT||state===STATE.LEVEL_UP||state===STATE.EVOLVE){handleMenuTouch(tx,ty);return}
-    if(tx<W*0.4){touchId=t.identifier;touchMove={x:tx,y:ty,active:true,sx:tx,sy:ty}}
-  }
-},false);
-
-canvas.addEventListener('touchmove',e=>{
+canvas.addEventListener('pointerdown',e=>{
+  if(!movementInput||!e.isPrimary||e.button!==0)return;
   e.preventDefault();
-  for(const t of e.changedTouches){
-    if(t.identifier===touchId&&touchMove.active){
-      const dx=t.clientX-touchMove.sx,dy=t.clientY-touchMove.sy;
-      const len=Math.sqrt(dx*dx+dy*dy);
-      const maxR=60;
-      if(len>0){touchDpad.x=dx/Math.max(len,maxR);touchDpad.y=dy/Math.max(len,maxR)}
-    }
-  }
-},false);
-
-canvas.addEventListener('touchend',e=>{
-  e.preventDefault();
-  for(const t of e.changedTouches){
-    if(t.identifier===touchId){touchMove.active=false;touchDpad.x=0;touchDpad.y=0;touchId=null}
-  }
-},false);
-
-canvas.addEventListener('mousedown',e=>{
   ensureAudio();
   if(state===STATE.TITLE||state===STATE.GAME_OVER){tapAction=true;return}
   if(state===STATE.CHAR_SELECT||state===STATE.LEVEL_UP||state===STATE.EVOLVE){handleMenuTouch(e.clientX,e.clientY)}
@@ -291,15 +272,10 @@ function handleMenuTouch(tx,ty){
 }
 
 function getInput(){
-  let ix=0,iy=0;
-  if(keys['a']||keys['arrowleft'])ix-=1;
-  if(keys['d']||keys['arrowright'])ix+=1;
-  if(keys['w']||keys['arrowup'])iy-=1;
-  if(keys['s']||keys['arrowdown'])iy+=1;
-  if(touchMove.active){ix+=touchDpad.x;iy+=touchDpad.y}
-  const len=Math.sqrt(ix*ix+iy*iy);
-  if(len>1){ix/=len;iy/=len}
-  return{x:ix,y:iy};
+  if(!movementInput)return{x:0,y:0};
+  const move=movementInput.state().move;
+  // SightX uses +y forward; canvas coordinates use +y down.
+  return{x:move.x,y:-move.y};
 }
 
 // === PARTICLES ===
@@ -884,7 +860,7 @@ function drawHUD(){
 
   // Weapon icons
   ctx.textAlign='left';
-  const wy=H-50;
+  const wy=H-(GG.coarse?210:50);
   for(let i=0;i<player.weapons.length;i++){
     const w=player.weapons[i];
     const def=WEAPON_DEFS[w.id]||EVOLVED_WEAPONS[w.id]||{color:'#888',name:'?'};
@@ -900,16 +876,7 @@ function drawHUD(){
 
   // Gold
   ctx.fillStyle=COLORS.gold;ctx.font='bold 12px monospace';ctx.textAlign='left';
-  ctx.fillText(`Gold: ${player.gold}`,10,H-60);
-
-  // Touch d-pad indicator
-  if(touchMove.active){
-    ctx.globalAlpha=0.3;ctx.strokeStyle='#fff';ctx.lineWidth=2;
-    ctx.beginPath();ctx.arc(touchMove.sx,touchMove.sy,60,0,TAU);ctx.stroke();
-    ctx.fillStyle=COLORS.green;
-    ctx.beginPath();ctx.arc(touchMove.sx+touchDpad.x*40,touchMove.sy+touchDpad.y*40,15,0,TAU);ctx.fill();
-    ctx.globalAlpha=1;
-  }
+  ctx.fillText(`Gold: ${player.gold}`,10,wy-10);
 }
 
 // === MENU SCREENS ===
@@ -929,7 +896,7 @@ function drawTitle(){
   // Pulse
   const pa=0.5+Math.sin(titlePulse*3)*0.3;
   ctx.globalAlpha=pa;ctx.fillStyle='#fff';ctx.font='20px monospace';
-  ctx.fillText('Press ENTER or Tap to Play',W/2,H/2+40);
+  ctx.fillText(inputError?'Controls unavailable — reload':movementInput?'Press ENTER or Tap to Play':'Loading controls…',W/2,H/2+40);
   ctx.globalAlpha=1;
   // High score
   ctx.fillStyle=COLORS.gold;ctx.font='14px monospace';
@@ -938,7 +905,7 @@ function drawTitle(){
   ctx.fillStyle=COLORS.gold;ctx.fillText(`Gold: ${meta.gold}`,W/2,H/2+120);
   // Meta upgrades hint
   ctx.fillStyle='#666';ctx.font='12px monospace';
-  ctx.fillText('WASD / Arrow Keys to move | Auto-attack',W/2,H-40);
+  ctx.fillText(GG.coarse?'Drag stick to move | Auto-attack':'WASD / Arrow Keys to move | Auto-attack',W/2,H-40);
 }
 
 function drawCharSelect(){
@@ -1083,6 +1050,7 @@ function drawGameOver(){
 
 // === START GAME ===
 function startGame(charDef){
+  movementInput.clear();
   gameTime=0;frameCount=0;score=0;kills=0;waveNum=0;waveTimer=0;spawnTimer=0;
   particles=[];floatingTexts=[];gems=[];enemies=[];projectiles=[];
   initPlayer(charDef);state=STATE.PLAYING;
@@ -1116,6 +1084,7 @@ function handleMenuKeys(){
   else if(state===STATE.GAME_OVER){
     if(keys['enter']||keys[' ']||tapAction){keys['enter']=false;keys[' ']=false;tapAction=false;state=STATE.TITLE}
   }
+  clearMenuInput();
 }
 
 // === MAIN LOOP ===

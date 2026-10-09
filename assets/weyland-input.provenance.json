@@ -1,0 +1,20 @@
+{
+  "upstream": "https://github.com/mobleysoft/weylandai.com",
+  "branch": "main",
+  "commit": "100073ef1640ada127097ec0aba109697ef4c116",
+  "path": "assets/weyland-input.js",
+  "sha256": "a5b53477f586569ee38f623d9ffae911710da2fea5f905ce54f2833a9d718dc4",
+  "vendored_on": "2026-10-09",
+  "local_modifications": false,
+  "consumer": "assets/gg-mobile.js: GG.createInput(options) -> Promise<WeylandInput controller>",
+  "first_game": "forge_survival.html",
+  "contract": {
+    "state": "Poll controller.state() once per game frame; move.x is right, move.y is forward, length <= 1. Canvas games negate move.y.",
+    "active": "Pass active: () => gameplayIsRunning. Menus, hidden pages, focused text fields, blur, resize and orientation changes clear movement.",
+    "gestures": "Immediate stick displacement and WASD/arrows. No long-press or double-tap actions. Continuous movement stops on release/cancel.",
+    "lifecycle": "clear(), setEnabled(boolean), destroy(); destroy before replacing a controller.",
+    "loading": "The shared kit loads one local vendor script on first createInput; await the Promise before allowing play. Load failures reject.",
+    "packaging": "Ship assets/weyland-input.js beside assets/gg-mobile.js, including native/offline bundles. An inlined kit resolves it from assets/ beside the page.",
+    "migration": "New games use GG.createInput instead of local movement listeners or data-gg-keypad. Existing unmigrated games keep their controls."
+  }
+}
